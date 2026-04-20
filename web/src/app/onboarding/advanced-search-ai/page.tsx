@@ -158,7 +158,7 @@ function buildOutreachJourney(leads: LeadProfile[], targeting: LeadTargeting | n
 }
 
 function avatarColor(name: string): string {
-    const colors = ['#6366f1', '#ec4899', '#2563eb', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
+    const colors = ['#0b1957', '#ec4899', '#2563eb', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
     let h = 0;
     for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
     return colors[Math.abs(h) % colors.length];
@@ -3499,8 +3499,8 @@ export default function AdvancedSearchAIPage() {
                             disabled={!input.trim()}
                             onClick={onLandingSubmit}
                             style={{
-                                background: input.trim() ? '#172560' : '#e5e7eb',
-                                boxShadow: input.trim() ? '0 4px 14px rgba(23,37,96,.3)' : 'none'
+                                background: input.trim() ? '#0b1957' : '#e5e7eb',
+                                boxShadow: input.trim() ? '0 4px 14px rgba(11,25,87,.3)' : 'none'
                             }}
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
@@ -3556,7 +3556,7 @@ export default function AdvancedSearchAIPage() {
             <div className="adv-yellow-bar" />
             <div className="adv-chat-main">
                 {/* LEFT: CHAT */}
-                <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '50%' : '100%' }}>
+                <div className={`adv-chat-left${messages.length === 0 ? ' adv-chat-left-empty' : ''}`} style={{ width: showPanel ? '60%' : '100%' }}>
                     <button className="adv-chat-back" onClick={reset}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                     </button>
@@ -3639,12 +3639,35 @@ export default function AdvancedSearchAIPage() {
                                 const hasUploadedLeads = inboundLeads.length > 0;
                                 return (
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '8px 0 16px' }}>
-                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e8ecfa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                         </div>
                                         {hasUploadedLeads ? (
                                             <button
                                                 onClick={() => fileInputRef.current?.click()}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Upload More
+                                            </button>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#0b1957', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    Import your leads & create outreach journey
+                                                </button>
+                                                <button
+                                                    onClick={downloadTemplate}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    Download CSV Template
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                                 Upload More
@@ -3950,7 +3973,7 @@ export default function AdvancedSearchAIPage() {
                                 <button onClick={() => setShowPanel('leads')} style={{
                                     flex: 1, background: showPanel === 'leads' ? '#fff' : 'transparent',
                                     border: 'none', fontSize: '13.5px', fontWeight: 600,
-                                    color: showPanel === 'leads' ? '#172560' : '#6b7280',
+                                    color: showPanel === 'leads' ? '#0b1957' : '#6b7280',
                                     borderRadius: '8px', padding: '6px 12px', cursor: 'pointer',
                                     boxShadow: showPanel === 'leads' ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
                                     transition: 'all .15s',
@@ -3960,7 +3983,7 @@ export default function AdvancedSearchAIPage() {
                                 <button onClick={() => setShowPanel('workflow')} style={{
                                     flex: 1, background: showPanel === 'workflow' ? '#fff' : 'transparent',
                                     border: 'none', fontSize: '13.5px', fontWeight: 600,
-                                    color: showPanel === 'workflow' ? '#172560' : '#6b7280',
+                                    color: showPanel === 'workflow' ? '#0b1957' : '#6b7280',
                                     borderRadius: '8px', padding: '6px 12px', cursor: 'pointer',
                                     boxShadow: showPanel === 'workflow' ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
                                     transition: 'all .15s',
@@ -3981,24 +4004,274 @@ export default function AdvancedSearchAIPage() {
                         </div>
 
                         {showPanel === 'leads' ? (
-                            <div className="adv-panel-body">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <h2 className="adv-panel-title" style={{ margin: 0 }}>
-                                        {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
-                                    </h2>
-                                    {!inboundMode && totalResults > 0 && (
-                                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                                            {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
-                                        </span>
-                                    )}
-                                    {inboundMode && inboundLeads.length > 0 && (
-                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                            {inboundLeads.length} contacts
-                                        </span>
-                                    )}
-                                    {!inboundMode && leads.length > 0 && totalResults === 0 && (
-                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#172560', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                            {leads.length} contact{leads.length !== 1 ? 's' : ''}
+
+                        <div className="adv-panel-body">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 className="adv-panel-title" style={{ margin: 0 }}>
+                                    {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
+                                </h2>
+                                {!inboundMode && totalResults > 0 && (
+                                    <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                                        {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
+                                    </span>
+                                )}
+                                {inboundMode && inboundLeads.length > 0 && (
+                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                        {inboundLeads.length} contacts
+                                    </span>
+                                )}
+                                {!inboundMode && leads.length > 0 && totalResults === 0 && (
+                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                        {leads.length} contact{leads.length !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="adv-panel-desc">
+                                <span className="adv-navy">✦</span>
+                                {inboundMode
+                                    ? ' Leads imported from your file — ready to launch a campaign'
+                                    : targeting
+                                        ? `${targeting.job_titles?.length > 0 ? ` ${targeting.job_titles.join(', ')}` : ''}${targeting.industries?.length > 0 ? ` in ${targeting.industries.join(', ')}` : ''}${targeting.locations?.length > 0 ? ` located in ${targeting.locations.join(', ')}` : ''} who are focused on growth and lead generation.`
+                                        : ' Contacts ready for outreach — review and launch your campaign.'
+                                }
+                            </p>
+
+                            {/* Inbound leads (CSV upload) */}
+                            {inboundMode && inboundLeads.length > 0 && (
+                                <div className="adv-leads-list">
+                                    {inboundLeads.map((lead, i) => (
+                                        <div key={i} className="adv-lead-card">
+                                            <div className="adv-lead-avatar" style={{ background: avatarColor(`${lead.firstName} ${lead.lastName}`) }}>
+                                                {initials(`${lead.firstName} ${lead.lastName}`) || '?'}
+                                            </div>
+                                            <div className="adv-lead-info">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span className="adv-lead-name">{[lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unknown'}</span>
+                                                    <span className="adv-verified">✓</span>
+                                                </div>
+                                                <div className="adv-lead-title">{lead.companyName || 'No company'}</div>
+                                                {lead.email && <div style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {lead.email}</div>}
+                                                {lead.phone && <div style={{ fontSize: '12px', color: '#6b7280' }}>📞 {lead.phone}</div>}
+                                                {lead.linkedinProfile && (
+                                                    <div style={{ fontSize: '12px', color: '#0a66c2' }}>
+                                                        <a href={lead.linkedinProfile} target="_blank" rel="noopener noreferrer"
+                                                            style={{ color: '#0a66c2', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                                            LinkedIn Profile
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {lead.notes && lead.notes.length > 0 && (
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#374151',
+                                                        marginTop: '6px',
+                                                        padding: '8px 10px',
+                                                        background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #c7d7f5',
+                                                        lineHeight: '1.6',
+                                                        maxWidth: '300px',
+                                                    }}>
+                                                        <span style={{ color: '#0b1957', fontWeight: 700, fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                                            AI Research Summary
+                                                        </span>
+                                                        {lead.notes.length > 200 ? lead.notes.substring(0, 200) + '…' : lead.notes}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => openEditLead(i)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: '#f3f4f6',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        color: '#4b5563',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#e5e7eb';
+                                                        e.currentTarget.style.borderColor = '#d1d5db';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#f3f4f6';
+                                                        e.currentTarget.style.borderColor = '#e5e7eb';
+                                                    }}
+                                                >
+                                                    ✏️ Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => openDeleteConfirmation(i)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: '#fee2e2',
+                                                        border: '1px solid #fecaca',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        color: '#dc2626',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#fecaca';
+                                                        e.currentTarget.style.borderColor = '#fca5a5';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#fee2e2';
+                                                        e.currentTarget.style.borderColor = '#fecaca';
+                                                    }}
+                                                >
+                                                    🗑️ Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* LinkedIn search leads */}
+                            {!inboundMode && (
+                            <div className="adv-leads-list">
+                                {leads.map((lead, i) => (
+                                    <div key={i} className={`adv-lead-card ${lead.locked ? 'adv-lead-locked' : ''}`}>
+                                        {lead.profile_picture ? (
+                                            <img src={lead.profile_picture} alt={lead.name} className="adv-lead-avatar-img" />
+                                        ) : (
+                                            <div className="adv-lead-avatar" style={{ background: avatarColor(lead.name) }}>
+                                                {initials(lead.name)}
+                                            </div>
+                                        )}
+                                        <div className="adv-lead-info">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {lead.profile_url && lead.profile_url.startsWith('http') ? (
+                                                    <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="adv-lead-name" style={{ textDecoration: 'none', color: 'inherit' }} onClick={e => e.stopPropagation()}>
+                                                        {lead.name} {!lead.locked && <span className="adv-verified">✓</span>}
+                                                    </a>
+                                                ) : (
+                                                    <span className="adv-lead-name">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
+                                                )}
+                                                {!targetingFiltersActive && lead.icp_score !== undefined && (
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                        padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                                                        background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
+                                                        color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
+                                                    }}>
+                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="adv-lead-title">
+                                                {lead.headline || lead.current_company || (lead.profile_url ? 'LinkedIn User' : lead.phone ? 'Phone Contact' : lead.email ? 'Email Contact' : 'Contact')}
+                                            </div>
+                                            {lead.location && <div className="adv-lead-location">📍 {lead.location}</div>}
+                                            {lead.inferred_nationality && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                        padding: '1px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+                                                        background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                                                    }}>
+                                                        🌍 {lead.inferred_nationality}
+                                                        {lead.nationality_confidence && lead.nationality_confidence >= 70 && (
+                                                            <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '2px' }}>·{lead.nationality_confidence}%</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {!targetingFiltersActive && lead.icp_reasoning && (
+                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', lineHeight: '1.4', fontStyle: 'italic' }}>
+                                                    {lead.icp_reasoning}
+                                                </div>
+                                            )}
+                                            {lead.enriched_profile?.skills && lead.enriched_profile.skills.length > 0 && (
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                                                    {lead.enriched_profile.skills.slice(0, 4).map((skill, si) => (
+                                                        <span key={si} style={{
+                                                            padding: '1px 6px', borderRadius: '8px', fontSize: '10px',
+                                                            background: '#f3f4f6', color: '#4b5563', border: '1px solid #e5e7eb',
+                                                        }}>{skill}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {lead.profile_url ? (
+                                                <div className="adv-lead-platform">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                                                </div>
+                                            ) : lead.phone ? (
+                                                <div className="adv-lead-platform" style={{ fontSize: '13px' }}>📞</div>
+                                            ) : lead.email ? (
+                                                <div className="adv-lead-platform" style={{ fontSize: '13px' }}>✉️</div>
+                                            ) : null}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                            <button
+                                                className="adv-lead-action"
+                                                title="Generate Summary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (!lead.locked) handleViewSummary(lead);
+                                                }}
+                                                style={{ pointerEvents: lead.locked ? 'none' : 'auto', border: 'none', background: 'transparent', cursor: lead.locked ? 'default' : 'pointer' }}
+                                            >
+                                                {lead.locked ? (
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                                                ) : (
+                                                    <Sparkles size={18} color="#0b1957" />
+                                                )}
+                                            </button>
+                                            {!lead.locked && (
+                                                <div style={{ display: 'flex', gap: '2px' }}>
+                                                    <button
+                                                        title="Good match"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'good'); }}
+                                                        style={{
+                                                            border: 'none', background: leadFeedback[lead.id] === 'good' ? '#dcfce7' : 'transparent',
+                                                            borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                            transition: 'all 0.15s',
+                                                        }}
+                                                    >
+                                                        👍
+                                                    </button>
+                                                    <button
+                                                        title="Bad match"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFeedback(lead.id, 'bad', lead.name); }}
+                                                        style={{
+                                                            border: 'none', background: leadFeedback[lead.id] === 'bad' ? '#fee2e2' : 'transparent',
+                                                            borderRadius: '6px', padding: '3px 5px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                                                            transition: 'all 0.15s',
+                                                        }}
+                                                    >
+                                                        👎
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            )} {/* end !inboundMode leads list */}
+
+                            {/* ── Filtered-out leads (below ICP threshold) ── */}
+                            {!inboundMode && filteredLeads.length > 0 && (
+                                <div style={{ marginTop: '12px' }}>
+                                    {/* Banner */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '8px 12px', borderRadius: '8px',
+                                        background: '#fefce8', border: '1px solid #fde68a',
+                                    }}>
+                                        <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                            Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+
                                         </span>
                                     )}
                                 </div>
@@ -4380,36 +4653,36 @@ export default function AdvancedSearchAIPage() {
                                 {/* Get More Leads button — show when there are leads and either a
                                 cursor token is available or the backend reported more total
                                 results than we're currently displaying */}
-                                {!inboundMode && leads.length > 0 && !noMoreLeads && (
-                                    <div style={{
-                                        display: 'flex', justifyContent: 'center',
-                                        padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
-                                    }}>
-                                        <button
-                                            disabled={loadingMore}
-                                            onClick={loadMoreLeads}
-                                            style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                                padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
-                                                border: '1px solid #e5e7eb',
-                                                background: loadingMore ? '#f9fafb' : '#172560',
-                                                color: loadingMore ? '#9ca3af' : '#fff',
-                                                cursor: loadingMore ? 'default' : 'pointer',
-                                                transition: 'all 0.15s',
-                                            }}
-                                        >
-                                            {loadingMore ? (
-                                                <>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
-                                                    Loading more leads...
-                                                </>
-                                            ) : (
-                                                <>Get More Leads →</>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            {!inboundMode && leads.length > 0 && !noMoreLeads && (
+                                <div style={{
+                                    display: 'flex', justifyContent: 'center',
+                                    padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
+                                }}>
+                                    <button
+                                        disabled={loadingMore}
+                                        onClick={loadMoreLeads}
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                            padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
+                                            border: '1px solid #e5e7eb',
+                                            background: loadingMore ? '#f9fafb' : '#0b1957',
+                                            color: loadingMore ? '#9ca3af' : '#fff',
+                                            cursor: loadingMore ? 'default' : 'pointer',
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {loadingMore ? (
+                                            <>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                                                Loading more leads...
+                                            </>
+                                        ) : (
+                                            <>Get More Leads →</>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         ) : (
                             <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                                 {/* Workflow panel header */}
@@ -4455,7 +4728,7 @@ export default function AdvancedSearchAIPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div style={{
                                             width: 36, height: 36, borderRadius: 10,
-                                            background: 'linear-gradient(135deg,#0b1957,#172560)',
+                                            background: 'linear-gradient(135deg,#0b1957,#1a3a8f)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
@@ -4512,7 +4785,7 @@ export default function AdvancedSearchAIPage() {
                                             <div style={{ height: 5, borderRadius: 99, background: '#dce3f5', overflow: 'hidden' }}>
                                                 <div style={{
                                                     height: '100%', borderRadius: 99,
-                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#0b1957,#172560)',
+                                                    background: pct >= 70 ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#0b1957,#0b1957)',
                                                     width: `${pct}%`, transition: 'width .5s ease',
                                                 }} />
                                             </div>
@@ -4525,7 +4798,7 @@ export default function AdvancedSearchAIPage() {
                             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14, background: '#f9fafb' }}>
                                 {pgChatHistory.length === 0 && !pgBusy && (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: '40px 20px' }}>
-                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#0b1957,#172560)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(11,25,87,.3)' }}>
+                                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#0b1957,#1a3a8f)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(11,25,87,.3)' }}>
                                             <AgentVisualizer state="idle" size={36} />
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
@@ -4538,7 +4811,7 @@ export default function AdvancedSearchAIPage() {
                                             onClick={pgStartConversation}
                                             style={{
                                                 padding: '12px 28px', borderRadius: 12, border: 'none',
-                                                background: 'linear-gradient(135deg,#0b1957,#172560)',
+                                                background: 'linear-gradient(135deg,#0b1957,#1a3a8f)',
                                                 color: '#fff', fontSize: 14, fontWeight: 700,
                                                 cursor: 'pointer', boxShadow: '0 4px 14px rgba(11,25,87,.4)',
                                                 display: 'flex', alignItems: 'center', gap: 8,
@@ -4555,7 +4828,7 @@ export default function AdvancedSearchAIPage() {
                                         {msg.role === 'user' ? (
                                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                                 <div style={{
-                                                    maxWidth: '78%', background: 'linear-gradient(135deg,#172560,#2563eb)',
+                                                    maxWidth: '78%', background: 'linear-gradient(135deg,#0b1957,#2563eb)',
                                                     color: '#fff', borderRadius: '18px 18px 4px 18px',
                                                     padding: '10px 14px', fontSize: 13.5, lineHeight: 1.55,
                                                     boxShadow: '0 2px 8px rgba(23,37,96,.2)',
@@ -4642,7 +4915,7 @@ export default function AdvancedSearchAIPage() {
                                                                 position: 'absolute', bottom: 8, right: 8,
                                                                 display: 'flex', alignItems: 'center', gap: 4,
                                                                 padding: '4px 10px', borderRadius: 6, border: 'none',
-                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#0b1957,#172560)',
+                                                                background: pgSuggesting ? '#e5e7eb' : 'linear-gradient(135deg,#0b1957,#1a3a8f)',
                                                                 color: pgSuggesting ? '#9ca3af' : '#fff',
                                                                 fontSize: 11.5, fontWeight: 600, cursor: pgSuggesting ? 'default' : 'pointer',
                                                                 transition: 'all .15s',
@@ -4678,7 +4951,7 @@ export default function AdvancedSearchAIPage() {
                                                                 style={{
                                                                     padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 500,
                                                                     border: selected ? 'none' : '1.5px solid #e5e7eb',
-                                                                    background: selected ? 'linear-gradient(135deg,#0b1957,#172560)' : '#f9fafb',
+                                                                    background: selected ? 'linear-gradient(135deg,#0b1957,#1a3a8f)' : '#f9fafb',
                                                                     color: selected ? '#fff' : '#374151',
                                                                     cursor: 'pointer', transition: 'all .12s',
                                                                 }}
@@ -4779,7 +5052,7 @@ export default function AdvancedSearchAIPage() {
                                                 disabled={!fieldVal && !pgTagInput.trim() && card.type !== 'hours'}
                                                 style={{
                                                     marginTop: 12, width: '100%', padding: '9px 0', borderRadius: 9, border: 'none',
-                                                    background: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
+                                                    background: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'linear-gradient(135deg,#0b1957,#1a3a8f)' : '#e5e7eb',
                                                     color: fieldVal || pgTagInput.trim() || card.type === 'hours' ? '#fff' : '#9ca3af',
                                                     fontSize: 13, fontWeight: 700, cursor: fieldVal || pgTagInput.trim() || card.type === 'hours' ? 'pointer' : 'default',
                                                     transition: 'all .15s',
@@ -4820,7 +5093,7 @@ export default function AdvancedSearchAIPage() {
                                         disabled={!pgInput.trim() || pgBusy}
                                         style={{
                                             width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
-                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#0b1957,#172560)' : '#e5e7eb',
+                                            background: pgInput.trim() && !pgBusy ? 'linear-gradient(135deg,#0b1957,#1a3a8f)' : '#e5e7eb',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             cursor: pgInput.trim() && !pgBusy ? 'pointer' : 'default', transition: 'all .15s',
                                         }}
@@ -4886,7 +5159,7 @@ export default function AdvancedSearchAIPage() {
                                     <div key={plan.name} style={{
                                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                         padding: '12px 16px', borderRadius: '12px',
-                                        border: plan.popular ? '2px solid #172560' : '1px solid #e5e7eb',
+                                        border: plan.popular ? '2px solid #0b1957' : '1px solid #e5e7eb',
                                         background: plan.popular ? '#f0f4ff' : '#fff',
                                         cursor: 'pointer',
                                     }} onClick={() => {
@@ -4894,11 +5167,11 @@ export default function AdvancedSearchAIPage() {
                                     }}>
                                         <div style={{ textAlign: 'left' }}>
                                             <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-                                                {plan.name} {plan.popular && <span style={{ fontSize: '10px', background: '#172560', color: '#fff', padding: '2px 6px', borderRadius: '8px', marginLeft: '6px' }}>Popular</span>}
+                                                {plan.name} {plan.popular && <span style={{ fontSize: '10px', background: '#0b1957', color: '#fff', padding: '2px 6px', borderRadius: '8px', marginLeft: '6px' }}>Popular</span>}
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6b7280' }}>{plan.credits} credits</div>
                                         </div>
-                                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#172560' }}>{plan.price}</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#0b1957' }}>{plan.price}</div>
                                     </div>
                                 ))}
                             </div>
@@ -4917,7 +5190,7 @@ export default function AdvancedSearchAIPage() {
                                     onClick={() => { window.location.href = '/settings?tab=credits&action=add'; }}
                                     style={{
                                         flex: 1, padding: '10px', borderRadius: '12px', border: 'none',
-                                        background: '#172560', fontSize: '14px', fontWeight: 600, color: '#fff', cursor: 'pointer',
+                                        background: '#0b1957', fontSize: '14px', fontWeight: 600, color: '#fff', cursor: 'pointer',
                                     }}
                                 >
                                     Recharge Now
@@ -5008,7 +5281,7 @@ export default function AdvancedSearchAIPage() {
                                 resize: 'vertical', outline: 'none', marginBottom: '14px',
                                 fontFamily: 'inherit', lineHeight: 1.5,
                             }}
-                            onFocus={(e) => { e.target.style.borderColor = '#172560'; }}
+                            onFocus={(e) => { e.target.style.borderColor = '#0b1957'; }}
                             onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; }}
                         />
 
@@ -5026,7 +5299,7 @@ export default function AdvancedSearchAIPage() {
                                 onClick={() => confirmBadFeedback(badFeedbackDraft)}
                                 style={{
                                     padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                                    border: 'none', background: '#172560', color: '#fff', cursor: 'pointer',
+                                    border: 'none', background: '#0b1957', color: '#fff', cursor: 'pointer',
                                 }}
                             >
                                 Mark as Bad Match
@@ -5568,7 +5841,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                             padding: '5px 8px', borderRadius: '8px', background: '#f8faff',
                                             border: '1px solid #e0eaf5', transition: 'background .12s',
                                         }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#eef2ff')}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#e8ecfa')}
                                         onMouseLeave={e => (e.currentTarget.style.background = '#f8faff')}
                                     >
                                         {/* Globe icon */}
@@ -5604,11 +5877,11 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             alignItems: "center",
                             gap: "14px"
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#f3f4f6"; e.currentTarget.style.borderColor = "#172560"; }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = "#f3f4f6"; e.currentTarget.style.borderColor = "#0b1957"; }}
                         onMouseLeave={e => { e.currentTarget.style.backgroundColor = "#f9fafb"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
                     >
                         <div style={{
-                            width: "48px", height: "48px", background: "#172560", borderRadius: "10px",
+                            width: "48px", height: "48px", background: "#0b1957", borderRadius: "10px",
                             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                         }}>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
@@ -5630,8 +5903,8 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         <div className="adv-rc" onClick={onStartTargeting} style={{
                             flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
-                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="2" cy="6" r="1" fill="#172560"/><circle cx="4" cy="12" r="1" fill="#172560"/><circle cx="8" cy="18" r="1" fill="#172560"/></svg>
+                            <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e8ecfa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="2" cy="6" r="1" fill="#0b1957"/><circle cx="4" cy="12" r="1" fill="#0b1957"/><circle cx="8" cy="18" r="1" fill="#0b1957"/></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
@@ -5648,11 +5921,11 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon adv-rc-icon-leads" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Leads</div>
-                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>
+                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#0b1957", fontWeight: 500 }}>
                                     {leadsCount > 0
                                         ? `${leadsCount} Leads found`
                                         : filteredLeadsCount && filteredLeadsCount > 0
@@ -5666,11 +5939,11 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5"/></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
-                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#172560", fontWeight: 500 }}>Live preview</div>
+                                <div className="adv-rc-sub" style={{ fontSize: "11px", color: "#0b1957", fontWeight: 500 }}>Live preview</div>
                             </div>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
@@ -5696,6 +5969,8 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             🚀 Create Outreach Journey
                         </button>
                     </div>
+                        </button>
+                    </div>
                 )}
 
                 {/* ── Inbound: Download Template + Upload buttons ── */}
@@ -5709,7 +5984,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         }}><Download size={16} /> Download</button>
                         <button onClick={() => onUploadClick?.()} style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', padding: '10px 8px',
-                            background: '#fff', color: '#172560', border: '2px solid #172560', borderRadius: '12px',
+                            background: '#fff', color: '#0b1957', border: '2px solid #0b1957', borderRadius: '12px',
                             fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap'
                         }}><Upload size={16} /> Upload CSV</button>
                     </div>
@@ -5748,7 +6023,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.outreach_journey && msg.outreach_journey.length > 0 && (
                     <div style={{ marginTop: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#172560" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                             Suggested Outreach Journey
                         </div>
                         <div className="adv-journey-stepper" style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'hidden', paddingBottom: '4px', width: '100%' }}>
@@ -5854,7 +6129,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         borderRadius: '16px', padding: '20px', maxWidth: '460px',
                         boxShadow: '0 4px 16px rgba(23,37,96,0.06)',
                     }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560', marginBottom: '14px', letterSpacing: '.01em' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0b1957', marginBottom: '14px', letterSpacing: '.01em' }}>
                             Contact Details
                         </div>
                         {/* Row 1: First Name + Last Name */}
@@ -5916,12 +6191,12 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                 onOpt('__submit_lead_details__:' + JSON.stringify(formData));
                             }}
                             style={{
-                                width: '100%', padding: '11px', background: '#172560', color: '#fff',
+                                width: '100%', padding: '11px', background: '#0b1957', color: '#fff',
                                 border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700,
                                 cursor: 'pointer', transition: 'all .15s', boxShadow: '0 2px 8px rgba(23,37,96,.2)',
                             }}
-                            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#0f1842'; }}
-                            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = '#172560'; }}
+                            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#0a1447'; }}
+                            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = '#0b1957'; }}
                         >
                             Save Details &amp; Continue →
                         </button>
@@ -6885,17 +7160,17 @@ function CheckpointFormInline({
 
     const optStyle = (selected: boolean): React.CSSProperties => ({
         display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-        border: `2px solid ${selected ? '#172560' : '#e5e7eb'}`,
-        background: selected ? '#eef2ff' : '#fff',
+        border: `2px solid ${selected ? '#0b1957' : '#e5e7eb'}`,
+        background: selected ? '#e8ecfa' : '#fff',
         borderRadius: '12px', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
-        fontSize: '14px', fontWeight: 500, color: selected ? '#172560' : '#374151',
+        fontSize: '14px', fontWeight: 500, color: selected ? '#0b1957' : '#374151',
     });
 
     const numBadge = (n: number, selected: boolean): React.CSSProperties => ({
         width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '12px', fontWeight: 700, flexShrink: 0,
-        border: `2px solid ${selected ? '#172560' : '#d1d5db'}`,
-        background: selected ? '#172560' : 'transparent',
+        border: `2px solid ${selected ? '#0b1957' : '#d1d5db'}`,
+        background: selected ? '#0b1957' : 'transparent',
         color: selected ? '#fff' : '#6b7280',
     });
 
@@ -6943,7 +7218,7 @@ function CheckpointFormInline({
                                             <div style={{ fontWeight: 600 }}>{opt.label}</div>
                                             <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{opt.desc}</div>
                                         </div>
-                                        <div style={{ fontSize: '12px', fontWeight: 700, color: selected ? '#172560' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 700, color: selected ? '#0b1957' : '#9ca3af', whiteSpace: 'nowrap' }}>
                                             {displayCount} lead{displayCount !== 1 ? 's' : ''}
                                         </div>
                                     </div>
@@ -7022,9 +7297,9 @@ function CheckpointFormInline({
                             {nextChannels.includes('email') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'email' : true) && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560' }}>✉️ Email Settings</div>
+                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0b1957' }}>✉️ Email Settings</div>
                                         <button disabled={emailGenLoading} onClick={generateEmail}
-                                            style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: 700, color: emailGenLoading ? '#9ca3af' : '#172560', cursor: emailGenLoading ? 'default' : 'pointer' }}>
+                                            style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: 700, color: emailGenLoading ? '#9ca3af' : '#0b1957', cursor: emailGenLoading ? 'default' : 'pointer' }}>
                                             {emailGenLoading ? 'Generating...' : '✨ AI Generate'}
                                         </button>
                                     </div>
@@ -7053,7 +7328,7 @@ function CheckpointFormInline({
                                             ) : (
                                                 <div style={{ fontSize: '12px', color: '#ef4444', padding: '8px 10px', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px' }}>
                                                     No email account connected.{' '}
-                                                    <a href="/settings?tab=integrations" style={{ color: '#172560', fontWeight: 600 }}>Connect Gmail or Outlook →</a>
+                                                    <a href="/settings?tab=integrations" style={{ color: '#0b1957', fontWeight: 600 }}>Connect Gmail or Outlook →</a>
                                                 </div>
                                             )}
                                         </div>
@@ -7116,7 +7391,7 @@ function CheckpointFormInline({
                                                     style={{ flex: 1, border: '1px solid #e0eaf5', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
                                                 />
                                                 <button onClick={saveEmailTemplate}
-                                                    style={{ padding: '8px 14px', background: '#172560', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                                    style={{ padding: '8px 14px', background: '#0b1957', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                                                     Save
                                                 </button>
                                                 <button onClick={() => { setSaveTemplateMode(false); setSaveTemplateName(''); }}
@@ -7178,7 +7453,7 @@ function CheckpointFormInline({
                                         {channelConfigStep < selectedChannelsList.length - 1 ? (
                                             <button
                                                 onClick={() => setChannelConfigStep(channelConfigStep + 1)}
-                                                style={{ padding: '10px 16px', background: '#172560', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                style={{ padding: '10px 16px', background: '#0b1957', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
                                                 Next → ({selectedChannelsList.length - channelConfigStep - 1} remaining)
                                             </button>
                                         ) : (
@@ -7569,7 +7844,7 @@ function CheckpointFormInline({
                             {/* Voice Agent Config (inline when voice_call selected) */}
                             {nextChannels.includes('voice_call') && (
                                 <div style={{ marginTop: '12px', padding: '14px', background: '#f8faff', border: '1px solid #e0eaf5', borderRadius: '12px' }}>
-                                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#172560', marginBottom: '10px' }}>Voice Call Settings</div>
+                                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0b1957', marginBottom: '10px' }}>Voice Call Settings</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                         <div>
                                             <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>AI Agent</label>
@@ -7582,7 +7857,7 @@ function CheckpointFormInline({
                                                     {voiceAgents.map((a: any) => <option key={a.id} value={a.id}>{a.name}{a.agent_language ? ` (${a.agent_language})` : ''}</option>)}
                                                 </select>
                                             ) : (
-                                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>No agents found — <a href="/voice-agent" style={{ color: '#172560' }}>set up an agent</a></div>
+                                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>No agents found — <a href="/voice-agent" style={{ color: '#0b1957' }}>set up an agent</a></div>
                                             )}
                                         </div>
                                         <div>
@@ -7596,7 +7871,7 @@ function CheckpointFormInline({
                                                     })}
                                                 </select>
                                             ) : (
-                                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>No phone numbers found — <a href="/voice-agent" style={{ color: '#172560' }}>add a number</a></div>
+                                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>No phone numbers found — <a href="/voice-agent" style={{ color: '#0b1957' }}>add a number</a></div>
                                             )}
                                         </div>
                                     </div>
@@ -7657,7 +7932,7 @@ function CheckpointFormInline({
                                                                         {showLiConnTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
                                                                     <button disabled={liFollowGenLoading} onClick={() => { setShowAiConnPanel(v => !v); setShowAiFollowPanel(false); }}
-                                                                        style={{ background: showAiConnPanel ? '#eef2ff' : 'none', border: showAiConnPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiConnPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        style={{ background: showAiConnPanel ? '#e8ecfa' : 'none', border: showAiConnPanel ? '1px solid #c2d6eb' : 'none', borderRadius: '6px', padding: showAiConnPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#0b1957', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
                                                                         {liFollowGenLoading ? '⏳ Generating...' : (showAiConnPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
@@ -7727,7 +8002,7 @@ function CheckpointFormInline({
                                                             />
                                                             {/* Character counter */}
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
-                                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+                                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#0b1957', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#0b1957' }}>← AI-personalised at send time</span></div>
                                                                 <div style={{ fontSize: '11px', fontWeight: 700, flexShrink: 0, marginLeft: '8px', color: connMsg.length >= 300 ? '#ef4444' : connMsg.length > 270 ? '#f59e0b' : '#9ca3af', whiteSpace: 'nowrap' }}>
                                                                     {connMsg.length}/300{connMsg.length >= 300 && ' ⚠️ limit reached'}
                                                                 </div>
@@ -7762,7 +8037,7 @@ function CheckpointFormInline({
                                                                         {showLiFollowTmplPanel ? '✕ Close' : '📋 Templates'}
                                                                     </button>
                                                                     <button disabled={liFollowGenLoading} onClick={() => { setShowAiFollowPanel(v => !v); setShowAiConnPanel(false); }}
-                                                                        style={{ background: showAiFollowPanel ? '#eef2ff' : 'none', border: showAiFollowPanel ? '1px solid #c7d2fe' : 'none', borderRadius: '6px', padding: showAiFollowPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#4f46e5', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
+                                                                        style={{ background: showAiFollowPanel ? '#e8ecfa' : 'none', border: showAiFollowPanel ? '1px solid #c2d6eb' : 'none', borderRadius: '6px', padding: showAiFollowPanel ? '2px 7px' : 0, fontSize: '11px', fontWeight: 700, color: liFollowGenLoading ? '#9ca3af' : '#0b1957', cursor: liFollowGenLoading ? 'default' : 'pointer' }}>
                                                                         {liFollowGenLoading ? '⏳ Generating...' : (showAiFollowPanel ? '✕ Close' : '✨ AI Generate')}
                                                                     </button>
                                                                 </div>
@@ -7829,7 +8104,7 @@ function CheckpointFormInline({
                                                                 rows={3}
                                                                 style={{ width: '100%', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', background: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                             />
-                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#6366f1', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#6366f1' }}>← AI-personalised at send time</span></div>
+                                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Placeholders: {'{{first_name}}'} {'{{last_name}}'} {'{{company}}'} {'{{title}}'} <span style={{ color: '#0b1957', fontWeight: 600 }}>{'{{web_insight}}'} {'{{recent_post}}'} {'{{article}}'} {'{{news}}'}</span> <span style={{ color: '#0b1957' }}>← AI-personalised at send time</span></div>
 
                                                             {/* ── AI Generate inline panel (follow-up) ── */}
                                                             {showAiFollowPanel && <AiMsgContextPanel
@@ -7869,7 +8144,7 @@ function CheckpointFormInline({
                                             </div>
                                             <div style={{
                                                 width: '36px', height: '20px', borderRadius: '99px', flexShrink: 0,
-                                                background: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '#6366f1' : '#d1d5db',
+                                                background: (enableDailyWebPresence || enableDailyPosts || enableAiPersonalization) ? '#0b1957' : '#d1d5db',
                                                 position: 'relative', transition: 'background 0.2s',
                                             }}>
                                                 <div style={{
@@ -7886,8 +8161,8 @@ function CheckpointFormInline({
                                                 {/* Toggle: Web Presence */}
                                                 <div style={{
                                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    padding: '9px 12px', background: enableDailyWebPresence ? '#eef2ff' : '#f9fafb',
-                                                    border: `1px solid ${enableDailyWebPresence ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                    padding: '9px 12px', background: enableDailyWebPresence ? '#e8ecfa' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyWebPresence ? '#c2d6eb' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
                                                 }} onClick={() => setEnableDailyWebPresence(!enableDailyWebPresence)}>
                                                     <div>
                                                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>🌐 Refresh web presence daily</div>
@@ -7895,7 +8170,7 @@ function CheckpointFormInline({
                                                     </div>
                                                     <div style={{
                                                         width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
-                                                        background: enableDailyWebPresence ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                        background: enableDailyWebPresence ? '#0b1957' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
                                                     }}>
                                                         <div style={{
                                                             position: 'absolute', top: '2px',
@@ -7909,8 +8184,8 @@ function CheckpointFormInline({
                                                 {/* Toggle: LinkedIn Posts */}
                                                 <div style={{
                                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    padding: '9px 12px', background: enableDailyPosts ? '#eef2ff' : '#f9fafb',
-                                                    border: `1px solid ${enableDailyPosts ? '#c7d2fe' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
+                                                    padding: '9px 12px', background: enableDailyPosts ? '#e8ecfa' : '#f9fafb',
+                                                    border: `1px solid ${enableDailyPosts ? '#c2d6eb' : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer',
                                                 }} onClick={() => setEnableDailyPosts(!enableDailyPosts)}>
                                                     <div>
                                                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>📝 Fetch live LinkedIn posts</div>
@@ -7918,7 +8193,7 @@ function CheckpointFormInline({
                                                     </div>
                                                     <div style={{
                                                         width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,
-                                                        background: enableDailyPosts ? '#6366f1' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
+                                                        background: enableDailyPosts ? '#0b1957' : '#d1d5db', position: 'relative', transition: 'background 0.2s',
                                                     }}>
                                                         <div style={{
                                                             position: 'absolute', top: '2px',
@@ -8033,7 +8308,7 @@ function CheckpointFormInline({
                                     const label = ch === 'voice_call' ? 'Voice Call' : ch === 'linkedin' ? 'LinkedIn' : ch.charAt(0).toUpperCase() + ch.slice(1);
                                     return (
                                         <span key={ch} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <span style={{ background: '#eef2ff', color: '#172560', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, fontSize: '11px' }}>{label}</span>
+                                            <span style={{ background: '#e8ecfa', color: '#0b1957', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, fontSize: '11px' }}>{label}</span>
                                             {idx < nextChannels.length - 1 && <span style={{ color: '#9ca3af' }}>→</span>}
                                         </span>
                                     );
@@ -8102,8 +8377,8 @@ function CheckpointFormInline({
                                     style={{ flex: 1, border: '1px solid #e0eaf5', borderRadius: '10px', padding: '10px 14px', fontSize: '14px', outline: 'none', background: '#fafbff', fontFamily: 'inherit', minWidth: 0 }}
                                 />
                                 <button onClick={suggestName} style={{
-                                    background: '#eef2ff', border: '1.5px solid #172560', borderRadius: '10px', padding: '0 14px',
-                                    fontSize: '12px', fontWeight: 700, color: '#172560', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                    background: '#e8ecfa', border: '1.5px solid #0b1957', borderRadius: '10px', padding: '0 14px',
+                                    fontSize: '12px', fontWeight: 700, color: '#0b1957', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                                     transition: 'all 0.15s',
                                 }}>✨ Suggest</button>
                             </div>
@@ -8132,7 +8407,7 @@ function CheckpointFormInline({
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
                                     }}
                                 >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#172560'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                                 </button>
                                 {step < totalSteps - 1 ? (
                                     <button
@@ -8140,7 +8415,7 @@ function CheckpointFormInline({
                                         onClick={handleNext}
                                         style={{
                                             width: '36px', height: '36px', borderRadius: '10px', border: 'none',
-                                            background: canNext() ? '#172560' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
+                                            background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
                                         }}
                                     >
@@ -8220,15 +8495,15 @@ function TargetingFormInline({
 
     const optStyle = (selected: boolean): React.CSSProperties => ({
         display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-        border: `2px solid ${selected ? '#172560' : '#e5e7eb'}`, background: selected ? '#eef2ff' : '#fff',
+        border: `2px solid ${selected ? '#0b1957' : '#e5e7eb'}`, background: selected ? '#e8ecfa' : '#fff',
         borderRadius: '12px', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
-        fontSize: '14px', fontWeight: 500, color: selected ? '#172560' : '#374151',
+        fontSize: '14px', fontWeight: 500, color: selected ? '#0b1957' : '#374151',
     });
 
     const numBadge = (n: number, selected: boolean): React.CSSProperties => ({
         width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '12px', fontWeight: 700, flexShrink: 0, border: `2px solid ${selected ? '#172560' : '#d1d5db'}`,
-        background: selected ? '#172560' : 'transparent', color: selected ? '#fff' : '#6b7280',
+        fontSize: '12px', fontWeight: 700, flexShrink: 0, border: `2px solid ${selected ? '#0b1957' : '#d1d5db'}`,
+        background: selected ? '#0b1957' : 'transparent', color: selected ? '#fff' : '#6b7280',
     });
 
     const toggleSelection = (arr: string[], item: string, setter: any) => {
@@ -8390,13 +8665,13 @@ function TargetingFormInline({
                                 style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                     padding: '16px 18px', borderRadius: '12px', cursor: 'pointer',
-                                    border: `2px solid ${postedRecently ? '#172560' : '#e5e7eb'}`,
-                                    background: postedRecently ? '#eef2ff' : '#fff',
+                                    border: `2px solid ${postedRecently ? '#0b1957' : '#e5e7eb'}`,
+                                    background: postedRecently ? '#e8ecfa' : '#fff',
                                     transition: 'all 0.15s',
                                 }}
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: 600, color: postedRecently ? '#172560' : '#111827' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: postedRecently ? '#0b1957' : '#111827' }}>
                                         📢 Posted on LinkedIn in last 3 months
                                     </div>
                                     <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
@@ -8408,7 +8683,7 @@ function TargetingFormInline({
                                 {/* Toggle switch */}
                                 <div style={{
                                     width: '44px', height: '24px', borderRadius: '12px', flexShrink: 0, marginLeft: '16px',
-                                    background: postedRecently ? '#172560' : '#d1d5db', transition: 'background 0.2s', position: 'relative',
+                                    background: postedRecently ? '#0b1957' : '#d1d5db', transition: 'background 0.2s', position: 'relative',
                                 }}>
                                     <div style={{
                                         width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
@@ -8473,7 +8748,7 @@ function TargetingFormInline({
                         {step < totalSteps - 1 && (
                             <button onClick={() => setStep(step + 1)}
                                 style={{
-                                    padding: '10px 14px', background: '#172560', color: '#fff', border: 'none',
+                                    padding: '10px 14px', background: '#0b1957', color: '#fff', border: 'none',
                                     borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
@@ -8533,9 +8808,9 @@ function AiMsgContextPanel({
     ].filter(Boolean);
 
     return (
-        <div style={{ marginTop: '10px', border: '1.5px solid #c7d2fe', borderRadius: '12px', background: '#f8f9ff', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ marginTop: '10px', border: '1.5px solid #c2d6eb', borderRadius: '12px', background: '#f8faff', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* Header */}
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#0b1957', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 ✨ AI Generate — tell us about your offer
                 <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '11px' }}>Will use lead's web presence &amp; posts</span>
             </div>
@@ -8550,7 +8825,7 @@ function AiMsgContextPanel({
                     onChange={e => setValueProp(e.target.value)}
                     placeholder="e.g. We help SaaS companies reduce churn with AI-powered customer success..."
                     rows={2}
-                    style={{ width: '100%', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '7px 10px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: '#111827' }}
+                    style={{ width: '100%', border: '1px solid #c2d6eb', borderRadius: '8px', padding: '7px 10px', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: '#111827' }}
                 />
             </div>
 
@@ -8561,8 +8836,8 @@ function AiMsgContextPanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {tones.map(t => (
                             <div key={t.id} onClick={() => setTone(t.id)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${tone === t.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: tone === t.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: tone === t.id ? 600 : 400, color: tone === t.id ? '#4f46e5' : '#374151' }}>
-                                {tone === t.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${tone === t.id ? '#0b1957' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: tone === t.id ? '#e8ecfa' : '#fff', fontSize: '12px', fontWeight: tone === t.id ? 600 : 400, color: tone === t.id ? '#0b1957' : '#374151' }}>
+                                {tone === t.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0b1957', flexShrink: 0 }} />}
                                 {t.label}
                             </div>
                         ))}
@@ -8573,8 +8848,8 @@ function AiMsgContextPanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {goals.map(g => (
                             <div key={g.id} onClick={() => setGoal(g.id)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${goal === g.id ? '#4f46e5' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: goal === g.id ? '#eef2ff' : '#fff', fontSize: '12px', fontWeight: goal === g.id ? 600 : 400, color: goal === g.id ? '#4f46e5' : '#374151' }}>
-                                {goal === g.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', border: `1.5px solid ${goal === g.id ? '#0b1957' : '#e5e7eb'}`, borderRadius: '7px', cursor: 'pointer', background: goal === g.id ? '#e8ecfa' : '#fff', fontSize: '12px', fontWeight: goal === g.id ? 600 : 400, color: goal === g.id ? '#0b1957' : '#374151' }}>
+                                {goal === g.id && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0b1957', flexShrink: 0 }} />}
                                 {g.label}
                             </div>
                         ))}
@@ -8584,16 +8859,16 @@ function AiMsgContextPanel({
 
             {/* Targeting badge */}
             {targetingTags.length > 0 && (
-                <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '7px', padding: '6px 10px', fontSize: '11px', color: '#4f46e5', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                <div style={{ background: '#e8ecfa', border: '1px solid #c2d6eb', borderRadius: '7px', padding: '6px 10px', fontSize: '11px', color: '#0b1957', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                     <span style={{ fontWeight: 700 }}>🎯</span>
                     {targetingTags.join(' · ')}
-                    {leadsCount > 0 && <span style={{ marginLeft: '4px', color: '#6366f1' }}>· {leadsCount} lead{leadsCount !== 1 ? 's' : ''} with live web insights</span>}
+                    {leadsCount > 0 && <span style={{ marginLeft: '4px', color: '#0b1957' }}>· {leadsCount} lead{leadsCount !== 1 ? 's' : ''} with live web insights</span>}
                 </div>
             )}
 
             {/* Generate button */}
             <button onClick={onGenerate} disabled={loading}
-                style={{ background: loading ? '#9ca3af' : 'linear-gradient(135deg,#4f46e5,#6366f1)', color: '#fff', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: loading ? 'none' : '0 3px 10px rgba(79,70,229,.35)' }}>
+                style={{ background: loading ? '#9ca3af' : 'linear-gradient(135deg,#0b1957,#1a3a8f)', color: '#fff', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: loading ? 'none' : '0 3px 10px rgba(11,25,87,.35)' }}>
                 {loading ? '⏳ Generating...' : '✨ Generate Message'}
             </button>
         </div>
@@ -8663,8 +8938,8 @@ function buildConfirmationMessage(intent: LeadTargeting, _originalQuery: string)
    ═══════════════════════════════════════════════ */
 const css = `
             /* ── RESET ── */
-            .adv-landing, .adv-chat-root {font - family: 'Inter', system-ui, -apple-system, sans-serif; }
-            * {box - sizing: border-box; }
+            .adv-landing, .adv-chat-root {font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+            * {box-sizing: border-box; }
 
             /* ── ANIMATIONS ── */
             @keyframes fadeUp {from {opacity:0; transform:translateY(14px); } to {opacity:1; transform:translateY(0); } }
@@ -8706,18 +8981,18 @@ const css = `
             .adv-center {flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 24px 60px; z-index:2; position:relative; }
             .adv-asterisk-wrap {width:90px; height:90px; border-radius:50%; background:#fff; border:1.5px solid #e0eaf5; display:flex; align-items:center; justify-content:center; margin-bottom:24px; box-shadow:0 4px 16px rgba(23,37,96,.10); animation:fadeUp .4s ease both; overflow:hidden; }
             .adv-lad-logo {width:80px; height:auto; display:block; }
-            .adv-title {font-size:34px; font-weight:800; color:#111827; text-align:center; margin-bottom:28px; letter-spacing:-.03em; line-height:1.2; animation:fadeUp .4s ease .08s both; }
-            .adv-title span {color:#172560; }
+            .adv-title {font-size:34px; font-weight:800; font-family:'Space Grotesk', system-ui, sans-serif; color:#111827; text-align:center; margin-bottom:28px; letter-spacing:-.03em; line-height:1.2; animation:fadeUp .4s ease .08s both; }
+            .adv-title span {color:#0b1957; }
             /* ── INPUT BOX ── */
             .adv-input-outer {width:100%; max-width:680px; background:#fff; border:1.5px solid #e5e7eb; border-radius:22px; padding:18px 20px 14px; box-shadow:0 8px 32px rgba(0,0,0,.08); animation:fadeUp .4s ease .16s both; cursor:text; transition:border .2s, box-shadow .2s; }
-            .adv-input-outer:focus-within {border-color:#172560; box-shadow:0 8px 32px rgba(23,37,96,.14); }
+            .adv-input-outer:focus-within {border-color:#0b1957; box-shadow:0 8px 32px rgba(11,25,87,.14); }
             .adv-ta {width:100%; border:none; outline:none; resize:none; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; background:transparent; min-height:72px; }
             .adv-ta::placeholder {color:#9ca3af; }
             .adv-websearch-badge {display:inline-flex; align-items:center; gap:5px; background:#dbeafe; border:1px solid #bfdbfe; border-radius:20px; padding:3px 10px; font-size:12px; color:#1d4ed8; margin-bottom:8px; }
             .adv-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid #f3f4f6; }
             /* ── ATTACH BUTTON ── */
             .adv-attach-btn {width:36px; height:36px; border-radius:50%; border:1.5px solid #e5e7eb; background:#f9fafb; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-            .adv-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#172560; }
+            .adv-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
             /* ── ATTACH DROPDOWN MENU ── */
             .adv-attach-menu {position:absolute; bottom:calc(100% + 10px); left:0; background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:8px; min-width:260px; box-shadow:0 12px 40px rgba(0,0,0,.14); z-index:100; animation:fadeUp .15s ease both; }
             .adv-attach-item {display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .12s; }
@@ -8732,39 +9007,39 @@ const css = `
             .adv-send-circle:disabled {cursor:default; }
             /* ── SUGGESTION CHIPS ── */
             .adv-chips-row {display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:20px; max-width:680px; animation:fadeUp .4s ease .24s both; }
-            .adv-chip {display:flex; align-items:center; gap:6px; border:1px solid #c2d6eb; border-radius:22px; padding:8px 16px; font-size:13px; font-weight:500; color:#172560; background:rgba(255,255,255,.75); cursor:pointer; transition:all .15s; }
-            .adv-chip:hover {background:#e0eaf5; border-color:#172560; }
+            .adv-chip {display:flex; align-items:center; gap:6px; border:1px solid #c2d6eb; border-radius:22px; padding:8px 16px; font-size:13px; font-weight:500; color:#0b1957; background:rgba(255,255,255,.75); cursor:pointer; transition:all .15s; }
+            .adv-chip:hover {background:#e0eaf5; border-color:#0b1957; }
             /* ── RECENT SEARCHES ── */
             .adv-recent-wrap {margin-top:24px; max-width:680px; width:100%; animation:fadeUp .4s ease .32s both; }
             .adv-recent-label {font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:8px; padding-left:4px; text-transform:uppercase; letter-spacing:.06em; }
             .adv-recent-list {display:flex; flex-direction:column; gap:4px; }
             .adv-recent-item {display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; text-align:left; font-size:13.5px; color:#374151; font-weight:500; transition:all .15s; width:100%; }
-            .adv-recent-item:hover {background:#f2f6fa; border-color:#172560; color:#111827; }
+            .adv-recent-item:hover {background:#f2f6fa; border-color:#0b1957; color:#111827; }
             .adv-recent-item span {flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
             /* ── CHAT SCREEN ── */
             .adv-chat-root {height:100vh; display:flex; flex-direction:column; background:#fff; }
-            .adv-yellow-bar {height:4px; background:linear-gradient(90deg,#3b82f6,#2563eb,#172560); flex-shrink:0; }
+            .adv-yellow-bar {height:4px; background:linear-gradient(90deg,#0b1957,#1a3a8f,#2563eb); flex-shrink:0; }
             .adv-chat-main {flex:1; display:flex; overflow:hidden; }
             /* adv-chat-left defined below with split-screen update */
             .adv-chat-back {position:absolute; top:16px; left:20px; z-index:10; width:42px; height:42px; border-radius:50%; border:1px solid #e5e7eb; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.06); transition:all .15s; }
             .adv-chat-back:hover {background:#f3f4f6; }
             .adv-chat-msgs {flex:1; overflow-y:auto; padding:72px 0 8px; display:flex; flex-direction:column; }
-            .adv-msgs-inner {max-width:700px; margin:0 auto; padding:0 20px; width:100%; }
+            .adv-msgs-inner {max-width:80%; margin:0 auto; padding:0 10px; width:100%; }
             .adv-msgs-inner + .adv-msgs-inner {padding-top:8px; }
             /* ── BUBBLES ── */
             .adv-bubble {padding:6px 0; }
             .adv-bubble-user {display:flex; justify-content:flex-end; margin-bottom:4px; }
-            .adv-user-msg {background:linear-gradient(135deg,#172560 0%,#2563eb 100%); color:#fff; border-radius:20px 20px 4px 20px; padding:12px 18px; max-width:72%; font-size:14.5px; line-height:1.65; box-shadow:0 2px 14px rgba(23,37,96,.2); font-weight:450; }
+            .adv-user-msg {background:#0b1957; color:#fff; border-radius:20px 20px 4px 20px; padding:12px 18px; max-width:72%; font-size:14.5px; line-height:1.65; box-shadow:0 2px 14px rgba(11,25,87,.2); font-weight:450; }
             .adv-bubble-ai {display:flex; gap:12px; align-items:flex-start; margin-bottom:4px; }
-            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#0b1957 0%,#172560 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(11,25,87,.28); }
+            .adv-ai-avatar {width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#0b1957 0%,#1a3a8f 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-size:15px; box-shadow:0 3px 10px rgba(11,25,87,.28); }
             .adv-ai-avatar-viz {background:transparent; box-shadow:none; overflow:visible; }
             .adv-ai-body {flex:1; max-width:90%; }
             .adv-ai-name {font-size:11px; font-weight:700; color:#0b1957; margin-bottom:8px; letter-spacing:.06em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; }
             .adv-ai-name-dot {width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
             .adv-ai-text {font-size:14px; line-height:1.6; color:#374151; }
             .adv-ai-text p {margin:0 0 4px; }
-            .adv-ai-text strong {color:#111827; font-weight:650; }
+            .adv-ai-text strong {color:#111827; font-weight:500; }
             .adv-ai-text em {color:#0b1957; font-style:normal; font-weight:500; }
             .adv-ai-h3 {font-size:13.5px; font-weight:700; color:#111827; margin:12px 0 5px; letter-spacing:.01em; }
             .adv-ai-hr {border:none; border-top:1px solid #f0f0f0; margin:10px 0; }
@@ -8775,22 +9050,22 @@ const css = `
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
             /* ── THINKING STATE ── */
             .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden;padding-top:2px}
-            .adv-thinking-word{font-size:13px;color:#6366f1;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease;letter-spacing:.01em}
+            .adv-thinking-word{font-size:13px;color:#0b1957;font-style:italic;font-weight:500;display:inline-block;transition:opacity .28s ease,transform .28s ease;letter-spacing:.01em}
             .adv-tw-in{opacity:1;transform:translateY(0)}
             .adv-tw-out{opacity:0;transform:translateY(-6px)}
             /* ── CHAT INPUT ── */
             .adv-chat-input-wrap {border-top:1px solid #f0f0f0; background:#fff; padding:12px 20px 16px; transition: opacity 0.3s ease; }
             .adv-chat-blur { pointer-events: none; opacity: 0.5; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
-            .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid transparent; border-radius:24px; padding:16px 20px 12px; max-width:720px; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(23,37,96,0.06); position:relative; z-index:0; }
-            .adv-chat-input-box::before {content:''; position:absolute; inset:-1.5px; border-radius:25.5px; padding:1.5px; background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#3b82f6); background-size:300% 100%; animation:adv-border-move 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; z-index:-1; pointer-events:none; }
+            .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid transparent; border-radius:24px; padding:16px 20px 12px; max-width:70%; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(11,25,87,0.06); position:relative; z-index:0; }
+            .adv-chat-input-box::before {content:''; position:absolute; inset:-1.5px; border-radius:25.5px; padding:1.5px; background:linear-gradient(90deg,#0b1957,#1a3a8f,#2563eb,#3b82f6,#0b1957); background-size:300% 100%; animation:adv-border-move 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; z-index:-1; pointer-events:none; }
             .adv-chat-input-box:focus-within::before {animation:adv-border-move 2s linear infinite; opacity:1; }
             @keyframes adv-border-move {0%{background-position:0% 50%}100%{background-position:300% 50%}}
             .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
-            .adv-chat-ta::placeholder {color:#0b1959; font-weight:400; }
+            .adv-chat-ta::placeholder {color:#0b1957; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-            .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#172560; }
+            .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
             .adv-model-label {display:flex; align-items:center; gap:4px; font-size:12px; color:#9ca3af; font-weight:500; cursor:pointer; }
             .adv-model-label:hover {color:#374151; }
             .adv-send-sm {width:34px!important; height:34px!important; }
@@ -8798,10 +9073,10 @@ const css = `
 
             /* ── TARGETING CARD ── */
             .adv-targeting-card {margin - top:12px; background:linear-gradient(135deg,#f2f6fa,#e0eaf5); border:1px solid #c2d6eb; border-radius:16px; padding:14px 16px; }
-            .adv-tc-header {display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:13px; color:#0f1842; }
+            .adv-tc-header {display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:13px; color:#0b1957; }
             .adv-tag-row {display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:6px; }
-            .adv-tag-label {font - size:11px; font-weight:600; color:#0f1842; min-width:70px; }
-            .adv-tag {font - size:11px; background:rgba(255,255,255,.85); color:#0a112e; padding:3px 11px; border-radius:20px; border:1px solid #c2d6eb; }
+            .adv-tag-label {font-size:11px; font-weight:600; color:#0b1957; min-width:70px; }
+            .adv-tag {font-size:11px; background:rgba(255,255,255,.85); color:#0a112e; padding:3px 11px; border-radius:20px; border:1px solid #c2d6eb; }
 
             /* ── MOBILE NAV SIDEBARS ── */
             .adv-mobile-icp-box {
@@ -8830,7 +9105,7 @@ const css = `
                 padding: 10px 8px;
                 border: 1.5px solid #e0eaf5;
                 border-radius: 20px;
-                box-shadow: 0 8px 32px rgba(23, 37, 96, 0.15);
+                box-shadow: 0 8px 32px rgba(11, 25, 87, 0.15);
                 animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
             }
             @keyframes slideInRight {
@@ -8855,12 +9130,12 @@ const css = `
             }
             .adv-nav-btn:hover {
                 background: #f1f5f9;
-                color: #172560;
+                color: #0b1957;
             }
             .adv-nav-btn-active {
-                background: #172560 !important;
+                background: #0b1957 !important;
                 color: #fff !important;
-                box-shadow: 0 4px 12px rgba(23, 37, 96, 0.25);
+                box-shadow: 0 4px 12px rgba(11, 25, 87, 0.25);
                 transform: scale(1.05);
             }
             .adv-nav-label {
@@ -8876,38 +9151,38 @@ const css = `
             .adv-ml-header {display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:12px; font-weight:600; color:#166534; }
             .adv-ml-count {margin - left:auto; font-size:11px; color:#16a34a; background:#dcfce7; padding:2px 10px; border-radius:20px; font-weight:500; }
             .adv-ml-item {display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid #dcfce7; }
-            .adv-ml-item:first-of-type {border - top:none; }
+            .adv-ml-item:first-of-type {border-top:none; }
             .adv-ml-avatar {width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; flex-shrink:0; }
             .adv-ml-info {flex:1; }
-            .adv-ml-name {font - size:12px; font-weight:600; color:#111827; }
-            .adv-ml-title {font - size:11px; color:#6b7280; }
+            .adv-ml-name {font-size:12px; font-weight:600; color:#111827; }
+            .adv-ml-title {font-size:11px; color:#6b7280; }
 
             /* ── NAS.io RESULT CARDS ── */
             .adv-result-cards {display:flex; gap:10px; margin-top:14px; }
             .adv-rc {display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; border:1.5px solid #e5e7eb; background:#fff; cursor:pointer; transition:all .15s; flex:1; min-width:0; }
-            .adv-rc:hover {border - color:#172560; background:#f2f6fa; box-shadow:0 2px 8px rgba(23,37,96,.1); }
+            .adv-rc:hover {border-color:#0b1957; background:#f2f6fa; box-shadow:0 2px 8px rgba(11,25,87,.1); }
             .adv-rc-icon {width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
-            .adv-rc-icon-target {background:#eef2ff; }
+            .adv-rc-icon-target {background:#e8ecfa; }
             .adv-rc-icon-leads {background:#e0eaf5; }
             .adv-rc-body {flex:1; min-width:0; }
-            .adv-rc-label {font - size:14px; font-weight:700; color:#111827; }
-            .adv-rc-sub {font - size:12px; color:#6b7280; margin-top:1px; }
-            .adv-rc-leads .adv-rc-sub {color:#172560; font-weight:500; }
+            .adv-rc-label {font-size:14px; font-weight:700; color:#111827; }
+            .adv-rc-sub {font-size:12px; color:#6b7280; margin-top:1px; }
+            .adv-rc-leads .adv-rc-sub {color:#0b1957; font-weight:500; }
 
             /* ── NAS.io ACTION BUTTONS ── */
             .adv-action-btns {display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-            .adv-act-btn {padding:8px 18px; border-radius:22px; font-size:13px; font-weight:600; border:1.5px solid #172560; background:transparent; color:#172560; cursor:pointer; transition:all .15s; }
-            .adv-act-btn:hover {background:#172560; color:#fff; box-shadow:0 2px 8px rgba(23,37,96,.25); }
+            .adv-act-btn {padding:8px 18px; border-radius:22px; font-size:13px; font-weight:600; border:1.5px solid #0b1957; background:transparent; color:#0b1957; cursor:pointer; transition:all .15s; }
+            .adv-act-btn:hover {background:#0b1957; color:#fff; box-shadow:0 2px 8px rgba(11,25,87,.25); }
 
             /* ── OPTION BUTTONS ── */
             .adv-opts {display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
             .adv-opt-btn {padding:10px 20px; border-radius:14px; font-size:13.5px; font-weight:600; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; transition:all .15s; }
-            .adv-opt-btn:hover {border-color:#172560; background:#f2f6fa; color:#0f1842; }
-            .adv-opt-btn:first-child {background:#172560; color:#fff; border-color:#172560; box-shadow:0 2px 8px rgba(23,37,96,.25); }
-            .adv-opt-btn:first-child:hover {background:#0f1842; border-color:#0f1842; box-shadow:0 4px 14px rgba(23,37,96,.35); }
+            .adv-opt-btn:hover {border-color:#0b1957; background:#f2f6fa; color:#0b1957; }
+            .adv-opt-btn:first-child {background:#0b1957; color:#fff; border-color:#0b1957; box-shadow:0 2px 8px rgba(11,25,87,.25); }
+            .adv-opt-btn:first-child:hover {background:#0a1447; border-color:#0a1447; box-shadow:0 4px 14px rgba(11,25,87,.35); }
 
             /* ── LEADS PANEL ── */
-            .adv-leads-panel {width:50%; background:#fff; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
+            .adv-leads-panel {width:40%; background:#fff; animation:slideIn .35s cubic-bezier(.4,0,.2,1) both; display:flex; flex-direction:column; overflow:hidden; border-left:2px solid #e0eaf5; flex-shrink:0; }
             .adv-chat-left {display:flex; flex-direction:column; position:relative; background:#fff; transition:width .35s cubic-bezier(.4,0,.2,1); border-right:none; min-width:0; }
             .adv-chat-left-empty {justify-content:center; }
             .adv-chat-left-empty .adv-chat-msgs {flex:none; overflow:visible; padding-top:0; }
@@ -8919,7 +9194,7 @@ const css = `
             .adv-unlock-btn {padding:8px 18px; border-radius:22px; border:none; background:#111827; color:#fff; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
             .adv-unlock-btn:hover {background:#1f2937; box-shadow:0 4px 12px rgba(0,0,0,.15); }
             .adv-panel-body {flex:1; overflow-y:auto; padding:20px; }
-            .adv-panel-title {font-size:18px; font-weight:800; color:#111827; margin:0 0 10px; line-height:1.3; letter-spacing:-.02em; }
+            .adv-panel-title {font-size:18px; font-weight:800; font-family:'Space Grotesk', system-ui, sans-serif; color:#111827; margin:0 0 10px; line-height:1.3; letter-spacing:-.02em; }
             .adv-panel-desc {font-size:13px; color:#6b7280; line-height:1.6; margin:0 0 16px; padding:10px 14px; background:#f5f8fc; border-radius:12px; border:1px solid #e0eaf5; }
             .adv-leads-list {display:flex; flex-direction:column; gap:2px; }
             .adv-lead-card {display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px; transition:background .15s; cursor:pointer; }
@@ -8927,15 +9202,15 @@ const css = `
             .adv-lead-locked {opacity:.55; filter:blur(1px); pointer-events:none; }
             .adv-lead-avatar {width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:700; flex-shrink:0; }
             .adv-lead-info {flex:1; min-width:0; }
-            .adv-lead-name {font - size:14px; font-weight:700; color:#111827; display:flex; align-items:center; gap:4px; }
+            .adv-lead-name {font-size:14px; font-weight:700; color:#111827; display:flex; align-items:center; gap:4px; }
             .adv-verified {background:#10b981; color:#fff; border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; }
-            .adv-lead-title {font - size:12px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            .adv-lead-title {font-size:12px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
             .adv-lead-platform {margin - top:4px; display:flex; gap:4px; }
             .adv-lead-action {width:36px; height:36px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all .15s; }
-            .adv-lead-action:hover:not(:disabled) {border - color:#172560; background:#f2f6fa; }
+            .adv-lead-action:hover:not(:disabled) {border-color:#0b1957; background:#f2f6fa; }
             .adv-lead-action:disabled {cursor:default; }
             .adv-lead-avatar-img {width:42px; height:42px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid #e5e7eb; }
-            .adv-lead-location {font - size:11px; color:#9ca3af; margin-top:2px; }
+            .adv-lead-location {font-size:11px; color:#9ca3af; margin-top:2px; }
             .adv-panel-footer {text - align:center; padding:20px 0 8px; font-size:12px; color:#9ca3af; border-top:1px solid #f3f4f6; margin-top:16px; }
 
             /* ── GEMINI-STYLE LANDING ── */
@@ -8963,6 +9238,7 @@ const css = `
             .adv-gemini-title {
                 font-size: 36px;
                 font-weight: 400;
+                font-family: 'Space Grotesk', system-ui, sans-serif;
                 color: #1f2937;
                 letter-spacing: -0.01em;
                 line-height: 1.3;
@@ -9016,7 +9292,7 @@ const css = `
                 inset: -1.5px;
                 border-radius: 25.5px;
                 padding: 1.5px;
-                background: linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#3b82f6);
+                background: linear-gradient(90deg,#0b1957,#1a3a8f,#2563eb,#3b82f6,#0b1957);
                 background-size: 300% 100%;
                 animation: adv-border-move 4s linear infinite;
                 -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -9032,8 +9308,8 @@ const css = `
             }
             .adv-gemini-chip:hover {
                 background: #fafaff;
-                color: #172560;
-                box-shadow: 0 2px 12px rgba(23,37,96,0.1);
+                color: #0b1957;
+                box-shadow: 0 2px 12px rgba(11,25,87,0.1);
             }
             /* ── MOBILE RESPONSIVE ── */
             @media (max-width: 768px) {
