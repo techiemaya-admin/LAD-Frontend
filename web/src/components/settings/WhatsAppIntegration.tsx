@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   UserCheck,
+  Bot,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -121,7 +122,7 @@ async function fetchTeamMembers(tenantId: string | null): Promise<TeamMember[]> 
 
 async function bulkAssign(
   tenantId: string | null,
-  userId: string,
+  userId: string | null,
   filter: 'all' | 'unassigned',
 ): Promise<{ success: boolean; assigned: number; total: number } | null> {
   try {
@@ -130,7 +131,11 @@ async function bulkAssign(
     const res = await fetch(`${PERSONAL_WA_API}/conversations/bulk-assign`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ user_id: userId, filter, reason: 'bulk_assign_settings' }),
+      body: JSON.stringify({
+        user_id: userId,  // null = release to AI Agent
+        filter,
+        reason: userId ? 'bulk_assign_settings' : 'bulk_release_to_ai',
+      }),
     });
     if (!res.ok) return null;
     return res.json();
@@ -275,7 +280,7 @@ export const WhatsAppIntegration: React.FC = () => {
   // Bulk assign state
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamMembersLoading, setTeamMembersLoading] = useState(false);
-  const [bulkAssignUserId, setBulkAssignUserId] = useState<string>('');
+  const [bulkAssignUserId, setBulkAssignUserId] = useState<string>('ai_agent');
   const [bulkAssignFilter, setBulkAssignFilter] = useState<'all' | 'unassigned'>('unassigned');
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [bulkAssigning, setBulkAssigning] = useState(false);
@@ -294,8 +299,8 @@ export const WhatsAppIntegration: React.FC = () => {
     setTeamMembersLoading(true);
     const members = await fetchTeamMembers(tenantId);
     setTeamMembers(members);
-    if (members.length > 0 && !bulkAssignUserId) {
-      setBulkAssignUserId(members[0].user_id);
+    if (members.length > 0 && (!bulkAssignUserId || bulkAssignUserId === 'ai_agent')) {
+      // Keep AI Agent as default — don't auto-select first team member
     }
     setTeamMembersLoading(false);
   }, [tenantId, bulkAssignUserId]);
@@ -304,7 +309,9 @@ export const WhatsAppIntegration: React.FC = () => {
     if (!bulkAssignUserId) return;
     setBulkAssigning(true);
     setBulkAssignResult(null);
-    const result = await bulkAssign(tenantId, bulkAssignUserId, bulkAssignFilter);
+    // 'ai_agent' sentinel means unassign (release back to AI)
+    const userId = bulkAssignUserId === 'ai_agent' ? null : bulkAssignUserId;
+    const result = await bulkAssign(tenantId, userId, bulkAssignFilter);
     if (result?.success) {
       setBulkAssignResult({ assigned: result.assigned, total: result.total });
     }
@@ -653,9 +660,10 @@ export const WhatsAppIntegration: React.FC = () => {
                 onFocus={() => { if (teamMembers.length === 0) loadTeamMembers(); }}
                 disabled={teamMembersLoading}
               >
-                {teamMembersLoading && <option value="">Loading…</option>}
+                <option value="ai_agent">🤖 AI Agent (release assignment)</option>
+                {teamMembersLoading && <option value="" disabled>Loading team members…</option>}
                 {!teamMembersLoading && teamMembers.length === 0 && (
-                  <option value="">No team members found</option>
+                  <option value="" disabled>No team members found</option>
                 )}
                 {teamMembers.map((m) => (
                   <option key={m.user_id} value={m.user_id}>
@@ -686,7 +694,7 @@ export const WhatsAppIntegration: React.FC = () => {
                   onChange={() => setBulkAssignFilter('unassigned')}
                   className="cursor-pointer"
                 />
-                Unassigned chats only
+                {bulkAssignUserId === 'ai_agent' ? 'Assigned chats only' : 'Unassigned chats only'}
               </label>
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -705,13 +713,15 @@ export const WhatsAppIntegration: React.FC = () => {
             {bulkAssignResult && (
               <div className="flex items-center gap-2 text-xs p-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700">
                 <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                Assigned {bulkAssignResult.assigned} of {bulkAssignResult.total} conversations.
+                {bulkAssignUserId === 'ai_agent'
+                  ? `Released ${bulkAssignResult.assigned} of ${bulkAssignResult.total} conversations back to AI Agent.`
+                  : `Assigned ${bulkAssignResult.assigned} of ${bulkAssignResult.total} conversations.`}
               </div>
             )}
 
             <Button
               size="sm"
-              className="w-full"
+              className={`w-full ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
               disabled={!bulkAssignUserId || teamMembersLoading}
               onClick={() => {
                 setBulkAssignResult(null);
@@ -721,8 +731,17 @@ export const WhatsAppIntegration: React.FC = () => {
                 setShowBulkAssignDialog(true);
               }}
             >
-              <UserCheck className="mr-2 h-4 w-4" />
-              Assign Chats
+              {bulkAssignUserId === 'ai_agent' ? (
+                <>
+                  <Bot className="mr-2 h-4 w-4" />
+                  Release to AI Agent
+                </>
+              ) : (
+                <>
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Assign Chats
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -906,27 +925,41 @@ export const WhatsAppIntegration: React.FC = () => {
       <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign {bulkAssignFilter === 'all' ? 'all active' : 'unassigned'} chats?</DialogTitle>
+            <DialogTitle>
+              {bulkAssignUserId === 'ai_agent'
+                ? `Release ${bulkAssignFilter === 'all' ? 'all active' : 'assigned'} chats to AI Agent?`
+                : `Assign ${bulkAssignFilter === 'all' ? 'all active' : 'unassigned'} chats?`}
+            </DialogTitle>
             <DialogDescription>
-              {(() => {
-                const member = teamMembers.find((m) => m.user_id === bulkAssignUserId);
-                const name = member?.name || 'the selected team member';
-                return bulkAssignFilter === 'all'
-                  ? `All active conversations will be assigned to ${name}. This will override any existing assignments.`
-                  : `All conversations not yet assigned to anyone will be assigned to ${name}.`;
-              })()}
+              {bulkAssignUserId === 'ai_agent'
+                ? bulkAssignFilter === 'all'
+                  ? 'All active conversations will have their team member assignment removed. The AI Agent will resume responding to these chats.'
+                  : 'All currently assigned conversations will be released. The AI Agent will resume responding to these chats.'
+                : (() => {
+                    const member = teamMembers.find((m) => m.user_id === bulkAssignUserId);
+                    const name = member?.name || 'the selected team member';
+                    return bulkAssignFilter === 'all'
+                      ? `All active conversations will be assigned to ${name}. This will override any existing assignments.`
+                      : `All conversations not yet assigned to anyone will be assigned to ${name}.`;
+                  })()}
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
-            Assigned team members will receive a copy of incoming messages on their own WhatsApp so they can reply directly.
+          <div className={`rounded-lg p-3 text-xs ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`}>
+            {bulkAssignUserId === 'ai_agent'
+              ? 'The AI Agent will automatically start handling messages in the released conversations.'
+              : 'Assigned team members will receive a copy of incoming messages on their own WhatsApp so they can reply directly.'}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setShowBulkAssignDialog(false)} disabled={bulkAssigning}>
               Cancel
             </Button>
-            <Button onClick={handleBulkAssign} disabled={bulkAssigning}>
+            <Button
+              onClick={handleBulkAssign}
+              disabled={bulkAssigning}
+              className={bulkAssignUserId === 'ai_agent' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+            >
               {bulkAssigning && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
-              Yes, assign chats
+              {bulkAssignUserId === 'ai_agent' ? 'Yes, release to AI Agent' : 'Yes, assign chats'}
             </Button>
           </DialogFooter>
         </DialogContent>
