@@ -128,12 +128,20 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           recommendations,
           metaTemplateName: selectedTemplate.name,
           languageCode: selectedTemplate.language_code || 'en',
+          templateParameterCount: selectedTemplate.parameter_count ?? 1,
         } as any).then((result: any) => {
           const inner = result?.data ?? result;
+          const sent   = inner?.sentCount  ?? 0;
           const failed = inner?.failedCount ?? 0;
-          if (failed > 0) console.warn(`[Broadcast] ${inner?.sentCount} sent, ${failed} failed`);
-          else console.log(`[Broadcast] Complete — ${inner?.sentCount} sent`);
-        }).catch((err: any) => console.error('[Broadcast] Error:', err));
+          if (failed > 0) {
+            console.warn(`[Broadcast] ${sent} sent, ${failed} failed`);
+            console.warn('[Broadcast] Failed members:', JSON.stringify(inner?.failedMembers, null, 2));
+          } else {
+            console.log(`[Broadcast] Complete — ${sent} sent`);
+          }
+        }).catch((err: any) => {
+          console.error('[Broadcast] Error:', err?.response?.data ?? err?.message ?? err);
+        });
 
       } else {
         if (!scheduledTime) { alert('Please select a scheduled time'); return; }
@@ -145,6 +153,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           templateIds: [],
           metaTemplateName: selectedTemplate.name,
           languageCode: selectedTemplate.language_code || 'en',
+          templateParameterCount: selectedTemplate.parameter_count ?? 1,
         } as any);
 
         if ((result as any)?.success || (result as any)?.id) {

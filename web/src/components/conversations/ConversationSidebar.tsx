@@ -524,7 +524,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         exitSelectMode();
       }
     },
-    [selectedIds, groupTemplateSendTarget, exitSelectMode]
+    [selectedIds, groupTemplateSendTarget, exitSelectMode, backendChannel]
   );
 
   // Called from ChatGroupManager single-group "Send Template" hover button
@@ -1227,6 +1227,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       <ImportLeadsDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
+        channel={backendChannel}
         onImportComplete={() => {
           // Refresh conversations and reload contacts in New Chat panel
           if (onRefresh) onRefresh();
