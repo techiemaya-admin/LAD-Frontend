@@ -15,6 +15,7 @@ import {
   Trash2,
   FileSpreadsheet,
   Download,
+  FolderPlus,
 } from 'lucide-react';
 import { Workbook } from 'exceljs';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ interface ImportLeadsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
+  channel?: 'personal' | 'waba';
 }
 
 const EMPTY_LEAD: Omit<LeadEntry, 'id'> = {
@@ -91,7 +93,7 @@ const API_BASE = '/api/whatsapp-conversations';
 
 // ── Component ────────────────────────────────────────────────────
 
-export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: ImportLeadsDialogProps) {
+export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channel }: ImportLeadsDialogProps) {
   const [activeTab, setActiveTab] = useState('single');
   const [leads, setLeads] = useState<LeadEntry[]>([newLead()]);
   const [groups, setGroups] = useState<ChatGroup[]>([]);
@@ -108,11 +110,15 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
   const excelInputRef = useRef<HTMLInputElement>(null);
   const [broadcastName, setBroadcastName] = useState('');
   const [showBroadcastPrompt, setShowBroadcastPrompt] = useState(false);
+  const [showAddToGroupPrompt, setShowAddToGroupPrompt] = useState(false);
+  const [postImportGroupIds, setPostImportGroupIds] = useState<Set<string>>(new Set());
+  const [addingToGroups, setAddingToGroups] = useState(false);
 
   // Load chat groups when dialog opens
   useEffect(() => {
     if (!open) return;
-    fetch(`${API_BASE}/chat-groups`, {
+    const channelParam = channel === 'personal' ? '?channel=personal' : '';
+    fetch(`${API_BASE}/chat-groups${channelParam}`, {
       headers: {
         'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
       },
@@ -122,7 +128,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
         if (data.success) setGroups(data.data || []);
       })
       .catch(() => {});
-  }, [open]);
+  }, [open, channel]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -131,6 +137,11 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
       setSelectedGroupIds(new Set());
       setImportResult(null);
       setActiveTab('single');
+      setShowBroadcastPrompt(false);
+      setBroadcastName('');
+      setShowAddToGroupPrompt(false);
+      setPostImportGroupIds(new Set());
+      setAddingToGroups(false);
     }
   }, [open]);
 
@@ -336,7 +347,8 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
     setImportResult(null);
 
     try {
-      const res = await fetch(`${API_BASE}/leads/import`, {
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      const res = await fetch(`${API_BASE}/leads/import${channelParam}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -385,6 +397,39 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete }: Impo
       setImporting(false);
     }
   }, [leads, selectedGroupIds, onImportComplete, onOpenChange]);
+
+  const handleAddToExistingGroups = useCallback(async () => {
+    if (postImportGroupIds.size === 0) return;
+    setAddingToGroups(true);
+    try {
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      const leadsForGroup = leads
+        .filter((l) => l.name.trim() && l.phone.trim())
+        .map((l) => ({
+          name: l.name.trim(),
+          phone: l.phone.trim(),
+          email: l.email.trim() || null,
+        }));
+      for (const groupId of postImportGroupIds) {
+        await fetch(`${API_BASE}/chat-groups/${groupId}/import-contacts${channelParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+          },
+          body: JSON.stringify({ contacts: leadsForGroup }),
+        });
+      }
+      setShowAddToGroupPrompt(false);
+      setPostImportGroupIds(new Set());
+      onOpenChange(false);
+      onImportComplete();
+    } catch (err) {
+      console.error('Failed to add to groups:', err);
+    } finally {
+      setAddingToGroups(false);
+    }
+  }, [leads, postImportGroupIds, channel, onImportComplete, onOpenChange]);
 
   const validCount = leads.filter((l) => l.name.trim()).length;
 
@@ -513,8 +558,8 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
         </Tabs>
 
-        {/* ── Broadcast Assignment ──────────────── */}
-        {groups.length > 0 && (
+        {/* ── Broadcast Assignment (pre-import only) ──────────────── */}
+        {groups.length > 0 && !importResult?.success && (
           <div className="px-4 py-3 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
               Assign to Broadcasts
@@ -563,17 +608,92 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
                     {importResult.conversations} conversation{importResult.conversations !== 1 ? 's' : ''}
                   </span>
                 </div>
-                {!showBroadcastPrompt && (
+                {!showBroadcastPrompt && !showAddToGroupPrompt && (
                   <div className="mt-2 pt-2 border-t border-green-200">
-                    <p className="text-xs font-medium mb-2">Create a broadcast group for these leads?</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs"
-                      onClick={() => setShowBroadcastPrompt(true)}
-                    >
-                      Create Broadcast Group
-                    </Button>
+                    <p className="text-xs font-medium mb-2">Add to a broadcast group?</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {groups.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs gap-1"
+                          onClick={() => setShowAddToGroupPrompt(true)}
+                        >
+                          <FolderPlus className="h-3 w-3" />
+                          Add to Existing Group
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs gap-1"
+                        onClick={() => setShowBroadcastPrompt(true)}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Create New Group
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {showAddToGroupPrompt && !showBroadcastPrompt && (
+                  <div className="mt-2 pt-2 border-t border-green-200 space-y-2">
+                    <p className="text-xs font-medium">Select groups to add leads into:</p>
+                    {groups.length === 0 ? (
+                      <p className="text-xs text-green-600/70">No broadcast groups found.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {groups.map((g) => {
+                          const sel = postImportGroupIds.has(g.id);
+                          return (
+                            <button
+                              key={g.id}
+                              onClick={() =>
+                                setPostImportGroupIds((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(g.id)) n.delete(g.id); else n.add(g.id);
+                                  return n;
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
+                                sel
+                                  ? 'bg-green-700 text-white border-green-700'
+                                  : 'bg-green-50 text-green-700 border-green-300 hover:border-green-500'
+                              )}
+                            >
+                              <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: sel ? 'white' : g.color }}
+                              />
+                              {g.name}
+                              {sel && <Check className="h-3 w-3" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex-1"
+                        onClick={() => {
+                          setShowAddToGroupPrompt(false);
+                          setPostImportGroupIds(new Set());
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs flex-1"
+                        disabled={postImportGroupIds.size === 0 || addingToGroups}
+                        onClick={handleAddToExistingGroups}
+                      >
+                        {addingToGroups && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                        Add to {postImportGroupIds.size} Group{postImportGroupIds.size !== 1 ? 's' : ''}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {showBroadcastPrompt && (
@@ -602,19 +722,40 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
                         onClick={async () => {
                           if (!broadcastName.trim()) return;
                           try {
-                            const conversationIds = importResult?.conversationIds || [];
-                            const res = await fetch(`${API_BASE}/chat-groups`, {
+                            const channelParam = channel === 'personal' ? '?channel=personal' : '';
+                            // Step 1: Create the broadcast group
+                            const createRes = await fetch(`${API_BASE}/chat-groups${channelParam}`, {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
                               },
-                              body: JSON.stringify({
-                                name: broadcastName.trim(),
-                                conversation_ids: conversationIds,
-                              }),
+                              body: JSON.stringify({ name: broadcastName.trim() }),
                             });
-                            if (res.ok) {
+                            if (createRes.ok) {
+                              const groupData = await createRes.json();
+                              // Node.js returns {success, group}; Python returns {success, data} or direct object
+                              const newGroup = groupData.group || groupData.data || (groupData.id ? groupData : null);
+                              // Step 2: Add the imported leads as members via import-contacts
+                              if (newGroup?.id) {
+                                const leadsForGroup = leads
+                                  .filter((l) => l.name.trim() && (l.phone.trim()))
+                                  .map((l) => ({
+                                    name: l.name.trim(),
+                                    phone: l.phone.trim(),
+                                    email: l.email.trim() || null,
+                                  }));
+                                if (leadsForGroup.length > 0) {
+                                  await fetch(`${API_BASE}/chat-groups/${newGroup.id}/import-contacts${channelParam}`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+                                    },
+                                    body: JSON.stringify({ contacts: leadsForGroup }),
+                                  });
+                                }
+                              }
                               setShowBroadcastPrompt(false);
                               setBroadcastName('');
                               onOpenChange(false);

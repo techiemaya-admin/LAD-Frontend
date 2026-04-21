@@ -17,6 +17,7 @@ import {
   User,
   ChevronDown,
   ChevronUp,
+  UserCheck,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,14 @@ interface AutoAssignConfig {
   enabled: boolean;
   saved_contacts_to: string;
   unsaved_contacts_to: string;
+}
+
+interface TeamMember {
+  user_id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  active_count: number;
 }
 
 interface SyncedContact {
@@ -92,6 +101,39 @@ async function updateAutoAssignConfig(tenantId: string | null, config: Partial<A
     if (!res.ok) return null;
     const data = await res.json();
     return data?.data || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTeamMembers(tenantId: string | null): Promise<TeamMember[]> {
+  try {
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const res = await fetch(`${PERSONAL_WA_API}/threads/team/workload`, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function bulkAssign(
+  tenantId: string | null,
+  userId: string,
+  filter: 'all' | 'unassigned',
+): Promise<{ success: boolean; assigned: number; total: number } | null> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const res = await fetch(`${PERSONAL_WA_API}/conversations/bulk-assign`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ user_id: userId, filter, reason: 'bulk_assign_settings' }),
+    });
+    if (!res.ok) return null;
+    return res.json();
   } catch {
     return null;
   }
@@ -230,6 +272,15 @@ export const WhatsAppIntegration: React.FC = () => {
   const [contactsLoading, setContactsLoading] = useState(false);
   const contactsSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Bulk assign state
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+  const [bulkAssignUserId, setBulkAssignUserId] = useState<string>('');
+  const [bulkAssignFilter, setBulkAssignFilter] = useState<'all' | 'unassigned'>('unassigned');
+  const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [bulkAssignResult, setBulkAssignResult] = useState<{ assigned: number; total: number } | null>(null);
+
   const loadContacts = useCallback(async (page = 1, search = '') => {
     setContactsLoading(true);
     const result = await fetchSyncedContacts(tenantId, { page, limit: 100, search });
@@ -238,6 +289,28 @@ export const WhatsAppIntegration: React.FC = () => {
     setContactsPage(result.page);
     setContactsLoading(false);
   }, [tenantId]);
+
+  const loadTeamMembers = useCallback(async () => {
+    setTeamMembersLoading(true);
+    const members = await fetchTeamMembers(tenantId);
+    setTeamMembers(members);
+    if (members.length > 0 && !bulkAssignUserId) {
+      setBulkAssignUserId(members[0].user_id);
+    }
+    setTeamMembersLoading(false);
+  }, [tenantId, bulkAssignUserId]);
+
+  const handleBulkAssign = useCallback(async () => {
+    if (!bulkAssignUserId) return;
+    setBulkAssigning(true);
+    setBulkAssignResult(null);
+    const result = await bulkAssign(tenantId, bulkAssignUserId, bulkAssignFilter);
+    if (result?.success) {
+      setBulkAssignResult({ assigned: result.assigned, total: result.total });
+    }
+    setBulkAssigning(false);
+    setShowBulkAssignDialog(false);
+  }, [tenantId, bulkAssignUserId, bulkAssignFilter]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -558,6 +631,102 @@ export const WhatsAppIntegration: React.FC = () => {
           )}
         </div>
 
+        {/* Assign All Chats to Team Member */}
+        <div className="border-t pt-4 mt-2">
+          <div className="flex gap-3 items-start mb-3">
+            <UserCheck className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">Assign chats to team member</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Bulk-assign conversations so a team member receives forwarded messages.
+              </p>
+            </div>
+          </div>
+
+          {/* Team member selector */}
+          <div className="ml-8 space-y-3">
+            <div className="flex gap-2 items-center">
+              <select
+                className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                value={bulkAssignUserId}
+                onChange={(e) => setBulkAssignUserId(e.target.value)}
+                onFocus={() => { if (teamMembers.length === 0) loadTeamMembers(); }}
+                disabled={teamMembersLoading}
+              >
+                {teamMembersLoading && <option value="">Loading…</option>}
+                {!teamMembersLoading && teamMembers.length === 0 && (
+                  <option value="">No team members found</option>
+                )}
+                {teamMembers.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.name}{m.active_count > 0 ? ` (${m.active_count} active)` : ''}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-2"
+                onClick={loadTeamMembers}
+                disabled={teamMembersLoading}
+                title="Refresh team members"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${teamMembersLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+
+            {/* Filter: all vs unassigned */}
+            <div className="flex gap-4 text-xs text-gray-600">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="bulkAssignFilter"
+                  value="unassigned"
+                  checked={bulkAssignFilter === 'unassigned'}
+                  onChange={() => setBulkAssignFilter('unassigned')}
+                  className="cursor-pointer"
+                />
+                Unassigned chats only
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="bulkAssignFilter"
+                  value="all"
+                  checked={bulkAssignFilter === 'all'}
+                  onChange={() => setBulkAssignFilter('all')}
+                  className="cursor-pointer"
+                />
+                All active chats
+              </label>
+            </div>
+
+            {/* Result feedback */}
+            {bulkAssignResult && (
+              <div className="flex items-center gap-2 text-xs p-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                Assigned {bulkAssignResult.assigned} of {bulkAssignResult.total} conversations.
+              </div>
+            )}
+
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={!bulkAssignUserId || teamMembersLoading}
+              onClick={() => {
+                setBulkAssignResult(null);
+                if (teamMembers.length === 0) {
+                  loadTeamMembers();
+                }
+                setShowBulkAssignDialog(true);
+              }}
+            >
+              <UserCheck className="mr-2 h-4 w-4" />
+              Assign Chats
+            </Button>
+          </div>
+        </div>
+
         {/* Synced Contacts List */}
         {status === 'connected' && (
           <div className="border-t pt-4 mt-2">
@@ -728,6 +897,36 @@ export const WhatsAppIntegration: React.FC = () => {
             <Button onClick={confirmAutoAssign} disabled={autoAssignSaving}>
               {autoAssignSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
               Yes, enable auto-assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Assign Confirmation Dialog */}
+      <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign {bulkAssignFilter === 'all' ? 'all active' : 'unassigned'} chats?</DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const member = teamMembers.find((m) => m.user_id === bulkAssignUserId);
+                const name = member?.name || 'the selected team member';
+                return bulkAssignFilter === 'all'
+                  ? `All active conversations will be assigned to ${name}. This will override any existing assignments.`
+                  : `All conversations not yet assigned to anyone will be assigned to ${name}.`;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
+            Assigned team members will receive a copy of incoming messages on their own WhatsApp so they can reply directly.
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowBulkAssignDialog(false)} disabled={bulkAssigning}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkAssign} disabled={bulkAssigning}>
+              {bulkAssigning && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
+              Yes, assign chats
             </Button>
           </DialogFooter>
         </DialogContent>
