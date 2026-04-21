@@ -78,7 +78,6 @@ export function Sidebar() {
   const [displayName, setDisplayName] = useState("User");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
@@ -238,24 +237,27 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
+          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70]",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <img
               src="/MrLAD-logo.svg" 
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
               decoding="async"
-              className="h-9 w-auto object-contain"
+              className="w-8 h-8 object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
               }}
             />
+            <span className="text-sm font-semibold text-sidebar-foreground">
+              LAD
+            </span>
           </div>
           <button
             aria-label="Close menu"
@@ -269,8 +271,6 @@ export function Sidebar() {
           {nav.map((n) => {
             const Icon = n.icon;
             const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
-            const hasChildren = n.children && n.children.length > 0;
-            
             return (
               <div key={n.href} className="relative group/mob">
                 <NavLink
@@ -278,7 +278,7 @@ export function Sidebar() {
                   className={cn(
                     "relative flex items-center rounded-xl overflow-visible px-3 h-12",
                     isActive
-                      ? "bg-primary/90 text-white shadow-lg"
+                      ? "bg-primary/90 text-white"
                       : "hover:bg-white/10 text-sidebar-foreground",
                   )}
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -291,9 +291,9 @@ export function Sidebar() {
                   />
                   <span className="ml-3 text-sm font-medium">{n.label}</span>
                 </NavLink>
-                
-                {hasChildren && (
-                  <div className="pl-10 space-y-0.5 mt-1">
+                {/* Mobile child items — shown below parent on hover */}
+                {n.children && n.children.length > 0 && (
+                  <div className="overflow-hidden max-h-0 group-hover/mob:max-h-40 transition-all duration-300 ease-in-out pl-10">
                     {n.children.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
@@ -302,14 +302,14 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "flex items-center rounded-xl px-3 h-10 transition-all",
+                            "flex items-center rounded-xl px-3 h-10 mt-0.5",
                             childActive
                               ? "bg-primary/80 text-white"
-                              : "hover:bg-white/10 text-sidebar-foreground/70",
+                              : "hover:bg-white/10 text-sidebar-foreground",
                           )}
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
-                          <ChildIcon className={cn("h-4 w-4", childActive ? "text-white" : "text-sidebar-foreground/70")} />
+                          <ChildIcon className={cn("h-4 w-4", childActive ? "text-white" : "text-sidebar-foreground")} />
                           <span className="ml-2 text-sm font-medium">{child.label}</span>
                         </NavLink>
                       );
@@ -321,33 +321,8 @@ export function Sidebar() {
           })}
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
-        <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
-          {/* Tenant Selector */}
-          <div className="mb-2">
-            <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 font-bold px-3">Tenant</span>
-            <div className="mt-1 space-y-1">
-              {tenants.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    setTenantById(t.id);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition",
-                    tenant.id === t.id 
-                      ? "bg-primary/20 text-primary font-bold" 
-                      : "text-sidebar-foreground/70 hover:bg-white/5"
-                  )}
-                >
-                  <span className="truncate">{t.name}</span>
-                  {tenant.id === t.id && <span className="text-primary">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 px-3 py-2 border-t border-sidebar-border/30">
+        <div className="border-t border-sidebar-border p-3 space-y-2">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
             {isHydrated && user?.avatar ? (
               <img
                 src={user.avatar}
