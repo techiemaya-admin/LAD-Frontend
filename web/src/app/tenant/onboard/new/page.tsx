@@ -34,11 +34,14 @@ interface FormData {
 
   // Step 4 — WABA (optional)
   enableWaba: boolean;
+  wabaSlug: string;
   wabaPhoneNumberId: string;
   wabaToken: string;
   wabaPhoneNumber: string;
   wabaDisplayName: string;
   wabaAccountId: string;
+  wabaVerifyToken: string;
+  wabaAppSecret: string;
 
   // Step 5 — Features & Voice
   features: string[];
@@ -121,11 +124,14 @@ const defaultForm = (): FormData => ({
   createDatabase: true,
   customDbUrl: '',
   enableWaba: false,
+  wabaSlug: '',
   wabaPhoneNumberId: '',
   wabaToken: '',
   wabaPhoneNumber: '',
   wabaDisplayName: '',
   wabaAccountId: '',
+  wabaVerifyToken: '',
+  wabaAppSecret: '',
   features: [...DEFAULT_FEATURES],
   featureFlags: [...DEFAULT_FLAGS],
   capabilities: [...DEFAULT_CAPABILITIES],
@@ -406,6 +412,9 @@ function StepWaba({ form, set }: { form: FormData; set: (k: keyof FormData, v: a
 
       {form.enableWaba && (
         <div className="space-y-0 grid grid-cols-2 gap-x-6">
+          <FieldRow label="Webhook Slug" required hint="Used in webhook URL: /webhook/{slug}">
+            <TextInput value={form.wabaSlug} onChange={v => set('wabaSlug', v)} placeholder="primary" />
+          </FieldRow>
           <FieldRow label="Phone Number ID" required>
             <TextInput value={form.wabaPhoneNumberId} onChange={v => set('wabaPhoneNumberId', v)} placeholder="1234567890" />
           </FieldRow>
@@ -418,9 +427,17 @@ function StepWaba({ form, set }: { form: FormData; set: (k: keyof FormData, v: a
           <FieldRow label="WABA Account ID">
             <TextInput value={form.wabaAccountId} onChange={v => set('wabaAccountId', v)} placeholder="WABA account ID" />
           </FieldRow>
+          <FieldRow label="Verify Token" hint="Token set in Meta webhook config for challenge verification">
+            <TextInput value={form.wabaVerifyToken} onChange={v => set('wabaVerifyToken', v)} placeholder="e.g. Techiemaya" />
+          </FieldRow>
           <div className="col-span-2">
             <FieldRow label="Access Token" required hint="Meta permanent or temporary system user token">
               <TextInput value={form.wabaToken} onChange={v => set('wabaToken', v)} placeholder="EAAxx..." />
+            </FieldRow>
+          </div>
+          <div className="col-span-2">
+            <FieldRow label="App Secret" required hint="Facebook App Secret — used to verify webhook HMAC signatures (Meta App Dashboard → Settings → Basic)">
+              <TextInput value={form.wabaAppSecret} onChange={v => set('wabaAppSecret', v)} placeholder="32-character hex string" type="password" />
             </FieldRow>
           </div>
         </div>
@@ -600,7 +617,9 @@ function StepReview({ form }: { form: FormData }) {
           <ReviewRow label="Feature Flags" value={`${form.featureFlags.length} enabled`} />
           <ReviewRow label="Capabilities" value={`${form.capabilities.length} enabled`} />
           <ReviewRow label="Core Schema Tables" value="37 tables (billing, community ROI, apollo, etc.)" />
-          <ReviewRow label="WABA" value={form.enableWaba ? `✓ ${form.wabaPhoneNumber}` : 'Not configured'} />
+          <ReviewRow label="WABA" value={form.enableWaba ? `✓ ${form.wabaPhoneNumber} (slug: ${form.wabaSlug})` : 'Not configured'} />
+          {form.enableWaba && <ReviewRow label="Verify Token" value={form.wabaVerifyToken || '(not set)'} />}
+          {form.enableWaba && <ReviewRow label="App Secret" value={form.wabaAppSecret ? '••••••••' : '(not set)'} />}
           <ReviewRow label="Voice Agent" value={form.enableVoice ? `✓ ${form.voiceAgentName} (${form.voiceProvider})` : 'Not configured'} />
         </div>
       </div>
@@ -797,9 +816,11 @@ export default function TenantOnboardPage() {
       errs.push('Custom database URL is required when not auto-creating');
     }
     if (step === 4 && form.enableWaba) {
+      if (!form.wabaSlug.trim()) errs.push('Webhook slug is required');
       if (!form.wabaPhoneNumberId.trim()) errs.push('WABA Phone Number ID is required');
       if (!form.wabaToken.trim()) errs.push('WABA Access Token is required');
       if (!form.wabaPhoneNumber.trim()) errs.push('WABA Phone Number is required');
+      if (!form.wabaAppSecret.trim()) errs.push('Facebook App Secret is required');
     }
     return errs;
   }
@@ -844,10 +865,13 @@ export default function TenantOnboardPage() {
           ...((!form.createDatabase && form.customDbUrl) ? { db_name: undefined } : {}),
           // WABA
           waba_enabled:            form.enableWaba,
+          waba_slug:               form.enableWaba ? form.wabaSlug : undefined,
           waba_phone_number_id:    form.enableWaba ? form.wabaPhoneNumberId : undefined,
           waba_access_token:       form.enableWaba ? form.wabaToken : undefined,
           waba_business_account_id:form.enableWaba ? form.wabaAccountId : undefined,
           waba_display_name:       form.enableWaba ? form.wabaDisplayName : undefined,
+          waba_verify_token:       form.enableWaba ? form.wabaVerifyToken : undefined,
+          waba_app_secret:         form.enableWaba ? form.wabaAppSecret : undefined,
           // Features — explicit arrays override defaults in backend
           features:      form.features,
           feature_flags: form.featureFlags,
