@@ -1,13 +1,20 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Send, Clock, AlertCircle, CheckCircle } from 'lucide-react';
-import {
-  useRecommendationTemplates,
-  useSendInstantMessages,
-  useScheduleMessages,
-  CommunicationTemplate,
-} from '@lad/frontend-features/community-roi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Send, Clock, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { useSendInstantMessages, useScheduleMessages } from '@lad/frontend-features/community-roi';
+
+// ── Meta template shape from /api/whatsapp-conversations/conversations/templates?channel=waba
+interface MetaTemplate {
+  name: string;           // template key, e.g. "bni_member_followup_1"
+  body: string;           // raw body with {{1}}, {{2}} placeholders
+  parameter_count: number;
+  parameters: string[];   // placeholder names
+  status: string;         // APPROVED / PENDING / etc.
+  category: string;
+  language: string;
+  language_code: string;
+}
 
 interface MessageTemplateSenderProps {
   memberName: string;
@@ -20,6 +27,17 @@ interface MessageTemplateSenderProps {
 
 type SendMode = 'instant' | 'schedule';
 
+// Friendly display name from snake_case key
+const displayName = (key: string) =>
+  key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+// Status badge colour
+const statusColor = (s: string) => {
+  if (s === 'APPROVED') return 'bg-green-100 text-green-700';
+  if (s === 'PENDING')  return 'bg-yellow-100 text-yellow-700';
+  return 'bg-slate-100 text-slate-500';
+};
+
 const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   memberName,
   noInteractionCount,
@@ -28,64 +46,51 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { templates, isLoading: templatesLoading } = useRecommendationTemplates();
   const { sendMessages, isLoading: isSending } = useSendInstantMessages();
   const { scheduleMessages, isLoading: isScheduling } = useScheduleMessages();
 
-  const [sendMode, setSendMode] = useState<SendMode>('instant');
+  const [sendMode, setSendMode]         = useState<SendMode>('instant');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectAll, setSelectAll]       = useState(false);
   const [scheduledTime, setScheduledTime] = useState('');
-  const [step, setStep] = useState<'mode' | 'templates' | 'members' | 'confirm'>('mode');
+  const [step, setStep]                 = useState<'template' | 'members' | 'confirm'>('template');
 
-  // Calculate week dates for template preview
-  const getWeekMonday = (weekNum: number) => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(today);
-    monday.setDate(monday.getDate() + daysToMonday + (weekNum - 1) * 7);
-    return monday.toISOString().split('T')[0];
-  };
+  // Meta templates from WABA endpoint
+  const [metaTemplates, setMetaTemplates]     = useState<MetaTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templateSearch, setTemplateSearch]   = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
 
-  // Preview messages with replaced variables
-  const previewMessages = useMemo(() => {
-    return templates.map(template => {
-      let body = template.content || template.body || '';
+  // Fetch Meta-approved templates on mount
+  useEffect(() => {
+    setTemplatesLoading(true);
+    fetch('/api/whatsapp-conversations/conversations/templates?channel=waba')
+      .then(r => r.json())
+      .then(json => {
+        const list: MetaTemplate[] = json?.data ?? [];
+        // Sort: APPROVED first, then alphabetical
+        list.sort((a, b) => {
+          if (a.status === 'APPROVED' && b.status !== 'APPROVED') return -1;
+          if (b.status === 'APPROVED' && a.status !== 'APPROVED') return 1;
+          return a.name.localeCompare(b.name);
+        });
+        setMetaTemplates(list);
+      })
+      .catch(err => console.error('[MetaTemplates] fetch error', err))
+      .finally(() => setTemplatesLoading(false));
+  }, []);
 
-      // Replace variables
-      body = body.replace(/{{member_name}}/g, memberName);
-      body = body.replace(/{{no_interaction_count}}/g, noInteractionCount.toString());
-      body = body.replace(/{{week1_date}}/g, getWeekMonday(1));
-      body = body.replace(/{{week2_date}}/g, getWeekMonday(2));
+  const filteredTemplates = useMemo(() =>
+    metaTemplates.filter(t =>
+      t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+      t.body.toLowerCase().includes(templateSearch.toLowerCase())
+    ),
+  [metaTemplates, templateSearch]);
 
-      // Get top 3 recommendations for week 1
-      const week1Recs = recommendations
-        .filter(r => r.week_number === 1)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
-
-      const memberNames = week1Recs.map(r => r.member_b || '—').join(', ');
-      body = body.replace(/{{member1}},\s*{{member2}},\s*{{member3}}/g, memberNames);
-      body = body.replace(/{{member1}}/g, week1Recs[0]?.member_b || '—');
-      body = body.replace(/{{member2}}/g, week1Recs[1]?.member_b || '—');
-      body = body.replace(/{{member3}}/g, week1Recs[2]?.member_b || '—');
-
-      return {
-        ...template,
-        previewBody: body,
-      };
-    });
-  }, [templates, memberName, noInteractionCount, recommendations]);
-
+  // Member helpers
   const handleSelectAllChange = (checked: boolean) => {
     setSelectAll(checked);
-    if (checked) {
-      setSelectedMembers(allMembers.map(m => m.id));
-    } else {
-      setSelectedMembers([]);
-    }
+    setSelectedMembers(checked ? allMembers.map((m: any) => m.id) : []);
   };
 
   const handleMemberToggle = (memberId: string) => {
@@ -93,19 +98,17 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
       const updated = prev.includes(memberId)
         ? prev.filter(id => id !== memberId)
         : [...prev, memberId];
-
-      // Auto-check "Select All" if all members are now selected
-      if (updated.length === allMembers.length && allMembers.length > 0) {
-        setSelectAll(true);
-      } else {
-        setSelectAll(false);
-      }
-
+      setSelectAll(updated.length === allMembers.length && allMembers.length > 0);
       return updated;
     });
   };
 
+  const recipientCount = selectAll ? allMembers.length : selectedMembers.length;
+  const isLoading = isSending || isScheduling;
+
   const handleSend = async () => {
+    if (!selectedTemplate) return;
+
     try {
       if (sendMode === 'instant') {
         if (selectedMembers.length === 0 && !selectAll) {
@@ -114,131 +117,159 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         }
 
         const memberCount = selectAll ? allMembers.length : selectedMembers.length;
-
-        // For large broadcasts, close immediately and process in background.
-        // Waiting for 90+ members to finish exceeds browser timeout limits.
         onSuccess({ broadcasting: true, total: memberCount });
         onClose();
 
-        // Fire-and-forget — don't block UI
+        // Fire-and-forget — pass metaTemplateName so backend uses it directly
         sendMessages({
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
-          templateIds: selectedTemplateIds,
+          templateIds: [],               // not used when metaTemplateName is set
           recommendations,
-        }).then((result) => {
-          const innerData = (result as any)?.data ?? result;
-          const sentCount  = innerData?.sentCount  ?? 0;
-          const failedCount = innerData?.failedCount ?? 0;
-          if (failedCount > 0) {
-            console.warn(`[Broadcast] ${sentCount} sent, ${failedCount} failed`, innerData?.failedMembers);
+          metaTemplateName: selectedTemplate.name,
+          languageCode: selectedTemplate.language_code || 'en',
+          templateParameterCount: selectedTemplate.parameter_count ?? 1,
+        } as any).then((result: any) => {
+          const inner = result?.data ?? result;
+          const sent   = inner?.sentCount  ?? 0;
+          const failed = inner?.failedCount ?? 0;
+          if (failed > 0) {
+            console.warn(`[Broadcast] ${sent} sent, ${failed} failed`);
+            console.warn('[Broadcast] Failed members:', JSON.stringify(inner?.failedMembers, null, 2));
           } else {
-            console.log(`[Broadcast] Complete — ${sentCount} messages sent`);
+            console.log(`[Broadcast] Complete — ${sent} sent`);
           }
-        }).catch((err) => {
-          console.error('[Broadcast] Error:', err);
+        }).catch((err: any) => {
+          console.error('[Broadcast] Error:', err?.response?.data ?? err?.message ?? err);
         });
 
-        return; // already closed
       } else {
-        // Schedule mode
-        if (!scheduledTime) {
-          alert('Please select a scheduled time');
-          return;
-        }
+        if (!scheduledTime) { alert('Please select a scheduled time'); return; }
 
         const result = await scheduleMessages({
           scheduledTime,
           sendToAllMembers: selectAll,
           memberIds: selectAll ? undefined : selectedMembers,
-          templateIds: selectedTemplateIds,
-        });
+          templateIds: [],
+          metaTemplateName: selectedTemplate.name,
+          languageCode: selectedTemplate.language_code || 'en',
+          templateParameterCount: selectedTemplate.parameter_count ?? 1,
+        } as any);
 
         if ((result as any)?.success || (result as any)?.id) {
-          onSuccess(result);
-          onClose();
+          onSuccess(result); onClose();
         } else {
-          const errMsg = (result as any)?.error ?? 'Failed to schedule messages';
-          alert(`Schedule failed: ${errMsg}`);
+          alert((result as any)?.error ?? 'Failed to schedule messages');
         }
       }
     } catch (error: any) {
       console.error('Error sending messages:', error);
-      const msg = error?.response?.data?.error ?? error?.message ?? 'Unknown error';
-      alert(`Failed to send messages: ${msg}`);
+      alert(error?.response?.data?.error ?? error?.message ?? 'Unknown error');
     }
   };
 
-  const recipientCount = sendMode === 'instant' ? selectedMembers.length : (selectAll ? allMembers.length : selectedMembers.length);
-  const isLoading = templatesLoading || isSending || isScheduling;
-
-  // Step 1: Send Mode Selection
-  if (step === 'mode') {
+  // ─── STEP 1: Template Selection ────────────────────────────────────────────
+  if (step === 'template') {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Send Recommendations</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Choose how you'd like to send the WhatsApp recommendations to members
-          </p>
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Send Message</h2>
+          <p className="text-sm text-slate-500 mb-5">Select a Meta-approved template to send</p>
 
-          {/* Message Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <h3 className="font-semibold text-slate-900 mb-3">Message Preview</h3>
-            <div className="space-y-4">
-              {previewMessages.map((msg, idx) => (
-                <div key={msg.id} className="bg-white rounded-lg p-3 text-sm">
-                  <p className="text-xs text-slate-500 font-medium mb-1">Template {idx + 1}</p>
-                  <p className="text-slate-700 whitespace-pre-wrap">{msg.previewBody}</p>
-                </div>
-              ))}
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={templateSearch}
+              onChange={e => setTemplateSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Template list */}
+          <div className="flex-1 overflow-y-auto space-y-2 mb-5 pr-1">
+            {templatesLoading ? (
+              <div className="flex items-center justify-center py-10 text-slate-500 text-sm gap-2">
+                <span className="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                Loading templates from Meta...
+              </div>
+            ) : filteredTemplates.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-slate-400 text-sm gap-2">
+                <AlertCircle className="w-8 h-8" />
+                <p>{templateSearch ? 'No templates match your search.' : 'No approved templates found.'}</p>
+              </div>
+            ) : (
+              filteredTemplates.map(t => {
+                const isSelected = selectedTemplate?.name === t.name;
+                return (
+                  <button
+                    key={t.name}
+                    onClick={() => setSelectedTemplate(t)}
+                    className={`w-full text-left p-4 border rounded-xl transition ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+                        : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {isSelected && <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
+                      <span className="font-semibold text-slate-900 text-sm">{displayName(t.name)}</span>
+                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(t.status)}`}>
+                        {t.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono leading-relaxed line-clamp-3">
+                      {t.body || '(no body text)'}
+                    </p>
+                    {t.parameter_count > 0 && (
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        {t.parameter_count} parameter{t.parameter_count > 1 ? 's' : ''}: {t.parameters.map(p => `{{${p}}}`).join(', ')}
+                      </p>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Send mode */}
+          {selectedTemplate && (
+            <div className="flex gap-3 mb-5">
+              <button
+                onClick={() => setSendMode('instant')}
+                className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition ${
+                  sendMode === 'instant'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Send className="w-4 h-4" />
+                Send Instantly
+              </button>
+              <button
+                onClick={() => setSendMode('schedule')}
+                className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition ${
+                  sendMode === 'schedule'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Schedule for Later
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Send Mode Selection */}
-          <div className="space-y-3 mb-6">
-            <label className="flex items-start p-4 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition">
-              <input
-                type="radio"
-                checked={sendMode === 'instant'}
-                onChange={() => setSendMode('instant')}
-                className="mt-1 mr-3 cursor-pointer"
-              />
-              <div>
-                <p className="font-semibold text-slate-900">Send Instantly</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Select specific members and send messages immediately
-                </p>
-              </div>
-            </label>
-
-            <label className="flex items-start p-4 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition">
-              <input
-                type="radio"
-                checked={sendMode === 'schedule'}
-                onChange={() => setSendMode('schedule')}
-                className="mt-1 mr-3 cursor-pointer"
-              />
-              <div>
-                <p className="font-semibold text-slate-900">Schedule for Later</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Schedule messages to send at a specific date and time
-                </p>
-              </div>
-            </label>
-          </div>
-
-          {/* Action Buttons */}
           <div className="flex gap-3 justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
-            >
+            <button onClick={onClose} className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition">
               Cancel
             </button>
             <button
-              onClick={() => setStep('templates')}
-              className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition"
+              onClick={() => setStep('members')}
+              disabled={!selectedTemplate}
+              className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition"
             >
               Next
             </button>
@@ -248,151 +279,60 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
     );
   }
 
-  // Step 2: Template Selection
-  if (step === 'templates') {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Templates</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Choose which WhatsApp templates to send. Each selected template will be sent as a separate message.
-          </p>
-
-          {templatesLoading ? (
-            <div className="flex items-center justify-center py-10 text-slate-500 text-sm">
-              Loading templates...
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-400 text-sm gap-2">
-              <AlertCircle className="w-8 h-8" />
-              <p>No WhatsApp templates found for this tenant.</p>
-              <p className="text-xs text-slate-400">Run the seed SQL to add Meta-approved templates.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 mb-6">
-              {previewMessages.map((msg) => (
-                <label
-                  key={msg.id}
-                  className={`flex items-start p-4 border rounded-xl cursor-pointer transition ${
-                    selectedTemplateIds.includes(msg.id)
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedTemplateIds.includes(msg.id)}
-                    onChange={() => {
-                      setSelectedTemplateIds(prev =>
-                        prev.includes(msg.id)
-                          ? prev.filter(id => id !== msg.id)
-                          : [...prev, msg.id]
-                      );
-                    }}
-                    className="mt-1 mr-3 cursor-pointer accent-indigo-600"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 text-sm mb-1">{msg.name}</p>
-                    <p className="text-xs text-slate-500 whitespace-pre-wrap break-words leading-relaxed">
-                      {msg.previewBody}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => setStep('mode')}
-              className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
-            >
-              Back
-            </button>
-            <button
-              onClick={() => setStep('members')}
-              disabled={selectedTemplateIds.length === 0}
-              className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition"
-            >
-              Next ({selectedTemplateIds.length} selected)
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Step 3: Member Selection
+  // ─── STEP 2: Member Selection ───────────────────────────────────────────────
   if (step === 'members') {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            {sendMode === 'instant' ? 'Select Members' : 'Choose Recipients'}
-          </h2>
-          <p className="text-sm text-slate-500 mb-6">
-            {sendMode === 'instant'
-              ? 'Select which members to send the recommendations to'
-              : 'Send to all members or select specific ones'}
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Select Recipients</h2>
+          <p className="text-sm text-slate-500 mb-5">
+            Template: <span className="font-semibold text-indigo-600">{displayName(selectedTemplate?.name ?? '')}</span>
           </p>
 
-          {/* Select All Checkbox */}
-          <div className="mb-6 pb-6 border-b border-slate-200">
+          {/* Select all */}
+          <div className="mb-4 pb-4 border-b border-slate-200">
             <label className="flex items-center p-3 bg-indigo-50 rounded-lg cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectAll}
                 onChange={e => handleSelectAllChange(e.target.checked)}
-                className="w-4 h-4 mr-3 cursor-pointer"
+                className="w-4 h-4 mr-3 cursor-pointer accent-indigo-600"
               />
               <span className="font-medium text-slate-900">Send to all {allMembers.length} members</span>
             </label>
           </div>
 
-          {/* Member List */}
+          {/* Member list */}
           {!selectAll && (
-            <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
-              {allMembers.map(member => (
+            <div className="space-y-1 mb-5 max-h-64 overflow-y-auto">
+              {allMembers.map((member: any) => (
                 <label key={member.id} className="flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedMembers.includes(member.id)}
                     onChange={() => handleMemberToggle(member.id)}
-                    className="w-4 h-4 mr-3 cursor-pointer"
+                    className="w-4 h-4 mr-3 cursor-pointer accent-indigo-600"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900">{member.name}</p>
-                    {member.phone && (
-                      <p className="text-xs text-slate-500">{member.phone}</p>
-                    )}
+                    <p className="font-medium text-slate-900 text-sm">{member.name}</p>
+                    {member.phone && <p className="text-xs text-slate-400">{member.phone}</p>}
                   </div>
                 </label>
               ))}
             </div>
           )}
 
-          {/* Recipient Count */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-            <p className="text-sm text-blue-900">
-              📱 Will send to <strong>{recipientCount}</strong> {recipientCount === 1 ? 'member' : 'members'}
-            </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-sm text-blue-900">
+            📱 Will send to <strong>{recipientCount}</strong> {recipientCount === 1 ? 'member' : 'members'}
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => setStep('templates')}
-              className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
-            >
+            <button onClick={() => setStep('template')} className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition">
               Back
             </button>
             <button
               onClick={() => setStep('confirm')}
-              disabled={
-                sendMode === 'instant'
-                  ? selectedMembers.length === 0
-                  : sendMode === 'schedule' && selectedMembers.length === 0 && !selectAll
-              }
+              disabled={recipientCount === 0}
               className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition"
             >
               Next
@@ -403,19 +343,17 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
     );
   }
 
-  // Step 3: Confirmation / Schedule Time
+  // ─── STEP 3: Confirm / Schedule ────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">
-          {sendMode === 'instant' ? 'Confirm Send' : 'Schedule Messages'}
+        <h2 className="text-2xl font-bold text-slate-900 mb-5">
+          {sendMode === 'instant' ? 'Confirm Send' : 'Schedule Message'}
         </h2>
 
         {sendMode === 'schedule' && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Scheduled Date & Time
-            </label>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Scheduled Date & Time</label>
             <input
               type="datetime-local"
               value={scheduledTime}
@@ -426,43 +364,25 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         )}
 
         {/* Summary */}
-        <div className="bg-slate-50 rounded-xl p-4 mb-6">
-          <div className="space-y-2 text-sm">
-            <p>
-              <span className="text-slate-600">Mode:</span>{' '}
-              <span className="font-medium text-slate-900">{sendMode === 'instant' ? 'Send Immediately' : 'Schedule'}</span>
-            </p>
-            <p>
-              <span className="text-slate-600">Recipients:</span>{' '}
-              <span className="font-medium text-slate-900">{recipientCount} members</span>
-            </p>
-            <p>
-              <span className="text-slate-600">Templates:</span>{' '}
-              <span className="font-medium text-slate-900">
-                {selectedTemplateIds.length === 0
-                  ? 'None selected'
-                  : templates
-                      .filter(t => selectedTemplateIds.includes(t.id))
-                      .map(t => t.name)
-                      .join(', ')}
-              </span>
-            </p>
-            {sendMode === 'schedule' && scheduledTime && (
-              <p>
-                <span className="text-slate-600">Send At:</span>{' '}
-                <span className="font-medium text-slate-900">{new Date(scheduledTime).toLocaleString()}</span>
+        <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-2 text-sm">
+          <p><span className="text-slate-500">Template:</span> <span className="font-semibold text-slate-900">{displayName(selectedTemplate?.name ?? '')}</span></p>
+          <p><span className="text-slate-500">Mode:</span> <span className="font-semibold text-slate-900">{sendMode === 'instant' ? 'Send Immediately' : 'Scheduled'}</span></p>
+          <p><span className="text-slate-500">Recipients:</span> <span className="font-semibold text-slate-900">{recipientCount} members</span></p>
+          {sendMode === 'schedule' && scheduledTime && (
+            <p><span className="text-slate-500">Send At:</span> <span className="font-semibold text-slate-900">{new Date(scheduledTime).toLocaleString()}</span></p>
+          )}
+          {selectedTemplate?.body && (
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <p className="text-slate-500 mb-1">Message preview:</p>
+              <p className="text-xs text-slate-600 font-mono bg-white p-2 rounded border border-slate-200 whitespace-pre-wrap">
+                {selectedTemplate.body}
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3 justify-end">
-          <button
-            onClick={() => setStep('members')}
-            className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition"
-            disabled={isLoading}
-          >
+          <button onClick={() => setStep('members')} disabled={isLoading} className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition">
             Back
           </button>
           <button

@@ -101,21 +101,23 @@ async function fetchGroups(channel?: 'personal' | 'waba'): Promise<ChatGroup[]> 
   return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
-async function createGroup(name: string, color: string, description?: string): Promise<ChatGroup | null> {
-  const res = await fetch(API_BASE, {
+async function createGroup(name: string, color: string, description?: string, channel?: 'personal' | 'waba'): Promise<ChatGroup | null> {
+  const channelParam = channel === 'personal' ? '?channel=personal' : '';
+  const res = await fetch(`${API_BASE}${channelParam}`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ name, color, description: description || null }),
   });
   const data = await res.json();
 
-  // Python service wraps in {success, data}; handle both formats
+  // Node.js backend returns {success, group}; Python returns {success, data}
+  if (data.success && data.group) return data.group;
   if (data.success && data.data) return data.data;
   // Direct group object (id present = success)
   if (data.id) return data as ChatGroup;
   // 409: group name already exists — fetch existing groups and return the match
   if (res.status === 409) {
-    const listRes = await fetch(API_BASE, { headers: authHeaders() });
+    const listRes = await fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() });
     const listData = await listRes.json();
     const groups: ChatGroup[] = listData.data || listData || [];
     return groups.find((g) => g.name.toLowerCase() === name.toLowerCase()) || null;
@@ -415,13 +417,14 @@ export function ChatGroupManager({
   // Create group with selected contacts
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
-    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined);
+    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined, channel);
     if (group) {
       // If contacts are selected, add them to the group via backend
       if (selectedContacts.size > 0) {
         try {
           const contactsList = Array.from(selectedContacts.values());
-          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts`, {
+          const channelParam = channel === 'personal' ? '?channel=personal' : '';
+          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts${channelParam}`, {
             method: 'POST',
             body: JSON.stringify({
               contacts: contactsList.map(c => ({
@@ -1228,7 +1231,8 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
   const handleAddToGroup = useCallback(async (groupId: string) => {
     if (selectedIds.size === 0) return;
     try {
-      await fetch(`${API_BASE}/${groupId}/conversations`, {
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      await fetch(`${API_BASE}/${groupId}/conversations${channelParam}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selectedIds) }),
@@ -1238,7 +1242,7 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
     }
     setIsOpen(false);
     onDone();
-  }, [selectedIds, onDone]);
+  }, [selectedIds, onDone, channel]);
 
   if (!isOpen) {
     return (
