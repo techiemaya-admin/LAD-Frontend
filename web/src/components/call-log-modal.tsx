@@ -1082,7 +1082,7 @@ export function CallLogModal({
         </div> */}
 
         {/* Body */}
-        <div className="flex flex-col h-full pt-12 p-6 space-y-6 overflow-hidden">
+        <div className="flex flex-col h-full pt-20 p-6 space-y-6 overflow-hidden">
 
           {logLoading ? (
             /* ── Skeleton while initial data loads ── */

@@ -278,7 +278,7 @@ export function CallLogsTable({
     // Match pattern like "2026-03-09T12-41-19-128Z-bulk_call_template__9_.xlsx"
     const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/;
     const match = fileName.match(timestampPattern);
-    
+
     if (match) {
       const [_, year, month, day, hours, minutes] = match;
       const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
@@ -290,13 +290,13 @@ export function CallLogsTable({
         minute: '2-digit',
         hour12: true
       });
-      
+
       // Extract the rest of the filename after the timestamp and Z-
       const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
-      
+
       return `${formattedDateTime} - ${restOfFileName}`;
     }
-    
+
     return fileName;
   };
 
@@ -315,7 +315,7 @@ export function CallLogsTable({
   const getStatusReason = (item: CallLog): string | undefined => {
     const raw: any = (item as any)?.metadata;
     if (!raw) return undefined;
-    
+
     let reason: string | undefined;
     if (typeof raw === 'string') {
       try {
@@ -331,7 +331,7 @@ export function CallLogsTable({
     if (reason && typeof reason === 'string') {
       return reason.replace(/_/g, ' ');
     }
-    
+
     return reason;
   };
 
@@ -759,7 +759,7 @@ export function CallLogsTable({
                 title={`Download ${attachmentFileName}`}
               >
                 <Download className="w-6 h-6" />
-                
+
               </button>
             )}
           </div>
@@ -913,7 +913,7 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onRetrySelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-800 rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
                   >
                     Retry ({failedCount})
                   </button>
@@ -924,7 +924,7 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onEndSelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
+                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
                   >
                     End ({selectedCalls.size})
                   </button>
@@ -933,7 +933,7 @@ export function CallLogsTable({
             )}
           </div>
         </div>
-        
+
         {/* Custom Date Inputs Picker (only show when custom is selected) */}
         {dateFilter === 'custom' && (
           <div className="flex gap-3 px-4 justify-end mt-2">
@@ -1004,218 +1004,218 @@ export function CallLogsTable({
                 </TableRow>
               ))}
             </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            // Skeleton rows
-            Array.from({ length: 8 }).map((_, i) => (
-              <TableRow key={`skeleton-${i}`} className="animate-pulse">
-                {columns.map((col, j) => (
-                  <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : batchGroups ? (
-            (() => {
-              // Create timeline items combining batches and individual calls
-              const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
-
-              const visibleRowIds = new Set(
-                table.getRowModel().rows.map((r) => (r.original as any)?.id),
-              );
-
-              // Use filteredBatchGroups instead of batchGroups
-              const groupsToRender = filteredBatchGroups || batchGroups;
-
-              // Add batch groups with their earliest timestamp
-              Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
-                // For expanded batches, show all calls; for collapsed batches, only show headers
-                const callsToRender = expandedBatches.has(batchId)
-                  ? calls  // Show all calls when expanded
-                  : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
-
-                if (callsToRender.length === 0) return;
-                const earliestTimestamp = Math.min(
-                  ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
-                );
-                timelineItems.push({
-                  type: 'batch',
-                  data: { batchId, calls: callsToRender },
-                  timestamp: earliestTimestamp
-                });
-              });
-
-              // Add individual calls
-              groupsToRender.noBatchCalls.forEach(call => {
-                if (!visibleRowIds.has((call as any)?.id)) return;
-                timelineItems.push({
-                  type: 'call',
-                  data: call,
-                  timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
-                });
-              });
-
-              // Check if there's any data
-              if (timelineItems.length === 0) {
-                return (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="text-center py-16"
-                    >
-                      {callFilter === 'current' ? (
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Phone className="w-8 h-8 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                              No calls in current batch
-                            </h3>
-                            <p className="text-sm text-[#64748B] mb-4">
-                              Start making calls to see them appear here
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => router.push('/make-call')}
-                            className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Go to Make Call
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Phone className="w-8 h-8 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                              Trigger a call
-                            </h3>
-                            <p className="text-sm text-[#64748B] mb-4">
-                              Start making calls to see them appear here
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => router.push('/make-call')}
-                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                          >
-                            <Phone className="w-4 h-4" />
-                            Make Call
-                          </button>
-                        </div>
-                      )}
-                    </TableCell>
+            <TableBody>
+              {isLoading ? (
+                // Skeleton rows
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`} className="animate-pulse">
+                    {columns.map((col, j) => (
+                      <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
+                        <div className="h-4 bg-gray-200 rounded w-full" />
+                      </TableCell>
+                    ))}
                   </TableRow>
-                );
-              }
+                ))
+              ) : batchGroups ? (
+                (() => {
+                  // Create timeline items combining batches and individual calls
+                  const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
 
-              // DEBUG: Log batch rendering state
-              logger.debug("[Batch Render] Timeline items:", {
-                count: timelineItems.length,
-                batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
-                  batchId: i.data.batchId,
-                  callCount: i.data.calls.length,
-                  isExpanded: expandedBatches.has(i.data.batchId),
-                })),
-                expandedBatches: Array.from(expandedBatches),
-              });
-
-              return timelineItems.map((item, index) => {
-                if (item.type === 'batch') {
-                  const { batchId, calls } = item.data;
-                  return (
-                    <React.Fragment key={`batch-group-${batchId}`}>
-                      {renderBatchHeader(batchId, calls)}
-                      {expandedBatches.has(batchId) &&
-                        calls
-                          .filter((c: CallLog) => !(c as any)?.is_batch_header)
-                          .map((call: CallLog) => renderCallRow(call, true))}
-                    </React.Fragment>
+                  const visibleRowIds = new Set(
+                    table.getRowModel().rows.map((r) => (r.original as any)?.id),
                   );
-                } else {
-                  return renderCallRow(item.data, false);
-                }
-              });
-            })()
-          ) : table.getRowModel().rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="text-center py-16"
-              >
-                {callFilter === 'current' ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                        No calls in current batch
-                      </h3>
-                      <p className="text-sm text-[#64748B] mb-4">
-                        Start making calls to see them appear here
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => router.push('/make-call')}
-                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Go to Make Call
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                        Trigger a call
-                      </h3>
-                      <p className="text-sm text-[#64748B] mb-4">
-                        Start making calls to see them appear here
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => router.push('/make-call')}
-                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Make Call
-                    </button>
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                onClick={() => onRowClick(row.original.id)}
-                className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
-                  }`}
-              >
-                {row.getVisibleCells().map((cell) => (
+
+                  // Use filteredBatchGroups instead of batchGroups
+                  const groupsToRender = filteredBatchGroups || batchGroups;
+
+                  // Add batch groups with their earliest timestamp
+                  Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
+                    // For expanded batches, show all calls; for collapsed batches, only show headers
+                    const callsToRender = expandedBatches.has(batchId)
+                      ? calls  // Show all calls when expanded
+                      : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
+
+                    if (callsToRender.length === 0) return;
+                    const earliestTimestamp = Math.min(
+                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                    );
+                    timelineItems.push({
+                      type: 'batch',
+                      data: { batchId, calls: callsToRender },
+                      timestamp: earliestTimestamp
+                    });
+                  });
+
+                  // Add individual calls
+                  groupsToRender.noBatchCalls.forEach(call => {
+                    if (!visibleRowIds.has((call as any)?.id)) return;
+                    timelineItems.push({
+                      type: 'call',
+                      data: call,
+                      timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
+                    });
+                  });
+
+                  // Check if there's any data
+                  if (timelineItems.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="text-center py-16"
+                        >
+                          {callFilter === 'current' ? (
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Phone className="w-8 h-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                  No calls in current batch
+                                </h3>
+                                <p className="text-sm text-[#64748B] mb-4">
+                                  Start making calls to see them appear here
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => router.push('/make-call')}
+                                className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Go to Make Call
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Phone className="w-8 h-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                  Trigger a call
+                                </h3>
+                                <p className="text-sm text-[#64748B] mb-4">
+                                  Start making calls to see them appear here
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => router.push('/make-call')}
+                                className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                              >
+                                <Phone className="w-4 h-4" />
+                                Make Call
+                              </button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  // DEBUG: Log batch rendering state
+                  logger.debug("[Batch Render] Timeline items:", {
+                    count: timelineItems.length,
+                    batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
+                      batchId: i.data.batchId,
+                      callCount: i.data.calls.length,
+                      isExpanded: expandedBatches.has(i.data.batchId),
+                    })),
+                    expandedBatches: Array.from(expandedBatches),
+                  });
+
+                  return timelineItems.map((item, index) => {
+                    if (item.type === 'batch') {
+                      const { batchId, calls } = item.data;
+                      return (
+                        <React.Fragment key={`batch-group-${batchId}`}>
+                          {renderBatchHeader(batchId, calls)}
+                          {expandedBatches.has(batchId) &&
+                            calls
+                              .filter((c: CallLog) => !(c as any)?.is_batch_header)
+                              .map((call: CallLog) => renderCallRow(call, true))}
+                        </React.Fragment>
+                      );
+                    } else {
+                      return renderCallRow(item.data, false);
+                    }
+                  });
+                })()
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
                   <TableCell
-                    key={cell.id}
-                    onClick={(e) => {
-                      // Prevent row click for checkbox and actions columns
-                      if (cell.column.id === 'select' || cell.column.id === 'actions') {
-                        e.stopPropagation();
-                      }
-                    }}
+                    colSpan={columns.length}
+                    className="text-center py-16"
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {callFilter === 'current' ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Phone className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                            No calls in current batch
+                          </h3>
+                          <p className="text-sm text-[#64748B] mb-4">
+                            Start making calls to see them appear here
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/make-call')}
+                          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Go to Make Call
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Phone className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                            Trigger a call
+                          </h3>
+                          <p className="text-sm text-[#64748B] mb-4">
+                            Start making calls to see them appear here
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/make-call')}
+                          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Make Call
+                        </button>
+                      </div>
+                    )}
                   </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    onClick={() => onRowClick(row.original.id)}
+                    className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                      }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        onClick={(e) => {
+                          // Prevent row click for checkbox and actions columns
+                          if (cell.column.id === 'select' || cell.column.id === 'actions') {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
           </Table>
         </div>
       </div>

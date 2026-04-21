@@ -390,18 +390,18 @@ export default function CallLogsPage() {
         const rawAnalysis = (r as any).raw_analysis || analysis?.raw_analysis || {};
 
         // Score is the ultimate source of truth for temperature buckets
-        const score = 
-          r.lead_score ?? 
-          r.score ?? 
-          analysis?.lead_score ?? 
-          rawAnalysis?.lead_score ?? 
+        const score =
+          r.lead_score ??
+          r.score ??
+          analysis?.lead_score ??
+          rawAnalysis?.lead_score ??
           (r as any).leadScore ??
           0;
 
         // 1. Get duration-based tag (heuristic)
-        const durationTag = categorizeLead({ 
-          status: r.status, 
-          duration: r.duration_seconds || r.call_duration || 0 
+        const durationTag = categorizeLead({
+          status: r.status,
+          duration: r.duration_seconds || r.call_duration || 0
         });
 
         // Direct mapping from the latest database "tags" column (category:xxx)
@@ -901,14 +901,14 @@ export default function CallLogsPage() {
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-800 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
               >
                 Retry Failed ({failedCallIds.length})
               </button>
             )}
             <button
               onClick={endSelectedCalls}
-              className="px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
             >
               End Selected ({selected.size})
             </button>

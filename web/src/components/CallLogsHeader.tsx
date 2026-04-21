@@ -5,7 +5,7 @@ interface CallLogsHeaderProps {
   filterProvider: string;
   onFilterProviderChange: (value: string) => void;
   callFilter: "all" | "current" | "previous" | "batch";
-  onCallFilterChange: (value: "all" | "current" | "previous" |"batch") => void;
+  onCallFilterChange: (value: "all" | "current" | "previous" | "batch") => void;
   uniqueProviders: string[];
   selectedCount: number;
   onEndSelected: () => void;
@@ -48,31 +48,31 @@ export function CallLogsHeader({
     <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
       {/* Title Section */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
-        
-          
-          <div>
-            <ScrollText className="w-6 h-6 text-[#1E293B] mb-1" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
-              Call Logs
-            </h1>
-            <p className="text-sm text-[#64748B] ml-2">
-              View and manage your call history
-            </p>
-          
+
+
+        <div>
+          <ScrollText className="w-6 h-6 text-[#1E293B] mb-1" />
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
+            Call Logs
+          </h1>
+          <p className="text-sm text-[#64748B] ml-2">
+            View and manage your call history
+          </p>
+
         </div>
         {selectedCount > 0 && (
           <div className="flex gap-2">
             {hasFailedCalls && (
               <button
                 onClick={onRetrySelected}
-                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-800 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
               >
                 Retry Failed ({failedCount})
               </button>
             )}
             <button
               onClick={onEndSelected}
-              className="px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
             >
               End Selected ({selectedCount})
             </button>
@@ -85,8 +85,8 @@ export function CallLogsHeader({
         <div className="flex flex-col md:flex-row gap-4">
           {/* Type Filter */}
           {/* <div className="flex items-center gap-2"> */}
-            {/* <Filter className="w-5 h-5 text-muted-foreground" /> */}
-            {/* <select
+          {/* <Filter className="w-5 h-5 text-muted-foreground" /> */}
+          {/* <select
               value={filterProvider}
               onChange={(e) => onFilterProviderChange(e.target.value)}
               className="px-4 py-3 rounded-xl border border-border bg-background/50 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 cursor-pointer"
