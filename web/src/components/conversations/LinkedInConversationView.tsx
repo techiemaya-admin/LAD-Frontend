@@ -112,10 +112,15 @@ function ContactAvatar({
     .join('')
     .toUpperCase();
 
-  if (contact.avatar) {
+  // LinkedIn CDN images (media.licdn.com) are blocked cross-origin and return 403/404.
+  // Skip the <img> entirely for those URLs — show initials instead to avoid console errors.
+  const isLinkedInCdn = contact.avatar?.includes('media.licdn.com');
+  const showAvatar = contact.avatar && !isLinkedInCdn;
+
+  if (showAvatar) {
     return (
       <img
-        src={contact.avatar}
+        src={contact.avatar!}
         alt={contact.name}
         className={cn('rounded-full object-cover flex-shrink-0', sizeClass)}
         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
