@@ -97,7 +97,18 @@ export default function AIEmailGeneratorPreview({
       }
 
       const data = await response.json();
-      setMediaUrl(data.url || data.data?.url);
+      const uploadedUrl = data.url || data.data?.url;
+      setMediaUrl(uploadedUrl);
+
+      // Persist uploaded URL to localStorage so MediaInsertionModal can list it
+      if (uploadedUrl) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
+          const entry = { url: uploadedUrl, name: file.name, uploadedAt: new Date().toISOString() };
+          const updated = [entry, ...stored.filter((s: any) => s.url !== uploadedUrl)].slice(0, 50);
+          localStorage.setItem('email_media_uploads', JSON.stringify(updated));
+        } catch { /* non-fatal */ }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       setError(errorMessage);

@@ -39,6 +39,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     sendMessage,
     markAsResolved,
     muteConversation,
+    loadMore,
+    hasMore,
+    isFetchingMore,
   } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -216,6 +219,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
               groupRefreshKey={groupRefreshKey}
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+              isFetchingMore={isFetchingMore}
             />
           </motion.div>
         )}
@@ -260,6 +266,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
                 onOpenGroupInfo={handleOpenGroupInfo}
                 onShowBroadcastModal={onShowBroadcastModal}
                 groupRefreshKey={groupRefreshKey}
+                onLoadMore={loadMore}
+                hasMore={hasMore}
+                isFetchingMore={isFetchingMore}
               />
             </motion.div>
           </motion.div>

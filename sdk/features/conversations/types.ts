@@ -139,4 +139,7 @@ export interface UseConversationsReturn {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  loadMore: () => void;
+  hasMore: boolean;
+  isFetchingMore: boolean;
 }
