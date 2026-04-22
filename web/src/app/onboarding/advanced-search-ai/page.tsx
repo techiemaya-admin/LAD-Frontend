@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X, MessageSquare, Users, Zap } from 'lucide-react';
+import { Sparkles, Gem, Upload, FileSpreadsheet, Download, CheckCircle2, Trash2, ChevronLeft, ChevronRight, X, MessageSquare, Users, Zap, Plus } from 'lucide-react';
 import { ProfileSummaryDialog } from '@/components/campaigns';
 import AgentVisualizer from '@/components/ui/AgentVisualizer';
 import { useOnboardingStore } from '@/store/onboardingStore';
@@ -2847,7 +2848,7 @@ export default function AdvancedSearchAIPage() {
                             finalText += `\n\n🎯 **ICP Qualification:** ${strongCount} strong match${strongCount !== 1 ? 'es' : ''}, ${moderateCount} moderate — sorted by relevance.`;
                         }
                     }
-                    setTimeout(() => setShowPanel('leads'), 500);
+                    if (realLeads.length > 0) setTimeout(() => setShowPanel('leads'), 500);
                 } else if (realLeads.length > 0) {
                     finalText = `Searching LinkedIn for leads...\n\n🔍 **Found ${searchTotal} leads** matching your search.`;
                     setTimeout(() => setShowPanel('leads'), 500);
@@ -3511,15 +3512,15 @@ export default function AdvancedSearchAIPage() {
                 {/* Suggestion chips */}
                 <div className="adv-chips-row">
                     <button className="adv-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                         Founders in trading companies in UAE
                     </button>
                     <button className="adv-chip" onClick={() => { setInput('Connect me with CFO in Goldman Sachs in USA'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
                         CFO in Goldman Sachs in USA
                     </button>
                     <button className="adv-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
                         VP of Sales in UK SaaS
                     </button>
                 </div>
@@ -3547,6 +3548,9 @@ export default function AdvancedSearchAIPage() {
             <style>{css}</style>
         </div>
     );
+
+    // Identify the latest message with targeting actions, inbound summary, or follow-up options to show in the mobile footer
+    const lastActionMsg = [...messages].reverse().find(m => !!m.targeting || m.inboundAction === 'summary' || (m.options && m.options.length > 0));
 
     /* ═══════════════════════════════════════════════
        SCREEN 2: CHAT + LEADS PANEL
@@ -3619,7 +3623,7 @@ export default function AdvancedSearchAIPage() {
                                             : 'Qualifying...'
                                     }
                                     : m;
-                                return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => { setTgStep(0); setChatBlocked(false); }} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} />;
+                                return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onStartTargeting={() => { setTgStep(0); setChatBlocked(false); }} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} isMobile={isMobile} />;
                             })}
                             {/* Import leads prompt — shown when conversation is about existing client relationships */}
                             {(() => {
@@ -3640,13 +3644,13 @@ export default function AdvancedSearchAIPage() {
                                 return (
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '8px 0 16px' }}>
                                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e8ecfa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                         </div>
                                         {hasUploadedLeads ? (
                                             <button
                                                 onClick={() => fileInputRef.current?.click()}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                                 Upload More
                                             </button>
                                         ) : (
@@ -3654,13 +3658,13 @@ export default function AdvancedSearchAIPage() {
                                                 <button
                                                     onClick={() => fileInputRef.current?.click()}
                                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', background: '#0b1957', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                                     Import your leads & create outreach journey
                                                 </button>
                                                 <button
                                                     onClick={downloadTemplate}
                                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: '#fff', border: '1.5px solid #d1d5db', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
-                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M7 10 12 15 17 10" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                                                     Download CSV Template
                                                 </button>
                                             </div>
@@ -3672,88 +3676,88 @@ export default function AdvancedSearchAIPage() {
 
                         {/* ── Inline Checkpoint Form (typeform-style) ── */}
                         {cpStep >= 0 && (
-                        <div className="adv-msgs-inner">
-                            <CheckpointFormInline
-                                step={cpStep}
-                                setStep={setCpStep}
-                                icpThreshold={cpIcpThreshold}
-                                setIcpThreshold={setCpIcpThreshold}
-                                actions={cpActions}
-                                setActions={setCpActions}
-                                connMsg={cpConnMsg}
-                                setConnMsg={setCpConnMsg}
-                                followMsg={cpFollowMsg}
-                                setFollowMsg={setCpFollowMsg}
-                                nextChannels={cpNextChannels}
-                                setNextChannels={setCpNextChannels}
-                                triggerCondition={cpTriggerCondition}
-                                setTriggerCondition={setCpTriggerCondition}
-                                days={cpDays}
-                                setDays={setCpDays}
-                                channelConfigStep={cpChannelConfigStep}
-                                setChannelConfigStep={setCpChannelConfigStep}
-                                channelDelays={cpChannelDelays}
-                                setChannelDelays={setCpChannelDelays}
-                                name={cpName}
-                                setName={setCpName}
-                                genLoading={cpGenLoading}
-                                setGenLoading={setCpGenLoading}
-                                launching={cpLaunching}
-                                setLaunching={setCpLaunching}
-                                voiceAgents={cpVoiceAgents}
-                                setVoiceAgents={setCpVoiceAgents}
-                                voiceNumbers={cpVoiceNumbers}
-                                setVoiceNumbers={setCpVoiceNumbers}
-                                selectedAgentId={cpSelectedAgentId}
-                                setSelectedAgentId={setCpSelectedAgentId}
-                                selectedVoiceId={cpSelectedVoiceId}
-                                setSelectedVoiceId={setCpSelectedVoiceId}
-                                selectedFromNumber={cpSelectedFromNumber}
-                                setSelectedFromNumber={setCpSelectedFromNumber}
-                                emailSubject={cpEmailSubject}
-                                setEmailSubject={setCpEmailSubject}
-                                emailBody={cpEmailBody}
-                                setEmailBody={setCpEmailBody}
-                                selectedEmailTemplateId={cpSelectedEmailTemplateId}
-                                setSelectedEmailTemplateId={setCpSelectedEmailTemplateId}
-                                saveTemplateMode={cpSaveTemplateMode}
-                                setSaveTemplateMode={setCpSaveTemplateMode}
-                                saveTemplateName={cpSaveTemplateName}
-                                setSaveTemplateName={setCpSaveTemplateName}
-                                emailGenLoading={cpEmailGenLoading}
-                                setEmailGenLoading={setCpEmailGenLoading}
-                                emailFromAddress={cpEmailFromAddress}
-                                setEmailFromAddress={setCpEmailFromAddress}
-                                emailProvider={cpEmailProvider}
-                                setEmailProvider={setCpEmailProvider}
-                                waBody={cpWaBody}
-                                setWaBody={setCpWaBody}
-                                waFromNumber={cpWaFromNumber}
-                                setWaFromNumber={setCpWaFromNumber}
-                                waGenLoading={cpWaGenLoading}
-                                setWaGenLoading={setCpWaGenLoading}
-                                targeting={targeting}
-                                leads={leads}
-                                leadFeedback={leadFeedback}
-                                searchSessions={searchSessions}
-                                chatMessages={messages}
-                                pendingContact={pendingContact}
-                                inboundMode={inboundMode}
-                                inboundLeads={inboundLeads}
-                                inboundLeadIds={inboundLeadIds}
-                                directContactLeadIds={directContactLeadIds}
-                                enableDailyWebPresence={cpEnableDailyWebPresence}
-                                setEnableDailyWebPresence={setCpEnableDailyWebPresence}
-                                enableDailyPosts={cpEnableDailyPosts}
-                                setEnableDailyPosts={setCpEnableDailyPosts}
-                                enableAiPersonalization={cpEnableAiPersonalization}
-                                setEnableAiPersonalization={setCpEnableAiPersonalization}
-                                enableAiConnectionPersonalization={cpEnableAiConnectionPersonalization}
-                                setEnableAiConnectionPersonalization={setCpEnableAiConnectionPersonalization}
-                                enableAiFollowupPersonalization={cpEnableAiFollowupPersonalization}
-                                setEnableAiFollowupPersonalization={setCpEnableAiFollowupPersonalization}
-                            />
-                        </div>
+                            <div className="adv-msgs-inner">
+                                <CheckpointFormInline
+                                    step={cpStep}
+                                    setStep={setCpStep}
+                                    icpThreshold={cpIcpThreshold}
+                                    setIcpThreshold={setCpIcpThreshold}
+                                    actions={cpActions}
+                                    setActions={setCpActions}
+                                    connMsg={cpConnMsg}
+                                    setConnMsg={setCpConnMsg}
+                                    followMsg={cpFollowMsg}
+                                    setFollowMsg={setCpFollowMsg}
+                                    nextChannels={cpNextChannels}
+                                    setNextChannels={setCpNextChannels}
+                                    triggerCondition={cpTriggerCondition}
+                                    setTriggerCondition={setCpTriggerCondition}
+                                    days={cpDays}
+                                    setDays={setCpDays}
+                                    channelConfigStep={cpChannelConfigStep}
+                                    setChannelConfigStep={setCpChannelConfigStep}
+                                    channelDelays={cpChannelDelays}
+                                    setChannelDelays={setCpChannelDelays}
+                                    name={cpName}
+                                    setName={setCpName}
+                                    genLoading={cpGenLoading}
+                                    setGenLoading={setCpGenLoading}
+                                    launching={cpLaunching}
+                                    setLaunching={setCpLaunching}
+                                    voiceAgents={cpVoiceAgents}
+                                    setVoiceAgents={setCpVoiceAgents}
+                                    voiceNumbers={cpVoiceNumbers}
+                                    setVoiceNumbers={setCpVoiceNumbers}
+                                    selectedAgentId={cpSelectedAgentId}
+                                    setSelectedAgentId={setCpSelectedAgentId}
+                                    selectedVoiceId={cpSelectedVoiceId}
+                                    setSelectedVoiceId={setCpSelectedVoiceId}
+                                    selectedFromNumber={cpSelectedFromNumber}
+                                    setSelectedFromNumber={setCpSelectedFromNumber}
+                                    emailSubject={cpEmailSubject}
+                                    setEmailSubject={setCpEmailSubject}
+                                    emailBody={cpEmailBody}
+                                    setEmailBody={setCpEmailBody}
+                                    selectedEmailTemplateId={cpSelectedEmailTemplateId}
+                                    setSelectedEmailTemplateId={setCpSelectedEmailTemplateId}
+                                    saveTemplateMode={cpSaveTemplateMode}
+                                    setSaveTemplateMode={setCpSaveTemplateMode}
+                                    saveTemplateName={cpSaveTemplateName}
+                                    setSaveTemplateName={setCpSaveTemplateName}
+                                    emailGenLoading={cpEmailGenLoading}
+                                    setEmailGenLoading={setCpEmailGenLoading}
+                                    emailFromAddress={cpEmailFromAddress}
+                                    setEmailFromAddress={setCpEmailFromAddress}
+                                    emailProvider={cpEmailProvider}
+                                    setEmailProvider={setCpEmailProvider}
+                                    waBody={cpWaBody}
+                                    setWaBody={setCpWaBody}
+                                    waFromNumber={cpWaFromNumber}
+                                    setWaFromNumber={setCpWaFromNumber}
+                                    waGenLoading={cpWaGenLoading}
+                                    setWaGenLoading={setCpWaGenLoading}
+                                    targeting={targeting}
+                                    leads={leads}
+                                    leadFeedback={leadFeedback}
+                                    searchSessions={searchSessions}
+                                    chatMessages={messages}
+                                    pendingContact={pendingContact}
+                                    inboundMode={inboundMode}
+                                    inboundLeads={inboundLeads}
+                                    inboundLeadIds={inboundLeadIds}
+                                    directContactLeadIds={directContactLeadIds}
+                                    enableDailyWebPresence={cpEnableDailyWebPresence}
+                                    setEnableDailyWebPresence={setCpEnableDailyWebPresence}
+                                    enableDailyPosts={cpEnableDailyPosts}
+                                    setEnableDailyPosts={setCpEnableDailyPosts}
+                                    enableAiPersonalization={cpEnableAiPersonalization}
+                                    setEnableAiPersonalization={setCpEnableAiPersonalization}
+                                    enableAiConnectionPersonalization={cpEnableAiConnectionPersonalization}
+                                    setEnableAiConnectionPersonalization={setCpEnableAiConnectionPersonalization}
+                                    enableAiFollowupPersonalization={cpEnableAiFollowupPersonalization}
+                                    setEnableAiFollowupPersonalization={setCpEnableAiFollowupPersonalization}
+                                />
+                            </div>
                         )}
 
                         {/* ── Inline Targeting Form (typeform-style) ── */}
@@ -3786,6 +3790,7 @@ export default function AdvancedSearchAIPage() {
 
                         <div ref={endRef} />
                     </div>
+
 
                     {!(isMobile && chatBlocked) && (
                         <div className={`adv-chat-input-wrap ${(!isMobile && chatBlocked) ? 'adv-chat-blur' : ''}`}>
@@ -3835,6 +3840,7 @@ export default function AdvancedSearchAIPage() {
                                     </div>
                                     {/* Premium Search toggle — uses Serper X-Ray + Sales Navigator */}
                                     <button
+                                        className="adv-premium-btn"
                                         onClick={() => setUseSalesNav(v => !v)}
                                         title={useSalesNav ? 'Premium Search ON — Google X-Ray + Sales Navigator (1 credit/search)' : 'Enable Premium Search: Google X-Ray + Sales Navigator (1 credit/search)'}
                                         style={{
@@ -3866,19 +3872,19 @@ export default function AdvancedSearchAIPage() {
                         <div className="adv-gemini-chips">
 
                             <button className="adv-gemini-chip" onClick={() => { setInput('Connect me with founders in trading companies in UAE'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                                 Founders in trading in UAE
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('Schedule sales meetings with procurement managers in HVAC in UAE'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
                                 Sales meetings with HVAC managers
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('Find VP of Sales in SaaS companies in UK'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
                                 VP of Sales in UK SaaS
                             </button>
                             <button className="adv-gemini-chip" onClick={() => { setInput('Strengthen my relationship with existing clients'); taRef.current?.focus(); }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
                                 Strengthen client relationships
 
                             </button>
@@ -3890,7 +3896,7 @@ export default function AdvancedSearchAIPage() {
                 </div>
 
                 {/* MOBILE ICP BUTTON (Always visible on mobile) */}
-                {messages.length === 0 && (
+                {isMobile && messages.length === 0 && (
                     <div className="adv-mobile-icp-box">
                         <button
                             className="adv-mobile-icp-btn"
@@ -3902,39 +3908,31 @@ export default function AdvancedSearchAIPage() {
                     </div>
                 )}
 
-                {/* MOBILE NAVIGATION SIDEBAR (Leads/Flow) - only when active results exist */}
-                {(messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
-                    <div className="adv-mobile-nav">
-                        {showPanel && (
-                            <button
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel(false)}
-                                title="Chat"
-                            >
-                                <MessageSquare size={20} />
-                                <span className="adv-nav-label">Chat</span>
-                            </button>
-                        )}
-                        {showPanel !== 'leads' && (
-                            <button
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel('leads')}
-                                title="Leads"
-                            >
-                                <Users size={20} />
-                                <span className="adv-nav-label">Leads</span>
-                            </button>
-                        )}
-                        {showPanel !== 'workflow' && (
-                            <button
-                                className="adv-nav-btn"
-                                onClick={() => setShowPanel('workflow')}
-                                title="Workflow"
-                            >
-                                <Zap size={20} />
-                                <span className="adv-nav-label">Flow</span>
-                            </button>
-                        )}
+                {/* MOBILE BOTTOM NAVIGATION (Chat/Leads/Flow) */}
+                {isMobile && (messages.length > 0 || leads.length > 0 || inboundLeads.length > 0) && (
+                    <div className="adv-mobile-footer">
+                        <button
+                            className={`adv-footer-btn ${!showPanel ? 'active' : ''}`}
+                            onClick={() => setShowPanel(false)}
+                        >
+                            <div className="adv-footer-btn-icon"><MessageSquare size={20} /></div>
+                            <span>Chat</span>
+                        </button>
+                        <button
+                            disabled={leads.length === 0 && inboundLeads.length === 0}
+                            className={`adv-footer-btn ${showPanel === 'leads' ? 'active' : ''} ${(leads.length > 0 || inboundLeads.length > 0) ? 'has-data' : ''}`}
+                            onClick={() => setShowPanel('leads')}
+                        >
+                            <div className="adv-footer-btn-icon"><Users size={20} /></div>
+                            <span>Leads</span>
+                        </button>
+                        <button
+                            className={`adv-footer-btn ${showPanel === 'workflow' ? 'active' : ''}`}
+                            onClick={() => setShowPanel('workflow')}
+                        >
+                            <div className="adv-footer-btn-icon"><Zap size={20} /></div>
+                            <span>Flow</span>
+                        </button>
                     </div>
                 )}
 
@@ -3982,27 +3980,27 @@ export default function AdvancedSearchAIPage() {
 
                         {showPanel === 'leads' ? (
 
-                        <div className="adv-panel-body">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 className="adv-panel-title" style={{ margin: 0 }}>
-                                    {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
-                                </h2>
-                                {!inboundMode && totalResults > 0 && (
-                                    <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                                        {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
-                                    </span>
-                                )}
-                                {inboundMode && inboundLeads.length > 0 && (
-                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                        {inboundLeads.length} contacts
-                                    </span>
-                                )}
-                                {!inboundMode && leads.length > 0 && totalResults === 0 && (
-                                    <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
-                                        {leads.length} contact{leads.length !== 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
+                            <div className="adv-panel-body">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h2 className="adv-panel-title" style={{ margin: 0 }}>
+                                        {inboundMode ? 'Your Imported Leads' : 'Your Lead Results'}
+                                    </h2>
+                                    {!inboundMode && totalResults > 0 && (
+                                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                                            {((searchPage - 1) * leadCount) + 1}-{Math.min(searchPage * leadCount, totalResults)} of {totalResults}
+                                        </span>
+                                    )}
+                                    {inboundMode && inboundLeads.length > 0 && (
+                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                            {inboundLeads.length} contacts
+                                        </span>
+                                    )}
+                                    {!inboundMode && leads.length > 0 && totalResults === 0 && (
+                                        <span style={{ fontSize: '12px', background: '#e0eaf5', color: '#0b1957', padding: '3px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                                            {leads.length} contact{leads.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </div>
 
                                 <p className="adv-panel-desc">
                                     <span className="adv-navy">✦</span>
@@ -4382,36 +4380,36 @@ export default function AdvancedSearchAIPage() {
                                 {/* Get More Leads button — show when there are leads and either a
                                 cursor token is available or the backend reported more total
                                 results than we're currently displaying */}
-                            {!inboundMode && leads.length > 0 && !noMoreLeads && (
-                                <div style={{
-                                    display: 'flex', justifyContent: 'center',
-                                    padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
-                                }}>
-                                    <button
-                                        disabled={loadingMore}
-                                        onClick={loadMoreLeads}
-                                        style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                            padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
-                                            border: '1px solid #e5e7eb',
-                                            background: loadingMore ? '#f9fafb' : '#0b1957',
-                                            color: loadingMore ? '#9ca3af' : '#fff',
-                                            cursor: loadingMore ? 'default' : 'pointer',
-                                            transition: 'all 0.15s',
-                                        }}
-                                    >
-                                        {loadingMore ? (
-                                            <>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
-                                                Loading more leads...
-                                            </>
-                                        ) : (
-                                            <>Get More Leads →</>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                {!inboundMode && leads.length > 0 && !noMoreLeads && (
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'center',
+                                        padding: '14px 16px', borderTop: '1px solid #e5e7eb', marginTop: '4px',
+                                    }}>
+                                        <button
+                                            disabled={loadingMore}
+                                            onClick={loadMoreLeads}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                                padding: '10px 28px', borderRadius: '24px', fontSize: '14px', fontWeight: 600,
+                                                border: '1px solid #e5e7eb',
+                                                background: loadingMore ? '#f9fafb' : '#0b1957',
+                                                color: loadingMore ? '#9ca3af' : '#fff',
+                                                cursor: loadingMore ? 'default' : 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            {loadingMore ? (
+                                                <>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin"><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                                                    Loading more leads...
+                                                </>
+                                            ) : (
+                                                <>Get More Leads →</>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                                 {/* Workflow panel header */}
@@ -5437,7 +5435,7 @@ export default function AdvancedSearchAIPage() {
    ═══════════════════════════════════════════════ */
 import { useSelector } from 'react-redux';
 
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav, isMobile }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean; isMobile?: boolean }) {
     const user = useSelector((state: any) => state.auth?.user);
     const displayName = user?.name || "User";
     const userInitial = displayName.charAt(0).toUpperCase();
@@ -5613,7 +5611,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             width: "48px", height: "48px", background: "#0b1957", borderRadius: "10px",
                             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                         }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: "15px", fontWeight: 700, color: "#111827", marginBottom: "4px" }}>
@@ -5633,7 +5631,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: useSalesNav ? "1px solid #e5e7eb" : "1px solid #fde68a", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: useSalesNav ? "#fff" : "#fffbeb"
                         }}>
                             <div className="adv-rc-icon adv-rc-icon-target" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e8ecfa", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="2" cy="6" r="1" fill="#0b1957"/><circle cx="4" cy="12" r="1" fill="#0b1957"/><circle cx="8" cy="18" r="1" fill="#0b1957"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="20" y2="12" /><line x1="12" y1="18" x2="20" y2="18" /><circle cx="2" cy="6" r="1" fill="#0b1957" /><circle cx="4" cy="12" r="1" fill="#0b1957" /><circle cx="8" cy="18" r="1" fill="#0b1957" /></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Targeting</div>
@@ -5668,7 +5666,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                             flex: 1, padding: "14px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", background: "#fff"
                         }}>
                             <div className="adv-rc-icon" style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#e0eaf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" /><path d="M12 7v4M9.5 17.5L12 11l2.5 6.5" /></svg>
                             </div>
                             <div className="adv-rc-body" style={{ flex: 1 }}>
                                 <div className="adv-rc-label" style={{ fontSize: "13px", fontWeight: 700 }}>Workflow</div>
@@ -5682,16 +5680,16 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {/* ── Modern action buttons (Example 1 style) ── */}
                 {msg.targeting && (
 
-                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px", justifyContent:"space-between" }}>
-                        <button className="adv-act-btn" style={{
-                            padding: "6px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
+                    <div className="adv-action-btns" style={{ display: "flex", gap: "8px", flexWrap: "nowrap", borderTop: "1px solid #e5e7eb", paddingTop: "12px", justifyContent: "space-between" }}>
+                        <button className="adv-act-btn adv-act-btn-refine" style={{
+                            padding: "8px 12px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "20px", fontSize: "12px", fontWeight: 600, color: "#374151"
                         }} onClick={() => onOpt('Refine my targeting criteria')}>Refine</button>
-                        <button className="adv-act-btn" style={{
-                            padding: "9px 20px", background: "#0b1957", border: "none", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "#fff",
+                        <button className="adv-act-btn adv-act-btn-journey" style={{
+                            padding: "9px 16px", background: "#0b1957", border: "none", borderRadius: "20px", fontSize: "12.5px", fontWeight: 700, color: "#fff",
                             boxShadow: "0 2px 8px rgba(23,37,96,0.35)", display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.01em"
                         }} onClick={onStartCheckpoints}>
                             Create Outreach Journey
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                         </button>
                     </div>
                 )}
@@ -5729,7 +5727,8 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                         </div>
                         <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
                             <button style={{
-                                width: '100%', padding: "10px 14px", background: "#172560", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, color: "#fff", cursor: 'pointer', boxShadow: '0 4px 12px rgba(23,37,96,0.2)'
+                                width: '100%', padding: "10px 14px", background: "#172560", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, color: "#fff", cursor: 'pointer', boxShadow: '0 4px 12px rgba(23,37,96,0.2)',
+                                display: 'block'
                             }} onClick={onStartCheckpoints}>Create Outreach Journey</button>
                         </div>
                     </div>
@@ -5746,10 +5745,10 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                 {msg.outreach_journey && msg.outreach_journey.length > 0 && (
                     <div style={{ marginTop: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '10px', letterSpacing: '.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b1957" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                             Suggested Outreach Journey
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px', justifyContent:"center" }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', overflowX: 'auto', paddingBottom: '4px', justifyContent: "center" }}>
                             {msg.outreach_journey.map((step, si) => {
                                 const channelConfig = {
                                     linkedin: {
@@ -5779,8 +5778,8 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onStartTargeting,
                                 const bgColor = step.recommended
                                     ? step.channel === 'linkedin' ? '#0a66c2'
                                         : step.channel === 'email' ? '#0b1957'
-                                        : step.channel === 'whatsapp' ? '#25d366'
-                                        : '#f97316'
+                                            : step.channel === 'whatsapp' ? '#25d366'
+                                                : '#f97316'
                                     : '#f3f4f6';
                                 return (
                                     <div key={si} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -6914,7 +6913,7 @@ function CheckpointFormInline({
                     <button onClick={() => setStep(-1)} title="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
                         onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
                         onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                 </div>
 
@@ -8123,49 +8122,49 @@ function CheckpointFormInline({
                     const dispTotal = skipsIcp ? 3 : totalSteps;
                     const isFirstStep = skipsIcp ? step <= 1 : step <= 0;
                     return (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
-                    <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                            disabled={isFirstStep}
-                            onClick={handleBack}
-                            style={{
-                                width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
-                                background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                            }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                        </button>
-                        {step < totalSteps - 1 ? (
-                            <button
-                                disabled={!canNext()}
-                                onClick={handleNext}
-                                style={{
-                                    width: '36px', height: '36px', borderRadius: '10px', border: 'none',
-                                    background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                }}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
-                            </button>
-                        ) : (
-                            <button
-                                disabled={!canNext() || launching}
-                                onClick={launchCampaign}
-                                style={{
-                                    padding: '8px 20px', borderRadius: '10px', border: 'none',
-                                    background: canNext() && !launching ? '#10b981' : '#e5e7eb',
-                                    color: canNext() && !launching ? '#fff' : '#9ca3af',
-                                    fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
-                                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
-                                }}
-                            >
-                                {launching ? 'Launching...' : 'Launch Campaign'}
-                            </button>
-                        )}
-                    </div>
-                </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
+                            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                    disabled={isFirstStep}
+                                    onClick={handleBack}
+                                    style={{
+                                        width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
+                                        background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                                    }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                                </button>
+                                {step < totalSteps - 1 ? (
+                                    <button
+                                        disabled={!canNext()}
+                                        onClick={handleNext}
+                                        style={{
+                                            width: '36px', height: '36px', borderRadius: '10px', border: 'none',
+                                            background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled={!canNext() || launching}
+                                        onClick={launchCampaign}
+                                        style={{
+                                            padding: '8px 20px', borderRadius: '10px', border: 'none',
+                                            background: canNext() && !launching ? '#10b981' : '#e5e7eb',
+                                            color: canNext() && !launching ? '#fff' : '#9ca3af',
+                                            fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {launching ? 'Launching...' : 'Launch Campaign'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     );
                 })()}
 
@@ -8685,14 +8684,14 @@ const css = `
 
             .adv-act-btn-refine {
                 display: flex; align-items: center; justify-content: center; flex: 1; gap: 8px;
-                padding: 12px 24px; border: none;
-                background: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%);
-                color: #fff; border-radius: 12px;
+                padding: 12px 24px; border: 1.5px solid #e5e7eb;
+                background: #fff;
+                color: #374151; border-radius: 12px;
                 font-size: 14px; font-weight: 700; cursor: pointer;
-                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+                box-shadow: none;
                 transition: all 0.2s;
             }
-            .adv-act-btn-refine:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
+            .adv-act-btn-refine:hover { background: #f0f4ff; border-color: #0b1957; color: #0b1957; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(11, 25, 87, 0.15); }
             .adv-act-btn-refine:active { transform: translateY(0); }
 
             .adv-act-btn-journey {
@@ -8820,57 +8819,9 @@ const css = `
                 border-radius: 20px;
                 animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
             }
-            .adv-mobile-nav {
-                display: none;
-                position: fixed;
-                right: 12px;
-                top: 84px; /* Lowered to make room for ICP box */
-                flex-direction: column;
-                gap: 12px;
-                z-index: 100;
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(10px);
-                padding: 10px 8px;
-                border: 1.5px solid #e0eaf5;
-                border-radius: 20px;
-                box-shadow: 0 8px 32px rgba(11, 25, 87, 0.15);
-                animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-            }
             @keyframes slideInRight {
                 from { opacity: 0; transform: translateX(20px); }
                 to { opacity: 1; transform: translateX(0); }
-            }
-            .adv-nav-btn {
-                width: 46px;
-                height: 48px;
-                border-radius: 14px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 3px;
-                border: none;
-                background: transparent;
-                cursor: pointer;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                color: #64748b;
-                padding: 0;
-            }
-            .adv-nav-btn:hover {
-                background: #f1f5f9;
-                color: #0b1957;
-            }
-            .adv-nav-btn-active {
-                background: #0b1957 !important;
-                color: #fff !important;
-                box-shadow: 0 4px 12px rgba(11, 25, 87, 0.25);
-                transform: scale(1.05);
-            }
-            .adv-nav-label {
-                font-size: 9px;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.02em;
             }
 
 
@@ -9041,37 +8992,78 @@ const css = `
             }
             /* ── MOBILE RESPONSIVE ── */
             @media (max-width: 768px) {
-                .adv-gemini-hero { width: 94% !important; margin: 0 auto !important; padding: 0 !important; display: flex; flex-direction: column; align-items: center; }
-                .adv-gemini-title { font-size: 22px; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; width: 100%; text-align: center; }
-                .adv-gemini-sparkle {width: 22px; height: 22px; }
-                .adv-gemini-logo-wrap {width: 56px; height: 56px; margin-bottom: 20px; }
-                .adv-gemini-logo {width: 44px; }
-                .adv-gemini-chips {flex-wrap: wrap; justify-content: center; padding: 0 !important; overflow-x: visible; gap: 8px; width: 100%; }
-                .adv-gemini-chip {padding: 8px 14px; font-size: 12px; flex: 0 0 auto; }
-                .adv-chat-input-box {border-radius: 20px; padding: 12px 14px 10px; }
-                .adv-chat-back {width: 36px; height: 36px; top: 12px; left: 12px; }
+                .adv-gemini-hero { width: 100% !important; margin: 0 !important; padding: 20px 20px 0 !important; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; flex: 0 0 auto !important; }
+                .adv-gemini-title { font-size: 24px; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 0; width: 100%; text-align: center; font-weight: 500; }
+                .adv-gemini-sparkle {width: 24px; height: 24px; }
+                .adv-gemini-logo-wrap {width: 64px; height: 64px; margin-bottom: 8px; }
+                .adv-gemini-logo {width: 50px; }
+                .adv-gemini-chips { flex-wrap: wrap; justify-content: center; padding: 10px 20px 40px !important; overflow-x: visible; gap: 10px; width: 100%; margin: 0 auto; }
+                .adv-gemini-chip { padding: 10px 16px; font-size: 12.5px; flex: 0 0 auto; border-radius: 12px; }
+                html, body { background: #FFFFFF !important; }
+                .adv-chat-input-box { width: 100% !important; max-width: 100% !important; border-radius: 20px; padding: 16px 18px 12px; border: none !important; box-shadow: none !important; outline: none !important; background: #FFFFFF !important; }
+                .adv-chat-ta { text-align: center; font-size: 15px !important; outline: none !important; border: none !important; background: #FFFFFF !important; }
+                .adv-chat-back { width: 36px; height: 36px; top: 75px; left: 12px; z-index: 2000 !important; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
-                .adv-chat-left { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; display: flex; flex-direction: column; align-items: stretch !important; }
-                .adv-mobile-nav { display: flex; right: 8px !important; left: auto !important; }
+                main { overflow: hidden !important; height: calc(100vh - 110px) !important; padding-top: 0 !important; background: #FFFFFF !important; }
+                .adv-chat-root { height: calc(100vh - 110px) !important; overflow: hidden !important; background: #FFFFFF !important; }
+                .adv-chat-main { background: #FFFFFF !important; }
+                .adv-chat-left { width: 100% !important; max-width: 100vw !important; overflow: hidden !important; display: flex; flex-direction: column; align-items: stretch !important; height: calc(100vh - 110px) !important; position: relative; background: #FFFFFF !important; }
+                .adv-chat-left-empty { justify-content: center !important; padding-bottom: 40px !important; gap: 20px; }
+                .adv-chat-left-empty .adv-chat-msgs { flex: 0 0 auto !important; display: flex; flex-direction: column; justify-content: center; padding: 0 !important; height: auto !important; margin-bottom: 0 !important; }
+                .adv-chat-left-empty .adv-msgs-inner { display: none !important; }
+                .adv-chat-left-empty .adv-chat-input-wrap { padding-bottom: 0 !important; flex: 0 0 auto !important; }
+                .adv-chat-left-empty .adv-chat-input-box { padding: 24px 30px !important; max-width: 90% !important; margin: 0 auto !important; }
+                .adv-chat-left-empty .adv-chat-ta { font-size: 20px !important; }
                 .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 80px !important; }
                 /* Decrease width for a more contained look on mobile */
-                .adv-chat-msgs { padding: 50px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; }
-                .adv-msgs-inner { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px !important; box-sizing: border-box !important; }
-                .adv-panel-body { padding-left: 12px !important; padding-right: 12px !important; }
-                .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 16px 12px !important; box-sizing: border-box !important; }
+                .adv-chat-msgs { flex: 1 !important; overflow-y: auto !important; padding: 70px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; background: #FFFFFF !important; }
+                .adv-msgs-inner { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 20px !important; box-sizing: border-box !important; }
+                .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 6px 16px 45px !important; box-sizing: border-box !important; background: #FFFFFF !important; border-top: none !important; flex: 0 0 auto !important; position: relative; z-index: 10; }
+                .adv-mobile-footer { background: #FFFFFF !important; }
+                .adv-chat-input-box { width: 100% !important; max-width: 90% !important; margin: 0 auto !important; border-radius: 20px; padding: 4px 12px 2px; background: #FFFFFF !important; }
+                .adv-input-central-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+                .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 14px !important; text-align: center !important; padding: 4px 0 !important; min-height: 24px !important; }
+                .adv-chat-input-foot { padding: 0 !important; border: none !important; background: none !important; justify-content: center !important; gap: 8px !important; }
+                .adv-premium-btn { width: 60% !important; justify-content: center !important; padding: 6px 12px !important; margin: 4px auto !important; }
+                .adv-msg-counter { font-size: 9px !important; color: #9ca3af !important; margin: 0 !important; }
+                
+                .adv-mobile-add-btn, .adv-mobile-send-btn {
+                    width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e7eb;
+                    background: #fff; display: flex; align-items: center; justify-content: center;
+                    cursor: pointer; color: #374151; flex-shrink: 0;
+                }
+                .adv-mobile-send-btn { border-color: #3b82f6; color: #3b82f6; }
+                .adv-mobile-send-btn:disabled { border-color: #e5e7eb; color: #9ca3af; }
+
+                .adv-mobile-floating-actions {
+                    position: fixed; bottom: 200px; left: 16px; right: 16px;
+                    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; z-index: 998;
+                }
+                .adv-mobile-chip {
+                    display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+                    border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+                    border: 1px solid #e5e7eb; transition: all 0.2s;
+                }
+                .adv-chip-primary { background: #fff; color: #374151; }
+                .adv-chip-navy { background: #0b1957; color: #fff; border: none; }
+                
+                .adv-opt-btn { 
+                    width: auto !important; flex: 0 0 auto !important; 
+                    padding: 8px 16px !important; border-radius: 20px !important;
+                    font-size: 12px !important; border: 1px solid #e5e7eb !important;
+                    background: #fff !important; color: #374151 !important;
+                }
+                .adv-opt-btn:first-child { background: #0b1957 !important; color: #fff !important; border: none !important; }
                 .adv-bubble-user { width: 100% !important; margin-left: auto !important; margin-right: 0 !important; justify-content: flex-end !important; padding-right: 0 !important; }
                 .adv-user-msg { max-width: 85% !important; word-wrap: break-word !important; }
                 .adv-ai-name { justify-content: flex-start !important; }
                 .adv-ai-avatar { width: 32px !important; height: 32px !important; flex-shrink: 0 !important; }
-                .adv-bubble-ai { gap: 8px !important; width: 100% !important; max-width: 100% !important; }
+                .adv-bubble-ai { gap: 10px !important; width: 100% !important; max-width: 100% !important; align-items: flex-start !important; }
                 .adv-ai-text { text-align: left !important; width: 100% !important; font-size: 13.5px !important; }
                 .adv-rc { padding: 10px 12px !important; border-radius: 10px !important; gap: 8px !important; overflow-x: hidden !important; }
                 .adv-rc-icon { width: 26px !important; height: 26px !important; border-radius: 6px !important; font-size: 14px !important; }
                 .adv-rc-label { font-size: 12px !important; }
                 .adv-rc-sub { font-size: 10px !important; }
-                .adv-act-btn-refine { padding: 10px 8px !important; font-size: 11.5px !important; flex: 1 !important; width: auto !important; justify-content: center; white-space: nowrap; }
-                .adv-act-btn-journey { padding: 10px 8px !important; font-size: 11.5px !important; flex: 1 !important; width: auto !important; justify-content: center; }
-                .adv-action-btns { flex-direction: row !important; align-items: stretch !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important; flex-wrap: nowrap !important; }
                 .adv-main-product-card { padding: 12px !important; border-radius: 10px !important; gap: 10px !important; }
                 .adv-main-product-card > div:first-of-type { width: 36px !important; height: 36px !important; font-size: 16px !important; }
                 .adv-main-product-card > div:nth-of-type(2) > div:first-of-type { font-size: 13px !important; }
@@ -9084,17 +9076,15 @@ const css = `
                 .adv-journey-stepper > div > div:nth-of-type(2) { width: 12px !important; padding-top: 10px !important; flex: 0 0 auto !important; display: flex !important; justify-content: center !important; opacity: 0.6 !important; }
                 .adv-journey-stepper span { font-size: 10px !important; }
                 /* Align text and labels to be centered */
-                .adv-journey-stepper > div > div:first-child > div { text-align: center !important; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px !important; }
-                .adv-journey-stepper > div > div:first-child > div:nth-of-type(3) { white-space: normal !important; min-height: 48px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; width: 100% !important; padding: 0 4px !important; line-height: 1.2 !important; }
+                .adv-journey-stepper > div > div:first-child > div { text-align: center !important; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 8px !important; }
+                .adv-journey-stepper > div > div:first-child > div:nth-of-type(3) { white-space: normal !important; min-height: 40px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; width: 100% !important; padding: 0 2px !important; line-height: 1.1 !important; }
                 .adv-ai-text p, .adv-ai-text div { text-align: left !important; justify-content: flex-start !important; }
                 .adv-ai-bullet { justify-content: flex-start !important; text-align: left !important; }
                 .adv-result-cards { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
-                .adv-action-btns { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; opacity: 1 !important; justify-content: center !important; }
                 .adv-rc { display: flex !important; width: 100% !important; }
                 .adv-rc-leads { display: none !important; }
                 .adv-rc-leads { display: none !important; }
                 .adv-icp-discover-btn { display: none !important; }
-                .adv-mobile-nav { top: 160px !important; }
                 .adv-mobile-icp-box { top: 90px !important; }
                 .adv-mobile-icp-btn {
                     background: #172560;
@@ -9114,12 +9104,51 @@ const css = `
                     background: #0f1842;
                     transform: scale(1.05);
                 }
-                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 40px !important; box-sizing: border-box !important; display: block; }
-                .adv-act-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: center; justify-content: center; font-size: 11px !important; padding: 10px 4px !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-                .adv-opt-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: left; font-size: 11px !important; padding: 8px 10px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+                .adv-ai-body { flex: 1 !important; min-width: 0 !important; width: auto !important; max-width: 100% !important; padding-right: 42px !important; box-sizing: border-box !important; display: block; }
+                .adv-act-btn { flex: 1 1 0 !important; width: 0 !important; box-sizing: border-box !important; text-align: center; justify-content: center; font-size: 11px !important; padding: 9px 4px !important; display: flex !important; align-items: center !important; white-space: nowrap !important; height: 38px !important; }
+                .adv-act-btn-journey svg { display: none !important; }
+                .adv-opt-btn { width: calc(50% - 4px) !important; flex: 0 0 calc(50% - 4px) !important; box-sizing: border-box !important; text-align: left; font-size: 11px !important; padding: 8px 10px !important; }
+                
+                /* MOBILE FOOTER */
+                .adv-mobile-footer {
+                    display: flex; position: fixed; bottom: 20px; left: 5%; right: 5%;
+                    height: 60px; background: #FFFFFF !important; border-radius: 40px; z-index: 1000;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                    justify-content: space-around; align-items: center;
+                    padding: 0 10px; border: none;
+                }
+                .adv-footer-btn {
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    gap: 2px; background: none; border: none; flex: 1; cursor: pointer;
+                    color: #9ca3af; font-size: 9px; font-weight: 700; text-transform: uppercase;
+                    transition: all 0.2s; position: relative;
+                }
+                .adv-footer-btn.has-data .adv-footer-btn-icon {
+                    color: #3b82f6;
+                    animation: adv-pulse-blue 2s infinite;
+                }
+                @keyframes adv-pulse-blue {
+                    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+                }
+                .adv-footer-btn:disabled {
+                    opacity: 0.4;
+                    cursor: not-allowed;
+                    filter: grayscale(1);
+                    pointer-events: none;
+                }
+                .adv-footer-btn-icon {
+                    width: 32px; height: 32px; border-radius: 50%;
+                    display: flex; align-items: center; justify-content: center;
+                    transition: all 0.2s; color: #4b5563;
+                }
+                .adv-footer-btn.active { color: #111827; }
+                .adv-footer-btn.active .adv-footer-btn-icon { background: #111827; color: #fff; }
+
                 .adv-journey-stepper { justify-content: space-between !important; width: 100% !important; }
                 .adv-center { padding: 0 0 60px !important; align-items: center !important; }
-                .adv-input-outer { width: 90% !important; max-width: 90% !important; margin: 0 auto 28px !important; }
+                .adv-input-outer { width: 92% !important; max-width: 92% !important; margin: 0 auto 90px !important; }
                 .adv-title { font-size: 24px !important; width: 88%; margin: 0 auto 24px !important; text-align: center; }
                 .adv-chips-row { width: 90% !important; justify-content: center !important; padding: 0 !important; margin: 0 auto !important; }
                 .adv-recent-wrap { width: 90% !important; margin: 16px auto 0 !important; }
