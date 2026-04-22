@@ -116,6 +116,8 @@ export default function Playground({
         onStartTesting={pg.startTesting}
         onStartDirectConfig={pg.startDirectConfig}
         onStartGuidedJourney={pg.startGuidedJourney}
+        advanceBuilderStep={pg.advanceBuilderStep}
+        builderData={pg.builderData}
         isHolding={pg.isHolding}
         reloading={pg.reloading}
         timerDisplay={pg.timerDisplay}
