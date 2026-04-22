@@ -26,7 +26,7 @@ interface IntegrationCard {
   comingSoon?: boolean;
 }
 
-const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'google', 'microsoft']);
+const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'whatsapp-personal', 'google', 'microsoft']);
 
 const INTEGRATIONS: IntegrationCard[] = [
   {
