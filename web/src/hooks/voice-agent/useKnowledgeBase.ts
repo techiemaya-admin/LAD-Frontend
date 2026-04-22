@@ -66,8 +66,11 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
         fetch(`${workerUrl}/release-call`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ call_id: sessionId.current })
-        }).catch(e => console.error(e));
+          body: JSON.stringify({ call_id: sessionId.current }),
+          keepalive: true
+        }).catch(() => {
+          // Ignore network errors on unmount
+        });
       }
     };
   }, []);
