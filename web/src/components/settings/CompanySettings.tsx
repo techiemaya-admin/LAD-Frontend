@@ -1,16 +1,42 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Building2, Upload, MapPin, Target, FileText, Briefcase, Save, X, Clock, ChevronDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import {
+  Building2, Upload, MapPin, Target, FileText, Briefcase, Save, X, Clock, ChevronDown,
+  Instagram,
+  Linkedin,
+  Mail,
+  Settings,
+  Link2,
+  Globe,
+  MessageCircle,
+  Sparkles
+} from 'lucide-react';
 import { selectSettings, setCompanyLocation, setCompanyIcp, setCompanyAbout, setCompanyServices, setCompanyBusinessHours } from '@/store/slices/settingsSlice';
 import { useBusinessHours, useUpdateBusinessHours } from '@lad/frontend-features/settings';
 import type { BusinessHoursPayload } from '@lad/frontend-features/settings';
+import { toast } from 'sonner';
+import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { useTenant } from '@/contexts/TenantContext';
+import { getCurrentUser } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 interface CompanySettingsProps {
   companyName: string;
   setCompanyName: (name: string) => void;
   companyLogo: string;
   setCompanyLogo: (logo: string) => void;
 }
+export interface CompanyProfileDetails {
+  tagline: string;
+  logo: string;
+  official_email: string;
+  whatsapp_url: string;
+  linkedin_url: string;
+  instagram_url: string;
+  website_url: string;
+}
+
 export const CompanySettings: React.FC<CompanySettingsProps> = ({
   companyName: externalCompanyName,
   setCompanyName: setExternalCompanyName,
@@ -45,6 +71,23 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     businessHours: settings.companyBusinessHours || '',
   });
 
+
+  const [companyProfileData, setCompanyProfileData] = useState({
+    company_logo_url: null as File | null,
+    tagline: '',                  // ✅ NEW
+    official_email: '',
+    whatsapp_url: '',
+    linkedin_url: '',
+    instagram_url: '',
+    website_url: '',
+    socials: '',
+  });
+
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [tenantId, setTenantId] = useState<string>("");
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [bhData, setBhData] = useState({
     startTime: '09:00',
     endTime: '18:00',
@@ -123,6 +166,42 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     setCompanyData(prev => ({ ...prev, companyName: externalCompanyName }));
   }, [externalCompanyName]);
 
+
+  const fetchCompanyProfileDetails = async (tenantId: string) => {
+    try {
+      console.log('Fetching company profile details for tenant_id:', tenantId);
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/tenant-profile/${tenantId}`);
+      const json = await res.json();
+      console.log('Fetched company profile details:', json);
+      setCompanyProfileData(json);
+    } catch (error) {
+      console.error('Failed to fetch company profile details', error);
+      toast.error('Failed to load company settings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        console.log('Fetching current user to get tenant_id...');
+        const user: any = await getCurrentUser();
+        const userTenantId = user?.user?.tenantId
+        console.log('Fetched user tenant_id:', userTenantId);
+        if (userTenantId) {
+          setTenantId(userTenantId);
+        }
+        setAuthed(true); // <--- ADD THIS
+        fetchCompanyProfileDetails(userTenantId);
+      } catch (error) {
+        setAuthed(false); // <--- ADD THIS
+        logger.error("[Call Logs] Failed to get user tenant_id", error);
+      }
+    };
+    fetchUser();
+  }, []);
+
   // Seed bhData from server when the query resolves (persists across refreshes)
   useEffect(() => {
     if (savedBH) {
@@ -144,6 +223,16 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     businessServices: false,
     businessHours: false,
   });
+  const [isCompanyProfileEditing, setIsCompanyProfileEditing] = useState({
+    tagline: false,
+    official_email: false,
+    whatsapp_url: false,
+    linkedin_url: false,
+    instagram_url: false,
+    website_url: false,
+    company_logo_url: false,
+    socials: false
+  });
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -160,12 +249,30 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       [field]: value,
     }));
   };
+
+
+  const handleCompanyProfileInputChange = (field: keyof typeof companyProfileData, value: string) => {
+    setCompanyProfileData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   const toggleEdit = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
       [field]: !prev[field],
     }));
   };
+
+
+  const toggleCompanyProfileEdit = (field: keyof typeof isCompanyProfileEditing) => {
+    setIsCompanyProfileEditing(prev => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  };
+
   const handleSaveField = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
@@ -186,6 +293,56 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       dispatch(setCompanyBusinessHours(companyData.businessHours));
     }
   };
+
+  const handleSaveCompanyProfileField = async (field: keyof typeof isCompanyProfileEditing) => {
+    setIsCompanyProfileEditing(prev => ({
+      ...prev,
+      [field]: false,
+    }));
+    console.log('Saving company profile for field:', field, companyProfileData[field as keyof typeof companyProfileData]);
+    if (field === 'socials') {
+      const fields = [
+        'whatsapp_url',
+        'linkedin_url',
+        'instagram_url',
+        'website_url'
+      ] as const;
+
+      for (const field of fields) {
+        console.log('Saving company profile for each field:', field, companyProfileData[field]);
+        await fetch(`${getApiBaseUrlForLocal()}/api/tenant-profile/${tenantId}/update-field`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            field,
+            value: companyProfileData[field],
+          }),
+        });
+      }
+    } else {
+      // Persist to Redux + localStorage
+      const jsonBody = {
+        "field": field,
+        "value": companyProfileData[field as keyof typeof companyProfileData],
+      }
+      const url = `${getApiBaseUrlForLocal()}/api/tenant-profile/${tenantId}/update-field`
+      const method = 'PATCH';
+      console.log('Saving company profile field:', jsonBody);
+      await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',   // ✅ REQUIRED
+          'Accept': 'application/json',         // ✅ optional but good
+        },
+        body: JSON.stringify(jsonBody),
+      });
+    }
+
+    fetchCompanyProfileDetails(tenantId);
+  };
+
   const handleCancelField = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
       ...prev,
@@ -219,6 +376,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
       businessHours: false,
     });
   };
+
   return (
     <div className="space-y-6">
       {/* Company Name */}
@@ -257,6 +415,52 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           />
         ) : (
           <p className="text-gray-700">{companyData.companyName || 'Not set'}</p>
+        )}
+      </div>
+      {/* Tagline */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-semibold">Tagline</h2>
+
+          {!isCompanyProfileEditing.tagline ? (
+            <button onClick={() => toggleCompanyProfileEdit('tagline')}>Edit</button>
+          ) : (
+            <button onClick={() => handleSaveCompanyProfileField('tagline')}>Save</button>
+          )}
+        </div>
+
+        {isCompanyProfileEditing.tagline ? (
+          <input
+            value={companyProfileData.tagline}
+            onChange={(e) => handleCompanyProfileInputChange('tagline', e.target.value)}
+            className="w-full border p-2"
+            placeholder="Enter tagline"
+          />
+        ) : (
+          <p>{companyProfileData.tagline || 'Not set'}</p>
+        )}
+      </div>
+      {/* Official Email */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-semibold">Official Email</h2>
+
+          {!isCompanyProfileEditing.official_email ? (
+            <button onClick={() => toggleCompanyProfileEdit('official_email')}>Edit</button>
+          ) : (
+            <button onClick={() => handleSaveCompanyProfileField('official_email')}>Save</button>
+          )}
+        </div>
+
+        {isCompanyProfileEditing.official_email ? (
+          <input
+            type="email"
+            value={companyProfileData.official_email}
+            onChange={(e) => handleCompanyProfileInputChange('official_email', e.target.value)}
+            className="w-full border p-2"
+          />
+        ) : (
+          <p>{companyProfileData.official_email || 'Not set'}</p>
         )}
       </div>
       {/* Location */}
@@ -410,6 +614,123 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
           </p>
         )}
       </div>
+
+      {/* Socials & Links */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 transition-all hover:shadow-md">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-slate-900 text-lg font-bold flex items-center gap-3">
+            <Link2 className="w-5 h-5 text-slate-700" />
+            Socials & Links
+          </h2>
+          {!isCompanyProfileEditing.socials ? (
+            <button
+              onClick={() => setIsCompanyProfileEditing({ ...isCompanyProfileEditing, socials: true })}
+              className="text-[#4F46E5] hover:text-[#4338CA] text-sm font-semibold transition-colors"
+            >
+              Update Links
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  fetchCompanyProfileDetails(tenantId);
+                  setIsCompanyProfileEditing({ ...isCompanyProfileEditing, socials: false });
+                }}
+                className="text-slate-400 hover:text-slate-600 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleSaveCompanyProfileField('socials' as any);
+                  setIsCompanyProfileEditing({ ...isCompanyProfileEditing, socials: false });
+                }}
+                className="px-4 py-1.5 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] text-sm font-bold transition-all"
+              >
+                Save Links
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-8">
+          {/* WhatsApp */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <MessageCircle className="w-3 h-3 text-emerald-500" /> WhatsApp URL
+            </label>
+            {isCompanyProfileEditing.socials ? (
+              <input
+                value={companyProfileData.whatsapp_url}
+                onChange={e => setCompanyProfileData({ ...companyProfileData, whatsapp_url: e.target.value })}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 outline-none"
+                placeholder="https://wa.me/..."
+              />
+            ) : (
+              <p className={cn("text-sm font-bold", companyProfileData.whatsapp_url ? "text-slate-700" : "text-slate-300")}>
+                {companyProfileData.whatsapp_url || 'Not set'}
+              </p>
+            )}
+          </div>
+
+          {/* LinkedIn */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Linkedin className="w-3 h-3 text-blue-600" /> LinkedIn URL
+            </label>
+            {isCompanyProfileEditing.socials ? (
+              <input
+                value={companyProfileData.linkedin_url}
+                onChange={e => setCompanyProfileData({ ...companyProfileData, linkedin_url: e.target.value })}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 outline-none"
+                placeholder="https://linkedin.com/in/..."
+              />
+            ) : (
+              <p className={cn("text-sm font-bold", companyProfileData.linkedin_url ? "text-slate-700" : "text-slate-300")}>
+                {companyProfileData.linkedin_url || 'Not set'}
+              </p>
+            )}
+          </div>
+
+          {/* Instagram */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Instagram className="w-3 h-3 text-pink-600" /> Instagram URL
+            </label>
+            {isCompanyProfileEditing.socials ? (
+              <input
+                value={companyProfileData.instagram_url}
+                onChange={e => setCompanyProfileData({ ...companyProfileData, instagram_url: e.target.value })}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 outline-none"
+                placeholder="https://instagram.com/..."
+              />
+            ) : (
+              <p className={cn("text-sm font-bold", companyProfileData.instagram_url ? "text-slate-700" : "text-slate-300")}>
+                {companyProfileData.instagram_url || 'Not set'}
+              </p>
+            )}
+          </div>
+
+          {/* Website */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Globe className="w-3 h-3 text-slate-500" /> Website URL
+            </label>
+            {isCompanyProfileEditing.socials ? (
+              <input
+                value={companyProfileData.website_url}
+                onChange={e => setCompanyProfileData({ ...companyProfileData, website_url: e.target.value })}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 outline-none"
+                placeholder="https://company.com"
+              />
+            ) : (
+              <p className={cn("text-sm font-bold", companyProfileData.website_url ? "text-slate-700" : "text-slate-300")}>
+                {companyProfileData.website_url || 'Not set'}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
       {/* Business Hours */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -479,6 +800,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
                 </div>
               </div>
             </div>
+
             {/* Row 2: Timezone + Active Days side by side */}
             <div className="grid grid-cols-2 gap-3">
               {/* Timezone */}
