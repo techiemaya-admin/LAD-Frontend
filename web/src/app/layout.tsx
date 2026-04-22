@@ -5,6 +5,8 @@ import { LoadingProvider } from "@/components/providers/loading-provider";
 import Providers from "./providers";
 import LayoutHandler from "@/components/layout/layout-handler";
 import ContactFormModal from "@/components/ContactFormModal";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 // Import VAPI error suppression (temporarily disable VAPI errors)
 import "@/utils/suppressVAPIErrors";
 
@@ -30,9 +32,19 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Force light mode — remove any saved dark theme preference
-              document.documentElement.classList.remove('dark');
-              try { localStorage.removeItem('theme'); } catch(e) {}
+              // Support dark/light mode with system preference detection
+              (function() {
+                try {
+                  const saved = localStorage.getItem('theme');
+                  const preferred = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  if (preferred === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch(e) {}
+              })();
+
               // Suppress Chrome extension message passing errors immediately
               window.addEventListener('error', function(event) {
                 if (event.message && event.message.includes('A listener indicated an asynchronous response')) {
@@ -53,19 +65,23 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`antialiased`}>
-        <Providers>
-          <LoadingProvider>
-            <AppToasterProvider>
-              {/* <PageLoader /> */}
-              <LayoutHandler>
-                {children}
-              </LayoutHandler>
-              {/* Contact Form Modal - Available globally */}
-              <ContactFormModal />
-            </AppToasterProvider>
-          </LoadingProvider>
-        </Providers>
+      <body className={`antialiased transition-colors duration-300`}>
+        <ThemeProvider>
+          <Providers>
+            <LoadingProvider>
+              <AppToasterProvider>
+                {/* <PageLoader /> */}
+                <LayoutHandler>
+                  {children}
+                </LayoutHandler>
+                {/* Contact Form Modal - Available globally */}
+                <ContactFormModal />
+                {/* Theme Toggle Button */}
+                <ThemeToggle />
+              </AppToasterProvider>
+            </LoadingProvider>
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

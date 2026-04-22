@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 export default function HeroSection() {
@@ -178,15 +177,25 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Right: Image */}
-           <Image
-              src="/lad.png"
-              alt="LAD Platform"
-              width={600}
-              height={400}
-              priority
-              className="w-full"
-            />
+          {/* Right: Video */}
+          <motion.div
+            variants={itemVariants}
+            className="w-full"
+          >
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full rounded-xl shadow-2xl"
+              style={{
+                backgroundColor: '#f0f0f0',
+              }}
+            >
+              <source src="/new-lad.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </motion.div>
         </div>
       </div>
     </motion.section>
