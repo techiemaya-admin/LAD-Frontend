@@ -233,16 +233,16 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     company_logo_url: false,
     socials: false
   });
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCompanyData(prev => ({
-        ...prev,
-        logo: file,
-        logoPreview: URL.createObjectURL(file),
-      }));
-    }
-  };
+  // const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setCompanyData(prev => ({
+  //       ...prev,
+  //       logo: file,
+  //       logoPreview: URL.createObjectURL(file),
+  //     }));
+  //   }
+  // };
   const handleInputChange = (field: keyof typeof companyData, value: string) => {
     setCompanyData(prev => ({
       ...prev,
@@ -294,6 +294,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
     }
   };
 
+
   const handleSaveCompanyProfileField = async (field: keyof typeof isCompanyProfileEditing) => {
     setIsCompanyProfileEditing(prev => ({
       ...prev,
@@ -342,6 +343,45 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
 
     fetchCompanyProfileDetails(tenantId);
   };
+
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    alert('Uploading logo...'); // Simple alert to indicate upload started
+    const file = e.target.files?.[0];
+    // Ensure we have a file and a tenant ID
+    if (!file) return;
+
+    // 1. Prepare FormData (Required for Multer)
+    const formData = new FormData();
+    formData.append('logo', file); // 'logo' must match upload.single('logo') in backend
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/tenant-profile/${tenantId}/logo`, {
+        method: 'POST',
+        body: formData,
+        // Note: Do NOT set Content-Type header manually when sending FormData, 
+        // the browser will set it automatically with the correct boundary.
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+
+        // 3. Update the local state with the NEW public URL returned from GCS
+        setCompanyProfileData({
+          ...companyProfileData,
+          company_logo_url: result.logoUrl // Use the URL returned by the backend
+        });
+
+        toast.success('Logo updated successfully');
+      } else {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Error updating logo:', error);
+      toast.error('Failed to save logo');
+    }
+  };
+
 
   const handleCancelField = (field: keyof typeof isEditing) => {
     setIsEditing(prev => ({
@@ -416,6 +456,31 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
         ) : (
           <p className="text-gray-700">{companyData.companyName || 'Not set'}</p>
         )}
+      </div>
+      {/* Company Logo */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 transition-all hover:shadow-md">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-slate-900 text-lg font-bold flex items-center gap-3">
+            <Upload className="w-5 h-5 text-slate-700" />
+            Company Logo
+          </h2>
+          <label className="text-[#4F46E5] hover:text-[#4338CA] text-sm font-semibold transition-colors cursor-pointer">
+            Upload
+            <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+          </label>
+        </div>
+        <div className="pl-8">
+          <div className="w-24 h-24 bg-slate-50 rounded-[28px] border-2 border-slate-100 flex items-center justify-center overflow-hidden shadow-inner group/logo relative">
+            {companyProfileData.company_logo_url ? (
+              <img src={companyProfileData.company_logo_url} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="w-10 h-10 text-slate-300" />
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <Upload className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        </div>
       </div>
       {/* Tagline */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
