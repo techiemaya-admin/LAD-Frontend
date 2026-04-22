@@ -18,6 +18,7 @@ import {
   Bell,
   Zap,
 } from 'lucide-react';
+import KnowledgeBaseManager from './KnowledgeBaseManager';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -575,37 +576,8 @@ export function ChatSettings() {
         </div>
       </div>
 
-      {/* ── Section 2: Knowledge Base ─────────────────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center gap-2 mb-1">
-            <BookOpen className="h-5 w-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Knowledge Base</h2>
-          </div>
-          <p className="text-sm text-gray-500">
-            This content is injected into all AI conversations as context. Add company info, FAQs, product details, etc.
-          </p>
-        </div>
-        <div className="p-6">
-          <textarea
-            className="w-full h-48 p-3 text-sm border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-gray-50"
-            value={chatSettings.knowledge_base}
-            onChange={(e) =>
-              setChatSettings((prev) => ({ ...prev, knowledge_base: e.target.value }))
-            }
-            placeholder="Enter knowledge base content here...&#10;&#10;Example:&#10;- Company name: Acme Corp&#10;- Products: Widget A, Widget B&#10;- Support hours: 9am-5pm EST"
-          />
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={handleSaveKb}
-              disabled={savingKb}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {savingKb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Knowledge Base
-            </button>
-          </div>
-        </div>
+        <KnowledgeBaseManager />
       </div>
 
       {/* ── Section 3: Campaign Settings ──────────────────────────── */}
