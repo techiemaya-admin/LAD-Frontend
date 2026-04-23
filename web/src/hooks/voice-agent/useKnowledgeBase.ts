@@ -96,8 +96,10 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   }, [tenantId, userId]);
 
   const createStore = async (displayName: string, description?: string) => {
-    if (!tenantId) throw new Error("Missing tenantId");
     try {
+      if (!tenantId) {
+        throw new Error("You must select an active organization/tenant to create a knowledge base.");
+      }
       const res = await fetch(`${workerUrl}/playground-rag/stores`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
