@@ -18,7 +18,7 @@ interface KnowledgeBaseManagerProps {
 export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBaseManagerProps) {
   const { user } = useAuth();
   const { tenantId: contextTenantId } = useTenant();
-  const effectiveTenantId = tenantId || contextTenantId || "";
+  const effectiveTenantId = tenantId || contextTenantId || (user as any)?.tenantId || "";
   const effectiveUserId = userId || (user as any)?.uid || (user as any)?.id || "";
   const rag = useKnowledgeBase(effectiveTenantId, effectiveUserId);
   
