@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, BookOpen, FileText, Plus, Trash2, Upload, Loader2, Sparkles, Folder, CheckCircle, MessageSquare, Send } from "lucide-react";
 import { useKnowledgeBase, PlaygroundStore, PlaygroundDocument } from "@/hooks/voice-agent/useKnowledgeBase";
+import ReactMarkdown from "react-markdown";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
@@ -350,13 +351,42 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
               chatMessages.map((msg, idx) => (
                 <div key={idx} className={`flex flex-col w-fit max-w-[85%] ${msg.role === "user" ? "ml-auto items-end" : "mr-auto items-start"}`}>
                   <div
-                    className={`px-4 py-2.5 rounded-2xl text-sm ${
+                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                       msg.role === "user"
                         ? "bg-purple-600 text-white rounded-br-sm text-right"
-                        : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm shadow-sm"
+                        : "bg-white border border-slate-200 text-slate-700 rounded-bl-sm shadow-sm"
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === "bot" ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-semibold text-slate-900" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                          h1: ({node, ...props}) => <h1 className="font-bold text-lg mb-2 mt-4 first:mt-0 text-slate-900" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0 text-slate-900" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="font-semibold text-base mb-2 mt-3 first:mt-0 text-slate-900" {...props} />,
+                          a: ({node, ...props}) => <a className="text-purple-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                          code: ({node, className, ...props}) => {
+                            const isInline = !className;
+                            return isInline ? (
+                              <code className="bg-slate-100 text-purple-700 px-1 py-0.5 rounded text-xs font-mono" {...props} />
+                            ) : (
+                              <div className="bg-slate-800 rounded-md my-2 overflow-hidden">
+                                <div className="px-3 py-1 bg-slate-900 text-slate-400 text-[10px] font-mono uppercase tracking-wider">{className?.replace('language-', '') || 'Code'}</div>
+                                <div className="p-3 overflow-x-auto"><code className="text-slate-50 text-xs font-mono" {...props} /></div>
+                              </div>
+                            );
+                          }
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                   {msg.role === "bot" && msg.sources && msg.sources.length > 0 && (
                     <div className="mt-1 px-1 text-[10px] text-slate-400 flex flex-wrap gap-1">
