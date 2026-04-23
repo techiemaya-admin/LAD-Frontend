@@ -64,7 +64,10 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
     const loaded: Record<string, MediaEntry[]> = {};
     for (const s of MEDIA_SECTIONS) {
       try {
-        loaded[s.key] = JSON.parse(localStorage.getItem(storageKey(s.key)) || '[]');
+        const raw = localStorage.getItem(storageKey(s.key));
+        const parsed = raw ? JSON.parse(raw) : [];
+        // Guard: must be an actual array (localStorage could contain corrupted data)
+        loaded[s.key] = Array.isArray(parsed) ? parsed : [];
       } catch {
         loaded[s.key] = [];
       }
@@ -113,15 +116,19 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
       const entry: MediaEntry = { url, name: file.name, uploadedAt: new Date().toISOString() };
 
       setImages((prev) => {
-        const updated = [entry, ...prev[sectionKey].filter((i) => i.url !== url)].slice(0, 20);
+        // Guard: prev[sectionKey] may be undefined/null if state was corrupted
+        const existing: MediaEntry[] = Array.isArray(prev[sectionKey]) ? prev[sectionKey] : [];
+        const updated = [entry, ...existing.filter((i) => i.url !== url)].slice(0, 20);
         persist(sectionKey, updated);
         return { ...prev, [sectionKey]: updated };
       });
 
       // Also sync into the general upload list for the Insert Media modal
       try {
-        const stored = JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
-        const general = [entry, ...stored.filter((s: any) => s.url !== url)].slice(0, 50);
+        const rawUploads = localStorage.getItem('email_media_uploads');
+        const parsedUploads = rawUploads ? JSON.parse(rawUploads) : [];
+        const storedUploads: any[] = Array.isArray(parsedUploads) ? parsedUploads : [];
+        const general = [entry, ...storedUploads.filter((s: any) => s.url !== url)].slice(0, 50);
         localStorage.setItem('email_media_uploads', JSON.stringify(general));
       } catch { /* non-fatal */ }
     } catch (err) {
@@ -136,7 +143,8 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
 
   const removeImage = (sectionKey: string, url: string) => {
     setImages((prev) => {
-      const updated = prev[sectionKey].filter((i) => i.url !== url);
+      const existing: MediaEntry[] = Array.isArray(prev[sectionKey]) ? prev[sectionKey] : [];
+      const updated = existing.filter((i) => i.url !== url);
       persist(sectionKey, updated);
       return { ...prev, [sectionKey]: updated };
     });
