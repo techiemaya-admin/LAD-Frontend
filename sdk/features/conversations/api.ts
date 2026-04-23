@@ -7,7 +7,7 @@
  *
  * Follows the same pattern as campaigns/api.ts for consistency.
  */
-import { queryOptions } from '@tanstack/react-query';
+import { queryOptions, infiniteQueryOptions } from '@tanstack/react-query';
 import { proxyClient } from '../../shared/proxyClient';
 import type {
   Conversation,
@@ -52,9 +52,27 @@ function mapChannelFromApi(channel?: string): Channel {
 }
 
 function mapMessageFromApi(raw: any): Message {
-  const role = raw.role || 'user';
-  // Backend returns "AI" for agent messages, "user" for lead, "human_agent" for human takeover
+  const rawRole = raw.role || 'user';
+
+  // WABA stores human-agent messages as role='assistant' with metadata.sender_type='human_agent'
+  // Normalise so callers always see role='human_agent' for human takeover messages.
+  const metadata: Record<string, any> =
+    typeof raw.metadata === 'string'
+      ? (() => { try { return JSON.parse(raw.metadata); } catch { return {}; } })()
+      : (raw.metadata || {});
+
+  const role =
+    metadata.sender_type === 'human_agent' && rawRole === 'assistant'
+      ? 'human_agent'
+      : rawRole;
+
   const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
+
+  // Human-agent display name: prefer metadata, fall back to 'Agent'
+  const senderName: string | undefined =
+    role === 'human_agent'
+      ? (metadata.sender_name || metadata.agent_name || raw.sender_name || undefined)
+      : undefined;
 
   return {
     id: raw.id,
@@ -64,11 +82,16 @@ function mapMessageFromApi(raw: any): Message {
     isOutgoing,
     status: (raw.message_status || 'sent') as MessageStatus,
     sender: {
-      id: isOutgoing ? 'agent' : raw.lead_id || 'user',
-      name: isOutgoing ? (role === 'human_agent' ? 'Agent' : 'AI Agent') : 'Contact',
+      id: isOutgoing ? (metadata.human_agent_id || 'agent') : raw.lead_id || 'user',
+      name: isOutgoing
+        ? (role === 'human_agent' ? (senderName || 'Agent') : 'AI Agent')
+        : 'Contact',
     },
     role,
     intent: raw.intent,
+    senderName,
+    humanAgentId: metadata.human_agent_id || undefined,
+    templateName: metadata.template_name || undefined,
   };
 }
 
@@ -144,6 +167,63 @@ export async function getConversations(filters?: ConversationQueryOptions): Prom
 
   return (response.data.data || []).map(mapConversationFromApi);
 }
+
+export interface ConversationsPage {
+  conversations: Conversation[];
+  total: number;
+  hasMore: boolean;
+  nextOffset: number;
+}
+
+const PAGE_SIZE = 20;
+
+/**
+ * Fetch a single page of conversations for infinite scroll.
+ */
+export async function getConversationsPage(
+  filters: ConversationQueryOptions,
+  offset: number,
+): Promise<ConversationsPage> {
+  const { backendChannel, ...rest } = filters;
+  const params: Record<string, string> = {
+    limit: String(PAGE_SIZE),
+    offset: String(offset),
+  };
+  if (rest.search) params.search = rest.search;
+  if (rest.status && rest.status !== 'all') {
+    params.status = rest.status === 'open' ? 'active' : rest.status;
+  }
+  if (rest.owner && rest.owner !== 'all') params.owner = rest.owner;
+  if (rest.context_status) params.context_status = rest.context_status;
+
+  const response = await proxyClient.get<{
+    success: boolean;
+    data: any[];
+    total: number;
+    has_more: boolean;
+  }>('/api/whatsapp-conversations/conversations', { params, channel: backendChannel });
+
+  const conversations = (response.data.data || []).map(mapConversationFromApi);
+  const total: number = response.data.total ?? conversations.length;
+  const hasMore: boolean = response.data.has_more ?? (offset + conversations.length < total);
+  return { conversations, total, hasMore, nextOffset: offset + conversations.length };
+}
+
+/**
+ * TanStack Query infinite options for conversations list (incremental loading).
+ */
+export const getConversationsInfiniteOptions = (filters?: ConversationQueryOptions) =>
+  infiniteQueryOptions({
+    queryKey: [...conversationKeys.list(filters), filters?.backendChannel ?? 'personal', 'infinite'],
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      getConversationsPage(filters ?? {}, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: ConversationsPage) =>
+      lastPage.hasMore ? lastPage.nextOffset : undefined,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 30000,
+  });
 
 /**
  * TanStack Query options for getting conversations.

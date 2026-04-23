@@ -102,10 +102,10 @@ export default function StandardPlans() {
           variants={cardVariants}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-[#222B45] mb-4">
             Flexible Pricing Plans
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-[#8F9BB3]">
             Choose the plan that fits your business needs. Credits included
             with every plan.
           </p>
@@ -116,10 +116,10 @@ export default function StandardPlans() {
             variants={cardVariants}
             className="text-center mb-8"
           >
-            <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-2xl font-semibold text-[#222B45] mb-2">
               Standard Plans
             </h3>
-            <p className="text-gray-600">
+            <p className="text-[#8F9BB3]">
               Perfect for individuals and new beginners
             </p>
           </motion.div>
@@ -141,7 +141,7 @@ export default function StandardPlans() {
                   plan.popular
                     ? "border-blue-500 hover:shadow-xl transform scale-105"
                     : (plan as any).enterprise
-                    ? "border-indigo-500 hover:border-indigo-600 hover:shadow-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white"
+                    ? "border-indigo-500 hover:border-#1A3F7F hover:shadow-xl bg-gradient-to-br from-#1A3F7F to-violet-600 text-white"
                     : "border-gray-200 hover:border-blue-500 hover:shadow-xl"
                 }`}
               >
@@ -171,20 +171,20 @@ export default function StandardPlans() {
                 )}
 
                 <div className="mb-4">
-                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-white' : 'text-gray-900' }`}>{plan.name}</h3>
-                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-gray-600' }`}>{plan.description}</p>
+                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-gray-900' : 'text-[#222B45]' }`}>{plan.name}</h3>
+                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-gray-700' : 'text-[#8F9BB3]' }`}>{plan.description}</p>
                 </div>
 
                 <div className="mb-6">
                   {(plan as any).enterprise ? (
                     <div>
-                      <span className="text-4xl font-bold text-white">Contact Us</span>
-                      <p className="text-sm text-indigo-200 mt-2">Custom pricing for your needs</p>
+                      <span className="text-4xl font-bold text-gray-900">Contact Us</span>
+                      <p className="text-sm text-gray-700 mt-2">Custom pricing for your needs</p>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-baseline">
-                        <span className="text-4xl font-bold text-gray-900">
+                        <span className="text-4xl font-bold text-[#222B45]">
                           {plan.price}
                         </span>
                       </div>
@@ -204,8 +204,8 @@ export default function StandardPlans() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * featureIndex }}
                     >
-                      <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-green-500' }`} />
-                      <span className={`${ (plan as any).enterprise ? 'text-indigo-100' : '' } ${typeof feature === 'object' && feature.bold ? 'font-bold' : ''}`}>
+                      <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${ (plan as any).enterprise ? 'text-indigo-600' : 'text-green-500' }`} />
+                      <span className={`${ (plan as any).enterprise ? 'text-gray-800' : '' } ${typeof feature === 'object' && feature.bold ? 'font-bold' : ''}`}>
                         {typeof feature === 'string' ? feature : feature.text}
                       </span>
                     </motion.li>

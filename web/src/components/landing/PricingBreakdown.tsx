@@ -107,10 +107,10 @@ export default function PricingBreakdown() {
           variants={cardVariants}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-[#222B45] mb-4">
             Feature Pricing Details
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-[#8F9BB3]">
             Transparent credit costs for each feature
           </p>
         </motion.div>
@@ -134,7 +134,7 @@ export default function PricingBreakdown() {
                 className="flex items-center justify-between mb-4"
                 whileHover={{ scale: 1.1 }}
               >
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-[#222B45]">
                   {feature.title}
                 </h3>
                 <div className="text-2xl">{feature.emoji}</div>
@@ -144,7 +144,7 @@ export default function PricingBreakdown() {
                 <div className={`text-3xl font-bold ${feature.accent}`}>
                   {feature.credits}
                 </div>
-                <div className="text-sm text-gray-600">{feature.unit}</div>
+                <div className="text-sm text-[#8F9BB3]">{feature.unit}</div>
                 {feature.subtitle && (
                   <div className="text-xs text-gray-500 mt-1">
                     {feature.subtitle}
@@ -173,7 +173,7 @@ export default function PricingBreakdown() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                <div className="text-xs text-gray-600">{feature.note}</div>
+                <div className="text-xs text-[#8F9BB3]">{feature.note}</div>
               </motion.div>
             </motion.div>
           ))}

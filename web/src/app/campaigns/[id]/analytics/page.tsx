@@ -1,23 +1,26 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, TrendingUp, Users, Send, CheckCircle, Mail, ExternalLink,
   AlertCircle, Linkedin, Phone, MessageCircle,
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
   Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
-  SquarePen
+  SquarePen, Sparkles, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
-import { useCampaignAnalytics } from '@lad/frontend-features/campaigns';
+import { useCampaignAnalytics, useCampaignLeads } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
 import { LiveBadge } from '@/components/LiveBadge';
+import { proxyPost } from '@/lib/api';
 
 const platformConfig = {
   linkedin: {
@@ -56,6 +59,117 @@ export default function CampaignAnalyticsPage() {
   // SSE connection for real-time updates is handled in useCampaignAnalytics hook
   const isConnected = analytics?.campaign?.status === 'running';
 
+  // ── Bulk Follow-up state ───────────────────────────────────────────────────
+  const { leads: allLeads, loading: leadsLoading } = useCampaignLeads(campaignId);
+  const [followupPanelOpen, setFollowupPanelOpen] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [bulkChannel, setBulkChannel] = useState<string>('');
+  const [bulkStatus, setBulkStatus] = useState<'idle' | 'running' | 'done'>('idle');
+  const [leadProgress, setLeadProgress] = useState<Array<{ id: string; name: string; status: 'pending' | 'sending' | 'done' | 'error'; message?: string; error?: string }>>([]);
+  const [bulkDoneCount, setBulkDoneCount] = useState(0);
+
+  // ── All bulk follow-up hooks MUST live here — before any early returns ─────
+
+  // Channels used in this campaign (derived from step_analytics; safe when analytics is null)
+  const campaignChannels = useMemo(() => {
+    const types = (analytics as any)?.step_analytics?.map((s: any) => s.type?.toLowerCase()) || [];
+    const channels: { value: string; label: string; icon: React.ReactNode }[] = [];
+    if (types.some((t: string) => t.includes('linkedin')))
+      channels.push({ value: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="w-3.5 h-3.5" /> });
+    if (types.some((t: string) => t.includes('email')))
+      channels.push({ value: 'email',    label: 'Email',    icon: <Mail className="w-3.5 h-3.5" /> });
+    if (types.some((t: string) => t.includes('whatsapp')))
+      channels.push({ value: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-3.5 h-3.5" /> });
+    return channels;
+  }, [analytics]);
+
+  // LinkedIn → only accepted-connection leads; email/whatsapp → all leads
+  const selectableLeads = useMemo(() => {
+    if (!allLeads) return [];
+    if (bulkChannel === 'linkedin') {
+      return (allLeads as any[]).filter((l: any) =>
+        l.has_connected === true ||
+        l.status?.toLowerCase().includes('connect') ||
+        l.status?.toLowerCase().includes('accept')
+      );
+    }
+    return allLeads as any[];
+  }, [allLeads, bulkChannel]);
+
+  // Auto-select the first available channel once analytics load
+  useEffect(() => {
+    if (campaignChannels.length && !bulkChannel) {
+      setBulkChannel(campaignChannels[0].value);
+    }
+  }, [campaignChannels, bulkChannel]);
+
+  // Drop selected leads that are no longer in the selectable set when channel changes
+  useEffect(() => {
+    if (!selectableLeads.length) return;
+    const validIds = new Set(selectableLeads.map((l: any) => l.id));
+    setSelectedLeadIds(prev => {
+      const filtered = new Set([...prev].filter(id => validIds.has(id)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
+  }, [selectableLeads]);
+
+  // Total manual follow-ups sent across all leads in this campaign
+  const totalFollowupsSent = useMemo(
+    () => ((allLeads as any[]) || []).reduce((sum: number, l: any) => sum + (l.manual_followup_count || 0), 0),
+    [allLeads]
+  );
+
+  const toggleLead = useCallback((id: string) => {
+    setSelectedLeadIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    const ids = selectableLeads.map((l: any) => l.id);
+    setSelectedLeadIds(prev => prev.size === ids.length ? new Set() : new Set(ids));
+  }, [selectableLeads]);
+
+  const startBulkFollowup = useCallback(async () => {
+    if (!selectedLeadIds.size || !bulkChannel) return;
+    const selected = selectableLeads.filter((l: any) => selectedLeadIds.has(l.id));
+    const initial = selected.map((l: any) => ({
+      id: l.id, name: l.name || l.first_name || 'Lead', status: 'pending' as const,
+    }));
+    setLeadProgress(initial);
+    setBulkDoneCount(0);
+    setBulkStatus('running');
+
+    let done = 0;
+    for (const lead of selected) {
+      setLeadProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'sending' } : p));
+      try {
+        const preview = await proxyPost<{ success: boolean; message: string | null; error?: string }>(
+          `/api/campaigns/${campaignId}/leads/${lead.id}/preview-followup`,
+          { channel: bulkChannel }
+        );
+        if (!preview.success || !preview.message) throw new Error(preview.error || 'No message generated');
+        const send = await proxyPost<{ success: boolean; error?: string }>(
+          `/api/campaigns/${campaignId}/leads/${lead.id}/send-followup`,
+          { channel: bulkChannel, message: preview.message }
+        );
+        if (!send.success) throw new Error(send.error || 'Send failed');
+        done++;
+        setBulkDoneCount(done);
+        setLeadProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'done', message: preview.message! } : p));
+      } catch (e: any) {
+        done++;
+        setBulkDoneCount(done);
+        setLeadProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'error', error: e.message } : p));
+      }
+    }
+    setBulkStatus('done');
+    push({ title: 'Follow-up Complete', description: `Sent ${done} messages via ${bulkChannel}` });
+  }, [selectedLeadIds, bulkChannel, selectableLeads, campaignId, push]);
+
+  // ── Error handler (also a hook — stays before early returns) ─────────────
   useEffect(() => {
     if (error) {
       push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
@@ -221,46 +335,67 @@ export default function CampaignAnalyticsPage() {
     },
   ].filter(Boolean);
 
-  // Chart data for AnalyticsCharts
+  // ── Chart data for AnalyticsCharts ─────────────────────────────────────────
   const extendedAnalytics = analytics as any;
-  const leadsOverTime = extendedAnalytics?.charts?.leads_over_time?.length
-    ? extendedAnalytics.charts.leads_over_time
-    : [
-      { date: 'Today', leads: analytics?.overview?.total_leads ?? 0 },
-      { date: 'Yesterday', leads: Math.max((analytics?.overview?.total_leads ?? 0) - 2, 0) },
-    ];
 
-  const channelBreakdownRaw = extendedAnalytics?.charts?.channel_breakdown?.length
-    ? extendedAnalytics.charts.channel_breakdown
-    : [
-      { name: 'LinkedIn', value: analyticsAny?.platform_metrics?.linkedin?.sent ?? analyticsAny?.metrics?.connection_requests_sent ?? 0 },
-      { name: 'Email', value: analyticsAny?.platform_metrics?.email?.sent ?? analyticsAny?.metrics?.emails_sent ?? 0 },
-      { name: 'Voice', value: analyticsAny?.platform_metrics?.voice?.sent ?? analyticsAny?.metrics?.voice_calls_made ?? 0 },
-    ];
+  // 1. Timeline — multi-series daily data
+  const chartTimeline: Array<{ date: string; sent?: number; delivered?: number; connected?: number; replied?: number }> =
+    extendedAnalytics?.timeline?.length
+      ? extendedAnalytics.timeline.map((t: any) => ({
+          date:      t.date,
+          sent:      t.sent      ?? undefined,
+          delivered: t.delivered ?? undefined,
+          connected: t.connected ?? undefined,
+          replied:   t.replied   ?? undefined,
+        }))
+      : [
+          { date: 'Campaign', sent: analytics?.overview?.sent ?? 0, connected: analytics?.overview?.connected ?? 0, replied: analytics?.overview?.replied ?? 0 },
+        ];
 
-  const channelBreakdownFiltered = channelBreakdownRaw.filter((c: any) => c.value > 0);
-  // Ensure at least one item for the pie chart
-  const channelBreakdown = channelBreakdownFiltered.length > 0 ? channelBreakdownFiltered : [{ name: 'No Data', value: 1 }];
-
-  // Dynamic funnel stage label based on campaign type
+  // 2. Conversion Funnel with colours
   const funnelStageLabel = hasLinkedIn ? 'Connected' : hasEmail ? 'Delivered' : hasWhatsApp ? 'Delivered' : hasVoice ? 'Answered' : 'Messaged';
   const funnelStageCount = hasLinkedIn
     ? (analytics?.overview?.connected ?? 0)
-    : hasEmail
-      ? (analytics?.overview?.delivered ?? 0)
-      : hasWhatsApp
-        ? (analytics?.overview?.delivered ?? 0)
-        : hasVoice
-          ? (analytics?.overview?.connected ?? 0)
-          : (analytics?.metrics?.linkedin_messages_sent ?? 0);
+    : (analytics?.overview?.delivered ?? 0);
+  const chartFunnel = [
+    { stage: 'Leads',    count: analytics?.overview?.total_leads ?? 0,             color: '#0b1957' },
+    { stage: 'Sent',     count: analytics?.overview?.sent        ?? 0,             color: '#6366f1' },
+    { stage: funnelStageLabel, count: funnelStageCount,                            color: '#06b6d4' },
+    { stage: 'Replied',  count: analytics?.overview?.replied     ?? 0,             color: '#22c55e' },
+  ].filter(s => s.count > 0 || s.stage === 'Leads');
 
-  const funnel = extendedAnalytics?.charts?.funnel?.length
-    ? extendedAnalytics.charts.funnel
-    : [
-      { stage: 'Leads', count: analytics?.overview?.total_leads ?? 0 },
-      { stage: funnelStageLabel, count: funnelStageCount },
-      { stage: 'Replied', count: analytics?.overview?.replied ?? 0 },
-    ];
+  // 3. Step performance
+  const chartSteps = (analytics?.step_analytics ?? []).map((s: any) => ({
+    title:     s.title || s.type || 'Step',
+    sent:      s.sent      || s.total_executions || 0,
+    connected: s.connected || 0,
+    replied:   s.replied   || 0,
+    errors:    s.errors    || 0,
+  }));
+
+  // 4. Lead status donut
+  const chartLeadStatus = [
+    { name: 'Active',    value: analytics?.overview?.active_leads    ?? 0, color: '#6366f1' },
+    { name: 'Completed', value: analytics?.overview?.completed_leads ?? 0, color: '#22c55e' },
+    { name: 'Stopped',   value: analytics?.overview?.stopped_leads   ?? 0, color: '#f43f5e' },
+    { name: 'Pending',   value: Math.max(
+        (analytics?.overview?.total_leads ?? 0) -
+        (analytics?.overview?.active_leads ?? 0) -
+        (analytics?.overview?.completed_leads ?? 0) -
+        (analytics?.overview?.stopped_leads ?? 0),
+        0
+      ), color: '#94a3b8' },
+  ];
+
+  // 5. Channel comparison
+  const chartChannels = [
+    hasLinkedIn && { name: 'LinkedIn',  sent: analyticsAny?.platform_metrics?.linkedin?.sent  ?? 0, connected: analyticsAny?.platform_metrics?.linkedin?.connected  ?? 0, replied: analyticsAny?.platform_metrics?.linkedin?.replied  ?? 0 },
+    hasEmail    && { name: 'Email',     sent: analyticsAny?.platform_metrics?.email?.sent     ?? 0, connected: analyticsAny?.platform_metrics?.email?.connected     ?? 0, replied: analyticsAny?.platform_metrics?.email?.replied     ?? 0 },
+    hasWhatsApp && { name: 'WhatsApp',  sent: analyticsAny?.platform_metrics?.whatsapp?.sent  ?? 0, connected: analyticsAny?.platform_metrics?.whatsapp?.connected  ?? 0, replied: analyticsAny?.platform_metrics?.whatsapp?.replied  ?? 0 },
+    hasVoice    && { name: 'Voice',     sent: analyticsAny?.platform_metrics?.voice?.sent     ?? 0, connected: analyticsAny?.platform_metrics?.voice?.connected     ?? 0, replied: analyticsAny?.platform_metrics?.voice?.replied     ?? 0 },
+  ].filter(Boolean) as Array<{ name: string; sent: number; connected: number; replied: number }>;
+
+  const campaignType = hasLinkedIn ? 'linkedin' : hasEmail ? 'email' : hasWhatsApp ? 'whatsapp' : hasVoice ? 'voice' : 'mixed';
 
   // Theme colors
   const theme = {
@@ -426,6 +561,12 @@ export default function CampaignAnalyticsPage() {
                   <h5 className="text-2xl font-bold text-slate-800">
                     {analytics.overview.replied}
                   </h5>
+                  {/* Follow-ups sent sub-stat */}
+                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                    <span className="text-xs text-slate-500">Follow-ups sent:</span>
+                    <span className="text-sm font-bold text-violet-600">{totalFollowupsSent}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -441,6 +582,205 @@ export default function CampaignAnalyticsPage() {
           pageSize={50}
           campaignSteps={analytics?.step_analytics}
         />
+      </div>
+
+      {/* ── Bulk Follow-up Panel ────────────────────────────────────────── */}
+      <div className="mb-8">
+        {/* Collapsed header — always visible */}
+        <button
+          onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
+          className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center">
+              <Send className="w-5 h-5 text-[#0b1957]" />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-[#1E293B] text-base">Send Follow-up</p>
+              <p className="text-xs text-slate-500">Select leads → choose channel → AI generates personalised messages and sends</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {selectedLeadIds.size > 0 && !followupPanelOpen && (
+              <span className="text-xs bg-[#0b1957] text-white px-2.5 py-1 rounded-full font-semibold">
+                {selectedLeadIds.size} selected
+              </span>
+            )}
+            {followupPanelOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+          </div>
+        </button>
+
+        {/* Expanded panel */}
+        {followupPanelOpen && (
+          <div className="mt-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100">
+              {/* Select all */}
+              <div className="flex items-center gap-2 mr-2">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedLeadIds.size > 0 && selectedLeadIds.size === selectableLeads.length}
+                  onCheckedChange={toggleAll}
+                  disabled={selectableLeads.length === 0}
+                />
+                <label htmlFor="select-all" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
+                  {selectedLeadIds.size === selectableLeads.length && selectedLeadIds.size > 0
+                    ? 'Deselect all'
+                    : `Select all (${selectableLeads.length})`}
+                </label>
+              </div>
+
+              {selectedLeadIds.size > 0 && (
+                <span className="text-xs bg-[#0b1957]/10 text-[#0b1957] px-2.5 py-1 rounded-full font-semibold">
+                  {selectedLeadIds.size} selected
+                </span>
+              )}
+
+              <div className="flex-1" />
+
+              {/* Channel dropdown */}
+              <Select value={bulkChannel} onValueChange={setBulkChannel}>
+                <SelectTrigger className="w-40 h-9 text-sm rounded-xl border-slate-200">
+                  <SelectValue placeholder="Select channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaignChannels.map(ch => (
+                    <SelectItem key={ch.value} value={ch.value}>
+                      <span className="flex items-center gap-2">{ch.icon}{ch.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Send button */}
+              <Button
+                onClick={startBulkFollowup}
+                disabled={!selectedLeadIds.size || !bulkChannel || bulkStatus === 'running'}
+                className="bg-[#0b1957] hover:bg-[#1a2d8f] text-white rounded-xl h-9 px-4 gap-2 text-sm font-semibold shadow-sm"
+              >
+                {bulkStatus === 'running' ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Sending {bulkDoneCount}/{selectedLeadIds.size}…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" />Send Follow-up</>
+                )}
+              </Button>
+            </div>
+
+            {/* Progress list (shown during / after send) */}
+            {leadProgress.length > 0 && (
+              <div className="px-5 py-3 border-b border-slate-100 max-h-48 overflow-y-auto">
+                <div className="space-y-1.5">
+                  {leadProgress.map(p => (
+                    <div key={p.id} className="flex items-center gap-3 text-sm py-1">
+                      <div className="w-5 flex-shrink-0">
+                        {p.status === 'pending'  && <div className="w-2 h-2 rounded-full bg-slate-300 mx-auto" />}
+                        {p.status === 'sending'  && <Loader2 className="w-4 h-4 animate-spin text-[#0b1957]" />}
+                        {p.status === 'done'     && <CheckCircle className="w-4 h-4 text-green-500" />}
+                        {p.status === 'error'    && <AlertCircle className="w-4 h-4 text-red-400" />}
+                      </div>
+                      <span className="font-medium text-slate-700 w-36 truncate">{p.name}</span>
+                      {p.status === 'done'  && <span className="text-xs text-slate-400 truncate flex-1">{p.message}</span>}
+                      {p.status === 'error' && <span className="text-xs text-red-400 truncate flex-1">{p.error}</span>}
+                      {p.status === 'sending' && <span className="text-xs text-[#0b1957] flex-1 flex items-center gap-1"><Sparkles className="w-3 h-3 animate-pulse" />Researching & generating…</span>}
+                      {p.status === 'pending' && <span className="text-xs text-slate-300 flex-1">Queued</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lead list with checkboxes */}
+            {bulkStatus !== 'running' && (
+              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+                {leadsLoading ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading leads…</span>
+                  </div>
+                ) : selectableLeads.length === 0 ? (
+                  <div className="text-center py-10 px-6">
+                    {bulkChannel === 'linkedin' ? (
+                      <>
+                        <Linkedin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-slate-500">No connected leads yet</p>
+                        <p className="text-xs text-slate-400 mt-1">LinkedIn follow-ups can only be sent to leads who have accepted your connection request. Switch to Email or WhatsApp to reach all leads.</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-slate-400">No leads found for this campaign</p>
+                    )}
+                  </div>
+                ) : (
+                  selectableLeads.map((lead: any) => (
+                    <div
+                      key={lead.id}
+                      onClick={() => toggleLead(lead.id)}
+                      className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedLeadIds.has(lead.id) ? 'bg-[#0b1957]/5' : ''}`}
+                    >
+                      <Checkbox
+                        checked={selectedLeadIds.has(lead.id)}
+                        onCheckedChange={() => toggleLead(lead.id)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      {lead.photo_url ? (
+                        <img src={lead.photo_url} alt={lead.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-slate-500">
+                            {(lead.first_name?.[0] || lead.name?.[0] || '?').toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim()}</p>
+                        <p className="text-xs text-slate-400 truncate">{[lead.title, lead.company].filter(Boolean).join(' · ')}</p>
+                      </div>
+                      <div className="flex gap-1.5 flex-shrink-0 items-center">
+                        {(lead.has_connected || lead.status?.includes('connect')) && (
+                          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">Connected</span>
+                        )}
+                        {(lead.has_replied || lead.status?.includes('repli')) && (
+                          <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium">Replied</span>
+                        )}
+                        {(lead.has_sent || lead.status?.includes('sent')) && !lead.has_connected && (
+                          <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium">Sent</span>
+                        )}
+                        {/* Follow-up count badge — increments in real-time via leadProgress */}
+                        {(() => {
+                          const sentNow = leadProgress.find(p => p.id === lead.id && p.status === 'done') ? 1 : 0;
+                          const total = (lead.manual_followup_count || 0) + sentNow;
+                          return total > 0 ? (
+                            <span className="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              {total} follow-up{total !== 1 ? 's' : ''}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Done summary */}
+            {bulkStatus === 'done' && (
+              <div className="px-5 py-3 bg-green-50 border-t border-green-100 flex items-center justify-between">
+                <p className="text-sm font-semibold text-green-700">
+                  ✓ Sent {leadProgress.filter(p => p.status === 'done').length} follow-ups via {bulkChannel}
+                  {leadProgress.filter(p => p.status === 'error').length > 0 && (
+                    <span className="text-red-500 ml-2">({leadProgress.filter(p => p.status === 'error').length} failed)</span>
+                  )}
+                </p>
+                <button
+                  onClick={() => { setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
+                  className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Reset
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Analytics Charts Section */}
@@ -461,7 +801,14 @@ export default function CampaignAnalyticsPage() {
           '--text-primary': theme.textPrimary,
           '--text-secondary': theme.textSecondary,
         } as React.CSSProperties}>
-          <AnalyticsCharts data={{ leadsOverTime, channelBreakdown, funnel }} />
+          <AnalyticsCharts data={{
+            timeline:         chartTimeline,
+            funnel:           chartFunnel,
+            steps:            chartSteps,
+            leadStatus:       chartLeadStatus,
+            channelBreakdown: chartChannels,
+            campaignType,
+          }} />
         </div>
       </div>
 
@@ -523,8 +870,8 @@ export default function CampaignAnalyticsPage() {
                           <p className="text-xs text-[#64748B]">Connected</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-amber-600">{item.replied}</p>
-                          <p className="text-xs text-[#64748B]">Replied</p>
+                          <p className="text-lg font-bold text-violet-600">{totalFollowupsSent}</p>
+                          <p className="text-xs text-[#64748B]">Follow-ups</p>
                         </div>
                       </div>
 

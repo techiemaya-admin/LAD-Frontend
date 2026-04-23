@@ -1,16 +1,23 @@
 "use client";
 import HeroSection from "@/components/landing/HeroSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
+import HowItWorksSection from "@/components/landing/HowItWorksSection";
+import ValuePropositionSection from "@/components/landing/ValuePropositionSection";
+import SocialProofSection from "@/components/landing/SocialProofSection";
 import PricingHero from "@/components/landing/PricingHero";
 import StandardPlans from "@/components/landing/StandardPlans";
 import EnterprisePlans from "@/components/landing/EnterprisePlans";
 import PricingBreakdown from "@/components/landing/PricingBreakdown";
+import InteractivePricingCalculator from "@/components/landing/InteractivePricingCalculator";
 import PricingCTA from "@/components/landing/PricingCTA";
 import CTASection from "@/components/landing/CTASection";
+import AgentGuide from "@/components/landing/AgentGuide";
+import FourStepsSection from "@/components/landing/FourStepsSection";
 
 export default function LAD3DShowcase() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-[#0b1957] dark:via-[#0b1957] dark:to-[#0b1957]">
+    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <AgentGuide />
 
       {/* Hero Section */}
       <HeroSection />
@@ -18,13 +25,30 @@ export default function LAD3DShowcase() {
       {/* Features Section */}
       <FeaturesSection />
 
+      {/* How It Works Section */}
+      <HowItWorksSection />
+
+      {/* 4 Steps Section */}
+      <FourStepsSection />
+
+      {/* Value Proposition Section */}
+      <ValuePropositionSection />
+
+      {/* Social Proof Section */}
+      <SocialProofSection />
+
       {/* Pricing Section */}
       <section>
         {/* Pricing Hero */}
         <PricingHero />
-        
+
         {/* Standard Plans */}
         <StandardPlans />
+
+        {/* Interactive Pricing Calculator */}
+        <div className="container mx-auto px-4">
+          <InteractivePricingCalculator />
+        </div>
 
         {/* Pricing Breakdown */}
         <PricingBreakdown />

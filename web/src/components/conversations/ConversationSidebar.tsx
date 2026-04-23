@@ -64,6 +64,10 @@ interface ConversationSidebarProps {
   onGroupSelect?: (group: ChatGroup) => void;
   onOpenGroupInfo?: (group: ChatGroup) => void;
   onShowBroadcastModal?: () => void;
+  groupRefreshKey?: number;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isFetchingMore?: boolean;
 }
 
 // LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
@@ -133,6 +137,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onGroupSelect,
   onOpenGroupInfo,
   onShowBroadcastModal,
+  groupRefreshKey,
+  onLoadMore,
+  hasMore,
+  isFetchingMore,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -149,6 +157,19 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       .then((u: any) => setMaskPhoneNumbers(!!(u?.maskPhoneNumber ?? u?.user?.maskPhoneNumber)))
       .catch(() => {});
   }, []);
+
+  // Handle ESC key to close select mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSelectMode) {
+        setIsSelectMode(false);
+        setSelectedIds(new Set());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectMode]);
 
   const displayPhone = useCallback((phone: string | undefined | null): string => {
     if (!maskPhoneNumbers || !phone) return phone || '';
@@ -210,6 +231,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [newChatContactsTotal, setNewChatContactsTotal] = useState(0);
   const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true);
   const [contactsSectionExpanded, setContactsSectionExpanded] = useState(true);
+  const [importRefreshTrigger, setImportRefreshTrigger] = useState(0); // Trigger to refresh after import
 
   // Chat Groups state
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -217,14 +239,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [groupConversationIds, setGroupConversationIds] = useState<Set<string>>(new Set());
   const [groupTemplateSendTarget, setGroupTemplateSendTarget] = useState<{ groupIds: string[]; count: number } | null>(null);
 
-  // Load (or reload) groups + all contacts whenever the New Chat panel is open.
-  // Re-runs when: panel opens, panel closes (skip), or ChatGroupManager closes after editing.
+  // Load (or reload) groups — runs whenever the New Chat panel is open, the group manager closes,
+  // the channel changes, or a group is deleted (groupRefreshKey increments).
   useEffect(() => {
-    if (!isNewChatOpen) return;
-
-    // Load groups (channel-aware — personal WA reads from Node.js, WABA from Python)
-    setNewChatGroupsLoading(true);
     const groupsChannel = backendChannel || 'waba';
+    setNewChatGroupsLoading(true);
     fetchWithTenant(`/api/whatsapp-conversations/chat-groups?channel=${groupsChannel}`)
       .then((r) => r.json())
       .then((data) => {
@@ -232,6 +251,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       })
       .catch(() => {})
       .finally(() => setNewChatGroupsLoading(false));
+  }, [isNewChatOpen, isGroupManagerOpen, backendChannel, groupRefreshKey]);
+
+  // Load contacts whenever the New Chat panel is open.
+  useEffect(() => {
+    if (!isNewChatOpen) return;
 
     // Load contacts from wa_contacts table (personal WA) or conversations (waba)
     // Supports 6000+ contacts via paginated background loading
@@ -300,7 +324,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         .catch(() => {})
         .finally(() => setNewChatContactsLoading(false));
     }
-  }, [isNewChatOpen, isGroupManagerOpen, backendChannel]); // re-fetch when group manager closes
+  }, [isNewChatOpen, backendChannel, importRefreshTrigger]); // re-fetch when panel opens, channel changes, or after import
 
   // Named-only filter: hide contacts with unknown/unresolved names
   const [namedOnly, setNamedOnly] = useState(false);
@@ -506,7 +530,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         exitSelectMode();
       }
     },
-    [selectedIds, groupTemplateSendTarget, exitSelectMode]
+    [selectedIds, groupTemplateSendTarget, exitSelectMode, backendChannel]
   );
 
   // Called from ChatGroupManager single-group "Send Template" hover button
@@ -544,6 +568,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           isSelectMode={isSelectMode}
           isChecked={selectedIds.has(conversation.id)}
           onContextStatusClick={handleContextStatusClick}
+          onDoubleClick={() => {
+            setIsSelectMode(true);
+            setSelectedIds(new Set([conversation.id]));
+          }}
         />
       );
     },
@@ -684,6 +712,34 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         </div>
       )}
 
+      {/* Multi-select filter row - shows at top when in select mode */}
+      {isSelectMode && (
+        <div className="px-3 py-2.5 border-b border-border bg-blue-50/60 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <CheckSquare className="h-4 w-4 text-blue-600" />
+            <span className="text-blue-700">{selectedIds.size} contact{selectedIds.size !== 1 ? 's' : ''} selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={selectAll}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100/50"
+              onClick={deselectAll}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Bulk action bar */}
       {isSelectMode && (
         <TooltipProvider>
@@ -786,6 +842,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             totalCount={filteredConversations.length}
             itemContent={itemContent}
             className="custom-scrollbar"
+            endReached={hasMore ? onLoadMore : undefined}
+            components={{
+              Footer: isFetchingMore
+                ? () => (
+                    <div className="flex justify-center items-center py-3 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-xs">Loading more...</span>
+                    </div>
+                  )
+                : undefined,
+            }}
           />
         )}
       </div>
@@ -848,7 +915,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               <span className="text-sm font-medium">Import Leads</span>
             </button>
 
-            {/* Chat Groups */}
+            {/* Broadcast */}
             <button
               onClick={() => {
                 setIsNewChatOpen(false);
@@ -858,9 +925,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
             >
               <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                <Users className="h-5 w-5 text-white" />
+                <Megaphone className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium">Chat Groups</span>
+              <span className="text-sm font-medium">New Broadcast</span>
             </button>
           </div>
 
@@ -1177,9 +1244,16 @@ export const ConversationSidebar = memo(function ConversationSidebar({
       <ImportLeadsDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
+        channel={backendChannel}
         onImportComplete={() => {
+          // Refresh conversations and reload contacts in New Chat panel
           if (onRefresh) onRefresh();
-          else window.location.reload();
+          // Trigger re-fetch of contacts in New Chat panel
+          setImportRefreshTrigger((prev) => prev + 1);
+          // If New Chat panel is open, ensure it shows new contacts
+          if (isNewChatOpen) {
+            // Panel is already open, the effect will re-fetch due to importRefreshTrigger change
+          }
         }}
       />
     </div>
