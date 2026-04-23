@@ -65,6 +65,9 @@ interface ConversationSidebarProps {
   onOpenGroupInfo?: (group: ChatGroup) => void;
   onShowBroadcastModal?: () => void;
   groupRefreshKey?: number;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isFetchingMore?: boolean;
 }
 
 // LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
@@ -135,6 +138,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onOpenGroupInfo,
   onShowBroadcastModal,
   groupRefreshKey,
+  onLoadMore,
+  hasMore,
+  isFetchingMore,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -836,6 +842,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             totalCount={filteredConversations.length}
             itemContent={itemContent}
             className="custom-scrollbar"
+            endReached={hasMore ? onLoadMore : undefined}
+            components={{
+              Footer: isFetchingMore
+                ? () => (
+                    <div className="flex justify-center items-center py-3 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-xs">Loading more...</span>
+                    </div>
+                  )
+                : undefined,
+            }}
           />
         )}
       </div>
