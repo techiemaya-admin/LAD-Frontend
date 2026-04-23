@@ -1,25 +1,24 @@
 /**
  * Chat Settings Proxy
- * GET /api/whatsapp-conversations/chat-settings → Backend /api/chat-settings
- * PUT /api/whatsapp-conversations/chat-settings → Backend /api/chat-settings
+ * GET /api/whatsapp-conversations/chat-settings → Node.js /api/personal-whatsapp/chat-settings
+ * PUT /api/whatsapp-conversations/chat-settings → Node.js /api/personal-whatsapp/chat-settings
+ *
+ * Uses channel=backend so the proxy routes directly to Node.js LAD_backend
+ * without path transformation.
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../utils/python-proxy';
+import { proxyToPythonService, getBackendUrl } from '../utils/python-proxy';
+
+function withBackendChannel(req: NextRequest): NextRequest {
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'backend');
+  return new NextRequest(url, req);
+}
 
 export async function GET(req: NextRequest) {
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/settings');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/chat-settings');
 }
 
 export async function PUT(req: NextRequest) {
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/settings');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/chat-settings');
 }

@@ -78,8 +78,12 @@ const FOLLOWUP_CONFIG_API = '/api/whatsapp-conversations/followup-config';
 async function fetchFollowupConfig(): Promise<FollowupTimingConfig> {
   try {
     const res = await fetch(FOLLOWUP_CONFIG_API);
+    if (!res.ok) return DEFAULT_FOLLOWUP_CONFIG;
     const data = await res.json();
-    return data.success ? data.data : DEFAULT_FOLLOWUP_CONFIG;
+    if (!data.success) return DEFAULT_FOLLOWUP_CONFIG;
+    // Accept data.data or data.config
+    const cfg = data.data ?? data.config;
+    return cfg && typeof cfg === 'object' ? { ...DEFAULT_FOLLOWUP_CONFIG, ...cfg } : DEFAULT_FOLLOWUP_CONFIG;
   } catch {
     return DEFAULT_FOLLOWUP_CONFIG;
   }
@@ -93,7 +97,7 @@ async function updateFollowupConfig(config: FollowupTimingConfig): Promise<boole
       body: JSON.stringify(config),
     });
     const data = await res.json();
-    return data.success;
+    return data.success ?? false;
   } catch {
     return false;
   }
@@ -102,7 +106,9 @@ async function updateFollowupConfig(config: FollowupTimingConfig): Promise<boole
 async function fetchPrompts(): Promise<Prompt[]> {
   const res = await fetch(PROMPTS_API);
   const data = await res.json();
-  return data.success ? data.data : [];
+  // Node.js backend returns { success, prompts: [] }; Python returns { success, data: [] }
+  const list = data.prompts ?? data.data ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 async function updatePrompt(name: string, updates: Partial<Prompt>): Promise<boolean> {
@@ -133,22 +139,40 @@ async function deletePrompt(name: string): Promise<boolean> {
   return data.success;
 }
 
+const DEFAULT_CHAT_SETTINGS: ChatSettingsConfig = {
+  knowledge_base: '',
+  campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
+};
+
 async function fetchChatSettings(): Promise<ChatSettingsConfig> {
-  const res = await fetch(SETTINGS_API);
-  const data = await res.json();
-  return data.success
-    ? data.data
-    : { knowledge_base: '', campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 } };
+  try {
+    const res = await fetch(SETTINGS_API);
+    if (!res.ok) return DEFAULT_CHAT_SETTINGS;
+    const data = await res.json();
+    if (!data.success) return DEFAULT_CHAT_SETTINGS;
+    // Node.js backend returns { success, data: {...} } or { success, settings: {...} }
+    const raw = data.data ?? data.settings ?? {};
+    return {
+      knowledge_base: raw.knowledge_base ?? '',
+      campaign_frequency: raw.campaign_frequency ?? DEFAULT_CHAT_SETTINGS.campaign_frequency,
+    };
+  } catch {
+    return DEFAULT_CHAT_SETTINGS;
+  }
 }
 
 async function updateChatSettings(updates: Partial<ChatSettingsConfig>): Promise<boolean> {
-  const res = await fetch(SETTINGS_API, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  });
-  const data = await res.json();
-  return data.success;
+  try {
+    const res = await fetch(SETTINGS_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    return data.success ?? false;
+  } catch {
+    return false;
+  }
 }
 
 // ── Human-readable prompt names ──────────────────────────────────
@@ -211,7 +235,7 @@ export function ChatSettings() {
   const [savingFollowup, setSavingFollowup] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [activeChannel, setActiveChannel] = useState('whatsapp');
+  const [activeChannel, setActiveChannel] = useState('waba');
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [editedTexts, setEditedTexts] = useState<Record<string, string>>({});
   const [savingPrompt, setSavingPrompt] = useState<string | null>(null);
@@ -229,7 +253,7 @@ export function ChatSettings() {
   useEffect(() => {
     Promise.all([fetchPrompts(), fetchChatSettings(), fetchFollowupConfig()])
       .then(([p, s, f]) => {
-        setPrompts(p);
+        setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
       })
