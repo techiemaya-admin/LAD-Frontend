@@ -20,16 +20,16 @@ export default function PricingPage() {
     }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b1957]">
+    <div className="min-h-screen bg-white dark:bg-black">
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0b1957] dark:to-[#0b1957] py-16">
+      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-black dark:to-black py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             Simple, credit-based
-            <span className="text-blue-600 ml-3">pricing</span>
+            <span className="text-blue-600 dark:text-blue-400 ml-3">pricing</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
             Buy credits once, use them for any feature. No subscriptions, no monthly fees, no expiration.
           </p>
           <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-500">
@@ -49,13 +49,13 @@ export default function PricingPage() {
         </div>
       </div>
       {/* Pricing Plans - Subscription Tiers */}
-      <div className="py-16 bg-white">
+      <div className="py-16 bg-white dark:bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Flexible Pricing Plans
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-300">
               Choose the plan that fits your business needs. Credits included with every plan.
             </p>
           </div>
@@ -63,8 +63,8 @@ export default function PricingPage() {
           {/* Non-Enterprise Plans */}
           <div className="mb-16">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-2">Standard Plans</h3>
-              <p className="text-gray-600">Perfect for individuals and new beginners</p>
+              <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">Standard Plans</h3>
+              <p className="text-gray-600 dark:text-gray-400">Perfect for individuals and new beginners</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* Starter Plan */}
