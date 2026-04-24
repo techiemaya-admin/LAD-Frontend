@@ -42,36 +42,53 @@ export default function MediaInsertionModal({
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/campaigns/email-templates', {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load media');
-      }
-
-      const data = await response.json();
-      // Extract media from templates
-      const media: MediaFile[] = [];
       const seen = new Set<string>();
+      const media: MediaFile[] = [];
 
-      if (data.data && Array.isArray(data.data)) {
-        data.data.forEach((template: any) => {
-          if (template.media_url && !seen.has(template.media_url)) {
-            seen.add(template.media_url);
+      // Source 1: localStorage — URLs saved immediately after each upload
+      try {
+        const stored: Array<{ url: string; name: string; uploadedAt: string }> =
+          JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
+        stored.forEach((entry) => {
+          if (entry.url && !seen.has(entry.url)) {
+            seen.add(entry.url);
             media.push({
-              id: template.id || template.media_url,
-              url: template.media_url,
-              name: template.media_url.split('/').pop() || 'image',
+              id: entry.url,
+              url: entry.url,
+              name: entry.name || entry.url.split('/').pop() || 'image',
               type: 'image',
-              uploadedAt: template.updated_at || new Date().toISOString(),
+              uploadedAt: entry.uploadedAt || new Date().toISOString(),
             });
           }
         });
-      }
+      } catch { /* non-fatal */ }
 
-      // Sort by upload date (newest first)
+      // Source 2: saved templates that have a media_url
+      try {
+        const response = await fetch('/api/campaigns/email-templates', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && Array.isArray(data.data)) {
+            data.data.forEach((template: any) => {
+              if (template.media_url && !seen.has(template.media_url)) {
+                seen.add(template.media_url);
+                media.push({
+                  id: template.id || template.media_url,
+                  url: template.media_url,
+                  name: template.media_url.split('/').pop() || 'image',
+                  type: 'image',
+                  uploadedAt: template.updated_at || new Date().toISOString(),
+                });
+              }
+            });
+          }
+        }
+      } catch { /* non-fatal — localStorage results still shown */ }
+
+      // Sort newest first
       media.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
       setMediaFiles(media);
     } catch (err) {

@@ -103,6 +103,47 @@ const nextConfig = {
           },
         ],
       },
+      // CORS headers for contact form embed
+      {
+        source: "/api/contact",
+        headers: [
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*", // Allow all origins, or restrict to specific domains
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value:
+              "X-CSRF-Token, X-Forwarded-Host, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+          },
+        ],
+      },
+      // CORS headers for embed.js script
+      {
+        source: "/embed.js",
+        headers: [
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*",
+          },
+          {
+            key: "Content-Type",
+            value: "application/javascript",
+          },
+        ],
+      },
     ];
   },
 

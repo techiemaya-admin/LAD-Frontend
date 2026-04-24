@@ -76,6 +76,7 @@ interface GroupChatWindowProps {
   groupName: string;
   groupColor: string;
   onBack: () => void;
+  onGroupDeleted?: () => void;
   autoOpenInfo?: boolean;
   channel?: 'personal' | 'waba';
 }
@@ -154,6 +155,7 @@ interface ConversationResult {
 
 interface AddMembersPanelProps {
   groupId: string;
+  channel: 'personal' | 'waba';
   existingConvIds: Set<string>;
   onClose: () => void;
   onMembersAdded: () => void;
@@ -161,6 +163,7 @@ interface AddMembersPanelProps {
 
 const AddMembersPanel = memo(function AddMembersPanel({
   groupId,
+  channel,
   existingConvIds,
   onClose,
   onMembersAdded,
@@ -203,8 +206,8 @@ const AddMembersPanel = memo(function AddMembersPanel({
         setContactsPage(page);
         if (src === 'personal') {
           setSavedContacts(raw.map((c, idx) => ({
-            id: String((c as Record<string,unknown>).whatsapp_id || (c as Record<string,unknown>).phone || `pwa-${page}-${idx}`),
-            lead_name: (c.name || c.phone) as string | null,
+            id: String((c as Record<string,unknown>).id || (c as Record<string,unknown>).whatsapp_id || (c as Record<string,unknown>).phone || `pwa-${page}-${idx}`),
+            lead_name: (c.name || c.contact_name || c.phone) as string | null,
             lead_phone: c.phone as string | null,
             lead_email: null,
             lead_company: null,
@@ -279,18 +282,20 @@ const AddMembersPanel = memo(function AddMembersPanel({
     if (selected.size === 0) return;
     setAdding(true);
     try {
-      await fetch(`${GROUP_API}/${groupId}/conversations`, {
+      const res = await fetch(`${GROUP_API}/${groupId}/conversations?channel=${channel}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selected) }),
       });
+      const data = await res.json();
+      console.log('[AddMembersPanel] add result:', data);
       onMembersAdded();
     } catch (err) {
       console.error('Error adding members:', err);
     } finally {
       setAdding(false);
     }
-  }, [groupId, selected, onMembersAdded]);
+  }, [groupId, channel, selected, onMembersAdded]);
 
   return (
     <div className="absolute inset-0 z-10 bg-card flex flex-col">
@@ -496,24 +501,30 @@ const AddMembersPanel = memo(function AddMembersPanel({
 
 interface GroupInfoPanelProps {
   groupId: string;
+  channel: 'personal' | 'waba';
   detail: GroupDetail;
   groupColor: string;
   senderColorMap: Map<string, string>;
   onClose: () => void;
   onMembersChanged: () => void;
+  onGroupDeleted: () => void;
 }
 
 const GroupInfoPanel = memo(function GroupInfoPanel({
   groupId,
+  channel,
   detail,
   groupColor,
   senderColorMap,
   onClose,
   onMembersChanged,
+  onGroupDeleted,
 }: GroupInfoPanelProps) {
   const [memberSearch, setMemberSearch] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
   const [metaAdsConnected, setMetaAdsConnected] = useState(false);
   const [loadingAdsStatus, setLoadingAdsStatus] = useState(false);
@@ -687,8 +698,30 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
   const handleMembersAdded = useCallback(() => {
     setShowAddMembers(false);
-    onMembersChanged(); // refreshDetail is passed as onMembersChanged from GroupChatWindow
+    onMembersChanged();
   }, [onMembersChanged]);
+
+  const handleDeleteGroup = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${GROUP_API}/${groupId}?channel=${channel}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        onGroupDeleted();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to delete group: ${err.error || res.statusText}`);
+      }
+    } catch (err) {
+      console.error('Error deleting group:', err);
+      alert('Failed to delete group');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [groupId, channel, onGroupDeleted]);
 
   return (
     <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden relative">
@@ -696,6 +729,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
       {showAddMembers && (
         <AddMembersPanel
           groupId={groupId}
+          channel={channel}
           existingConvIds={existingConvIds}
           onClose={() => setShowAddMembers(false)}
           onMembersAdded={handleMembersAdded}
@@ -955,15 +989,50 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
         {/* Danger zone */}
         <div className="px-2 py-2">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
-            <LogOut className="h-4 w-4" />
-            <span className="text-sm flex-1 text-left">Exit group</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
-            <Trash2 className="h-4 w-4" />
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500 disabled:opacity-50"
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             <span className="text-sm flex-1 text-left">Delete group</span>
           </button>
         </div>
+
+        {/* Delete confirmation dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 rounded-lg">
+            <div className="bg-card border border-border rounded-xl shadow-xl p-5 mx-4 w-full max-w-xs">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="h-5 w-5 text-red-500 flex-shrink-0" />
+                <h3 className="font-semibold text-sm">Delete group?</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                <span className="font-medium text-foreground">"{detail.name}"</span> and all its members will be permanently deleted. This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  onClick={handleDeleteGroup}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -976,6 +1045,7 @@ export const GroupChatWindow = memo(function GroupChatWindow({
   groupName,
   groupColor,
   onBack,
+  onGroupDeleted,
   autoOpenInfo = false,
   channel = 'waba',
 }: GroupChatWindowProps) {
@@ -1002,8 +1072,10 @@ export const GroupChatWindow = memo(function GroupChatWindow({
       .then(([detailResult, messagesResult]) => {
         if (detailResult.status === 'fulfilled') {
           const detailRes = detailResult.value;
+          console.log('[GroupChatWindow] detail response:', detailRes);
           if (detailRes?.success) {
             setDetail(detailRes.data);
+            console.log('[GroupChatWindow] members count:', detailRes.data?.members?.length, detailRes.data?.members);
           } else {
             setDetailError(detailRes?.error || 'Unable to load group info');
           }
@@ -1186,11 +1258,13 @@ export const GroupChatWindow = memo(function GroupChatWindow({
         detail ? (
           <GroupInfoPanel
             groupId={groupId}
+            channel={channel}
             detail={detail}
             groupColor={groupColor}
             senderColorMap={senderColorMap}
             onClose={() => setShowInfoPanel(false)}
             onMembersChanged={refreshDetail}
+            onGroupDeleted={onGroupDeleted ?? onBack}
           />
         ) : (
           <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden">

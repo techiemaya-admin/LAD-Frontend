@@ -87,10 +87,10 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    /* Message Bubbles */
-    --message-incoming: 210 40% 96%;
-    --message-incoming-foreground: 222 47% 11%;
-    --message-outgoing: 230 74% 19%;
+    /* Message Bubbles - WhatsApp Theme */
+    --message-incoming: 0 0% 100%;
+    --message-incoming-foreground: 0 0% 0%;
+    --message-outgoing: 142 70% 45%;
     --message-outgoing-foreground: 0 0% 100%;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
@@ -138,22 +138,45 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles */
+  /* Message bubbles — WhatsApp styling */
   .message-bubble-incoming {
-    @apply bg-[hsl(var(--message-incoming))] text-[hsl(var(--message-incoming-foreground))] rounded-2xl rounded-bl-md;
+    background: #ffffff;
+    color: #111b21;
+    border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
   }
 
   .message-bubble-outgoing {
-    @apply bg-[hsl(var(--message-outgoing))] text-[hsl(var(--message-outgoing-foreground))] rounded-2xl rounded-br-md;
+    background: #0b1957;
+    color: #ffffff;
+    border-radius: 8px 0 8px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
 
-  /* Chat background */
+  /* ── Chat window background ────────────────────────────────────────────── */
   .whatsapp-chat-bg {
-    @apply bg-white;
+    background-color: #ffffff;
   }
 
   .dark .whatsapp-chat-bg {
-    @apply bg-gray-950;
+    background-color: #0d1418;
+  }
+
+  /* ── Chat message typography (WhatsApp-style) ──────────────────────────── */
+  .wa-msg-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14.2px;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    white-space: pre-wrap;
+    word-break: break-words;
+  }
+
+  .wa-msg-time {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
   }
 
   /* Event type colors for calendar */

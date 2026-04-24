@@ -196,7 +196,6 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
       const seg = segments[i];
       const speaker = (seg.speaker || "").toLowerCase();
       const text = seg.text.trim().toLowerCase();
-
       // Heuristic for agent/assistant
       const isAgent = speaker.includes("agent") || speaker.includes("assistant") || speaker.includes("ai") || speaker.includes("mira");
 
@@ -211,7 +210,6 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
           if (next) {
             const nextSpeaker = (next.speaker || "").toLowerCase();
             const nextText = next.text.trim().toLowerCase();
-
             const isUser = nextSpeaker.includes("user") || nextSpeaker.includes("lead") || nextSpeaker.includes("customer") || nextSpeaker.includes("human") || nextSpeaker.includes("prospect") ||
               (!nextSpeaker.includes("agent") && !nextSpeaker.includes("assistant") && !nextSpeaker.includes("ai") && !nextSpeaker.includes("mira"));
 

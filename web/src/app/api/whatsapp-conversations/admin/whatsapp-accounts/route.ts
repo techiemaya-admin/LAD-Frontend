@@ -15,7 +15,7 @@
  *   - Fall back to Node backend if BNI returns 4xx/5xx.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-proxy';
+import { getWhatsAppServiceUrl } from '../../utils/python-proxy';
 import { getBackendUrl } from '../../../utils/backend';
 
 interface WaAccount {
@@ -51,22 +51,38 @@ async function fetchNodeAccounts(req: NextRequest): Promise<WaAccount[]> {
   }
 }
 
-/** Pull accounts from the Python BNI conversation service. */
+/** Pull accounts from the Python BNI conversation service.
+ *  Uses a direct fetch (not proxyToPythonService) so ECONNREFUSED is swallowed
+ *  silently — Python is optional; Node.js accounts are the primary source.
+ */
 async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): Promise<WaAccount[]> {
+  const wabaBase = getWhatsAppServiceUrl();
+  if (!wabaBase) return [];
+
   try {
-    const url = new URL(req.url);
-    if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-    // Always pass tenant_id so the Python service filters server-side
-    if (tenantId) url.searchParams.set('tenant_id', tenantId);
-    const wabaReq = new NextRequest(url, req);
-    const resp = await proxyToPythonService(wabaReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
-    if (resp.status >= 400) return [];
+    const targetUrl = new URL('/admin/whatsapp-accounts', wabaBase);
+    if (tenantId) targetUrl.searchParams.set('tenant_id', tenantId);
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const auth = req.headers.get('authorization');
+    if (auth) headers['Authorization'] = auth;
+    const tid = req.headers.get('x-tenant-id');
+    if (tid) headers['X-Tenant-ID'] = tid;
+
+    const resp = await fetch(targetUrl.toString(), {
+      method: 'GET',
+      headers,
+      signal: AbortSignal.timeout(5000), // don't wait more than 5s for an optional source
+    });
+
+    if (!resp.ok) return [];
     const data = await resp.json();
     if (data?.success && Array.isArray(data.data)) return data.data;
     if (Array.isArray(data?.accounts)) return data.accounts;
     if (Array.isArray(data)) return data;
     return [];
   } catch {
+    // Python service is optional — silently return empty when it's down
     return [];
   }
 }
@@ -147,33 +163,41 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Read the body once before handing it to the BNI proxy, so we can re-send
-  // it to the Node backend fallback if BNI fails (streams can only be read once).
+  // Read the body once; we may need to re-send it to the Node fallback.
   let parsedBody: unknown;
   try {
     parsedBody = await req.json();
   } catch { /* empty body */ }
 
-  try {
-    const bodyString = parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined;
-    const url = new URL(req.url);
-    if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-    const clonedReq = new NextRequest(url, {
-      method: req.method,
-      headers: req.headers,
-      body: bodyString,
-    });
+  // Try Python BNI service first (full onboarding flow) using a direct fetch
+  // so ECONNREFUSED is swallowed silently without proxy error logs.
+  const wabaBase = getWhatsAppServiceUrl();
+  if (wabaBase) {
+    try {
+      const targetUrl = new URL('/admin/whatsapp-accounts', wabaBase);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const auth = req.headers.get('authorization');
+      if (auth) headers['Authorization'] = auth;
+      const tid = req.headers.get('x-tenant-id');
+      if (tid) headers['X-Tenant-ID'] = tid;
 
-    const bniResponse = await proxyToPythonService(clonedReq, getWhatsAppServiceUrl(), '/admin/whatsapp-accounts');
+      const bniResp = await fetch(targetUrl.toString(), {
+        method: 'POST',
+        headers,
+        body: parsedBody !== undefined ? JSON.stringify(parsedBody) : undefined,
+        signal: AbortSignal.timeout(10000),
+      });
 
-    // Fall back to Node backend on server errors or method-not-allowed
-    if (bniResponse.status >= 400) {
-      return callNodeBackend(req, 'POST', parsedBody);
+      if (bniResp.ok) {
+        const data = await bniResp.json();
+        return NextResponse.json(data, { status: bniResp.status });
+      }
+      // BNI returned 4xx/5xx — fall through to Node fallback below
+    } catch {
+      // Python service down — fall through to Node fallback silently
     }
-
-    return bniResponse;
-  } catch (err) {
-    console.error('[admin/whatsapp-accounts POST] Python proxy error, falling back to Node:', err);
-    return callNodeBackend(req, 'POST', parsedBody);
   }
+
+  // Fallback: Node.js backend
+  return callNodeBackend(req, 'POST', parsedBody);
 }
