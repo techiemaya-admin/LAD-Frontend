@@ -435,7 +435,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <UserPlus className="h-5 w-5" />
@@ -531,7 +531,7 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
 
           {/* ── Single/List Add Tab ────────────────── */}
           <TabsContent value="single" className="flex-1 flex flex-col overflow-hidden px-4 py-2">
-            <ScrollArea className="flex-1 max-h-[40vh] pr-2">
+            <ScrollArea className="flex-1 max-h-[50vh] pr-2">
               <div className="space-y-3">
                 {leads.map((lead, idx) => (
                   <LeadRow

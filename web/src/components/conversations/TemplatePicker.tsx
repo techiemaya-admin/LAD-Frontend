@@ -192,7 +192,7 @@ export function TemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Send Template Message
@@ -216,7 +216,7 @@ export function TemplatePicker({
             </div>
 
             {/* Template list */}
-            <ScrollArea className="flex-1 max-h-[400px]">
+            <ScrollArea className="flex-1">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -269,9 +269,9 @@ export function TemplatePicker({
             </ScrollArea>
           </>
         ) : (
-          <>
-            {/* Selected template detail */}
-            <div className="space-y-4">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto pr-1">
+              <div className="space-y-4 pb-4">
               {/* Back button + template info */}
               <div className="flex items-center gap-2">
                 <Button
@@ -418,17 +418,21 @@ export function TemplatePicker({
                 </div>
               )}
 
-            <DialogFooter>
+              </div>
+
+            <DialogFooter className="px-6 py-4 border-t border-border bg-gray-50/50 flex-shrink-0">
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={sending}
+                className="px-6 border-gray-300 text-gray-700 h-11 font-medium"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
+                className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white px-8 h-11 font-bold shadow-md rounded-lg transition-all"
               >
                 {sending ? (
                   <>
@@ -443,7 +447,7 @@ export function TemplatePicker({
                 )}
               </Button>
             </DialogFooter>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>

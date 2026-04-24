@@ -1760,7 +1760,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       open={isDetailsOpen} 
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
-      <DialogContent className="flex flex-col max-h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
+      <DialogContent className="flex flex-col sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
         <DialogTitle className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1801,12 +1801,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               className="flex flex-col"
             >
               <div className="border-b border-gray-200 px-6 sticky top-0 bg-white z-10">
-                <TabsList className="flex gap-2">
+                <TabsList className="flex w-full justify-around bg-gray-50/50 p-1 rounded-xl">
                   {tabs.map((tab) => (
                     <TabsTrigger 
                       key={tab.index}
                       value={String(tab.index)}
-                      className="px-3 py-1 text-sm"
+                      className="px-8 text-sm font-medium py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1848,7 +1848,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     handleSaveEdit();
                   }}
                   disabled={isLoading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white"
                 >
                   {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
@@ -2121,19 +2121,24 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       </div>
       {renderDetailsDialog()}
       <Dialog open={deleteDialogOpen}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
-          <DialogTitle className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
+        <DialogContent showCloseButton={false} className="p-10 pt-4 sm:max-w-5xl sm:w-[90vw] sm:min-h-[280px] flex flex-col justify-between">
+          <DialogTitle className="flex justify-between items-center border-b pb-4">
+            <span className="text-xl font-bold text-[#3A3A4F]">Delete Lead</span>
             <button
               onClick={handleDeleteDialogClose}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </DialogTitle>
-          <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+          <div className="py-8">
+            <p className="text-gray-600 text-base">
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{getLeadDisplayName(lead)}</span>? 
+              This action is permanent and cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end pt-6 border-t">
+            <Button variant="outline" onClick={handleDeleteDialogClose} className="px-6 border-gray-300 text-gray-700 hover:bg-gray-50 h-11 font-medium">
               Cancel
             </Button>
             <Button
@@ -2147,15 +2152,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 handleConfirmDelete();
               }}
               disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="px-6 bg-red-600 hover:bg-red-700 text-white h-11 font-medium shadow-sm"
             >
-              {isLoading ? 'Deleting...' : 'Delete'}
+              {isLoading ? 'Deleting...' : 'Delete Lead'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
       <Dialog open={deleteConfirmation.open}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
+        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh]">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-[#3A3A4F]">
               Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}

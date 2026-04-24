@@ -1656,7 +1656,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
       />
       {/* Custom Export Date Range Dialog */}
       <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
-        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+        <DialogContent className="mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
           <div className="flex gap-4 mb-2">
             <div className="flex-1">

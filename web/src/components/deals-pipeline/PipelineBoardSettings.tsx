@@ -136,7 +136,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
+      <DialogContent className="sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogTitle className="pb-2">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-blue-500" />

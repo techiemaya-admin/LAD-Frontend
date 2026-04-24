@@ -241,7 +241,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
         </SortableContext>
       </div>
       <Dialog open={editDialogOpen} onOpenChange={(isOpen) => !isOpen && setEditDialogOpen(false)}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] overflow-y-auto">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-[#3A3A4F]">Edit Stage</span>
             <button
@@ -330,7 +330,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
         </DialogContent>
       </Dialog>
       <Dialog open={deleteDialogOpen} onOpenChange={(isOpen) => !isOpen && setDeleteDialogOpen(false)}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2 max-h-[90vh] overflow-y-auto">
+        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] overflow-y-auto">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-[#3A3A4F]">Delete Stage</span>
             <button

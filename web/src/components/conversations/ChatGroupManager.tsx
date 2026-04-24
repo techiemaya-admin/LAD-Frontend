@@ -522,7 +522,7 @@ export function ChatGroupManager({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-5xl sm:w-[90vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <div className="bg-primary/5 border-b border-border px-4 py-3">
           <DialogHeader>
@@ -544,7 +544,7 @@ export function ChatGroupManager({
               )}
 
               {/* Select mode controls */}
-              <div className="ml-auto flex items-center gap-1">
+              <div className="ml-auto flex items-center gap-1 mr-8">
                 {isGroupSelectMode ? (
                   <>
                     {selectedGroupIds.size < filteredGroups.length ? (
@@ -836,7 +836,7 @@ export function ChatGroupManager({
                             );
                           })()}
 
-                          <ScrollArea className="h-[200px]">
+                          <ScrollArea className="h-[400px]">
                             <div className="space-y-0.5">
                               {sourceContacts.map((contact, idx) => {
                                 const isSelected = selectedContacts.has(contact.id);

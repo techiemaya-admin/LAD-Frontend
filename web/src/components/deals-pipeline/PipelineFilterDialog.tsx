@@ -132,15 +132,9 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   if (masterDataLoading || hasNoMasterData) {
     return (
       <Dialog open={open}>
-        <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
+        <DialogContent showCloseButton={true} className="p-6 pt-2 overflow-y-auto rounded-3xl">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-primary">Filter Leads</span>
-            <button
-              onClick={onClose}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </DialogTitle>
           <div className="flex justify-center p-6">
             <p>Loading filter options...</p>
@@ -195,16 +189,10 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     });
   };
   return (
-    <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto sm:max-w-[640px] rounded-3xl">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent showCloseButton={true} className="p-6 pt-2 overflow-y-auto rounded-3xl">
         <DialogTitle className="flex justify-between items-center pb-1 mt-4">
           <span className="text-lg font-semibold text-primary">Filter Leads</span>
-          <button
-            onClick={onClose}
-            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </DialogTitle>
         <div className="mt-2 rounded-xl border border-gray-200 p-4 bg-[#f9fafb]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

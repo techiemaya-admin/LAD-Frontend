@@ -128,7 +128,7 @@ export default function MediaInsertionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Insert Media into Email</DialogTitle>
           <DialogDescription>
