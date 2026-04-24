@@ -72,7 +72,9 @@ function normalizeList(value: any): string[] {
         if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
       } catch { }
     }
-    if (v.includes(",")) return v.split(",").map((x) => x.trim()).filter(Boolean);
+    // Only split by newlines or semicolons, not commas, to avoid breaking sentences
+    if (v.includes("\n")) return v.split("\n").map((x) => x.trim()).filter(Boolean);
+    if (v.includes(";")) return v.split(";").map((x) => x.trim()).filter(Boolean);
     return [v];
   }
   if (typeof value === "object") return Object.values(value).map(String).filter(Boolean);
@@ -150,39 +152,115 @@ const TranscriptsTab = ({
 );
 
 /* ----------------- Analysis Tab ------------------ */
-const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
-  const recoList = normalizeList(analysis?.recommendations);
+const StatBox = ({ label, value, subValue, colorClass }: { label: string; value: string; subValue?: string; colorClass?: string }) => (
+  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-1 min-w-[120px] flex-1">
+    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{label}</span>
+    <span className={cn("text-lg font-bold leading-tight", colorClass || "text-[#172560]")}>{value}</span>
+    {subValue && <span className="text-[10px] text-gray-400 font-medium truncate">{subValue}</span>}
+  </div>
+);
+
+const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | null; log: any | null; leadData?: any; segments?: any[] }) => {
+  const lead = leadData?.lead ?? leadData?.data?.lead ?? leadData ?? null;
+  const recoList = normalizeList(analysis?.recommendations || analysis?.raw_analysis?.recommendations);
   const summaryText = analysis?.summary ?? "";
   const sentimentText = analysis?.sentiment ?? "";
-  const dispositionText = analysis?.disposition ?? "";
+  const dispositionText = (analysis?.disposition || analysis?.raw_analysis?.disposition || analysis?.raw_analysis?.lead_disposition || analysis?.raw_analysis?.disposition_full?.disposition || log?.disposition || "").replace(/_/g, ' ');
 
-  const getSentimentVariant = (sentiment: string) => {
-    const lower = sentiment.toLowerCase();
-    if (lower.includes("positive"))
-      return {
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle,
-      };
-    if (lower.includes("negative"))
-      return {
-        color: "bg-red-100 text-red-800 border-red-200",
-        icon: AlertCircle,
-      };
-    return {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: MinusCircle,
-    };
+  // Data for the boxes
+  const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? (log as any)?.lead_score ?? (log as any)?.score ?? 0;
+  let category = (
+    analysis?.lead_category ||
+    analysis?.category ||
+    analysis?.raw_analysis?.lead_category ||
+    analysis?.raw_analysis?.category ||
+    log?.lead_category ||
+    log?.category ||
+    "WARM"
+  ).toUpperCase();
+
+  // Score enforcement as safety (if score >= 8, it MUST be hot)
+  if (score >= 8 && category !== "HOT") category = "HOT";
+  if (score > 0 && score <= 3 && category !== "COLD") category = "COLD";
+  // Logic for completion percentage based on questions asked vs answered
+  const getCompletionStats = () => {
+    if (!segments || segments.length === 0) return { percent: 0, answered: 0, total: 0 };
+
+    let total = 0;
+    let answered = 0;
+
+    // Keywords for filler/greeting questions to ignore
+    const fillerKeywords = ["hello", "hi ", "hey ", "are you there", "am i audible", "anybody there", "how are you"];
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const speaker = (seg.speaker || "").toLowerCase();
+      const text = seg.text.trim().toLowerCase();
+
+      // Heuristic for agent/assistant
+      const isAgent = speaker.includes("agent") || speaker.includes("assistant") || speaker.includes("ai") || speaker.includes("mira");
+
+      // Filter out greetings and short filler questions
+      const isFiller = text.length < 15 || fillerKeywords.some(k => text.includes(k));
+
+      if (isAgent && seg.text.includes("?") && !isFiller) {
+        total++;
+        // Check if user (any non-agent) responded in next 2 turns
+        for (let j = 1; j <= 2; j++) {
+          const next = segments[i + j];
+          if (next) {
+            const nextSpeaker = (next.speaker || "").toLowerCase();
+            const nextText = next.text.trim().toLowerCase();
+
+            const isUser = nextSpeaker.includes("user") || nextSpeaker.includes("lead") || nextSpeaker.includes("customer") || nextSpeaker.includes("human") || nextSpeaker.includes("prospect") ||
+              (!nextSpeaker.includes("agent") && !nextSpeaker.includes("assistant") && !nextSpeaker.includes("ai") && !nextSpeaker.includes("mira"));
+
+            // Ignore very short responses or simple greetings as an "answer"
+            const isMeaningfulResponse = nextText.length > 3 && !["hi", "hello", "yes", "okay"].includes(nextText);
+
+            if (isUser && isMeaningfulResponse) {
+              answered++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
+    return { percent, answered, total };
   };
 
-  // Color mapping derived from disposition
+  const { percent: completionPercent, answered: answeredCount, total: totalQuestions } = getCompletionStats();
+
+  // Logic for sub-labels based on score
+  const getScoreTier = (s: number) => {
+    if (s >= 8) return "High-tier lead";
+    if (s >= 5) return "Mid-tier lead";
+    if (s >= 3) return "Lower-mid tier";
+    return "Cold contact";
+  };
+
+  const getCategoryDesc = (c: string) => {
+    if (c === "HOT") return "Qualified interest";
+    if (c === "COLD") return "No interest";
+    return "Unqualified interest";
+  };
+
+  const getPriorityDesc = (s: number) => {
+    if (s >= 8) return "Immediate action";
+    if (s >= 5) return "Follow up needed";
+    return "Nurture sequence";
+  };
+
   const getDispositionVariant = (disposition: string) => {
     const lower = (disposition || "").toLowerCase();
     const compact = lower.replace(/[^a-z0-9]+/g, " ").trim();
     const noPunct = lower.replace(/[^a-z0-9]/g, "");
 
-    // Green
+    // Red (proceed immediately) - Changed from Green as per user request
     if (compact.includes("proceed immediately") || noPunct.includes("proceedimmediately")) {
-      return { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle };
+      return { color: "bg-red-100 text-red-800 border-red-200", icon: () => null };
     }
 
     // Yellow (3-7 days)
@@ -200,7 +278,7 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
       return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
     }
 
-    // Red (don't pursue)
+    // Blue (don't pursue) - Changed from Red as per user request
     if (
       compact.includes("do not pursue") ||
       compact.includes("dont pursue") ||
@@ -212,32 +290,127 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
       noPunct.includes("dontpurse") ||
       noPunct.includes("donotpurse")
     ) {
-      return { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle };
+      return { color: "bg-blue-100 text-blue-800 border-blue-200", icon: AlertCircle };
     }
 
     return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
   };
+
+  const getScoreColor = (cat: string) => {
+    if (cat === "HOT") return { bar: "bg-red-100", dot: "bg-red-500", border: "border-red-500", text: "text-red-500", tick: "bg-red-300" };
+    if (cat === "COLD") return { bar: "bg-blue-100", dot: "bg-blue-500", border: "border-blue-500", text: "text-blue-500", tick: "bg-blue-300" };
+    return { bar: "bg-amber-100", dot: "bg-amber-500", border: "border-amber-500", text: "text-amber-500", tick: "bg-amber-300" };
+  };
+
+  const theme = getScoreColor(category);
+
+  const getThemeGradient = (cat: string) => {
+    if (cat === "HOT") return "from-white to-red-50";
+    if (cat === "COLD") return "from-white to-blue-50";
+    return "from-white to-amber-50";
+  };
+  const gradientClass = getThemeGradient(category);
 
   const dispositionInfo = getDispositionVariant(dispositionText);
   const DispoIcon = dispositionInfo.icon;
 
   return (
     <ScrollArea className="h-full p-4">
-      <Card className="border-orange-200 shadow-lg overflow-hidden">
-        <CardContent className="p-6 space-y-6 bg-gradient-to-br from-white to-orange-50">
+      <div className="space-y-6">
+        {/* Summary Boxes */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatBox label="Lead Score" value={`${score}/10`} subValue={getScoreTier(score)} colorClass={theme.text} />
+          <StatBox label="Category" value={category} subValue={getCategoryDesc(category)} colorClass={theme.text} />
+          <StatBox
+            label="Emotion"
+            value={(() => {
+              const text = (analysis?.sentiment || analysis?.raw_analysis?.sentiment || "").toLowerCase();
+              if (text.includes("interested")) return "Interested";
+              if (text.includes("excited")) return "Excited";
+              if (text.includes("frustrated")) return "Frustrated";
+              if (text.includes("hesitant") || text.includes("hesitation")) return "Hesitant";
+              if (text.includes("curious")) return "Curious";
+              if (text.includes("angry")) return "Angry";
+              if (text.includes("polite")) return "Polite";
+              return "Neutral";
+            })()}
+            subValue="Call mindset"
+            colorClass="text-purple-600"
+          />
+          <StatBox label="Stage Completion" value={`${completionPercent}%`} subValue={`${answeredCount}/${totalQuestions} answered`} colorClass="text-blue-600" />
+        </div>
+
+        {/* Scaling Indicator */}
+        <div className="p-6 space-y-8 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          {/* Scaling Indicator */}
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Scaling — Where this lead sits</h4>
+            <div className="relative h-6 flex items-center">
+              {/* Background Line */}
+              <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
+
+              {/* Animated Pointer */}
+              <div
+                className="absolute transition-all duration-500 ease-out flex items-center justify-center translate-y-[0px]"
+                style={{ left: `${(score / 10) * 100}%`, transform: "translateX(-50%)" }}
+              >
+                <div className={cn("w-5 h-5 rounded-full border-2 bg-white shadow-md flex items-center justify-center", theme.border)}>
+                  <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Scaling Labels */}
+            <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+              <span className="text-left">Cold / wrong contact</span>
+              <span className="text-center">Nurture</span>
+              <span className="text-center">Active pipeline</span>
+              <span className="text-right">Close now</span>
+            </div>
+          </div>
+
+          {/* Scaling Note */}
+          <div className={cn("border-l-4 p-4 rounded-r-xl",
+            category === "HOT" ? "bg-red-50 border-red-400" :
+              category === "COLD" ? "bg-blue-50 border-blue-400" :
+                "bg-amber-50 border-amber-400"
+          )}>
+            <h5 className={cn("text-[10px] font-bold uppercase mb-1",
+              category === "HOT" ? "text-red-800" :
+                category === "COLD" ? "text-blue-800" :
+                  "text-amber-800"
+            )}>Scaling note</h5>
+            <p className={cn("text-xs leading-relaxed font-medium",
+              category === "HOT" ? "text-red-700" :
+                category === "COLD" ? "text-blue-700" :
+                  "text-amber-700"
+            )}>
+              {analysis?.scaling_note || (score >= 8 ? (
+                "This lead is a high-priority prospect who showed immediate interest and buying signals. Focus on closing or scheduling the next concrete step."
+              ) : score >= 5 ? (
+                "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
+              ) : (
+                "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
+              ))}
+            </p>
+          </div>
+        </div>
+
+        {/* Main Analysis Sections (Priority) */}
+        <div className={cn("p-6 space-y-6 bg-gradient-to-br rounded-2xl border border-gray-100 shadow-sm", gradientClass)}>
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <Zap className="h-5 w-5 text-[#0b1957]" />
+              <Zap className={cn("h-5 w-5", theme.text === "text-amber-500" ? "text-amber-600" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
             </div>
-            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-200 wrap-break-word whitespace-pre-wrap">
+            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-100 wrap-break-word whitespace-pre-wrap">
               {summaryText || "No summary available."}
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-orange-500" />
+              <TrendingUp className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
             </div>
             <Badge
@@ -246,43 +419,66 @@ const AnalysisTab = ({ analysis }: { analysis: any | null }) => {
                 dispositionInfo.color
               )}
             >
-              <DispoIcon className="h-4 w-4 mr-1 shrink-0" />
-              <span className="wrap-break-word whitespace-pre-wrap">
-                {sentimentText || "Neutral"}
-              </span>
+              <span className="wrap-break-word whitespace-pre-wrap">{sentimentText || "Neutral"}</span>
             </Badge>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-orange-500" />
+              <Clock className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
             </div>
-            <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-200">
-              {dispositionText || "Resolved successfully."}
+            <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-100">
+              {dispositionText || "No disposition available."}
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <Lightbulb className="h-5 w-5 text-orange-500" />
+              <Zap className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
-              {recoList.length > 0 ? (
-                recoList.map((r, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{r}</span>
+            <div className="space-y-4 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
+              {/* Current Lead Stage Information */}
+              {(lead?.stage || lead?.stages) && (
+                <div className="flex flex-col gap-2 pb-3 border-b border-gray-100/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Current Pipeline Stage</span>
+                      <span className="text-sm font-bold text-[#172560] capitalize">
+                        {String(lead.stage || lead.stages).replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 font-bold px-3 py-1">
+                      ACTIVE
+                    </Badge>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 italic">No recommendations available.</p>
+                </div>
               )}
+
+              <div className="space-y-3">
+                {recoList.length > 0 ? (
+                  recoList
+                    .flatMap((r) => r.split(/[.!?]/).filter((s) => s.trim().length > 0))
+                    .map((sentence, i) => (
+                      <div key={i} className="flex items-start gap-3 group">
+                        <div className={cn("mt-1 flex-shrink-0", theme.text)}>
+                          <CheckCircle className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">
+                          {sentence.trim()}.
+                        </span>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-gray-500 italic">No specific recommendations identified.</p>
+                )}
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+      </div>
     </ScrollArea>
   );
 };
@@ -302,12 +498,14 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               <MessageSquare className="h-5 w-5 text-orange-500" />
               <h3 className="font-bold text-xl text-gray-800">Prospect Questions</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
+            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
               {questions.length > 0 ? (
                 questions.map((q, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{q}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className="mt-1 flex-shrink-0 text-orange-500">
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{q}</span>
                   </div>
                 ))
               ) : (
@@ -321,12 +519,14 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
               <AlertCircle className="h-5 w-5 text-orange-500" />
               <h3 className="font-bold text-xl text-gray-800">Prospect Concerns</h3>
             </div>
-            <div className="space-y-2 bg-white/50 p-4 rounded-xl border border-gray-200">
+            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
               {concerns.length > 0 ? (
                 concerns.map((c, i) => (
-                  <div key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1.5" />
-                    <span>{c}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className="mt-1 flex-shrink-0 text-red-500">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{c}</span>
                   </div>
                 ))
               ) : (
@@ -582,7 +782,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
       </ScrollArea>
     );
   }
-  
+
 
   const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
   const phoneValue =
@@ -721,11 +921,13 @@ export function CallLogModal({
 
   useEffect(() => {
     async function load() {
+      setLogLoading(true);
+      setLog(null);
+      setAnalysis(null);
+      setSegments([]);
+      setMessages(null);
+
       if (!open || !id) {
-        setLog(null);
-        setSegments([]);
-        setAnalysis(null);
-        setMessages(null);
         return;
       }
 
@@ -809,14 +1011,13 @@ export function CallLogModal({
   const hasAudio = Boolean(signedRecordingUrl);
   const hasAnalysis = analysis && typeof analysis === "object" && Object.keys(analysis).length > 0;
 
-  const availableTabs: Array<"transcripts" | "analysis" | "messages" | "cost"> = [];
+  const availableTabs: Array<"transcripts" | "analysis" | "messages"> = [];
   if (hasTranscripts) availableTabs.push("transcripts");
   if (hasAnalysis) {
     availableTabs.push("analysis");
     availableTabs.push("messages");
   }
-  availableTabs.push("cost");
-  const defaultTab = availableTabs[0] ?? "cost";
+  const defaultTab = availableTabs[0] ?? "analysis";
 
   // Download handler
   const handleDownloadRecording = async () => {
@@ -867,6 +1068,15 @@ export function CallLogModal({
           open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none invisible"
         )}
       >
+        {/* Close Button */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-50/80 hover:bg-gray-100 border border-gray-200 text-gray-400 hover:text-gray-600 transition-all duration-200 z-[10000] group shadow-sm"
+          title="Close Modal"
+        >
+          <X className="h-5 w-5 group-hover:scale-110 transition-transform" />
+        </button>
+
         {/* Header */}
         {/* <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -897,7 +1107,7 @@ export function CallLogModal({
         </div> */}
 
         {/* Body */}
-        <div className="flex flex-col h-full p-6 space-y-6 overflow-hidden">
+        <div className="flex flex-col h-full pt-20 p-6 space-y-6 overflow-hidden">
 
           {logLoading ? (
             /* ── Skeleton while initial data loads ── */
@@ -977,13 +1187,6 @@ export function CallLogModal({
                     </TabsTrigger>
                   )}
 
-                  <TabsTrigger
-                    value="cost"
-                    className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
-                  >
-                    <DollarSign className="h-4 w-4 shrink-0" />
-                    <span>Cost</span>
-                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="lead" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
@@ -998,7 +1201,7 @@ export function CallLogModal({
 
                 {hasAnalysis && (
                   <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
-                    <AnalysisTab analysis={analysis} />
+                    <AnalysisTab analysis={analysis} log={log} leadData={leadData} segments={segments} />
                   </TabsContent>
                 )}
 
@@ -1008,9 +1211,6 @@ export function CallLogModal({
                   </TabsContent>
                 )}
 
-                <TabsContent value="cost" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl pt-6">
-                  <CallCostTab log={log} analysis={analysis} />
-                </TabsContent>
               </Tabs>
             </>
           )}

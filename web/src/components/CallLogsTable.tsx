@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
+import { cn } from "@/lib/utils";
 import {
   PhoneIncoming,
   PhoneOutgoing,
@@ -78,6 +79,7 @@ interface CallLog {
   recording_url?: string;
   call_recording_url?: string;
   tag?: LeadTag;
+
 }
 
 interface CallLogsTableProps {
@@ -225,20 +227,18 @@ export function CallLogsTable({
     }
   };
 
-  // Get lead tag for categorization
+  // Get lead tag for categorization - MUST match CallLogModal and CallLogsPage transformation
   const getLeadTag = useCallback((item: CallLog): LeadTag => {
-    const tags = item.lead_tags;
-    const primary = Array.isArray(tags) && tags.length > 0 ? String(tags[0]) : "";
-    const normalizedPrimary = primary.toLowerCase();
-    if (normalizedPrimary.includes("hot")) return "hot";
-    if (normalizedPrimary.includes("warm")) return "warm";
-    if (normalizedPrimary.includes("cold")) return "cold";
+    const score = item.lead_score ?? 0;
+    let cat = (item.lead_category || "WARM").toUpperCase();
 
-    if (item.lead_category) {
-      const normalized = normalizeLeadCategory(item.lead_category);
-      if (normalized) return normalized;
-    }
-    return "unknown";
+    // Score enforcement (identical to modal/page logic)
+    if (score >= 8) cat = "HOT";
+    else if (score > 0 && score <= 3) cat = "COLD";
+
+    if (cat === "HOT") return "hot";
+    if (cat === "COLD") return "cold";
+    return "warm";
   }, []);
 
   // Helper function to clean lead names from placeholder text
@@ -279,7 +279,7 @@ export function CallLogsTable({
     // Match pattern like "2026-03-09T12-41-19-128Z-bulk_call_template__9_.xlsx"
     const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/;
     const match = fileName.match(timestampPattern);
-    
+
     if (match) {
       const [_, year, month, day, hours, minutes] = match;
       const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
@@ -291,13 +291,13 @@ export function CallLogsTable({
         minute: '2-digit',
         hour12: true
       });
-      
+
       // Extract the rest of the filename after the timestamp and Z-
       const restOfFileName = fileName.replace(timestampPattern, '').replace(/^\d+Z-/, '');
-      
+
       return `${formattedDateTime} - ${restOfFileName}`;
     }
-    
+
     return fileName;
   };
 
@@ -316,15 +316,24 @@ export function CallLogsTable({
   const getStatusReason = (item: CallLog): string | undefined => {
     const raw: any = (item as any)?.metadata;
     if (!raw) return undefined;
+
+    let reason: string | undefined;
     if (typeof raw === 'string') {
       try {
         const parsed = JSON.parse(raw);
-        return parsed?.status_reason || parsed?.sip_trail?.status_reason;
+        reason = parsed?.status_reason || parsed?.sip_trail?.status_reason;
       } catch {
-        return undefined;
+        reason = undefined;
       }
+    } else {
+      reason = raw?.status_reason || raw?.sip_trail?.status_reason;
     }
-    return raw?.status_reason || raw?.sip_trail?.status_reason;
+
+    if (reason && typeof reason === 'string') {
+      return reason.replace(/_/g, ' ');
+    }
+
+    return reason;
   };
 
   // Add computed tag and serial number to items
@@ -389,6 +398,7 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
+      meta: { sticky: 'left-0', zIndex: 'z-40' },
       header: ({ table }) => {
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
@@ -434,6 +444,7 @@ export function CallLogsTable({
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
+      meta: { sticky: 'left-[44px]', zIndex: 'z-30' },
       header: 'S/No',
       size: 60,
       maxSize: 80,
@@ -447,6 +458,7 @@ export function CallLogsTable({
     {
       id: 'assistant',
       accessorKey: 'assistant',
+      meta: { sticky: 'left-[104px]', zIndex: 'z-20' },
       header: 'Agent',
       size: 120,
       maxSize: 150,
@@ -455,6 +467,7 @@ export function CallLogsTable({
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
+      meta: { sticky: 'left-[224px]', zIndex: 'z-10' },
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
@@ -515,9 +528,10 @@ export function CallLogsTable({
         return status.toLowerCase().includes(filterValue.toLowerCase());
       },
     },
+
     {
-      id: 'response',
-      header: 'Response',
+      id: "response",
+      header: "Response",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
           {getStatusReason(row.original) || "—"}
@@ -750,7 +764,7 @@ export function CallLogsTable({
                 title={`Download ${attachmentFileName}`}
               >
                 <Download className="w-6 h-6" />
-                
+
               </button>
             )}
           </div>
@@ -800,17 +814,20 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-              <TableCell
-                key={`${callId}-${column.id}`}
-                onClick={(e) => {
-                  if (column.id === 'select' || column.id === 'actions') {
-                    e.stopPropagation();
-                  }
-                }}
-                className={cellIndex === 0 && indent ? "pl-8" : ""}
-              >
-                {flexRender(column.cell, cellContext as any)}
-              </TableCell>
+                <TableCell
+                  key={`${callId}-${column.id}`}
+                  onClick={(e) => {
+                    if (column.id === 'select' || column.id === 'actions') {
+                      e.stopPropagation();
+                    }
+                  }}
+                  className={cn(
+                    cellIndex === 0 && indent ? "pl-8" : "",
+                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                  )}
+                >
+                  {flexRender(column.cell, cellContext as any)}
+                </TableCell>
             );
           })}
         </TableRow>
@@ -833,7 +850,10 @@ export function CallLogsTable({
                 e.stopPropagation();
               }
             }}
-            className={cellIndex === 0 && indent ? "pl-8" : ""}
+            className={cn(
+              cellIndex === 0 && indent ? "pl-8" : "",
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+            )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
@@ -846,53 +866,22 @@ export function CallLogsTable({
     <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
       <div className="p-4 border-b border-[#E2E8F0]">
-        <div className="flex flex-col gap-4">
-          {/* Row 1: Search Bar & Selection Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search Call Logs..."
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Selection Actions - ONLY ON MOBILE */}
-            {selectedCalls.size > 0 && (
-              <div className="flex sm:hidden gap-2 items-center w-full">
-                {failedCount > 0 && onRetrySelected && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRetrySelected();
-                    }}
-                    className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
-                  >
-                    Retry ({failedCount})
-                  </button>
-                )}
-                {onEndSelected && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEndSelected();
-                    }}
-                    className="flex-1 px-3 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-all duration-300 text-xs font-semibold shadow-md active:scale-95"
-                  >
-                    End ({selectedCalls.size})
-                  </button>
-                )}
-              </div>
-            )}
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div className="relative flex-1 max-w-full lg:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search Call Logs..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
           </div>
-          
-          {/* Row 2: Status, Time, and Call Filters grouped together */}
-          <div className="flex flex-wrap sm:flex-nowrap gap-3 items-center justify-end">
+
+          {/* Filters grouped together in one row */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center justify-end">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -905,7 +894,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={dateFilter} onValueChange={onDateFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
                 <SelectValue placeholder="Date Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -916,7 +905,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={callFilter} onValueChange={onCallFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[150px] sm:w-[180px] h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
                 <SelectValue placeholder="Call Type" />
               </SelectTrigger>
               <SelectContent>
@@ -925,9 +914,37 @@ export function CallLogsTable({
                 <SelectItem value="batch">Batch View</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Selection Actions - ONLY ON MOBILE */}
+            {selectedCalls.size > 0 && (
+              <div className="flex sm:hidden gap-2 items-center w-full mt-2">
+                {failedCount > 0 && onRetrySelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetrySelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                  >
+                    Retry ({failedCount})
+                  </button>
+                )}
+                {onEndSelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEndSelected();
+                    }}
+                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                  >
+                    End ({selectedCalls.size})
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        
+
         {/* Custom Date Inputs Picker (only show when custom is selected) */}
         {dateFilter === 'custom' && (
           <div className="flex gap-3 px-4 justify-end mt-2">
@@ -967,15 +984,18 @@ export function CallLogsTable({
       </div>
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
         <div className="min-w-[1000px] w-full">
-          <Table>
-            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0] hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className={`font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                        }`}
+                      className={cn(
+                        "font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] sticky top-0 z-30",
+                        header.column.getCanSort() ? 'cursor-pointer select-none' : '',
+                        (header.column.columnDef.meta as any)?.sticky ? `sticky ${(header.column.columnDef.meta as any)?.sticky} z-50` : ''
+                      )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {header.isPlaceholder ? null : (
@@ -998,218 +1018,218 @@ export function CallLogsTable({
                 </TableRow>
               ))}
             </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            // Skeleton rows
-            Array.from({ length: 8 }).map((_, i) => (
-              <TableRow key={`skeleton-${i}`} className="animate-pulse">
-                {columns.map((col, j) => (
-                  <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : batchGroups ? (
-            (() => {
-              // Create timeline items combining batches and individual calls
-              const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
-
-              const visibleRowIds = new Set(
-                table.getRowModel().rows.map((r) => (r.original as any)?.id),
-              );
-
-              // Use filteredBatchGroups instead of batchGroups
-              const groupsToRender = filteredBatchGroups || batchGroups;
-
-              // Add batch groups with their earliest timestamp
-              Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
-                // For expanded batches, show all calls; for collapsed batches, only show headers
-                const callsToRender = expandedBatches.has(batchId)
-                  ? calls  // Show all calls when expanded
-                  : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
-
-                if (callsToRender.length === 0) return;
-                const earliestTimestamp = Math.min(
-                  ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
-                );
-                timelineItems.push({
-                  type: 'batch',
-                  data: { batchId, calls: callsToRender },
-                  timestamp: earliestTimestamp
-                });
-              });
-
-              // Add individual calls
-              groupsToRender.noBatchCalls.forEach(call => {
-                if (!visibleRowIds.has((call as any)?.id)) return;
-                timelineItems.push({
-                  type: 'call',
-                  data: call,
-                  timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
-                });
-              });
-
-              // Check if there's any data
-              if (timelineItems.length === 0) {
-                return (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="text-center py-16"
-                    >
-                      {callFilter === 'current' ? (
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Phone className="w-8 h-8 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                              No calls in current batch
-                            </h3>
-                            <p className="text-sm text-[#64748B] mb-4">
-                              Start making calls to see them appear here
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => router.push('/make-call')}
-                            className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Go to Make Call
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Phone className="w-8 h-8 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                              Trigger a call
-                            </h3>
-                            <p className="text-sm text-[#64748B] mb-4">
-                              Start making calls to see them appear here
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => router.push('/make-call')}
-                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                          >
-                            <Phone className="w-4 h-4" />
-                            Make Call
-                          </button>
-                        </div>
-                      )}
-                    </TableCell>
+            <TableBody>
+              {isLoading ? (
+                // Skeleton rows
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`} className="animate-pulse">
+                    {columns.map((col, j) => (
+                      <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
+                        <div className="h-4 bg-gray-200 rounded w-full" />
+                      </TableCell>
+                    ))}
                   </TableRow>
-                );
-              }
+                ))
+              ) : batchGroups ? (
+                (() => {
+                  // Create timeline items combining batches and individual calls
+                  const timelineItems: Array<{ type: 'batch' | 'call', data: any, timestamp: number }> = [];
 
-              // DEBUG: Log batch rendering state
-              logger.debug("[Batch Render] Timeline items:", {
-                count: timelineItems.length,
-                batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
-                  batchId: i.data.batchId,
-                  callCount: i.data.calls.length,
-                  isExpanded: expandedBatches.has(i.data.batchId),
-                })),
-                expandedBatches: Array.from(expandedBatches),
-              });
-
-              return timelineItems.map((item, index) => {
-                if (item.type === 'batch') {
-                  const { batchId, calls } = item.data;
-                  return (
-                    <React.Fragment key={`batch-group-${batchId}`}>
-                      {renderBatchHeader(batchId, calls)}
-                      {expandedBatches.has(batchId) &&
-                        calls
-                          .filter((c: CallLog) => !(c as any)?.is_batch_header)
-                          .map((call: CallLog) => renderCallRow(call, true))}
-                    </React.Fragment>
+                  const visibleRowIds = new Set(
+                    table.getRowModel().rows.map((r) => (r.original as any)?.id),
                   );
-                } else {
-                  return renderCallRow(item.data, false);
-                }
-              });
-            })()
-          ) : table.getRowModel().rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="text-center py-16"
-              >
-                {callFilter === 'current' ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                        No calls in current batch
-                      </h3>
-                      <p className="text-sm text-[#64748B] mb-4">
-                        Start making calls to see them appear here
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => router.push('/make-call')}
-                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Go to Make Call
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
-                        Trigger a call
-                      </h3>
-                      <p className="text-sm text-[#64748B] mb-4">
-                        Start making calls to see them appear here
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => router.push('/make-call')}
-                      className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Make Call
-                    </button>
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                onClick={() => onRowClick(row.original.id)}
-                className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
-                  }`}
-              >
-                {row.getVisibleCells().map((cell) => (
+
+                  // Use filteredBatchGroups instead of batchGroups
+                  const groupsToRender = filteredBatchGroups || batchGroups;
+
+                  // Add batch groups with their earliest timestamp
+                  Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
+                    // For expanded batches, show all calls; for collapsed batches, only show headers
+                    const callsToRender = expandedBatches.has(batchId)
+                      ? calls  // Show all calls when expanded
+                      : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
+
+                    if (callsToRender.length === 0) return;
+                    const earliestTimestamp = Math.min(
+                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                    );
+                    timelineItems.push({
+                      type: 'batch',
+                      data: { batchId, calls: callsToRender },
+                      timestamp: earliestTimestamp
+                    });
+                  });
+
+                  // Add individual calls
+                  groupsToRender.noBatchCalls.forEach(call => {
+                    if (!visibleRowIds.has((call as any)?.id)) return;
+                    timelineItems.push({
+                      type: 'call',
+                      data: call,
+                      timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
+                    });
+                  });
+
+                  // Check if there's any data
+                  if (timelineItems.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="text-center py-16"
+                        >
+                          {callFilter === 'current' ? (
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Phone className="w-8 h-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                  No calls in current batch
+                                </h3>
+                                <p className="text-sm text-[#64748B] mb-4">
+                                  Start making calls to see them appear here
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => router.push('/make-call')}
+                                className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Go to Make Call
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Phone className="w-8 h-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                  Trigger a call
+                                </h3>
+                                <p className="text-sm text-[#64748B] mb-4">
+                                  Start making calls to see them appear here
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => router.push('/make-call')}
+                                className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                              >
+                                <Phone className="w-4 h-4" />
+                                Make Call
+                              </button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  // DEBUG: Log batch rendering state
+                  logger.debug("[Batch Render] Timeline items:", {
+                    count: timelineItems.length,
+                    batches: timelineItems.filter(i => i.type === 'batch').map(i => ({
+                      batchId: i.data.batchId,
+                      callCount: i.data.calls.length,
+                      isExpanded: expandedBatches.has(i.data.batchId),
+                    })),
+                    expandedBatches: Array.from(expandedBatches),
+                  });
+
+                  return timelineItems.map((item, index) => {
+                    if (item.type === 'batch') {
+                      const { batchId, calls } = item.data;
+                      return (
+                        <React.Fragment key={`batch-group-${batchId}`}>
+                          {renderBatchHeader(batchId, calls)}
+                          {expandedBatches.has(batchId) &&
+                            calls
+                              .filter((c: CallLog) => !(c as any)?.is_batch_header)
+                              .map((call: CallLog) => renderCallRow(call, true))}
+                        </React.Fragment>
+                      );
+                    } else {
+                      return renderCallRow(item.data, false);
+                    }
+                  });
+                })()
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
                   <TableCell
-                    key={cell.id}
-                    onClick={(e) => {
-                      // Prevent row click for checkbox and actions columns
-                      if (cell.column.id === 'select' || cell.column.id === 'actions') {
-                        e.stopPropagation();
-                      }
-                    }}
+                    colSpan={columns.length}
+                    className="text-center py-16"
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {callFilter === 'current' ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Phone className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                            No calls in current batch
+                          </h3>
+                          <p className="text-sm text-[#64748B] mb-4">
+                            Start making calls to see them appear here
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/make-call')}
+                          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Go to Make Call
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Phone className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                            Trigger a call
+                          </h3>
+                          <p className="text-sm text-[#64748B] mb-4">
+                            Start making calls to see them appear here
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/make-call')}
+                          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Make Call
+                        </button>
+                      </div>
+                    )}
                   </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    onClick={() => onRowClick(row.original.id)}
+                    className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                      }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        onClick={(e) => {
+                          // Prevent row click for checkbox and actions columns
+                          if (cell.column.id === 'select' || cell.column.id === 'actions') {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
           </Table>
         </div>
       </div>
