@@ -15,6 +15,7 @@ import {
   Twitter, Github, Youtube, Instagram, Globe,
   BookOpen, Mic, Trophy, Newspaper, Presentation,
   Linkedin, ThumbsUp, MessageSquare, FileText,
+  RefreshCw, Clock,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -97,6 +98,12 @@ interface ProfileSummaryDialogProps {
   recentPosts?: RecentPost[] | null;
   loading: boolean;
   error: string | null;
+  /** How many days old the cached research data is. null = fresh research just ran. */
+  dataAgeDays?: number | null;
+  /** Called when user clicks "Get Latest Data" — triggers a force-refresh. */
+  onRefresh?: () => void;
+  /** True while the refresh request is in-flight. */
+  refreshLoading?: boolean;
 }
 
 // ── Social platform config ────────────────────────────────────────────────────
@@ -216,6 +223,9 @@ export default function ProfileSummaryDialog({
   recentPosts,
   loading,
   error,
+  dataAgeDays,
+  onRefresh,
+  refreshLoading = false,
 }: ProfileSummaryDialogProps) {
   const employeeName = employee
     ? employee.name ||
@@ -268,6 +278,22 @@ export default function ProfileSummaryDialog({
               <Badge className="mt-1 font-semibold text-xs h-6 max-w-full truncate block w-fit">
                 {employee.title}
               </Badge>
+            )}
+            {/* ── Data age indicator (shown only when serving cached data) ── */}
+            {!loading && dataAgeDays != null && dataAgeDays > 0 && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <span className="text-xs text-[#92400E] bg-[#FEF3C7] border border-[#FDE68A] px-2 py-0.5 rounded-full font-medium">
+                  Research data from {dataAgeDays === 1 ? '1 day' : `${dataAgeDays} days`} ago
+                </span>
+              </div>
+            )}
+            {!loading && (dataAgeDays === 0 || dataAgeDays === null) && !error && (summary || webPresence) && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-xs text-[#065F46] bg-[#D1FAE5] border border-[#6EE7B7] px-2 py-0.5 rounded-full font-medium">
+                  ✓ Fresh research
+                </span>
+              </div>
             )}
           </div>
         </DialogHeader>
@@ -425,10 +451,26 @@ export default function ProfileSummaryDialog({
         </div>
 
         {/* ── Footer ── */}
-        <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-white">
+        <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-white flex items-center gap-3">
+          {/* "Get Latest Data" — shown when cached data is being displayed */}
+          {!loading && dataAgeDays != null && dataAgeDays > 0 && onRefresh && (
+            <Button
+              onClick={onRefresh}
+              disabled={refreshLoading}
+              variant="outline"
+              className="flex items-center gap-2 border-[#0b1957] text-[#0b1957] hover:bg-[#F0F4FF] font-semibold px-5"
+            >
+              {refreshLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {refreshLoading ? 'Refreshing…' : 'Get Latest Data'}
+            </Button>
+          )}
           <Button
             onClick={onClose}
-            className="bg-[#0b1957] hover:bg-[#0a1440] font-semibold px-6"
+            className="bg-[#0b1957] hover:bg-[#0a1440] font-semibold px-6 ml-auto"
           >
             Close
           </Button>

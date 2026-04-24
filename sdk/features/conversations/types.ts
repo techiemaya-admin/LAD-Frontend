@@ -40,8 +40,15 @@ export interface Message {
     name: string;
   };
   attachments?: Attachment[];
+  /** 'user' = lead | 'assistant' = AI | 'human_agent' = human takeover */
   role?: string;
   intent?: string;
+  /** Display name of the human agent who sent this message (if role='human_agent') */
+  senderName?: string;
+  /** User ID of the human agent (if stored in message metadata) */
+  humanAgentId?: string;
+  /** Template name if this message was sent via a WhatsApp template */
+  templateName?: string;
 }
 
 export interface Attachment {
@@ -132,4 +139,7 @@ export interface UseConversationsReturn {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  loadMore: () => void;
+  hasMore: boolean;
+  isFetchingMore: boolean;
 }

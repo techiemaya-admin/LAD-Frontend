@@ -6,6 +6,7 @@
     "jsx": "react-jsx",
     "moduleResolution": "node",
     "strict": false,
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -14,6 +15,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": ".",
     "baseUrl": ".",
     "noImplicitAny": false,
     "paths": {

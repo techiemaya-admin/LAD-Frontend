@@ -269,6 +269,7 @@ function MessageBubble({ msg }: { msg: LinkedInMessage }) {
 
 // ─── Chat disabled banner ─────────────────────────────────────────────────────
 
+
 function ChatDisabledBanner({ conv }: { conv: LinkedInConversation }) {
   const cfg = STATUS_CONFIG[conv.connection_status];
   if (!cfg?.bannerText) return null;

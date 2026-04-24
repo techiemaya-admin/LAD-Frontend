@@ -61,7 +61,11 @@ function ChannelConversationView({
     sendMessage,
     markAsResolved,
     muteConversation,
+    loadMore,
+    hasMore,
+    isFetchingMore,
   } = useConversations({ channel });
+
 
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
@@ -237,6 +241,9 @@ function ChannelConversationView({
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
               groupRefreshKey={groupRefreshKey}
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+              isFetchingMore={isFetchingMore}
             />
           </motion.div>
         )}
@@ -334,6 +341,9 @@ function ChannelConversationView({
                     onOpenGroupInfo={handleOpenGroupInfo}
                     onShowBroadcastModal={onShowBroadcastModal}
                     groupRefreshKey={groupRefreshKey}
+                    onLoadMore={loadMore}
+                    hasMore={hasMore}
+                    isFetchingMore={isFetchingMore}
                   />
                 )}
               </div>

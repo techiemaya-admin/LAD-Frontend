@@ -8,10 +8,8 @@
  * This replaces the old mock-based useConversations hook.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  getConversationsOptions,
-  getConversationMessagesOptions,
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';import {
+  getConversationsInfiniteOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
   markConversationRead as markConversationReadApi,
@@ -58,12 +56,17 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
   }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
 
-  // Fetch conversations from backend
-  const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions({ backendChannel: hookOptions?.channel }));
+  // Infinite query for incremental conversation loading (20 at a time)
+  const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
 
-  const conversations = conversationsQuery.data || [];
-  const allConversations = allConversationsQuery.data || [];
+  // Flatten pages into a single list
+  const conversations: Conversation[] = useMemo(
+    () => conversationsQuery.data?.pages.flatMap((p) => p.conversations) ?? [],
+    [conversationsQuery.data],
+  );
+
+  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  const allConversations = conversations;
 
   // Auto-select first conversation if none selected
   const effectiveSelectedId = useMemo(() => {
@@ -88,22 +91,22 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     return counts;
   }, [allConversations]);
 
+  // Load next page of conversations
+  const loadMore = useCallback(() => {
+    if (conversationsQuery.hasNextPage && !conversationsQuery.isFetchingNextPage) {
+      conversationsQuery.fetchNextPage();
+    }
+  }, [conversationsQuery]);
+
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
-
-    // Optimistically zero the unread badge in every conversation-list cache entry
-    // so the sidebar updates immediately without waiting for the next poll.
-    queryClient.setQueriesData<Conversation[]>(
-      { queryKey: conversationKeys.lists() },
-      (old) => (old || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-    );
 
     // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
-  }, [queryClient, hookOptions?.channel]);
+  }, [hookOptions?.channel, conversationsQuery]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -176,5 +179,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     isLoading: conversationsQuery.isLoading,
     error: conversationsQuery.error,
     refetch: conversationsQuery.refetch,
+    loadMore,
+    hasMore: conversationsQuery.hasNextPage ?? false,
+    isFetchingMore: conversationsQuery.isFetchingNextPage,
   };
 }

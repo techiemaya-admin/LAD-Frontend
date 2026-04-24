@@ -31,6 +31,7 @@ import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
 import { ScrollText } from "lucide-react";
+import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
 
@@ -113,7 +114,7 @@ export default function CallLogsPage() {
   // SDK Hooks
   // Use lead-status hook when status or lead_tag filter is active, otherwise use regular call logs
   const shouldUseLeadStatusHook = !!(statusFilter || leadTagFilter);
-  
+
   const callLogsQuery = useCallLogs(
     {
       from_date: dateRange.from,
@@ -276,9 +277,20 @@ export default function CallLogsPage() {
           r.lead_name ||
           "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? r.lead_score ?? r.score ?? 0;
+        let category = (
+          analysis?.lead_category ||
+          analysis?.category ||
+          analysis?.raw_analysis?.lead_category ||
+          analysis?.raw_analysis?.category ||
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          r.category ||
+          "WARM"
+        ).toUpperCase();
+
+        if (score >= 8 && category !== "HOT") category = "HOT";
+        if (score > 0 && score <= 3 && category !== "COLD") category = "COLD";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -293,8 +305,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id || selectedBatchId,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
+          disposition: r.analysis?.disposition || r.disposition || r.analysis?.raw_analysis?.disposition || r.analysis?.raw_analysis?.lead_disposition || "PROCEED",
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -372,9 +386,54 @@ export default function CallLogsPage() {
         const leadName =
           [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const rawAnalysis = (r as any).raw_analysis || analysis?.raw_analysis || {};
+
+        // Score is the ultimate source of truth for temperature buckets
+        const score =
+          r.lead_score ??
+          r.score ??
+          analysis?.lead_score ??
+          rawAnalysis?.lead_score ??
+          (r as any).leadScore ??
+          0;
+
+        // 1. Get duration-based tag (heuristic)
+        const durationTag = categorizeLead({
+          status: r.status,
+          duration: r.duration_seconds || r.call_duration || 0
+        });
+
+        // Direct mapping from the latest database "tags" column (category:xxx)
+        const extractCategoryFromTags = (tags?: string[]) => {
+          if (!tags || !Array.isArray(tags)) return null;
+          const catTag = tags.find(t => String(t).toLowerCase().startsWith("category:"));
+          if (catTag) {
+            const val = String(catTag).split(":")[1]?.toLowerCase();
+            if (val === "hot") return "HOT";
+            if (val === "cold") return "COLD";
+            if (val === "warm") return "WARM";
+          }
+          return null;
+        };
+
+        // 2. Determine category - Priority: Specific Call Analysis > Lead Tags (fallback) > Heuristics
+        let category = (
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          analysis?.lead_category ||
+          analysis?.category ||
+          rawAnalysis?.lead_category ||
+          rawAnalysis?.category ||
+          r.category ||
+          extractCategoryFromTags(r.lead_tags) || // Use the Lead's current tag only if call analysis is missing
+          (durationTag === "cold" ? "COLD" : "WARM")
+        ).toUpperCase();
+
+        // Safety Nets: Force status based on score thresholds (MUST match modal exactly)
+        if (score >= 8) category = "HOT";
+        else if (score > 0 && score <= 3) category = "COLD";
+
+        const disposition = analysis?.disposition || r.disposition || rawAnalysis?.disposition || rawAnalysis?.lead_disposition || "PROCEED";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -389,8 +448,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
+          disposition: disposition,
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -840,14 +901,14 @@ export default function CallLogsPage() {
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
               >
                 Retry Failed ({failedCallIds.length})
               </button>
             )}
             <button
               onClick={endSelectedCalls}
-              className="px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
             >
               End Selected ({selected.size})
             </button>

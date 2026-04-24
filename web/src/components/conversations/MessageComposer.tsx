@@ -154,7 +154,7 @@ export const MessageComposer = memo(function MessageComposer({
   }, []);
 
   return (
-    <div className="border-t border-border bg-card p-3">
+    <div className="border-t border-border bg-white p-3 whatsapp-chat-bg">
       {/* Takeover confirmation dialog */}
       <AlertDialog open={showTakeoverDialog} onOpenChange={setShowTakeoverDialog}>
         <AlertDialogContent>
@@ -284,8 +284,8 @@ export const MessageComposer = memo(function MessageComposer({
             placeholder={channelPlaceholders[channel] || DEFAULT_PLACEHOLDER}
             disabled={disabled}
             className={cn(
-              'min-h-[40px] max-h-[150px] resize-none py-2.5 pr-10',
-              'bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30'
+              'min-h-[40px] max-h-[150px] resize-none py-2.5 px-4 pr-10 rounded-2xl',
+              'bg-white border border-gray-300 focus-visible:ring-1 focus-visible:ring-[#25D366]/30'
             )}
             rows={1}
           />
