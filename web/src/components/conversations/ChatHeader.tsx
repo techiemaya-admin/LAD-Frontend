@@ -25,8 +25,6 @@ import {
   UserPlus,
   CheckCircle2,
   VolumeX,
-  Phone,
-  Video,
   PanelRightOpen,
   Pin,
   Lock,
@@ -35,6 +33,8 @@ import {
   Trash2,
   Star,
   MailCheck,
+  Search,
+  ChevronLeft,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSettings } from './MessageSettings';
@@ -51,6 +51,7 @@ interface ChatHeaderProps {
   onExport?: () => void;
   onBlock?: () => void;
   onDelete?: () => void;
+  onBack?: () => void;
 }
 
 export const ChatHeader = memo(function ChatHeader({
@@ -65,6 +66,7 @@ export const ChatHeader = memo(function ChatHeader({
   onExport,
   onBlock,
   onDelete,
+  onBack,
 }: ChatHeaderProps) {
   const { contact, channel, status } = conversation;
   const [confirmAction, setConfirmAction] = useState<'block' | 'delete' | null>(null);
@@ -90,66 +92,56 @@ export const ChatHeader = memo(function ChatHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 border-b border-border bg-card">
         {/* Left section - Contact info */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Avatar className="h-10 w-10">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          {onBack && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 lg:hidden shrink-0" 
+              onClick={onBack}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
+          
+          <div className="relative shrink-0">
+            <Avatar className="h-9 w-9 md:h-10 md:w-10">
               <AvatarImage src={contact.avatar} alt={contact.name} />
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs md:text-sm font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {contact.isOnline && (
-              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-success border-2 border-card" />
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-success border-2 border-card" />
             )}
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               <h3 className="font-semibold text-sm truncate">{contact.name}</h3>
               <ChannelIcon channel={channel} size={14} />
               {status === 'resolved' && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-success/10 text-success rounded">
+                <span className="hidden xs:inline-block px-1.5 py-0.5 text-[10px] font-medium bg-success/10 text-success rounded">
                   Resolved
                 </span>
               )}
-              {status === 'muted' && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded">
-                  Muted
-                </span>
-              )}
-              {conversation.is_locked && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 text-orange-700 rounded flex items-center gap-0.5">
-                  <Lock className="h-2.5 w-2.5" />
-                  Locked
-                </span>
-              )}
-              {conversation.is_pinned && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 rounded flex items-center gap-0.5">
-                  <Pin className="h-2.5 w-2.5 rotate-45" />
-                  Pinned
-                </span>
-              )}
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <span
                 className={`h-1.5 w-1.5 rounded-full ${contact.isOnline ? 'bg-success' : 'bg-muted-foreground'}`}
               />
-              {statusText}
+              <span className="truncate">{statusText}</span>
             </p>
           </div>
         </div>
 
         {/* Right section - Actions */}
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:flex">
-            <Phone className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Search className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:flex">
-            <Video className="h-4 w-4" />
-          </Button>
-
 
           <MessageSettings />
 
