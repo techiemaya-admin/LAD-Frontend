@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Send, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Search, Send, Loader2, AlertCircle, ChevronDown, Plus } from 'lucide-react';
+import { CreateWabaTemplateModal } from './CreateWabaTemplateModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -26,6 +26,9 @@ interface WhatsAppTemplate {
   body: string;
   parameter_count: number;
   parameters: string[]; // e.g. ['name', '1', 'company']
+  header_type: string;        // "text" | "image" | "document" | "video" | ""
+  header_param_count: number; // how many leading parameters belong to the header component
+  header_url: string;         // media handle for image/document/video header templates
 }
 
 type NameFormat = 'first' | 'full';
@@ -40,7 +43,7 @@ interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions) => void;
+  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
   sending?: boolean;
   /** Which backend channel to fetch templates from. Defaults to 'waba'. */
   channel?: 'personal' | 'waba';
@@ -67,6 +70,9 @@ export function TemplatePicker({
   const [search, setSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [paramValues, setParamValues] = useState<string[]>([]);
+  const [headerMediaUrl, setHeaderMediaUrl] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [nameFormat, setNameFormat] = useState<NameFormat>('first');
   const [batchSize, setBatchSize] = useState(5);
   const [delayMin, setDelayMin] = useState(120);    // seconds
@@ -104,6 +110,9 @@ export function TemplatePicker({
                 body,
                 parameter_count: params.length || t.parameter_count || 0,
                 parameters: params,
+                header_type: t.header_type || '',
+                header_param_count: t.header_param_count || 0,
+                header_url: t.header_url || '',
               };
             });
           setTemplates(normalized);
@@ -111,7 +120,7 @@ export function TemplatePicker({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open, channel]);
+  }, [open, channel, refreshKey]);
 
   const filtered = useMemo(() => {
     if (!search) return templates;
@@ -139,6 +148,9 @@ export function TemplatePicker({
       defaults[0] = '{member_name}';
     }
     setParamValues(defaults);
+    // Pre-fill media URL if the template has a real https example URL stored
+    const isMediaHeader = ['image', 'document', 'video'].includes(template.header_type);
+    setHeaderMediaUrl(isMediaHeader && template.header_url?.startsWith('https://') ? template.header_url : '');
   }, []);
 
   const handleParamChange = useCallback((index: number, value: string) => {
@@ -157,8 +169,11 @@ export function TemplatePicker({
       paramValues.length > 0 ? paramValues : [],
       nameFormat,
       { batchSize, delayMin, delayRandom },
+      selectedTemplate.header_param_count ?? 0,
+      selectedTemplate.header_type ?? '',
+      headerMediaUrl,
     );
-  }, [selectedTemplate, paramValues, nameFormat, batchSize, delayMin, delayRandom, onSend]);
+  }, [selectedTemplate, paramValues, nameFormat, batchSize, delayMin, delayRandom, onSend, headerMediaUrl]);
 
   // Whether any parameter is a name-type field (controls name format picker visibility)
   const hasNameParam = useMemo(() => {
@@ -199,8 +214,27 @@ export function TemplatePicker({
             <Badge variant="secondary" className="text-xs">
               {selectedCount} conversation{selectedCount !== 1 ? 's' : ''}
             </Badge>
+            {channel === 'waba' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto h-6 text-[10px] px-2"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <Plus className="w-3 h-3 mr-1" /> New template
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
+
+        <CreateWabaTemplateModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          onCreated={() => {
+            setShowCreateModal(false);
+            setRefreshKey(k => k + 1);
+          }}
+        />
 
         {!selectedTemplate ? (
           <>
@@ -216,7 +250,7 @@ export function TemplatePicker({
             </div>
 
             {/* Template list */}
-            <ScrollArea className="flex-1 max-h-[400px]">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -266,7 +300,7 @@ export function TemplatePicker({
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </>
         ) : (
           <>
@@ -325,6 +359,24 @@ export function TemplatePicker({
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Media URL input — shown for image/document/video header templates */}
+              {['image', 'document', 'video'].includes(selectedTemplate.header_type) && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground capitalize">
+                    Header {selectedTemplate.header_type} URL
+                  </p>
+                  <Input
+                    placeholder="https://example.com/image.jpg"
+                    value={headerMediaUrl}
+                    onChange={e => setHeaderMediaUrl(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Public URL for the {selectedTemplate.header_type} attached to this template
+                  </p>
                 </div>
               )}
 
