@@ -101,6 +101,7 @@ export interface SendMessageRequest {
   leadId: string;
   phoneNumber?: string;
   humanAgentId?: string;
+  channel?: 'personal' | 'waba';
 }
 
 export interface ConversationStats {

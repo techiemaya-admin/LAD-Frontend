@@ -45,7 +45,7 @@ export function useRelationshipHeatmap(enabled: boolean = true): UseRelationship
     colorLegend: query.data?.metadata?.colorLegend,
     isLoading: query.isLoading,
     loading: query.isLoading,
-    error: query.error,
+    error: query.error as Error | null,
     isError: query.isError,
     refetch: query.refetch,
     isFetching: query.isFetching,
