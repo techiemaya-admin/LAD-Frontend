@@ -287,7 +287,8 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
       lead_id: data.leadId,
       phone_number: data.phoneNumber,
       human_agent_id: data.humanAgentId,
-    }
+    },
+    { channel: data.channel }
   );
   return mapMessageFromApi(response.data.data);
 }

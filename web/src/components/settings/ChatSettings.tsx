@@ -175,9 +175,10 @@ function getLabel(name: string): string {
 
 const CHANNELS = [
   { id: 'waba', label: 'WABA', color: 'bg-green-500' },
-  { id: 'personal_whatsapp', label: 'Personal WhatsApp', color: 'bg-emerald-400' },
+  { id: 'personal_whatsapp', label: 'Personal Whatsapp', color: 'bg-emerald-400' },
   { id: 'linkedin', label: 'LinkedIn', color: 'bg-blue-600' },
   { id: 'gmail', label: 'Gmail', color: 'bg-red-500' },
+  { id: 'instagram', label: 'Instagram', color: 'bg-pink-500' },
 ];
 
 // ── Toast notification ───────────────────────────────────────────

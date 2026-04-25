@@ -126,9 +126,10 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
         content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
+        channel: hookOptions?.channel,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation]
+    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations

@@ -449,7 +449,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
   // Template send for bulk selected conversations
   const handleTemplateSend = useCallback(
-    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30 }) => {
+    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30 }, headerParamCount = 0, headerType = '', headerUrl = '') => {
       setTemplateSending(true);
       try {
         // If sending to one or more groups (via group manager), call each group's send-template endpoint
@@ -472,6 +472,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     language_code: languageCode,
                     parameters,
                     name_format: nameFormat,
+                    header_param_count: headerParamCount,
+                    header_type: headerType,
+                    header_url: headerUrl,
                   }),
                 }
               );
@@ -510,6 +513,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               batch_size: batch.batchSize,
               delay_min: batch.delayMin,
               delay_random: batch.delayRandom,
+              header_param_count: headerParamCount,
+              header_type: headerType,
+              header_url: headerUrl,
             }),
           });
           const data = await res.json();
