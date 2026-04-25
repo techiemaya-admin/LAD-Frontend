@@ -11,6 +11,8 @@ interface MetaTemplate {
   parameter_count: number;
   parameters: string[];
   status: string;
+  quality_score: string;
+  quality_pending: boolean;
   category: string;
   language: string;
   language_code: string;
@@ -73,10 +75,22 @@ function highlightBody(body: string): React.ReactNode[] {
 const displayName = (key: string) =>
   key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-const statusColor = (s: string) => {
-  if (s === 'APPROVED') return 'bg-green-100 text-green-700';
+const statusColor = (s: string, qualityPending?: boolean) => {
+  if (qualityPending)   return 'bg-amber-100 text-amber-700';
+  if (s === 'APPROVED' || s === 'ACTIVE') return 'bg-green-100 text-green-700';
   if (s === 'PENDING')  return 'bg-yellow-100 text-yellow-700';
+  if (s === 'REJECTED') return 'bg-red-100 text-red-700';
+  if (s === 'PAUSED')   return 'bg-orange-100 text-orange-700';
   return 'bg-slate-100 text-slate-500';
+};
+
+const statusLabel = (s: string, qualityPending?: boolean, qualityScore?: string) => {
+  if (qualityPending) return '⏳ Quality Pending';
+  if (s === 'ACTIVE')   return qualityScore ? `✓ Active · ${qualityScore}` : '✓ Active';
+  if (s === 'APPROVED') return '✓ Approved';
+  if (s === 'REJECTED') return '✗ Rejected';
+  if (s === 'PAUSED')   return '⏸ Paused';
+  return s;
 };
 
 const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
@@ -115,6 +129,8 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           category:        t.category || '',
           language:        t.language || 'en',
           language_code:   t.language_code || t.language || 'en',
+          quality_score:   t.quality_score || '',
+          quality_pending: t.quality_pending ?? false,
           header_type:     t.header_type || '',
           header_url:      t.header_url || '',
         }));
@@ -292,10 +308,15 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     <div className="flex items-center gap-2 mb-2">
                       {isSelected && <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
                       <span className="font-semibold text-slate-900 text-sm">{displayName(t.name)}</span>
-                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(t.status)}`}>
-                        {t.status}
+                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(t.status, t.quality_pending)}`}>
+                        {statusLabel(t.status, t.quality_pending, t.quality_score)}
                       </span>
                     </div>
+                    {t.quality_pending && (
+                      <p className="text-[10px] text-amber-600 mt-1 mb-1">
+                        ⚠️ Meta is assessing quality — delivery may be limited until approved.
+                      </p>
+                    )}
                     <p className="text-xs text-slate-500 font-mono leading-relaxed line-clamp-3">
                       {t.body || '(no body text)'}
                     </p>
