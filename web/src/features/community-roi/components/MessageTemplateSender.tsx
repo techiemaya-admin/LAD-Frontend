@@ -131,7 +131,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           language_code:   t.language_code || t.language || 'en',
           quality_score:   t.quality_score || '',
           quality_pending: t.quality_pending ?? false,
-          header_type:     t.header_type || '',,
+          header_type:     t.header_type || '',
           header_url:      t.header_url || '',
         }));
         list.sort((a, b) => {
