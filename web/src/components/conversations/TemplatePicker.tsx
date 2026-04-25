@@ -95,6 +95,7 @@ export function TemplatePicker({
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [paramValues, setParamValues] = useState<string[]>([]);
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
+  const [resolvingMedia, setResolvingMedia] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [nameFormat, setNameFormat] = useState<NameFormat>('first');
@@ -159,7 +160,7 @@ export function TemplatePicker({
     );
   }, [templates, search]);
 
-  const handleSelectTemplate = useCallback((template: WhatsAppTemplate) => {
+  const handleSelectTemplate = useCallback(async (template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
     // Auto-fill known contact fields with sentinels so the backend can personalize per-contact
     const params = template.parameters || [];
@@ -175,9 +176,32 @@ export function TemplatePicker({
       defaults[0] = '{member_name}';
     }
     setParamValues(defaults);
-    // Pre-fill media URL if the template has a real https example URL stored
+
+    // Resolve header media URL from Meta when template has an image/video/document header
     const isMediaHeader = ['image', 'document', 'video'].includes(template.header_type);
-    setHeaderMediaUrl(isMediaHeader && template.header_url?.startsWith('https://') ? template.header_url : '');
+    if (!isMediaHeader) {
+      setHeaderMediaUrl('');
+      return;
+    }
+    if (template.header_url?.startsWith('https://')) {
+      setHeaderMediaUrl(template.header_url);
+      return;
+    }
+    if (template.header_url) {
+      // handle is not a URL — ask the backend to resolve it via Meta Graph API
+      setHeaderMediaUrl('');
+      setResolvingMedia(true);
+      try {
+        const res = await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations/templates/resolve-media?handle=${encodeURIComponent(template.header_url)}`
+        );
+        const data = await res.json();
+        if (data.url) setHeaderMediaUrl(data.url);
+      } catch { /* silent — user can paste manually */ }
+      finally { setResolvingMedia(false); }
+    } else {
+      setHeaderMediaUrl('');
+    }
   }, []);
 
   const handleParamChange = useCallback((index: number, value: string) => {
@@ -425,21 +449,40 @@ export function TemplatePicker({
                 </div>
               )}
 
-              {/* Media URL input — shown for image/document/video header templates */}
+              {/* Media header — shown for image/document/video header templates */}
               {['image', 'document', 'video'].includes(selectedTemplate.header_type) && (
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground capitalize">
-                    Header {selectedTemplate.header_type} URL
+                    Header {selectedTemplate.header_type}
                   </p>
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    value={headerMediaUrl}
-                    onChange={e => setHeaderMediaUrl(e.target.value)}
-                    className="h-8 text-sm"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Public URL for the {selectedTemplate.header_type} attached to this template
-                  </p>
+                  {resolvingMedia ? (
+                    <div className="flex items-center gap-2 h-8 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Fetching image from Meta…
+                    </div>
+                  ) : (
+                    <>
+                      {selectedTemplate.header_type === 'image' && headerMediaUrl && (
+                        <img
+                          src={headerMediaUrl}
+                          alt="Template header"
+                          className="w-full max-h-32 object-cover rounded-md border border-border mb-1"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      )}
+                      <Input
+                        placeholder="https://example.com/image.jpg"
+                        value={headerMediaUrl}
+                        onChange={e => setHeaderMediaUrl(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {headerMediaUrl
+                          ? `✓ ${selectedTemplate.header_type} attached — edit URL to change`
+                          : `Paste a public URL for the ${selectedTemplate.header_type} to attach`}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
