@@ -113,6 +113,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
 
   const [paramMapping, setParamMapping] = useState<ParamMapping>([]);
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
+  const [resolvingMedia, setResolvingMedia] = useState(false);
 
   // Fetch Meta-approved templates on mount
   useEffect(() => {
@@ -152,15 +153,35 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
     ),
   [metaTemplates, templateSearch]);
 
-  // When a template is chosen, pre-fill param mapping and media URL with intelligent defaults
-  const initParamMapping = useCallback((template: MetaTemplate) => {
+  // When a template is chosen, pre-fill param mapping and media URL with intelligent defaults.
+  // Also attempts to resolve a Meta upload handle to a real image URL.
+  const initParamMapping = useCallback(async (template: MetaTemplate) => {
     const mapping: ParamMapping = Array.from({ length: template.parameter_count }, (_, i) => ({
       field:       suggestField(template.body, i + 1),
       customValue: '',
     }));
     setParamMapping(mapping);
+
     const isMediaHeader = ['image', 'document', 'video'].includes(template.header_type);
-    setHeaderMediaUrl(isMediaHeader && template.header_url?.startsWith('https://') ? template.header_url : '');
+    if (!isMediaHeader) { setHeaderMediaUrl(''); return; }
+    if (template.header_url?.startsWith('https://')) {
+      setHeaderMediaUrl(template.header_url);
+      return;
+    }
+    if (template.header_url) {
+      setHeaderMediaUrl('');
+      setResolvingMedia(true);
+      try {
+        const res = await fetch(
+          `/api/whatsapp-conversations/conversations/templates/resolve-media?handle=${encodeURIComponent(template.header_url)}`
+        );
+        const data = await res.json();
+        if (data.url) setHeaderMediaUrl(data.url);
+      } catch { /* silent — user can paste URL manually */ }
+      finally { setResolvingMedia(false); }
+    } else {
+      setHeaderMediaUrl('');
+    }
   }, []);
 
   // Member helpers
@@ -407,18 +428,37 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           {['image', 'document', 'video'].includes(selectedTemplate?.header_type ?? '') && (
             <div className="mb-3 p-4 border border-slate-200 rounded-xl bg-white">
               <p className="text-sm font-medium text-slate-700 mb-2 capitalize">
-                Header {selectedTemplate?.header_type} URL
+                Header {selectedTemplate?.header_type}
               </p>
-              <input
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                value={headerMediaUrl}
-                onChange={e => setHeaderMediaUrl(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">
-                Public URL for the {selectedTemplate?.header_type} to attach to this template
-              </p>
+              {resolvingMedia ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+                  <span className="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                  Fetching image from Meta…
+                </div>
+              ) : (
+                <>
+                  {selectedTemplate?.header_type === 'image' && headerMediaUrl && (
+                    <img
+                      src={headerMediaUrl}
+                      alt="Template header"
+                      className="w-full max-h-40 object-cover rounded-lg border border-slate-200 mb-2"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={headerMediaUrl}
+                    onChange={e => setHeaderMediaUrl(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {headerMediaUrl
+                      ? `✓ ${selectedTemplate?.header_type} ready to attach — edit URL to change`
+                      : `Paste a public URL for the ${selectedTemplate?.header_type} to attach to this template`}
+                  </p>
+                </>
+              )}
             </div>
           )}
 
