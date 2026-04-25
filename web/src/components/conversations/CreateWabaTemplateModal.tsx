@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Eye, Send, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { Plus, Trash2, Eye, Send, Loader2, AlertCircle, CheckCircle2, X, Upload, FileIcon } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -85,10 +85,14 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   const [category, setCategory] = useState<Category>('MARKETING');
 
   // ── Header ──────────────────────────────────────────────────────────────────
-  const [headerFmt,      setHeaderFmt]      = useState<HeaderFmt>('NONE');
-  const [headerText,     setHeaderText]     = useState('');
-  const [headerMediaUrl, setHeaderMediaUrl] = useState('');
-  const [headerVarExample, setHeaderVarExample] = useState('');  // example for {{1}} in text header
+  const [headerFmt,         setHeaderFmt]         = useState<HeaderFmt>('NONE');
+  const [headerText,        setHeaderText]         = useState('');
+  const [headerMediaHandle, setHeaderMediaHandle] = useState('');   // Meta media_id from upload API
+  const [mediaFileName,     setMediaFileName]     = useState('');
+  const [uploadStatus,      setUploadStatus]      = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [uploadError,       setUploadError]       = useState('');
+  const [headerVarExample, setHeaderVarExample]   = useState('');  // example for {{1}} in text header
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Body ────────────────────────────────────────────────────────────────────
   const [bodyText,      setBodyText]      = useState('');
@@ -132,6 +136,47 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(cursor, cursor); });
   }, [bodyText, bodyVars]);
 
+  // ── Media upload ─────────────────────────────────────────────────────────────
+  const handleMediaFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadStatus('uploading');
+    setUploadError('');
+    setHeaderMediaHandle('');
+    setMediaFileName(file.name);
+    try {
+      // Read file as base64 and send as JSON — avoids multipart proxy issues
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      const res = await fetchWithTenant(
+        '/api/whatsapp-conversations/conversations/templates/upload-media?channel=waba',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file_base64: base64, filename: file.name, content_type: file.type }),
+        }
+      );
+      const data = await res.json();
+      if (data.success && data.media_id) {
+        setHeaderMediaHandle(data.media_id);
+        setUploadStatus('done');
+      } else {
+        const raw = data.error || data.detail || 'Upload failed';
+        setUploadError(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        setUploadStatus('error');
+      }
+    } catch (err: any) {
+      setUploadError(err?.message ?? 'Upload failed');
+      setUploadStatus('error');
+    }
+    // reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
   // ── Build Meta components array ────────────────────────────────────────────
   const buildComponents = useCallback((): object[] => {
     const comps: object[] = [];
@@ -144,11 +189,11 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
           comp.example = { header_text: [headerVarExample] };
         }
         comps.push(comp);
-      } else if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerFmt) && headerMediaUrl) {
+      } else if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerFmt) && headerMediaHandle) {
         comps.push({
           type:    'HEADER',
           format:  headerFmt,
-          example: { header_handle: [headerMediaUrl] },
+          example: { header_handle: [headerMediaHandle] },
         });
       }
     }
@@ -183,7 +228,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     }
 
     return comps;
-  }, [headerFmt, headerText, headerTextVars, headerVarExample, headerMediaUrl,
+  }, [headerFmt, headerText, headerTextVars, headerVarExample, headerMediaHandle,
       bodyText, bodyVars, bodyExamples, footerText, buttons]);
 
   // ── Preview ───────────────────────────────────────────────────────────────────
@@ -200,23 +245,42 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     if (headerFmt === 'TEXT') {
       return headerText.replace(/\{\{1\}\}/g, headerVarExample || '[example]');
     }
-    return headerMediaUrl || `[${headerFmt.toLowerCase()} URL required]`;
-  }, [headerFmt, headerText, headerVarExample, headerMediaUrl]);
+    return mediaFileName || `[${headerFmt.toLowerCase()} upload required]`;
+  }, [headerFmt, headerText, headerVarExample, mediaFileName]);
 
   // ── Validation ────────────────────────────────────────────────────────────────
+
+  // Meta rejects templates where variables are too dense relative to surrounding text.
+  // Rule of thumb: strip variables, count remaining words; need ≥ 3 words per variable.
+  const varDensityWarning = useMemo(() => {
+    if (bodyVars.length === 0) return null;
+    const stripped = bodyText.replace(/\{\{\d+\}\}/g, '').trim();
+    const wordCount = stripped.split(/\s+/).filter(Boolean).length;
+    const minWords  = bodyVars.length * 3;
+    if (wordCount < minWords) {
+      return `Body has ${wordCount} word${wordCount !== 1 ? 's' : ''} for ${bodyVars.length} variable${bodyVars.length !== 1 ? 's' : ''}. Meta requires at least ${minWords} surrounding words. Add more text or reduce variables.`;
+    }
+    return null;
+  }, [bodyText, bodyVars]);
+
   const canSubmit = useMemo(() => {
     if (!safeName || !bodyText.trim()) return false;
     if (bodyVars.some(v => !bodyExamples[v]?.trim())) return false;
     if (headerFmt === 'TEXT' && !headerText.trim()) return false;
-    if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerFmt) && !headerMediaUrl.trim()) return false;
+    if (['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerFmt) && !headerMediaHandle) return false;
+    if (uploadStatus === 'uploading') return false;
     if (headerFmt === 'TEXT' && headerTextVars.length > 0 && !headerVarExample.trim()) return false;
+    if (buttons.some(b => b.type === 'URL' && !b.url.trim())) return false;
+    if (buttons.some(b => b.type === 'PHONE_NUMBER' && !b.phone.trim())) return false;
+    if (varDensityWarning) return false;
     return true;
-  }, [safeName, bodyText, bodyVars, bodyExamples, headerFmt, headerText, headerTextVars, headerVarExample, headerMediaUrl]);
+  }, [safeName, bodyText, bodyVars, bodyExamples, headerFmt, headerText, headerTextVars, headerVarExample, headerMediaHandle, uploadStatus, varDensityWarning]);
 
   // ── Reset ─────────────────────────────────────────────────────────────────────
   const reset = () => {
     setName(''); setLanguage('en_US'); setCategory('MARKETING');
-    setHeaderFmt('NONE'); setHeaderText(''); setHeaderMediaUrl(''); setHeaderVarExample('');
+    setHeaderFmt('NONE'); setHeaderText(''); setHeaderMediaHandle(''); setMediaFileName('');
+    setUploadStatus('idle'); setUploadError(''); setHeaderVarExample('');
     setBodyText(''); setBodyExamples({}); setFooterText('');
     setButtons([]); setActiveTab('build'); setResult(null);
   };
@@ -405,16 +469,60 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                 )}
 
                 {['IMAGE', 'DOCUMENT', 'VIDEO'].includes(headerFmt) && (
-                  <div className="space-y-1">
-                    <Input
-                      type="url"
-                      placeholder="https://example.com/image.jpg (public URL for Meta review)"
-                      value={headerMediaUrl}
-                      onChange={e => setHeaderMediaUrl(e.target.value)}
-                      className="h-8 text-sm"
+                  <div className="space-y-2">
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={
+                        headerFmt === 'IMAGE'    ? 'image/jpeg,image/png,image/webp' :
+                        headerFmt === 'VIDEO'    ? 'video/mp4,video/3gp' :
+                        'application/pdf,.doc,.docx'
+                      }
+                      className="hidden"
+                      onChange={handleMediaFileChange}
                     />
+
+                    {/* Upload button / status */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadStatus === 'uploading'}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors',
+                          uploadStatus === 'uploading'
+                            ? 'border-border text-muted-foreground cursor-not-allowed'
+                            : 'border-primary text-primary hover:bg-primary/5'
+                        )}
+                      >
+                        {uploadStatus === 'uploading'
+                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
+                          : <><Upload className="w-3.5 h-3.5" /> {uploadStatus === 'done' ? 'Replace file' : `Upload ${headerFmt.toLowerCase()}`}</>
+                        }
+                      </button>
+
+                      {uploadStatus === 'done' && mediaFileName && (
+                        <div className="flex items-center gap-1.5 text-xs text-green-700">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <FileIcon className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[180px]">{mediaFileName}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {uploadStatus === 'error' && (
+                      <div className="flex items-center gap-1.5 p-2 rounded bg-red-50 border border-red-200 text-xs text-red-700">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        {uploadError}
+                      </div>
+                    )}
+
                     <p className="text-[10px] text-muted-foreground">
-                      Public URL used as the example during Meta's approval. You can change the URL when sending.
+                      File is uploaded to Meta and used as the sample during approval.
+                      {headerFmt === 'IMAGE' && ' Accepted: JPG, PNG, WebP.'}
+                      {headerFmt === 'VIDEO' && ' Accepted: MP4, 3GP.'}
+                      {headerFmt === 'DOCUMENT' && ' Accepted: PDF, DOC, DOCX.'}
                     </p>
                   </div>
                 )}
@@ -442,6 +550,14 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                   onChange={e => setBodyText(e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                 />
+
+                {/* Variable density warning */}
+                {varDensityWarning && (
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                    {varDensityWarning}
+                  </div>
+                )}
 
                 {/* Example values for each variable */}
                 {bodyVars.length > 0 && (
@@ -552,9 +668,9 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         ) : (
                           <div className="flex items-center gap-2 text-slate-500 text-xs">
                             <span className="uppercase font-mono">{headerFmt}</span>
-                            {headerMediaUrl
-                              ? <span className="text-green-600 truncate max-w-[160px]">{headerMediaUrl}</span>
-                              : <span className="text-amber-500">URL required</span>}
+                            {uploadStatus === 'done' && mediaFileName
+                              ? <span className="text-green-600 truncate max-w-[160px]">{mediaFileName}</span>
+                              : <span className="text-amber-500">Upload required</span>}
                           </div>
                         )}
                       </div>

@@ -18,6 +18,15 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 const CONTACT_NAME_FIELDS = ['name', 'first_name', 'contact_name', 'customer_name', 'member_name', 'client_name'];
 const CONTACT_COMPANY_FIELDS = ['company', 'company_name', 'organization', 'business'];
 
+interface FieldOption { label: string; value: string; hint: string; }
+const FIELD_OPTIONS: FieldOption[] = [
+  { label: 'Contact name (full)',  value: '{member_name}',       hint: 'e.g. Naveen Reddy'         },
+  { label: 'Contact first name',  value: '{member_first_name}', hint: 'e.g. Naveen'               },
+  { label: 'Phone number',        value: '{member_phone}',      hint: 'e.g. +971501234567'        },
+  { label: 'Email address',       value: '{member_email}',      hint: 'e.g. naveen@example.com'   },
+  { label: 'Custom value…',       value: '__custom__',          hint: 'Same text sent to everyone' },
+];
+
 interface WhatsAppTemplate {
   name: string;
   language: string;
@@ -50,6 +59,19 @@ interface TemplatePickerProps {
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
+
+/** Return up to ~60 chars of body text surrounding {{paramName}}, e.g. "…report for {{2}} is ready…" */
+function getParamContext(body: string, paramName: string): string {
+  const tag = `{{${paramName}}}`;
+  const idx = body.indexOf(tag);
+  if (idx === -1) return '';
+  const CTX = 40;
+  const before = body.slice(Math.max(0, idx - CTX), idx).replace(/\s+/g, ' ').trimStart();
+  const after  = body.slice(idx + tag.length, idx + tag.length + CTX).replace(/\s+/g, ' ').trimEnd();
+  const prefix = idx > CTX ? '…' : '';
+  const suffix = idx + tag.length + CTX < body.length ? '…' : '';
+  return `${prefix}${before}[{{${paramName}}}]${after}${suffix}`;
+}
 
 const categoryColors: Record<string, string> = {
   MARKETING: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -143,7 +165,8 @@ export function TemplatePicker({
       if (CONTACT_COMPANY_FIELDS.includes(key)) return '{member_company}';
       return '';
     });
-    // Fallback for positional-only templates: prefill {{1}} with {member_name}
+    // For positional templates ({{1}}, {{2}}, …): default first param to name,
+    // leave the rest as empty so user picks from the dropdown.
     if (defaults.length > 0 && defaults[0] === '' && !isNaN(Number(params[0]))) {
       defaults[0] = '{member_name}';
     }
@@ -202,7 +225,7 @@ export function TemplatePicker({
 
   const canSend = selectedTemplate && (
     selectedTemplate.parameter_count === 0 ||
-    paramValues.every((v) => v.trim().length > 0)
+    paramValues.every((v) => v.trim().length > 0 && v !== '__custom__')
   );
 
   return (
@@ -336,24 +359,45 @@ export function TemplatePicker({
                     Fill in template parameters:
                   </p>
                   {(selectedTemplate.parameters || []).map((paramName, i) => {
-                    const isAutoFilled = paramValues[i] === '{member_name}' || paramValues[i] === '{member_company}';
-                    const label = isNaN(Number(paramName)) ? `{{${paramName}}}` : `Parameter {{${paramName}}}`;
+                    const currentVal  = paramValues[i] || '';
+                    const isCustom    = !FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal);
+                    const selectedOpt = FIELD_OPTIONS.find(o => o.value === currentVal) ?? FIELD_OPTIONS[FIELD_OPTIONS.length - 1];
+                    const label       = isNaN(Number(paramName)) ? `{{${paramName}}}` : `Parameter {{${paramName}}}`;
+                    const ctx         = getParamContext(selectedTemplate.body, paramName);
                     return (
                       <div key={i} className="space-y-1">
                         <p className="text-[10px] text-muted-foreground font-mono">{label}</p>
-                        <Input
-                          placeholder={
-                            isAutoFilled
-                              ? 'Auto-filled per contact'
-                              : `Enter value for ${label}`
-                          }
-                          value={paramValues[i] || ''}
-                          onChange={(e) => handleParamChange(i, e.target.value)}
-                          className={`h-8 text-sm ${isAutoFilled ? 'text-muted-foreground italic' : ''}`}
-                        />
-                        {isAutoFilled && (
+                        {ctx && (
+                          <p className="text-[10px] text-muted-foreground font-mono bg-muted/40 rounded px-2 py-1 truncate">
+                            {ctx}
+                          </p>
+                        )}
+                        {/* Field picker dropdown */}
+                        <select
+                          value={FIELD_OPTIONS.find(o => o.value === currentVal) ? currentVal : '__custom__'}
+                          onChange={e => {
+                            const v = e.target.value;
+                            handleParamChange(i, v === '__custom__' ? '' : v);
+                          }}
+                          className="w-full h-8 px-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          {FIELD_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>
+                          ))}
+                        </select>
+                        {/* Custom text input — shown only when Custom is selected */}
+                        {(isCustom || currentVal === '__custom__' || currentVal === '') && (
+                          <Input
+                            placeholder={`Fixed value sent to everyone (e.g. "12")`}
+                            value={FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal) ? '' : currentVal}
+                            onChange={e => handleParamChange(i, e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        )}
+                        {/* Hint for auto-resolved fields */}
+                        {selectedOpt && selectedOpt.value !== '__custom__' && currentVal !== '' && currentVal !== '__custom__' && (
                           <p className="text-[10px] text-green-600">
-                            ✓ Will be replaced with each contact&apos;s name automatically
+                            ✓ Replaced automatically per contact — {selectedOpt.hint}
                           </p>
                         )}
                       </div>
