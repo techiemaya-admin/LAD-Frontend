@@ -31,6 +31,8 @@ interface WhatsAppTemplate {
   name: string;
   language: string;
   status: string;
+  quality_score: string;
+  quality_pending: boolean;
   category: string;
   body: string;
   parameter_count: number;
@@ -128,6 +130,8 @@ export function TemplatePicker({
                 name: t.name || '',
                 language: t.language || t.language_code || t.metadata?.language_code || 'en',
                 status: t.status || (t.is_active === false ? 'INACTIVE' : 'APPROVED'),
+                quality_score: t.quality_score || '',
+                quality_pending: t.quality_pending ?? false,
                 category: t.category || t.metadata?.channel_type || 'MESSAGE',
                 body,
                 parameter_count: params.length || t.parameter_count || 0,
@@ -310,6 +314,21 @@ export function TemplatePicker({
                         <Badge variant="outline" className="text-[10px] px-1.5 h-4">
                           {template.language}
                         </Badge>
+                        {template.quality_pending && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 bg-amber-50 text-amber-700 border-amber-200">
+                            ⏳ Quality Pending
+                          </Badge>
+                        )}
+                        {!template.quality_pending && template.quality_score && template.quality_score !== 'UNKNOWN' && (
+                          <Badge variant="outline" className={cn(
+                            'text-[10px] px-1.5 h-4',
+                            template.quality_score === 'HIGH'   ? 'bg-green-50 text-green-700 border-green-200' :
+                            template.quality_score === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          )}>
+                            {template.quality_score}
+                          </Badge>
+                        )}
                         {template.parameter_count > 0 && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 h-4">
                             {template.parameter_count} param{template.parameter_count > 1 ? 's' : ''}
