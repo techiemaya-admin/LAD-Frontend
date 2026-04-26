@@ -59,4 +59,6 @@ export type {
   SendMessageRequest,
   ConversationStats,
   UseConversationsReturn,
+  RichMessageType,
+  RichMessagePayload,
 } from './types';

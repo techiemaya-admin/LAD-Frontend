@@ -6,12 +6,13 @@ import { MessageList } from './MessageList';
 import { MessageComposer } from './MessageComposer';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import type { RichMessagePayload } from '@lad/frontend-features/conversations';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
   onMarkResolved: (id: string) => void;
   onMute: (id: string) => void;
-  onSendMessage: (content: string) => void;
+  onSendMessage: (payload: RichMessagePayload) => void;
   onTogglePanel: () => void;
   isPanelOpen: boolean;
   backendChannel?: 'personal' | 'waba';

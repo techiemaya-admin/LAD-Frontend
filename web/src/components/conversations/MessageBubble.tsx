@@ -1,10 +1,59 @@
 import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
-import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MrLadAvatar } from './MrLadAvatar';
+
+// ── Location card renderer ───────────────────────────────────────────────────
+function LocationCard({
+  latitude,
+  longitude,
+  name,
+  address,
+}: {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  address?: string;
+}) {
+  const mapUrl = `https://maps.google.com/maps?q=${latitude},${longitude}`;
+  const displayName = name || address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+  return (
+    <a
+      href={mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block w-full max-w-xs rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+    >
+      {/* Static map thumbnail */}
+      <div className="relative bg-gray-800 h-32 flex items-end justify-center">
+        <img
+          src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=300x140&markers=color:red%7C${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}`}
+          alt="Location"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback if map image fails to load
+            const img = e.target as HTMLImageElement;
+            img.style.display = 'none';
+          }}
+        />
+        {/* Location pin overlay */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <MapPin className="w-8 h-8 text-red-500 drop-shadow-lg" fill="currentColor" />
+        </div>
+      </div>
+
+      {/* Location name */}
+      <div className="bg-gray-900 px-3 py-2 text-white text-sm">
+        <div className="font-semibold truncate">{displayName}</div>
+        <div className="text-xs text-gray-400 mt-0.5">{latitude.toFixed(6)}, {longitude.toFixed(6)}</div>
+      </div>
+    </a>
+  );
+}
 
 // ── Template message renderer ─────────────────────────────────────────────────
 // Shows a labelled badge above the actual rendered message text
@@ -239,9 +288,46 @@ export const MessageBubble = memo(function MessageBubble({
           </p>
         )}
 
-        {/* Message text — template messages get a labelled badge, others plain text */}
+        {/* Message content — template, location, or plain text */}
         {message.templateName ? (
           <TemplateMessageBubble content={content} templateName={message.templateName} />
+        ) : message.latitude != null && message.longitude != null ? (
+          <div className="flex flex-col gap-3">
+            {/* Location card with map preview */}
+            <LocationCard
+              latitude={message.latitude}
+              longitude={message.longitude}
+              name={message.locationName}
+              address={message.locationAddress}
+            />
+            {/* Clickable map links */}
+            <div className="text-sm wa-msg-text whitespace-pre-line">
+              {content.split('\n').map((line, idx) => {
+                // Check if line contains a URL
+                const urlMatch = line.match(/https?:\/\/[^\s]+/);
+                if (urlMatch) {
+                  const before = line.substring(0, line.indexOf(urlMatch[0]));
+                  const url = urlMatch[0];
+                  const after = line.substring(line.indexOf(urlMatch[0]) + url.length);
+                  return (
+                    <div key={idx}>
+                      {before}
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline break-all"
+                      >
+                        {url}
+                      </a>
+                      {after}
+                    </div>
+                  );
+                }
+                return <div key={idx}>{line}</div>;
+              })}
+            </div>
+          </div>
         ) : (
           <p className="wa-msg-text">{content}</p>
         )}
