@@ -92,6 +92,11 @@ function mapMessageFromApi(raw: any): Message {
     senderName,
     humanAgentId: metadata.human_agent_id || undefined,
     templateName: metadata.template_name || undefined,
+    // Rich message fields (extracted from metadata)
+    latitude: metadata.latitude !== undefined ? Number(metadata.latitude) : undefined,
+    longitude: metadata.longitude !== undefined ? Number(metadata.longitude) : undefined,
+    locationName: metadata.location_name || undefined,
+    locationAddress: metadata.location_address || undefined,
   };
 }
 
@@ -340,10 +345,30 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
   const response = await proxyClient.post<{ success: boolean; data: any }>(
     `/api/whatsapp-conversations/conversations/${data.conversationId}/messages`,
     {
-      content: data.content,
-      lead_id: data.leadId,
-      phone_number: data.phoneNumber,
+      // Core — always send `content` key so backend body.get("content") never returns None
+      type:           data.type ?? 'text',
+      content:        data.content ?? '',
+      lead_id:        data.leadId,
+      phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
+      // Media
+      file_base64:    data.fileBase64,
+      filename:       data.filename,
+      content_type:   data.contentType,
+      caption:        data.caption,
+      // Location
+      latitude:       data.latitude,
+      longitude:      data.longitude,
+      location_name:  data.locationName,
+      location_address: data.locationAddress,
+      // Contact
+      contact_name:    data.contactName,
+      contact_phone:   data.contactPhone,
+      contact_email:   data.contactEmail,
+      contact_company: data.contactCompany,
+      // Poll
+      poll_question:  data.pollQuestion,
+      poll_options:   data.pollOptions,
     },
     { channel: data.channel }
   );

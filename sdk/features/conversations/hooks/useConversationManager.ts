@@ -22,6 +22,7 @@ import type {
   Message,
   UseConversationsReturn,
   ConversationListFilters,
+  RichMessagePayload,
 } from '../types';
 
 export interface UseConversationsOptions {
@@ -121,15 +122,35 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   });
 
   const sendMessage = useCallback(
-    (content: string) => {
-      if (!effectiveSelectedId || !content.trim() || !selectedConversation) return;
+    (payload: RichMessagePayload) => {
+      if (!effectiveSelectedId || !selectedConversation) return;
+      // Require at least some content for text messages (also guard against missing type)
+      const payloadType = payload.type || 'text';
+      if (payloadType === 'text' && !payload.content?.trim()) return;
 
       sendMutation.mutate({
         conversationId: effectiveSelectedId,
-        content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
         channel: hookOptions?.channel,
+        // spread all rich fields
+        type:            payloadType,
+        content:         payload.content ?? '',  // always send content key, even if empty (non-text types)
+
+        fileBase64:      payload.fileBase64,
+        filename:        payload.filename,
+        contentType:     payload.contentType,
+        caption:         payload.caption,
+        latitude:        payload.latitude,
+        longitude:       payload.longitude,
+        locationName:    payload.locationName,
+        locationAddress: payload.locationAddress,
+        contactName:     payload.contactName,
+        contactPhone:    payload.contactPhone,
+        contactEmail:    payload.contactEmail,
+        contactCompany:  payload.contactCompany,
+        pollQuestion:    payload.pollQuestion,
+        pollOptions:     payload.pollOptions,
       });
     },
     [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
