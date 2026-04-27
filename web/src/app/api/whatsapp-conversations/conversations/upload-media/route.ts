@@ -10,7 +10,7 @@
  * The media_id can then be used in the send-message payload (no large base64 needed).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getWABAServiceUrl } from '../../utils/python-proxy';
+import { getWABAServiceUrl, getBackendUrl } from '../../utils/python-proxy';
 
 // No body size limit configuration needed — multipart streams directly to backend
 export const maxDuration = 300;
@@ -28,6 +28,65 @@ function extractTenantIdFromJwt(token: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  const channel = req.nextUrl.searchParams.get('channel') || 'waba';
+
+  // Personal channel → LAD_backend template upload endpoint (multer, no JSON body limit)
+  // Returns { success, url, filename, media_type, size } — we map url → media_id for the frontend
+  if (channel === 'personal') {
+    const backendUrl = getBackendUrl();
+    const url = new URL('/api/whatsapp-conversations/conversations/templates/upload-media', backendUrl);
+
+    const headers: Record<string, string> = {};
+    const authHeader = req.headers.get('authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      const tenantId = extractTenantIdFromJwt(authHeader.replace('Bearer ', ''));
+      if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    }
+    const directTenantId = req.headers.get('x-tenant-id');
+    if (directTenantId) headers['X-Tenant-ID'] = directTenantId;
+    if (!headers['X-Tenant-ID']) {
+      const cookieToken = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
+      if (cookieToken) {
+        const tenantId = extractTenantIdFromJwt(cookieToken);
+        if (tenantId) headers['X-Tenant-ID'] = tenantId;
+      }
+    }
+    const contentType = req.headers.get('content-type');
+    if (contentType) headers['Content-Type'] = contentType;
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers,
+        body: req.body,
+        // @ts-ignore
+        duplex: 'half',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return NextResponse.json(data, { status: response.status });
+      }
+      // Map the LAD_backend response to the format the frontend expects
+      // frontend reads data.media_id — use the file URL as the "media_id" for personal channel
+      return NextResponse.json({
+        success: true,
+        media_id: data.url,          // URL used as reference when sending the message
+        url: data.url,
+        filename: data.filename,
+        media_type: data.media_type,
+        size: data.size,
+      });
+    } catch (error) {
+      console.error('[upload-media-proxy] Error uploading media to personal WA backend:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to upload media to personal WA backend' },
+        { status: 502 },
+      );
+    }
+  }
+
+  // WABA channel → Python WABA service
   const wabaUrl = getWABAServiceUrl();
   const url = new URL('/api/conversations/upload-media', wabaUrl);
 

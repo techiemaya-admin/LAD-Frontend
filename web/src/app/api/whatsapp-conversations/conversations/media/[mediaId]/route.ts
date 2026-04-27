@@ -8,7 +8,7 @@
  * sent by customers (inbound) can be displayed in the conversation UI.
  */
 import { NextRequest } from 'next/server';
-import { getWABAServiceUrl } from '../../../utils/python-proxy';
+import { getWABAServiceUrl, getBackendUrl } from '../../../utils/python-proxy';
 
 function extractTenantIdFromJwt(token: string): string | null {
   try {
@@ -26,8 +26,16 @@ export async function GET(
   { params }: { params: Promise<{ mediaId: string }> },
 ) {
   const { mediaId } = await params;
-  const wabaUrl = getWABAServiceUrl();
-  const url = new URL(`/api/conversations/media/${mediaId}`, wabaUrl);
+
+  // Personal WhatsApp inbound media — IDs are prefixed with "pwa_"
+  // These are stored on LAD_backend (Node.js), not the WABA Python service
+  const isPersonalMedia = mediaId.startsWith('pwa_');
+  const serviceUrl = isPersonalMedia ? getBackendUrl() : getWABAServiceUrl();
+  const mediaPath  = isPersonalMedia
+    ? `/api/whatsapp-conversations/conversations/media/${mediaId}`
+    : `/api/conversations/media/${mediaId}`;
+
+  const url = new URL(mediaPath, serviceUrl);
 
   const headers: Record<string, string> = {};
 

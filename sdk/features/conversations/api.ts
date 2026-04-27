@@ -367,15 +367,20 @@ export const getConversationMessagesOptions = (
 const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
 
 /**
- * Upload a media file (multipart) to get a WhatsApp media_id.
+ * Upload a media file (multipart) to get a media reference.
  * This bypasses JSON body size limits — suitable for large PDFs, videos, etc.
- * The proxy route handles tenant ID extraction from the auth cookie automatically.
+ * - WABA channel: uploads to Meta via Python service, returns a numeric media_id
+ * - Personal channel: uploads to LAD_backend local/GCP storage, returns a file URL
  */
-async function uploadMediaForMessage(file: File): Promise<string> {
+async function uploadMediaForMessage(file: File, channel?: string): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch('/api/whatsapp-conversations/conversations/upload-media', {
+  const uploadUrl = channel === 'personal'
+    ? '/api/whatsapp-conversations/conversations/upload-media?channel=personal'
+    : '/api/whatsapp-conversations/conversations/upload-media';
+
+  const res = await fetch(uploadUrl, {
     method: 'POST',
     body: formData,
   });
@@ -398,8 +403,12 @@ async function uploadMediaForMessage(file: File): Promise<string> {
  */
 export async function sendMessage(data: SendMessageRequest): Promise<Message> {
   let mediaId: string | undefined = data.mediaId;
+  // For personal channel, the pre-uploaded reference is a file URL, not a Meta media_id
+  let fileUrl: string | undefined;
 
-  // Pre-upload large media files to avoid JSON body size limits (~8MB cap)
+  // Pre-upload large media files to avoid JSON body size limits (~8MB cap).
+  // - WABA: uploads to Meta → returns media_id (numeric string)
+  // - Personal: uploads to LAD_backend local/GCP storage → returns file URL
   if (
     data.type &&
     (MEDIA_TYPES as readonly string[]).includes(data.type) &&
@@ -417,7 +426,14 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
       const blob = new Blob([byteArr], { type: data.contentType || 'application/octet-stream' });
       const file = new File([blob], data.filename || 'upload', { type: blob.type });
 
-      mediaId = await uploadMediaForMessage(file);
+      const uploadedRef = await uploadMediaForMessage(file, data.channel);
+
+      if (data.channel === 'personal') {
+        // Personal channel returns a file URL reference, not a Meta media_id
+        fileUrl = uploadedRef;
+      } else {
+        mediaId = uploadedRef;
+      }
     } catch (uploadErr) {
       console.error('[sendMessage] Media pre-upload failed, falling back to base64:', uploadErr);
       // Fall through — will try sending with file_base64 (may fail for very large files)
@@ -433,9 +449,11 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
       lead_id:        data.leadId,
       phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
-      // Media — send media_id if pre-uploaded, otherwise fall back to base64
+      // Media — for WABA: send media_id if pre-uploaded; for personal: send file_url
+      // Fall back to file_base64 if pre-upload failed (will fail for >10MB files)
       media_id:       mediaId,
-      file_base64:    mediaId ? undefined : data.fileBase64,
+      file_url:       fileUrl,
+      file_base64:    (mediaId || fileUrl) ? undefined : data.fileBase64,
       filename:       data.filename,
       content_type:   data.contentType,
       caption:        data.caption,

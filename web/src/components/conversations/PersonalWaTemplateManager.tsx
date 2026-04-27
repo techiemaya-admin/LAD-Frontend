@@ -66,7 +66,7 @@ const EMPTY_FORM: TemplateFormData = {
 };
 
 const API = '/api/whatsapp-conversations/conversations/templates';
-const UPLOAD_API = '/api/whatsapp-conversations/conversations/templates/upload-media';
+const UPLOAD_API = '/api/whatsapp-conversations/conversations/templates/upload-media?channel=personal';
 
 // Count {{variable}} placeholders
 function countPlaceholders(text: string): string[] {

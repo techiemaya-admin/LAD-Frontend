@@ -108,7 +108,10 @@ function MediaCard({
   mediaFilename?: string;
   mediaCaption?: string;
 }) {
-  const mediaUrl = `/api/whatsapp-conversations/conversations/media/${mediaId}`;
+  // GCP URLs (personal WA inbound) are used directly; WABA / pwa_ IDs go through proxy
+  const mediaUrl = mediaId.startsWith('http')
+    ? mediaId
+    : `/api/whatsapp-conversations/conversations/media/${mediaId}`;
   const isImage = mediaType === 'image' || (mediaMimeType?.startsWith('image/') ?? false);
   const isVideo = mediaType === 'video' || (mediaMimeType?.startsWith('video/') ?? false);
   const isAudio = mediaType === 'audio' || (mediaMimeType?.startsWith('audio/') ?? false);
