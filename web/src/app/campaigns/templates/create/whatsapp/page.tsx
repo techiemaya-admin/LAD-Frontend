@@ -731,7 +731,7 @@ export default function WhatsAppTemplateCreatePage() {
           </div>
 
           {/* ── Buttons section ── */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8F9FE]">
               <h2 className="text-base font-semibold text-[#1E293B]">
                 Buttons

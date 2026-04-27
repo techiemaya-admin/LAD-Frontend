@@ -7,7 +7,7 @@
  *
  * This replaces the old mock-based useConversations hook.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getConversationsOptions,
@@ -51,20 +51,63 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination state
+  const [offset, setOffset] = useState(0);
+  const [allLoadedConversations, setAllLoadedConversations] = useState<Conversation[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Build filters from local state — include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   const filters: ConversationQueryOptions = useMemo(() => ({
     backendChannel: hookOptions?.channel,
+    limit: 20,
+    offset: offset,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
-  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
+  }), [hookOptions?.channel, offset, searchQuery, contextStatusFilter]);
 
   // Fetch conversations from backend
   const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions({ backendChannel: hookOptions?.channel }));
 
-  const conversations = conversationsQuery.data || [];
-  const allConversations = allConversationsQuery.data || [];
+  // Extract conversations from new API response structure
+  const currentPageData = conversationsQuery.data || { conversations: [], total: 0, hasMore: false };
+
+  // Accumulate conversations across pages whenever TanStack Query delivers fresh data.
+  // Depend on dataUpdatedAt so we process each successful fetch exactly once
+  // without causing infinite loops from object-reference changes.
+  useEffect(() => {
+    if (currentPageData.conversations.length === 0 && !currentPageData.hasMore) return;
+    if (offset === 0) {
+      // Fresh load or search/filter change — replace all loaded conversations
+      setAllLoadedConversations(currentPageData.conversations);
+      setHasMore(currentPageData.hasMore);
+      setIsLoadingMore(false);
+    } else {
+      // Load more — append new conversations, dedup by id
+      setAllLoadedConversations((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id));
+        const newOnes = currentPageData.conversations.filter((c) => !existingIds.has(c.id));
+        if (newOnes.length === 0) return prev; // nothing new
+        return [...prev, ...newOnes];
+      });
+      setHasMore(currentPageData.hasMore);
+      setIsLoadingMore(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationsQuery.dataUpdatedAt, offset]);
+
+  // Reset pagination when search or filters change
+  useEffect(() => {
+    setOffset(0);
+    setAllLoadedConversations([]);
+    setHasMore(true);
+  }, [searchQuery, contextStatusFilter]);
+
+  const conversations = allLoadedConversations;
+  // allConversations mirrors conversations — used for unread badges and mute status.
+  // Loaded conversations are sorted most-recent-first, so unreads are always visible.
+  const allConversations = allLoadedConversations;
 
   // Auto-select first conversation if none selected
   const effectiveSelectedId = useMemo(() => {
@@ -89,18 +132,21 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     return counts;
   }, [allConversations]);
 
+  // Load more conversations for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!hasMore || isLoadingMore || conversationsQuery.isLoading) {
+      return;
+    }
+    setIsLoadingMore(true);
+    setOffset((prev) => prev + 20);
+  }, [hasMore, isLoadingMore, conversationsQuery.isLoading]);
+
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
 
-    // Optimistically zero the unread badge in every conversation-list cache entry
-    // so the sidebar updates immediately without waiting for the next poll.
-    queryClient.setQueriesData<Conversation[]>(
-      { queryKey: conversationKeys.lists() },
-      (old) => (old || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-    );
-
-    // Fire-and-forget: persist the reset to the DB so polls stay at 0
+    // Fire-and-forget: persist the unread reset to the DB
+    // The next poll will update the UI from the server response
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
@@ -198,5 +244,9 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     isLoading: conversationsQuery.isLoading,
     error: conversationsQuery.error,
     refetch: conversationsQuery.refetch,
+    // Pagination
+    loadMore,
+    isLoadingMore,
+    hasMore,
   };
 }
