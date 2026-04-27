@@ -7,11 +7,10 @@
  *
  * This replaces the old mock-based useConversations hook.
  */
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getConversationsOptions,
-  getConversationMessagesOptions,
+  getConversationsInfiniteOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
   markConversationRead as markConversationReadApi,
@@ -51,63 +50,25 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Pagination state
-  const [offset, setOffset] = useState(0);
-  const [allLoadedConversations, setAllLoadedConversations] = useState<Conversation[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
   // Build filters from local state — include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   const filters: ConversationQueryOptions = useMemo(() => ({
     backendChannel: hookOptions?.channel,
-    limit: 20,
-    offset: offset,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
-  }), [hookOptions?.channel, offset, searchQuery, contextStatusFilter]);
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
 
-  // Fetch conversations from backend
-  const conversationsQuery = useQuery(getConversationsOptions(filters));
+  // Infinite query for incremental conversation loading (20 at a time)
+  const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
 
-  // Extract conversations from new API response structure
-  const currentPageData = conversationsQuery.data || { conversations: [], total: 0, hasMore: false };
+  // Flatten pages into a single list
+  const conversations: Conversation[] = useMemo(
+    () => conversationsQuery.data?.pages.flatMap((p) => p.conversations) ?? [],
+    [conversationsQuery.data],
+  );
 
-  // Accumulate conversations across pages whenever TanStack Query delivers fresh data.
-  // Depend on dataUpdatedAt so we process each successful fetch exactly once
-  // without causing infinite loops from object-reference changes.
-  useEffect(() => {
-    if (currentPageData.conversations.length === 0 && !currentPageData.hasMore) return;
-    if (offset === 0) {
-      // Fresh load or search/filter change — replace all loaded conversations
-      setAllLoadedConversations(currentPageData.conversations);
-      setHasMore(currentPageData.hasMore);
-      setIsLoadingMore(false);
-    } else {
-      // Load more — append new conversations, dedup by id
-      setAllLoadedConversations((prev) => {
-        const existingIds = new Set(prev.map((c) => c.id));
-        const newOnes = currentPageData.conversations.filter((c) => !existingIds.has(c.id));
-        if (newOnes.length === 0) return prev; // nothing new
-        return [...prev, ...newOnes];
-      });
-      setHasMore(currentPageData.hasMore);
-      setIsLoadingMore(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationsQuery.dataUpdatedAt, offset]);
-
-  // Reset pagination when search or filters change
-  useEffect(() => {
-    setOffset(0);
-    setAllLoadedConversations([]);
-    setHasMore(true);
-  }, [searchQuery, contextStatusFilter]);
-
-  const conversations = allLoadedConversations;
-  // allConversations mirrors conversations — used for unread badges and mute status.
-  // Loaded conversations are sorted most-recent-first, so unreads are always visible.
-  const allConversations = allLoadedConversations;
+  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  const allConversations = conversations;
 
   // Auto-select first conversation if none selected
   const effectiveSelectedId = useMemo(() => {
@@ -132,25 +93,22 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     return counts;
   }, [allConversations]);
 
-  // Load more conversations for infinite scroll
+  // Load next page of conversations
   const loadMore = useCallback(() => {
-    if (!hasMore || isLoadingMore || conversationsQuery.isLoading) {
-      return;
+    if (conversationsQuery.hasNextPage && !conversationsQuery.isFetchingNextPage) {
+      conversationsQuery.fetchNextPage();
     }
-    setIsLoadingMore(true);
-    setOffset((prev) => prev + 20);
-  }, [hasMore, isLoadingMore, conversationsQuery.isLoading]);
+  }, [conversationsQuery]);
 
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
 
-    // Fire-and-forget: persist the unread reset to the DB
-    // The next poll will update the UI from the server response
+    // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
-  }, [queryClient, hookOptions?.channel]);
+  }, [hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -244,9 +202,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     isLoading: conversationsQuery.isLoading,
     error: conversationsQuery.error,
     refetch: conversationsQuery.refetch,
-    // Pagination
     loadMore,
-    isLoadingMore,
-    hasMore,
+    hasMore: conversationsQuery.hasNextPage ?? false,
+    isLoadingMore: conversationsQuery.isFetchingNextPage,
   };
 }

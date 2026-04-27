@@ -7,7 +7,7 @@
  *
  * Follows the same pattern as campaigns/api.ts for consistency.
  */
-import { queryOptions } from '@tanstack/react-query';
+import { queryOptions, infiniteQueryOptions } from '@tanstack/react-query';
 import { proxyClient } from '../../shared/proxyClient';
 import type {
   Conversation,
@@ -192,6 +192,63 @@ export async function getConversations(
 
   return { conversations, total, hasMore };
 }
+
+export interface ConversationsPage {
+  conversations: Conversation[];
+  total: number;
+  hasMore: boolean;
+  nextOffset: number;
+}
+
+const PAGE_SIZE = 20;
+
+/**
+ * Fetch a single page of conversations for infinite scroll.
+ */
+export async function getConversationsPage(
+  filters: ConversationQueryOptions,
+  offset: number,
+): Promise<ConversationsPage> {
+  const { backendChannel, ...rest } = filters;
+  const params: Record<string, string> = {
+    limit: String(PAGE_SIZE),
+    offset: String(offset),
+  };
+  if (rest.search) params.search = rest.search;
+  if (rest.status && rest.status !== 'all') {
+    params.status = rest.status === 'open' ? 'active' : rest.status;
+  }
+  if (rest.owner && rest.owner !== 'all') params.owner = rest.owner;
+  if (rest.context_status) params.context_status = rest.context_status;
+
+  const response = await proxyClient.get<{
+    success: boolean;
+    data: any[];
+    total: number;
+    has_more: boolean;
+  }>('/api/whatsapp-conversations/conversations', { params, channel: backendChannel });
+
+  const conversations = (response.data.data || []).map(mapConversationFromApi);
+  const total: number = response.data.total ?? conversations.length;
+  const hasMore: boolean = response.data.has_more ?? (offset + conversations.length < total);
+  return { conversations, total, hasMore, nextOffset: offset + conversations.length };
+}
+
+/**
+ * TanStack Query infinite options for conversations list (incremental loading).
+ */
+export const getConversationsInfiniteOptions = (filters?: ConversationQueryOptions) =>
+  infiniteQueryOptions({
+    queryKey: [...conversationKeys.list(filters), filters?.backendChannel ?? 'personal', 'infinite'],
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      getConversationsPage(filters ?? {}, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: ConversationsPage) =>
+      lastPage.hasMore ? lastPage.nextOffset : undefined,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 30000,
+  });
 
 /**
  * TanStack Query options for getting conversations.

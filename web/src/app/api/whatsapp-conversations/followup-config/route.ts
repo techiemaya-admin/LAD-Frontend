@@ -1,26 +1,24 @@
 /**
  * Follow-up Config Proxy
- * GET /api/whatsapp-conversations/followup-config → Backend /api/followup-config
- * PUT /api/whatsapp-conversations/followup-config → Backend /api/followup-config
+ * GET /api/whatsapp-conversations/followup-config → Node.js /api/personal-whatsapp/followup-config
+ * PUT /api/whatsapp-conversations/followup-config → Node.js /api/personal-whatsapp/followup-config
  *
- * Manages post-conversation follow-up timing config:
- *   - Per-stage delays (FIRST/SECOND/THIRD/FOURTH)
- *   - Enable/disable each stage
- *   - Meeting reminder delay
+ * Uses channel=backend so the proxy routes directly to Node.js LAD_backend
+ * without path transformation.
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../utils/python-proxy';
+import { proxyToPythonService, getBackendUrl } from '../utils/python-proxy';
+
+function withBackendChannel(req: NextRequest): NextRequest {
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'backend');
+  return new NextRequest(url, req);
+}
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/followup-config');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/followup-config');
 }
 
 export async function PUT(req: NextRequest) {
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/followup-config');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/followup-config');
 }

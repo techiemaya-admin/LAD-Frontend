@@ -848,27 +848,24 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             <p className="text-xs mt-1">Try adjusting your filters</p>
           </div>
         ) : (
-          <>
-            <Virtuoso
-              style={{ flex: 1 }}
-              totalCount={filteredConversations.length}
-              itemContent={itemContent}
-              className="custom-scrollbar"
-              endReached={() => {
-                if (hasMore && onLoadMore && !isLoadingMore) {
-                  onLoadMore();
-                }
-              }}
-              increaseViewportBy={{ top: 100, bottom: 500 }}
-            />
-            {/* Loading indicator at bottom when loading more */}
-            {isLoadingMore && (
-              <div className="flex items-center justify-center p-4 border-t border-border bg-muted/30">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
-                <span className="text-xs text-muted-foreground">Loading more conversations...</span>
-              </div>
-            )}
-          </>
+          <Virtuoso
+            style={{ height: '100%' }}
+            totalCount={filteredConversations.length}
+            itemContent={itemContent}
+            className="custom-scrollbar"
+            endReached={hasMore ? onLoadMore : undefined}
+            increaseViewportBy={{ top: 100, bottom: 500 }}
+            components={{
+              Footer: isLoadingMore
+                ? () => (
+                    <div className="flex justify-center items-center py-3 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-xs">Loading more conversations...</span>
+                    </div>
+                  )
+                : undefined,
+            }}
+          />
         )}
       </div>
 

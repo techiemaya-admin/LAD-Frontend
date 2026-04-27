@@ -82,6 +82,11 @@ export async function proxyToPythonService(
     // Transform: /api/conversations → /api/linkedin-conversations/conversations
     resolvedBaseUrl = getBackendUrl();
     resolvedPath = '/api/linkedin-conversations' + path.replace(/^\/api/, '');
+  } else if (channel === 'backend') {
+    // Direct Node.js backend route — no path transformation
+    // Use when the full API path is already specified (e.g. /api/personal-whatsapp/prompts)
+    resolvedBaseUrl = getBackendUrl();
+    resolvedPath = path;
   } else {
     // Fallback: use the passed-in baseUrl (backwards compat)
     resolvedBaseUrl = baseUrl;
