@@ -43,6 +43,8 @@ interface CreateAccountForm {
   access_token: string;
   business_account_id: string;
   verify_token: string;
+  app_id: string;
+  app_secret: string;
   ai_model: string;
   ai_api_key: string;
   timezone: string;
@@ -68,7 +70,7 @@ async function fetchAccounts(): Promise<WhatsAppAccount[]> {
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {
   const body: Record<string, any> = { ...form };
   // Remove empty optional fields (including tenant_id — blank = auto-create new tenant)
-  for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'ai_api_key']) {
+  for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'app_id', 'app_secret', 'ai_api_key']) {
     if (!body[key]) delete body[key];
   }
 
@@ -127,6 +129,8 @@ const INITIAL_FORM: CreateAccountForm = {
   access_token: '',
   business_account_id: '',
   verify_token: '',
+  app_id: '',
+  app_secret: '',
   ai_model: 'gemini-2.5-flash',
   ai_api_key: '',
   timezone: 'UTC',
@@ -431,6 +435,34 @@ export function TenantOnboarding() {
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
               />
             </div>
+
+            {/* App ID */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                App ID <span className="text-gray-400 font-normal">(Facebook App ID — required for template media uploads)</span>
+              </label>
+              <input
+                type="text"
+                value={form.app_id}
+                onChange={(e) => setForm((prev) => ({ ...prev, app_id: e.target.value.trim() }))}
+                placeholder="e.g. 1618644592164501"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+              />
+            </div>
+
+            {/* App Secret */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                App Secret <span className="text-gray-400 font-normal">(Facebook App Secret — for webhook payload verification)</span>
+              </label>
+              <input
+                type="password"
+                value={form.app_secret}
+                onChange={(e) => setForm((prev) => ({ ...prev, app_secret: e.target.value }))}
+                placeholder="Facebook App Secret"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 mt-5">
@@ -536,6 +568,10 @@ export function TenantOnboarding() {
                       <div>
                         <span className="text-xs text-gray-400">Business Account ID</span>
                         <p className="font-mono text-xs text-gray-600">{account.business_account_id || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-400">App ID</span>
+                        <p className="font-mono text-xs text-gray-600">{(account as any).app_id || '—'}</p>
                       </div>
                       <div>
                         <span className="text-xs text-gray-400">Webhook URL</span>

@@ -18,6 +18,7 @@ import {
   type Message,
 } from '@/store/slices/conversationSlice';
 import { RootState } from '@/store/store';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 export interface UseConversationsReturn {
   conversations: Conversation[];
@@ -47,7 +48,7 @@ export interface UseConversationsReturn {
  * - Conversation status management (resolved, muted)
  * - Unread count tracking
  */
-export function useConversations(): UseConversationsReturn {
+export function useConversations({ channel }: { channel?: 'personal' | 'waba' } = {}): UseConversationsReturn {
   const dispatch = useDispatch();
   const conversationsFromRedux = useSelector(selectConversations);
   const activeConversationId = useSelector(selectActiveConversationId);
@@ -150,9 +151,10 @@ export function useConversations(): UseConversationsReturn {
     );
 
     // Send to backend API (which sends via WhatsApp)
+    const channelParam = channel ? `?channel=${channel}` : '';
     try {
-      const res = await fetch(
-        `/api/whatsapp-conversations/conversations/${selectedId}/messages`,
+      const res = await fetchWithTenant(
+        `/api/whatsapp-conversations/conversations/${selectedId}/messages${channelParam}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
