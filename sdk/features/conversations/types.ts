@@ -209,7 +209,8 @@ export interface UseConversationsReturn {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  // ── Pagination ────────────────────────────────────────────────────────
   loadMore: () => void;
+  isLoadingMore: boolean;
   hasMore: boolean;
-  isFetchingMore: boolean;
 }

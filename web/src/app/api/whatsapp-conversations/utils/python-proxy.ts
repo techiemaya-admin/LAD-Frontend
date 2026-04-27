@@ -152,13 +152,20 @@ export async function proxyToPythonService(
     headers,
   };
 
-  // Forward body for POST/PUT/PATCH
+  // Forward body for POST/PUT/PATCH.
+  // Use req.text() rather than req.json()+JSON.stringify() to:
+  //   1. Avoid double parse/reserialise overhead (important for large base64 payloads like PDFs)
+  //   2. Prevent silent body loss — req.json() throws on any read error and the old catch
+  //      block silently forwarded a body-less POST, causing FastAPI 422 on dict params.
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     try {
-      const body = await req.json();
-      fetchOptions.body = JSON.stringify(body);
-    } catch {
-      // No body or invalid JSON — proceed without body
+      const bodyText = await req.text();
+      if (bodyText) {
+        fetchOptions.body = bodyText;
+      }
+    } catch (bodyErr) {
+      console.error(`[python-proxy] Failed to read request body for ${req.method} ${path}:`, bodyErr);
+      // Body could not be read — proceed without it (FastAPI will return its own validation error)
     }
   }
 

@@ -36,7 +36,10 @@ function dedupeById(msgs: Message[]): Message[] {
 }
 
 // ── How many messages to load per page ───────────────────────────────────────
-const INITIAL_LIMIT = 500;   // covers full history for most convos
+// 50 recent messages are polled every 3 s — enough to show the current thread
+// without fetching the full history on every interval tick.
+// Older messages are fetched on-demand when the user scrolls up ("load more").
+const INITIAL_LIMIT = 50;
 const LOAD_MORE_LIMIT = 100; // older messages fetched when user scrolls up
 
 export const ChatWindow = memo(function ChatWindow({
@@ -55,7 +58,7 @@ export const ChatWindow = memo(function ChatWindow({
   onDelete,
   onOpenAssignmentPanel,
 }: ChatWindowProps) {
-  // ── Latest messages polled every 3 s (large limit for full history) ───────
+  // ── Latest 50 messages polled every 3 s; older ones loaded on scroll-up ────
   const { messages: polledMessages, isLoading: messagesLoading, isAgentTyping, total } =
     useConversationMessages(
       conversation?.id || null,

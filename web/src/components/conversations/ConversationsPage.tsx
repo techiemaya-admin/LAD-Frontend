@@ -9,6 +9,7 @@ import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
+import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,13 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: 'personal' | 'waba'; onShowBroadcastModal?: () => void }) {
+function ChannelConversationView({
+  channel,
+  onShowBroadcastModal,
+}: {
+  channel: 'personal' | 'waba';
+  onShowBroadcastModal?: () => void;
+}) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -40,8 +47,8 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     markAsResolved,
     muteConversation,
     loadMore,
+    isLoadingMore,
     hasMore,
-    isFetchingMore,
   } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -51,6 +58,8 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [createGroupSelectedIds, setCreateGroupSelectedIds] = useState<string[]>([]);
 
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
@@ -218,10 +227,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
+              onShowCreateGroupModal={(ids) => {
+                setCreateGroupSelectedIds(ids);
+                setShowCreateGroupModal(true);
+              }}
               groupRefreshKey={groupRefreshKey}
               onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
               hasMore={hasMore}
-              isFetchingMore={isFetchingMore}
             />
           </motion.div>
         )}
@@ -265,10 +278,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
                 onShowBroadcastModal={onShowBroadcastModal}
+                onShowCreateGroupModal={(ids) => {
+                  setCreateGroupSelectedIds(ids);
+                  setShowCreateGroupModal(true);
+                }}
                 groupRefreshKey={groupRefreshKey}
                 onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
                 hasMore={hasMore}
-                isFetchingMore={isFetchingMore}
               />
             </motion.div>
           </motion.div>
@@ -334,6 +351,22 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               defaultTab={contextPanelTab}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Broadcast Group Modal */}
+      <AnimatePresence>
+        {showCreateGroupModal && (
+          <CreateBroadcastGroupModal
+            open={showCreateGroupModal}
+            onOpenChange={setShowCreateGroupModal}
+            selectedIds={createGroupSelectedIds}
+            onSuccess={() => {
+              setGroupRefreshKey((prev) => prev + 1);
+              setCreateGroupSelectedIds([]);
+            }}
+            channel={channel}
+          />
         )}
       </AnimatePresence>
     </div>

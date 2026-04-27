@@ -80,7 +80,14 @@ function mapMessageFromApi(raw: any): Message {
     content: raw.content || '',
     timestamp: new Date(raw.created_at),
     isOutgoing,
-    status: (raw.message_status || 'sent') as MessageStatus,
+    // DB default is 'received' for all messages; outbound ones get backfilled to 'sent'.
+    // Map 'received' → 'sent' for display (shows clock icon) since older rows may
+    // still carry the DB default before the wamid-backfill was introduced.
+    status: (() => {
+      const s = raw.message_status || '';
+      if (!s || s === 'received') return 'sent' as MessageStatus;
+      return s as MessageStatus;
+    })(),
     sender: {
       id: isOutgoing ? (metadata.human_agent_id || 'agent') : raw.lead_id || 'user',
       name: isOutgoing
@@ -107,7 +114,8 @@ function mapConversationFromApi(raw: any): Conversation {
     channel: mapChannelFromApi(raw.lead_channel),
     contact: {
       id: raw.lead_id,
-      name: raw.lead_name || 'Unknown',
+      // Prefer stored name; fall back to phone so we never show "Unknown"
+      name: raw.lead_name || raw.lead_phone || raw.phone || 'Unknown',
       phone: raw.lead_phone,
       email: raw.lead_email,
     },
@@ -122,7 +130,7 @@ function mapConversationFromApi(raw: any): Conversation {
           status: 'sent',
           sender: {
             id: raw.last_message_role === 'user' ? raw.lead_id : 'agent',
-            name: raw.last_message_role === 'user' ? (raw.lead_name || 'Contact') : 'AI Agent',
+            name: raw.last_message_role === 'user' ? (raw.lead_name || raw.lead_phone || 'Contact') : 'AI Agent',
           },
         }
       : null,
@@ -151,26 +159,38 @@ export interface ConversationQueryOptions extends ConversationListFilters {
 }
 
 /**
- * Get all conversations with optional filters
+ * Get all conversations with optional filters and pagination
  */
-export async function getConversations(filters?: ConversationQueryOptions): Promise<Conversation[]> {
+export async function getConversations(
+  filters?: ConversationQueryOptions
+): Promise<{ conversations: Conversation[]; total: number; hasMore: boolean }> {
   const { backendChannel, ...rest } = filters ?? {};
   const params: Record<string, string> = {};
+
+  // Set default pagination if not provided
+  const limit = rest.limit ?? 20;
+  const offset = rest.offset ?? 0;
+
+  params.limit = String(limit);
+  params.offset = String(offset);
+
   if (rest.search) params.search = rest.search;
   if (rest.status && rest.status !== 'all') {
     params.status = rest.status === 'open' ? 'active' : rest.status;
   }
   if (rest.owner && rest.owner !== 'all') params.owner = rest.owner;
   if (rest.context_status) params.context_status = rest.context_status;
-  if (rest.limit) params.limit = String(rest.limit);
-  if (rest.offset) params.offset = String(rest.offset);
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
     { params, channel: backendChannel }
   );
 
-  return (response.data.data || []).map(mapConversationFromApi);
+  const total = response.data.total || 0;
+  const conversations = (response.data.data || []).map(mapConversationFromApi);
+  const hasMore = offset + limit < total;
+
+  return { conversations, total, hasMore };
 }
 
 export interface ConversationsPage {
