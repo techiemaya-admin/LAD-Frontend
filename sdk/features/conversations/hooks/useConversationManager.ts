@@ -8,7 +8,8 @@
  * This replaces the old mock-based useConversations hook.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';import {
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
   getConversationsInfiniteOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
@@ -107,7 +108,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
-  }, [hookOptions?.channel, conversationsQuery]);
+  }, [hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -203,6 +204,6 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     refetch: conversationsQuery.refetch,
     loadMore,
     hasMore: conversationsQuery.hasNextPage ?? false,
-    isFetchingMore: conversationsQuery.isFetchingNextPage,
+    isLoadingMore: conversationsQuery.isFetchingNextPage,
   };
 }
