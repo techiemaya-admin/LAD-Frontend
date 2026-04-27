@@ -194,6 +194,16 @@ export async function proxyToPythonService(
     }
 
     const data = await response.json();
+
+    // Log Python-service 5xx errors so the actual exception message is visible
+    // in Next.js dev logs (the global exception handler encodes it in `detail`).
+    if (response.status >= 500) {
+      console.error(
+        `[python-proxy] 5xx from ${url} (${response.status}):`,
+        data?.detail || data?.error || data
+      );
+    }
+
     const nextResponse = NextResponse.json(data, { status: response.status });
     nextResponse.headers.set('X-Debug-Trace-Id', debugTraceId || 'none');
     nextResponse.headers.set('X-Debug-Resolved-Tenant', headers['X-Tenant-ID'] || 'none');
