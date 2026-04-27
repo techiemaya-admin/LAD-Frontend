@@ -530,8 +530,8 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
 
           {/* ── Single/List Add Tab ────────────────── */}
-          <TabsContent value="single" className="flex-1 flex flex-col overflow-hidden px-4 py-2">
-            <ScrollArea className="flex-1 max-h-[40vh] pr-2">
+          <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-4 py-2">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-2">
               <div className="space-y-3">
                 {leads.map((lead, idx) => (
                   <LeadRow
@@ -544,7 +544,7 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
                   />
                 ))}
               </div>
-            </ScrollArea>
+            </div>
 
             <Button
               variant="ghost"
