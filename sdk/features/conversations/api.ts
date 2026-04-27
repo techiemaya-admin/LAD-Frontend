@@ -367,7 +367,8 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
     {
       // Core — always send `content` key so backend body.get("content") never returns None
       type:           data.type ?? 'text',
-      content:        data.content ?? '',
+      // For documents, fileBase64 IS the content; for text/rich messages, use content field
+      content:        data.type === 'document' ? data.fileBase64 : (data.content ?? ''),
       lead_id:        data.leadId,
       phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
