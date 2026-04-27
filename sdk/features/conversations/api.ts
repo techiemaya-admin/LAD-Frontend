@@ -99,11 +99,17 @@ function mapMessageFromApi(raw: any): Message {
     senderName,
     humanAgentId: metadata.human_agent_id || undefined,
     templateName: metadata.template_name || undefined,
-    // Rich message fields (extracted from metadata)
+    // Location fields (extracted from metadata)
     latitude: metadata.latitude !== undefined ? Number(metadata.latitude) : undefined,
     longitude: metadata.longitude !== undefined ? Number(metadata.longitude) : undefined,
     locationName: metadata.location_name || undefined,
     locationAddress: metadata.location_address || undefined,
+    // Inbound media fields (extracted from metadata)
+    mediaId: metadata.media_id || undefined,
+    mediaType: metadata.message_type || undefined,
+    mediaMimeType: metadata.mime_type || undefined,
+    mediaFilename: metadata.filename || undefined,
+    mediaCaption: metadata.caption || undefined,
   };
 }
 
@@ -358,22 +364,78 @@ export const getConversationMessagesOptions = (
 // Mutation Functions
 // ====================
 
+const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
+
 /**
- * Send a human agent message
+ * Upload a media file (multipart) to get a WhatsApp media_id.
+ * This bypasses JSON body size limits — suitable for large PDFs, videos, etc.
+ * The proxy route handles tenant ID extraction from the auth cookie automatically.
+ */
+async function uploadMediaForMessage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch('/api/whatsapp-conversations/conversations/upload-media', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || err?.error || `Media upload failed (${res.status})`);
+  }
+
+  const data = await res.json();
+  if (!data?.media_id) throw new Error('No media_id returned from upload');
+  return data.media_id as string;
+}
+
+/**
+ * Send a human agent message.
+ * For media types (image/video/audio/document), the file is pre-uploaded to WhatsApp
+ * as multipart to avoid JSON body size limits, and only the media_id is sent in the
+ * message payload.
  */
 export async function sendMessage(data: SendMessageRequest): Promise<Message> {
+  let mediaId: string | undefined = data.mediaId;
+
+  // Pre-upload large media files to avoid JSON body size limits (~8MB cap)
+  if (
+    data.type &&
+    (MEDIA_TYPES as readonly string[]).includes(data.type) &&
+    data.fileBase64 &&
+    !mediaId
+  ) {
+    try {
+      // Convert base64 back to a File object for multipart upload
+      const b64 = data.fileBase64.includes(',')
+        ? data.fileBase64.split(',')[1]
+        : data.fileBase64;
+      const byteChars = atob(b64);
+      const byteArr = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: data.contentType || 'application/octet-stream' });
+      const file = new File([blob], data.filename || 'upload', { type: blob.type });
+
+      mediaId = await uploadMediaForMessage(file);
+    } catch (uploadErr) {
+      console.error('[sendMessage] Media pre-upload failed, falling back to base64:', uploadErr);
+      // Fall through — will try sending with file_base64 (may fail for very large files)
+    }
+  }
+
   const response = await proxyClient.post<{ success: boolean; data: any }>(
     `/api/whatsapp-conversations/conversations/${data.conversationId}/messages`,
     {
       // Core — always send `content` key so backend body.get("content") never returns None
       type:           data.type ?? 'text',
-      // For documents, fileBase64 IS the content; for text/rich messages, use content field
-      content:        data.type === 'document' ? data.fileBase64 : (data.content ?? ''),
+      content:        data.content ?? '',
       lead_id:        data.leadId,
       phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
-      // Media
-      file_base64:    data.fileBase64,
+      // Media — send media_id if pre-uploaded, otherwise fall back to base64
+      media_id:       mediaId,
+      file_base64:    mediaId ? undefined : data.fileBase64,
       filename:       data.filename,
       content_type:   data.contentType,
       caption:        data.caption,

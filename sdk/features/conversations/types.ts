@@ -59,6 +59,18 @@ export interface Message {
   locationName?: string;
   /** Location address string */
   locationAddress?: string;
+
+  // ── Inbound media message fields ─────────────────────────────────────────
+  /** WhatsApp media ID for inbound image/video/audio/document messages */
+  mediaId?: string;
+  /** Media type: 'image' | 'video' | 'audio' | 'document' | 'sticker' */
+  mediaType?: string;
+  /** MIME type of the media (e.g. 'image/jpeg', 'application/pdf') */
+  mediaMimeType?: string;
+  /** Original filename for document messages */
+  mediaFilename?: string;
+  /** Optional caption attached to the media */
+  mediaCaption?: string;
 }
 
 export interface Attachment {
@@ -153,11 +165,13 @@ export interface SendMessageRequest {
   phoneNumber?: string;
   humanAgentId?: string;
   channel?: 'personal' | 'waba';
+  tenantId?: string;  // used for X-Tenant-ID header during multipart media pre-upload
 
   // Rich payload — all fields from RichMessagePayload forwarded to backend
   type?: RichMessageType;
   content?: string;
   fileBase64?: string;
+  mediaId?: string;   // pre-uploaded WhatsApp media ID (skips base64 in message body)
   filename?: string;
   contentType?: string;
   caption?: string;
