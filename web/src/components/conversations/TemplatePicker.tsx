@@ -48,6 +48,7 @@ interface BatchOptions {
   batchSize: number;      // how many messages per batch
   delayMin: number;       // minimum delay between batches (seconds)
   delayRandom: number;    // additional random 0–N seconds added to delay
+  dailyLimit: number;     // maximum messages to send in a single day
 }
 
 interface TemplatePickerProps {
@@ -58,6 +59,8 @@ interface TemplatePickerProps {
   sending?: boolean;
   /** Which backend channel to fetch templates from. Defaults to 'waba'. */
   channel?: 'personal' | 'waba';
+  /** Force batch settings to always be shown (e.g. group sends where count may be 0). */
+  isBulkSend?: boolean;
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
@@ -88,6 +91,7 @@ export function TemplatePicker({
   onSend,
   sending = false,
   channel = 'waba',
+  isBulkSend = false,
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,8 +104,9 @@ export function TemplatePicker({
   const [refreshKey, setRefreshKey] = useState(0);
   const [nameFormat, setNameFormat] = useState<NameFormat>('first');
   const [batchSize, setBatchSize] = useState(5);
-  const [delayMin, setDelayMin] = useState(120);    // seconds
+  const [delayMin, setDelayMin] = useState(120);      // seconds — min 120 enforced
   const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
+  const [dailyLimit, setDailyLimit] = useState(250);  // max messages to send per day
 
   // Fetch templates when dialog opens (re-fetch if channel changes)
   useEffect(() => {
@@ -219,7 +224,7 @@ export function TemplatePicker({
       selectedTemplate.language,
       paramValues.length > 0 ? paramValues : [],
       nameFormat,
-      { batchSize, delayMin, delayRandom },
+      { batchSize, delayMin, delayRandom, dailyLimit },
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
@@ -528,34 +533,36 @@ export function TemplatePicker({
               </div>
             </div>
 
-              {/* Batch & Delay settings */}
-              {selectedCount > 1 && (
+              {/* Batch & Delay settings — always shown for bulk/group sends */}
+              {(isBulkSend || selectedCount > 1) && (
                 <div className="space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs font-semibold text-amber-800">Sending schedule ({selectedCount} contacts)</p>
+                  <p className="text-xs font-semibold text-amber-800">
+                    Sending schedule {selectedCount > 0 ? `(${selectedCount} contacts)` : ''}
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">Batch size</label>
                       <Input
                         type="number"
-                        min={1} max={50}
+                        min={1} max={10}
                         value={batchSize}
-                        onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={e => setBatchSize(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
                         onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
-                      <p className="text-[9px] text-amber-600 text-center">msgs / batch</p>
+                      <p className="text-[9px] text-amber-600 text-center">msgs / batch (max 10)</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">Min delay</label>
                       <Input
                         type="number"
-                        min={10} max={3600}
+                        min={120} max={3600}
                         value={delayMin}
-                        onChange={e => setDelayMin(Math.max(10, parseInt(e.target.value) || 10))}
+                        onChange={e => setDelayMin(Math.max(120, parseInt(e.target.value) || 120))}
                         onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
-                      <p className="text-[9px] text-amber-600 text-center">seconds</p>
+                      <p className="text-[9px] text-amber-600 text-center">seconds (min 120)</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">+Random</label>
@@ -569,6 +576,25 @@ export function TemplatePicker({
                       />
                       <p className="text-[9px] text-amber-600 text-center">0–N secs</p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 border-t border-amber-200">
+                    <div className="flex items-center gap-2 flex-1">
+                      <label className="text-[10px] text-amber-700 font-medium whitespace-nowrap">Daily cap</label>
+                      <Input
+                        type="number"
+                        min={1} max={250}
+                        value={dailyLimit}
+                        onChange={e => setDailyLimit(Math.min(250, Math.max(1, parseInt(e.target.value) || 1)))}
+                        onFocus={e => e.target.select()}
+                        className="h-7 text-xs text-center w-24"
+                      />
+                      <p className="text-[9px] text-amber-600">msgs / day (max 250)</p>
+                    </div>
+                    {selectedCount > 0 && dailyLimit < selectedCount && (
+                      <p className="text-[9px] text-amber-700 font-medium">
+                        Will send {dailyLimit} today, {selectedCount - dailyLimit} queued for next day
+                      </p>
+                    )}
                   </div>
                   <p className="text-[10px] text-amber-700">
                     ≈ {batchSize} messages, then wait {delayMin}s + random 0–{delayRandom}s before next batch
