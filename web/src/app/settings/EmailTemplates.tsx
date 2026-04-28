@@ -69,6 +69,18 @@ export const EmailTemplates: React.FC<EmailTemplatesProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check extension or MIME type
+      const isDocx = file.name.toLowerCase().endsWith('.docx') ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      if (!isDocx) {
+        toast.error('Only .docx files are allowed');
+        // Reset the input value so the same invalid file can't be "re-selected"
+        e.target.value = '';
+        setPendingFile(null);
+        return;
+      }
+
       setPendingFile(file);
       toast.success(`File "${file.name}" selected`);
     }
@@ -154,7 +166,7 @@ export const EmailTemplates: React.FC<EmailTemplatesProps> = ({
                     )}
                   </div>
                   <p className="text-xs text-slate-400 font-medium mb-4">
-                    {template.template_name.toLowerCase().replace(/\s+/g, '-')}.html • HTML • Uploaded {format(new Date(template.created_at), 'MMM d, yyyy')}
+                    • DOCX• Uploaded {format(new Date(template.created_at), 'MMM d, yyyy')}
                   </p>
                   <div className="flex items-center gap-2 mb-1">
                     <Mail className="w-3 h-3 text-slate-400" />
@@ -267,6 +279,7 @@ export const EmailTemplates: React.FC<EmailTemplatesProps> = ({
                       <input
                         type="file"
                         onChange={handleFileChange}
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         className="absolute inset-0 opacity-0 cursor-pointer"
                         disabled={isUploading}
                       />

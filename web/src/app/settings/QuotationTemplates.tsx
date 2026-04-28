@@ -67,6 +67,18 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check extension or MIME type
+      const isDocx = file.name.toLowerCase().endsWith('.docx') ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      if (!isDocx) {
+        toast.error('Only .docx files are allowed');
+        // Reset the input value so the same invalid file can't be "re-selected"
+        e.target.value = '';
+        setPendingFile(null);
+        return;
+      }
+
       setPendingFile(file);
       toast.success(`File "${file.name}" selected`);
     }
@@ -148,7 +160,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                     )}
                   </div>
                   <p className="text-xs text-slate-400 font-medium mb-4">
-                    {template.name.toLowerCase().replace(/\s+/g, '-')}.html • HTML • Uploaded {format(new Date(template.created_at), 'MMM d, yyyy')}
+                    • DOCX • Uploaded {format(new Date(template.created_at), 'MMM d, yyyy')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -250,6 +262,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                         type="file"
                         onChange={handleFileChange}
                         className="absolute inset-0 opacity-0 cursor-pointer"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         disabled={isUploading}
                       />
                     </div>
