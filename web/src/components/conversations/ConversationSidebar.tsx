@@ -153,6 +153,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
+  const [sendSummary, setSendSummary] = useState<{ sent: number; queued: number; scheduledDays: number } | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
@@ -460,14 +461,14 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
   // Template send for bulk selected conversations
   const handleTemplateSend = useCallback(
-    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30 }, headerParamCount = 0, headerType = '', headerUrl = '') => {
+    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30, dailyLimit: 250 }, headerParamCount = 0, headerType = '', headerUrl = '') => {
       setTemplateSending(true);
       try {
         // If sending to one or more groups (via group manager), call each group's send-template endpoint
         if (groupTemplateSendTarget) {
           const channelParam = backendChannel === 'personal' ? '?channel=personal' : '';
           const groupIds = groupTemplateSendTarget.groupIds;
-          const { batchSize, delayMin, delayRandom } = batch;
+          const { batchSize, delayMin, delayRandom, dailyLimit } = batch;
           const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
           for (let i = 0; i < groupIds.length; i++) {
@@ -483,6 +484,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     language_code: languageCode,
                     parameters,
                     name_format: nameFormat,
+                    batch_size: batchSize,
+                    delay_min: delayMin,
+                    delay_random: delayRandom,
+                    daily_limit: dailyLimit,
                     header_param_count: headerParamCount,
                     header_type: headerType,
                     header_url: headerUrl,
@@ -490,7 +495,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                 }
               );
               const data = await res.json();
-              if (!data.success) console.error(`Group template send failed for ${groupId}:`, data.error);
+              if (!data.success) {
+                console.error(`Group template send failed for ${groupId}:`, data.error);
+              } else if (data.queued > 0) {
+                setSendSummary(prev => ({
+                  sent: (prev?.sent ?? 0) + (data.sent ?? 0),
+                  queued: (prev?.queued ?? 0) + (data.queued ?? 0),
+                  scheduledDays: Math.max(prev?.scheduledDays ?? 0, data.scheduled_days ?? 0),
+                }));
+              }
             } catch (err) {
               console.error(`Group template send error for ${groupId}:`, err);
             }
@@ -524,6 +537,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               batch_size: batch.batchSize,
               delay_min: batch.delayMin,
               delay_random: batch.delayRandom,
+              daily_limit: batch.dailyLimit ?? 250,
               header_param_count: headerParamCount,
               header_type: headerType,
               header_url: headerUrl,
@@ -1328,6 +1342,25 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         channel={backendChannel}
       />
 
+      {/* Broadcast schedule summary toast */}
+      {sendSummary && sendSummary.queued > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-start gap-3 bg-card border border-border shadow-xl rounded-xl px-4 py-3 max-w-sm w-full">
+          <div className="text-green-500 mt-0.5">✓</div>
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">Broadcast started</p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Sent <strong>{sendSummary.sent}</strong> today.{' '}
+              <strong>{sendSummary.queued}</strong> remaining scheduled across{' '}
+              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} — continues at 9:00 AM daily.
+            </p>
+          </div>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xs mt-0.5"
+            onClick={() => setSendSummary(null)}
+          >✕</button>
+        </div>
+      )}
+
       {/* Template Picker Dialog */}
       <TemplatePicker
         open={isTemplatePickerOpen}
@@ -1339,6 +1372,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         onSend={handleTemplateSend}
         sending={templateSending}
         channel={backendChannel ?? 'waba'}
+        isBulkSend={!!groupTemplateSendTarget || selectedIds.size > 1}
       />
 
       {/* Import Leads Dialog */}
