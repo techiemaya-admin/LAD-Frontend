@@ -346,7 +346,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({
 
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    alert('Uploading logo...'); // Simple alert to indicate upload started
     const file = e.target.files?.[0];
     // Ensure we have a file and a tenant ID
     if (!file) return;

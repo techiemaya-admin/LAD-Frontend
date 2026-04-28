@@ -10,103 +10,104 @@ import {
   Eye, 
   ArrowRight,
   X,
-  Settings
+  Settings,
+  Tag
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { QuotationTemplatesProps } from '../../types/quotationtemplateprops';
+
+interface Template {
+  id: string;
+  name: string;
+  created_at: string;
+  html?: string;
+  design?: any;
+  is_default?: boolean;
+  placeholders?: string[];
+}
+
+
+export interface Placeholder {
+  id: string;
+  placeholder_key: string;
+  description: string;
+  data_source_path: string;
+  is_loop: boolean;
+}
+
+interface QuotationTemplatesProps {
+  templates: Template[];
+  onUpload: (name: string, isDefault: boolean, file: File) => Promise<void>;
+  onDelete: (id: string) => void;
+  onPreview: (template: Template) => void;
+  onSetDefault: (id: string) => void;
+  placeholderList: Placeholder[];
+}
+
 export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({ 
   templates, 
   onUpload,
-  onOpenBuilder,
   onDelete,
   onPreview,
-  onSetDefault
+  onSetDefault,
+  placeholderList
 }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isPlaceholderModalOpen, setIsPlaceholderModalOpen] = useState(false);
+  const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
+  const [isLoadingPlaceholders, setIsLoadingPlaceholders] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [fileUploaded, setFileUploaded] = useState(false);
-  const [uploadedHtml, setUploadedHtml] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [detectedTags, setDetectedTags] = useState<string[]>([]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIsUploading(true);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const response = await fetch('/api/templates/parse', {
-          method: 'POST',
-          body: formData
-        });
-
-        const text = await response.text();
-        
-        if (!response.ok) {
-          let errorData = { error: 'Failed to parse template' };
-          try {
-            errorData = JSON.parse(text);
-          } catch (e) {
-            // Not JSON
-          }
-          throw new Error(errorData.error || 'Failed to parse template');
-        }
-
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          console.error('Server returned non-JSON response:', text);
-          throw new Error('Server returned an invalid response (HTML instead of JSON). Check server logs.');
-        }
-        
-        setIsUploading(false);
-        setFileUploaded(true);
-        setUploadedHtml(data.html);
-        setDetectedTags(data.placeholders);
-        
-        toast.success(`File "${file.name}" uploaded and parsed successfully`);
-      } catch (error: any) {
-        console.error('Template parsing error:', error);
-        setIsUploading(false);
-        toast.error(error.message || 'Failed to parse template file. Please try a different format.');
-      }
+      setPendingFile(file);
+      toast.success(`File "${file.name}" selected`);
     }
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!templateName) {
       toast.error('Please enter a template name');
       return;
     }
-    if (!fileUploaded) {
-      toast.error('Please upload a template file first');
+    if (!pendingFile) {
+      toast.error('Please select a template file first');
       return;
     }
 
-    onUpload(templateName, isDefault, detectedTags, uploadedHtml);
-    setIsUploadModalOpen(false);
-    setTemplateName('');
-    setIsDefault(false);
-    setFileUploaded(false);
-    setUploadedHtml('');
-    setDetectedTags([]);
+    setIsUploading(true);
+    try {
+      await onUpload(templateName, isDefault, pendingFile);
+      setIsUploadModalOpen(false);
+      setTemplateName('');
+      setIsDefault(false);
+      setPendingFile(null);
+      setDetectedTags([]);
+    } catch (error: any) {
+      console.error('Template upload error:', error);
+      toast.error(error.message || 'Failed to upload template');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCloseModal = () => {
     setIsUploadModalOpen(false);
     setTemplateName('');
     setIsDefault(false);
-    setFileUploaded(false);
-    setUploadedHtml('');
+    setPendingFile(null);
     setDetectedTags([]);
+  };
+
+  const handleOpenPlaceholderDetails = () => {
+    setIsPlaceholderModalOpen(true);
   };
 
   return (
@@ -116,14 +117,22 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
           <h2 className="text-2xl font-black text-slate-800">Quotation Templates</h2>
           <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Manage your document templates</p>
         </div>
-        <button 
-          onClick={() => {
-            setIsUploadModalOpen(true);
-          }}
-          className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 flex items-center gap-3 active:scale-95"
-        >
-          <Plus className="w-4 h-4" /> Upload template
-        </button>
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={handleOpenPlaceholderDetails}
+            className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 transition-colors border-b-2 border-transparent hover:border-blue-200 pb-1"
+          >
+            <Tag className="w-3.5 h-3.5" /> View Placeholder Guide
+          </button>
+          <button 
+            onClick={() => {
+              setIsUploadModalOpen(true);
+            }}
+            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 flex items-center gap-3 active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Upload template
+          </button>
+        </div>
       </div>
 
       <div className="p-8">
@@ -141,14 +150,6 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                   <p className="text-xs text-slate-400 font-medium mb-4">
                     {template.name.toLowerCase().replace(/\s+/g, '-')}.html • HTML • Uploaded {format(new Date(template.created_at), 'MMM d, yyyy')}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(template.placeholders || ['quotationNumber', 'clientName', 'totalAmount', 'validUntil']).map((tag) => (
-                      <span key={tag} className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-black rounded-full">
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <button 
@@ -230,7 +231,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                       <div className="w-16 h-16 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                         {isUploading ? (
                           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                        ) : fileUploaded ? (
+                        ) : pendingFile ? (
                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                         ) : (
                           <Upload className="w-8 h-8 text-slate-400" />
@@ -238,10 +239,10 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                       </div>
                       <div className="text-center">
                         <p className="text-sm font-black text-slate-800 mb-1">
-                          {isUploading ? 'Uploading...' : fileUploaded ? 'File uploaded!' : <><span className="text-blue-600">Click to upload</span> or drag & drop</>}
+                          {isUploading ? 'Preparing to save...' : pendingFile ? 'File selected!' : <><span className="text-blue-600">Click to upload</span> or drag & drop</>}
                         </p>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                          {fileUploaded ? 'Ready to save' : 'HTML, DOCX, or PDF • Max 10MB'}
+                          {pendingFile ? pendingFile.name : ' DOCX • Max 10MB'}
                         </p>
                       </div>
                       <input 
@@ -293,6 +294,106 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
                     Save template <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Placeholder Details Modal */}
+      <AnimatePresence>
+        {isPlaceholderModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPlaceholderModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                    <Tag className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800">Placeholder Dictionary</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Available tags for your templates</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsPlaceholderModalOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto">
+                {isLoadingPlaceholders ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading definitions...</p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-100 rounded-3xl overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tag / Key</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {placeholderList.map((ph) => (
+                          <tr key={ph.id} className="hover:bg-blue-50/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <code className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                                [{ph.placeholder_key}]
+                              </code>
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                              {ph.is_loop ? (
+                                <span className="flex items-center gap-1.5 text-amber-600 font-bold">
+                                  <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                                  List/Table
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                                  Text Value
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-400 font-medium leading-relaxed max-w-xs">{ph.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="mt-8 p-6 bg-slate-50 rounded-3xl border border-slate-100 italic text-xs text-slate-500">
+                  <p className="flex gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-blue-500" />
+                    Placeholders must be wrapped in square brackets (e.g., [key]) DOCX, or PDF templates to be detected correctly.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 shrink-0 flex justify-end">
+                <button 
+                  onClick={() => setIsPlaceholderModalOpen(false)}
+                  className="px-8 py-3 bg-white border border-slate-200 text-slate-800 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
+                >
+                  Close Dictionary
+                </button>
               </div>
             </motion.div>
           </div>

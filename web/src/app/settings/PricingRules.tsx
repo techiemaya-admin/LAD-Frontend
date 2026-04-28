@@ -401,7 +401,6 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none appearance-none"
                       >
                         <option value="final_price">Final Price</option>
-                        <option value="base_price">Base Price</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                     </div>

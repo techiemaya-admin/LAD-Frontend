@@ -14,6 +14,8 @@ import { TeamManagement } from '../../components/settings/TeamManagement';
 import { Toaster, toast } from 'sonner';
 import { Concept } from '../../types/concept';
 import { cn } from '../../lib/utils';
+import { EmailTemplates, Template } from './EmailTemplates';
+import { QuotationTemplates } from './QuotationTemplates';
 // Import the LeadRequirements component (ensure path is correct based on your project)
 import { LeadRequirements } from './LeadRequirements';
 import { RequirementConfig } from '../../types/requirement_config';
@@ -27,7 +29,9 @@ import {
   Tag,
   Settings,
   DollarSign,
-  MessageSquare
+  MessageSquare,
+  Mail,
+  FileText
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -36,7 +40,7 @@ import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { PricingRule } from '@/types/pricing_rule';
 
-type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits'| 'proposal_settings';
+type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,7 +48,7 @@ const SettingsPage: React.FC = () => {
   // --- ADD THESE TOP-LEVEL STATES ---
   // Inside SettingsPage component
   const [requirementConfigs, setRequirementConfigs] = useState<RequirementConfig[]>([]);
-  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules'>('lead_config');
+  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules' | 'email_templates' | 'quotation-templates'>('lead_config');
   const [editingConfig, setEditingConfig] = useState<RequirementConfig | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false); // Move this HERE
   const [isConceptModalOpen, setIsConceptModalOpen] = useState(false);
@@ -54,6 +58,13 @@ const SettingsPage: React.FC = () => {
   const [tenantId, setTenantId] = useState<string>("");
   const [pricingModels, setpricingModels] = useState<{ value: string; label: string }[]>([]);
   const [selectedConceptServices, setSelectedConceptServices] = useState<string[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [placeholders, setPlaceholders] = useState<any[]>([]);
+  const [quotationTemplates, setQuotationTemplates] = useState<any[]>([]);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isPreviewQuotationModalOpen, setIsPreviewQuotationModalOpen] = useState(false);
+
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -72,6 +83,9 @@ const SettingsPage: React.FC = () => {
         await fetchConcepts(userTenantId);
         await fetchPricingRules(userTenantId);
         await fetchpricingModels(userTenantId); // Fetch pricing modals after getting tenant_id
+        await fetchEmailTemplates(userTenantId); // Fetch email templates after getting tenant_id
+        await fetchQuotationTemplates(userTenantId);
+        await fetchPlaceholders(userTenantId);
       } catch (error) {
         setAuthed(false); // <--- ADD THIS
         logger.error("[Call Logs] Failed to get user tenant_id", error);
@@ -99,6 +113,44 @@ const SettingsPage: React.FC = () => {
       logger.error("Failed to fetch pricing modals", error); // 
     }
   };
+
+
+  const fetchPlaceholders = async (tenantId: string) => {
+    try {
+      console.log("Fetching placeholder for tenant id : " + tenantId)
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched placeholders :', data.data);
+      setPlaceholders(data.data);
+    } catch (error) {
+      logger.error("Failed to fetch placeholders ", error); // 
+    }
+  };
+
+
+  const fetchEmailTemplates = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched email templates:', data);
+      setEmailTemplates(data);
+    } catch (error) {
+      logger.error("Failed to fetch email templates", error); // 
+    }
+  };
+
+
+  const fetchQuotationTemplates = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched quotation templates:', data);
+      setQuotationTemplates(data);
+    } catch (error) {
+      logger.error("Failed to fetch quotation templates", error); // 
+    }
+  };
+
 
   const fetchConfigs = async (tenantId: string) => {
     try {
@@ -136,6 +188,171 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleUploadEmailTemplate = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
+    try {
+      console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
+      const formData = new FormData();
+      formData.append('template_name', template_name);
+      formData.append('is_default', String(isDefault));
+      formData.append('subject_line', subjectLine);
+      formData.append('file', file);
+
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/upload/${tenantId}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Email template uploaded and saved');
+        fetchEmailTemplates(tenantId);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload email template');
+      }
+    } catch (error: any) {
+      console.error('Upload email template failed:', error);
+      toast.error(error.message || 'Failed to upload email template');
+    }
+  };
+
+
+  const handleUploadQuotationTemplate = async (template_name: string, isDefault: boolean, file: File) => {
+    try {
+      console.log('Uploading Quotation template:', { template_name, isDefault, file });
+      const formData = new FormData();
+      formData.append('template_name', template_name);
+      formData.append('is_default', String(isDefault));
+      formData.append('file', file);
+
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/upload/${tenantId}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Quotation template uploaded and saved');
+        fetchQuotationTemplates(tenantId);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload Quotation template');
+      }
+    } catch (error: any) {
+      console.error('Upload Quotation template failed:', error);
+      toast.error(error.message || 'Failed to upload Quotation template');
+    }
+  };
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+
+  const handlePreviewTemplate = async (template: Template) => {
+    try {
+      // Fetch the file as a blob (binary data)
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${template.id}/preview`);
+
+      if (!response.ok) throw new Error("Failed to fetch preview");
+
+      const blob = await response.blob();
+
+      // Create a temporary URL for the PDF blob
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setIsPreviewModalOpen(true);
+
+    } catch (error) {
+      toast.error("Visual preview failed to load");
+      console.error(error);
+    }
+  };
+
+  const [previewQuotationUrl, setPreviewQuotationUrl] = useState<string | null>(null);
+
+  const handlePreviewQuotationTemplate = async (template: Template) => {
+    try {
+      // Fetch the file as a blob (binary data)
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${template.id}/preview`);
+
+      if (!response.ok) throw new Error("Failed to fetch Quotation preview");
+
+      const blob = await response.blob();
+
+      // Create a temporary URL for the PDF blob
+      const url = window.URL.createObjectURL(blob);
+      setPreviewQuotationUrl(url);
+      setIsPreviewQuotationModalOpen(true);
+
+    } catch (error) {
+      toast.error("Visual preview failed to load for quotation");
+      console.error(error);
+    }
+  };
+
+  // Cleanup memory when modal closes
+  const closePreview = () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setIsPreviewModalOpen(false);
+    setPreviewQuotationUrl(null);
+    setIsPreviewQuotationModalOpen(false);
+  };
+  const handleSetDefaultEmailTemplate = async (id: string) => {
+    try {
+      await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}/set-default/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_default: true })
+      });
+
+      toast.success('Default email template updated');
+      fetchEmailTemplates(tenantId);
+    } catch (error) {
+      console.error('Set default email template failed:', error);
+    }
+  };
+
+  const handleSetDefaultQuotationTemplate = async (id: string) => {
+    try {
+      console.log("tenant id : " + tenantId + " id : " + id)
+      await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}/set-default/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_default: true })
+      });
+
+      toast.success('Default quotation template updated');
+      fetchQuotationTemplates(tenantId);
+    } catch (error) {
+      console.error('Set default quotation template failed:', error);
+    }
+  };
+
+  const handleDeleteEmailTemplate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this email template?')) return;
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Email template deleted');
+        fetchEmailTemplates(tenantId);
+      }
+    } catch (error) {
+      console.error('Delete email template failed:', error);
+      toast.error('Failed to delete email template');
+    }
+  };
+
+
+  const handleDeleteQuotationTemplate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this quotation template?')) return;
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('quotation template deleted');
+        fetchQuotationTemplates(tenantId);
+      }
+    } catch (error) {
+      console.error('Delete quotation template failed:', error);
+      toast.error('Failed to delete quotation template');
+    }
+  };
 
   const handleSavePricingRule = async (ruleData: Partial<PricingRule>) => {
     const url = ruleData.id ? `${getApiBaseUrlForLocal()}/api/pricing-rules/${ruleData.id}` : `${getApiBaseUrlForLocal()}/api/pricing-rules`;
@@ -336,8 +553,8 @@ const SettingsPage: React.FC = () => {
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                    ? 'bg-white text-blue-700 shadow-md font-semibold'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                  ? 'bg-white text-blue-700 shadow-md font-semibold'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
                   }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -633,6 +850,8 @@ const SettingsPage: React.FC = () => {
                 { id: 'lead_config', label: 'Lead Requirement', icon: Settings },
                 { id: 'concepts', label: 'Concept Management', icon: Sparkles },
                 { id: 'pricing_rules', label: 'Pricing Rules', icon: DollarSign },
+                { id: 'email_templates', label: 'Email Templates', icon: Mail },
+                { id: 'quotation-templates', label: 'Quotation Template', icon: FileText },
               ].map((subTab) => (
                 <button
                   key={subTab.id}
@@ -677,7 +896,7 @@ const SettingsPage: React.FC = () => {
                 requirementConfigs={requirementConfigs}
                 onEdit={(concept) => {
                   setEditingConcept(concept);
-                  
+
                   const requirementConfigIds = concept.requirement_configs.map(item => item.id);
                   console.log('Editing concept with requirement config IDs:', requirementConfigIds);
                   setSelectedConceptServices(requirementConfigIds || []);
@@ -701,8 +920,88 @@ const SettingsPage: React.FC = () => {
                 onDelete={handleDeletePricingRule}
               />
             )}
+            {proposalSubTab === 'email_templates' && (
+              <EmailTemplates
+                templates={emailTemplates}
+                onUpload={handleUploadEmailTemplate}
+                onDelete={handleDeleteEmailTemplate}
+                onPreview={handlePreviewTemplate}
+                onSetDefault={handleSetDefaultEmailTemplate}
+                placeholderList={placeholders}
+              />
+            )}
+            {proposalSubTab === 'quotation-templates' && (
+              <QuotationTemplates
+                templates={quotationTemplates}
+                onUpload={handleUploadQuotationTemplate}
+                onDelete={handleDeleteQuotationTemplate}
+                onPreview={handlePreviewQuotationTemplate}
+                onSetDefault={handleSetDefaultQuotationTemplate}
+                placeholderList={placeholders}
+              />
+            )}
+
           </div>
         )}
+
+        {/* Quotation Template Modal */}
+        <AnimatePresence>
+          {isPreviewQuotationModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
+              >
+                <div className="p-6 border-b flex justify-between items-center bg-white">
+                  <h2 className="font-bold text-slate-800 text-lg">Quotation Template Preview</h2>
+                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="flex-1 bg-slate-100 p-4">
+                  {previewQuotationUrl && (
+                    <iframe
+                      src={`${previewQuotationUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full rounded-xl border-none shadow-lg"
+                      title="Visual Preview"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        {/* Email Template Modal */}
+        <AnimatePresence>
+          {isPreviewModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
+              >
+                <div className="p-6 border-b flex justify-between items-center bg-white">
+                  <h2 className="font-bold text-slate-800 text-lg">Email Template Preview</h2>
+                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="flex-1 bg-slate-100 p-4">
+                  {previewUrl && (
+                    <iframe
+                      src={`${previewUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full rounded-xl border-none shadow-lg"
+                      title="Visual Preview"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Concept Modal */}
         <AnimatePresence>
