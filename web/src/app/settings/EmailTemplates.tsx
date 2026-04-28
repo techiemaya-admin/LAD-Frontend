@@ -176,14 +176,15 @@ export const EmailTemplates: React.FC<EmailTemplatesProps> = ({
                   >
                     Preview
                   </button>
-                  {template.is_default ? (
+                  {!template.is_default && (
                     <button
                       onClick={() => onDelete(template.id)}
                       className="px-6 py-2.5 bg-white border border-slate-200 text-red-600 rounded-xl font-bold text-xs hover:bg-red-50 hover:border-red-200 transition-all"
                     >
                       Delete
                     </button>
-                  ) : (
+                  )}
+                  {!template.is_default && (
                     <button
                       onClick={() => onSetDefault(template.id)}
                       className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all"

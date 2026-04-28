@@ -31,7 +31,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
     if (rule.target_type === 'package') {
       return concepts.find(c => c.id === rule.condition_field)?.name || 'Unknown Package';
     }
-    const config = requirementConfigs.find(c => c.field_key === rule.condition_field);
+    const config = requirementConfigs.find(c => c.id === rule.condition_field);
     return config ? config.label : (rule.condition_field === 'pax' ? 'people' : rule.condition_field);
   };
 
@@ -287,16 +287,15 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
                   )}>
                     <div className="relative">
                       {editingRule.target_type === 'package' ? (
-                        <select
-                          name="condition_field"
-                          defaultValue={editingRule.condition_field}
+                        <select name="condition_field"
+                          // Change from defaultValue to value
                           required
-                          onChange={(e) => setEditingRule({ ...editingRule, condition_field: e.target.value })}
+                          onChange={(e) => setEditingRule({ ...editingRule, condition_field: e.target.value, concept_id: e.target.value })}
                           className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                         >
                           <option value="">Select Concept</option>
                           {concepts.map(c => (
-                            <option key={c.id} value={c.id}>
+                            <option key={c.id} value={c.id} selected={c.id == editingRule.concept_id} >
                               {c.name}
                             </option>
                           ))}
@@ -304,13 +303,12 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
                       ) : (
                         <select
                           name="condition_field"
-                          defaultValue={editingRule.condition_field}
                           required
                           className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                         >
                           <option value="">Select Field</option>
                           {requirementConfigs.map(config => (
-                            <option key={config.field_key} value={config.field_key}>
+                            <option key={config.id} value={config.id} selected={editingRule.requirement_config_id == config.id}>
                               {config.label} ({config.field_key})
                             </option>
                           ))}
@@ -451,6 +449,6 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
           </div>
         )}
       </AnimatePresence>
-    </section>
+    </section >
   );
 };
