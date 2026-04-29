@@ -1,0 +1,164 @@
+import { loadingFetch } from "@/lib/loading-fetch";
+import { safeStorage } from '@lad/shared/storage';
+import { logger } from "@/lib/logger";
+// Use backend URL directly
+const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-160078175457.us-central1.run.app").replace(/\/+$/, "");
+function authHeaders() {
+    if (typeof document === "undefined") {
+        logger.debug('[API] authHeaders: Running on server, no token');
+        return {};
+    }
+    let token = null;
+    // First try to get token from safeStorage (now prioritizes cookies)
+    token = safeStorage.getItem('token');
+    logger.debug('[API] authHeaders: Token from safeStorage:', {
+        hasToken: !!token,
+        preview: token ? `${token.substring(0, 30)}...` : '(none)',
+        source: 'safeStorage (cookies first)'
+    });
+    // Also check what's directly in localStorage for debugging
+    if (typeof window !== 'undefined' && window.localStorage) {
+        const lsToken = localStorage.getItem('token');
+        logger.debug('[API] authHeaders: Direct localStorage check:', {
+            hasToken: !!lsToken,
+            matchesSafeStorage: lsToken === token
+        });
+    }
+    logger.debug('[API] authHeaders: Final token:', {
+        hasToken: !!token,
+        preview: token ? `${token.substring(0, 30)}...` : '(none)'
+    });
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+function handleAuthError(status, path) {
+    // Only handle auth errors for core auth endpoints
+    // For other endpoints, let the component handle the error
+    if ((status === 401 || status === 403) &&
+        (path.includes('/api/auth/') || path.includes('/api/users/'))) {
+        if (typeof window !== "undefined") {
+            const hasToken = !!safeStorage.getItem("token");
+            if (hasToken) {
+                logger.warn('[API] Auth token rejected for core endpoint, clearing');
+                safeStorage.removeItem("token");
+                safeStorage.removeItem("user");
+                safeStorage.removeItem("auth");
+            }
+        }
+    }
+}
+export async function apiGet(path, options) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        cache: "no-store",
+        credentials: 'include',
+        headers: { ...authHeaders() },
+        signal: options?.signal
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        throw new Error(`GET ${path} ${res.status}`);
+    }
+    return res.json();
+}
+export async function apiPost(path, body) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        method: "POST",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        // Try to extract error message from response body
+        let errorMessage = `POST ${path} ${res.status}`;
+        try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+        }
+        catch (e) {
+            // If response is not JSON, use default error message
+        }
+        throw new Error(errorMessage);
+    }
+    return res.json();
+}
+export async function apiPut(path, body) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        method: "PUT",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        throw new Error(`PUT ${path} ${res.status}`);
+    }
+    return res.json();
+}
+export async function apiPatch(path, body) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        method: "PATCH",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        throw new Error(`PATCH ${path} ${res.status}`);
+    }
+    return res.json();
+}
+export async function apiDelete(path) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        method: "DELETE",
+        credentials: 'include',
+        headers: { ...authHeaders() },
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        throw new Error(`DELETE ${path} ${res.status}`);
+    }
+    return res.json();
+}
+/**
+ * Like apiPost but routes through the Next.js API proxy (relative URL, no BACKEND_URL base).
+ * Use this for any endpoint that has a matching /app/api/... proxy route.
+ */
+export async function proxyPost(path, body) {
+    const p = path.startsWith('/') ? path : `/${path}`;
+    const res = await loadingFetch(p, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        let errorMessage = `POST ${path} ${res.status}`;
+        try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+        }
+        catch (e) { /* ignore */ }
+        throw new Error(errorMessage);
+    }
+    return res.json();
+}
+export async function apiUpload(path, form) {
+    const p = path.startsWith("/") ? path : `/${path}`;
+    const res = await loadingFetch(`${API_BASE}${p}`, {
+        method: "POST",
+        credentials: 'include',
+        headers: { ...authHeaders() },
+        body: form,
+    });
+    if (!res.ok) {
+        handleAuthError(res.status, p);
+        throw new Error(`UPLOAD ${path} ${res.status}`);
+    }
+    return res.json();
+}
+//# sourceMappingURL=api.js.map

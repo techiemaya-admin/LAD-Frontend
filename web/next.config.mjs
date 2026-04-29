@@ -6,6 +6,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ✅ Increase body size limit for large file attachments (images, PDFs, videos)
+  // Default is 10MB — personal WhatsApp attachments exceed this limit
+  middlewareClientMaxBodySize: '50mb',
+
   // ✅ REQUIRED when importing ../sdk
   experimental: {
     externalDir: true,
