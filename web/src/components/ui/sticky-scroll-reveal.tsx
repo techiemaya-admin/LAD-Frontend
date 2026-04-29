@@ -70,7 +70,7 @@ export const StickyScroll = ({
       animate={{
         backgroundColor: backgroundColors[activeCard % backgroundColors.length],
       }}
-      className="relative flex h-[30rem] justify-center space-x-10 overflow-y-scroll rounded-md p-10 bg-white dark:bg-slate-950 scrollbar-hide"
+      className="py-20 relative bg-gradient-to-b from-background via-background to-background relative flex h-[30rem] justify-center space-x-10 overflow-y-scroll rounded-md p-10 bg-white dark:bg-slate-950 scrollbar-hide"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',

@@ -46,7 +46,7 @@ export default function LAD3DShowcase() {
       <SocialProofSection />
 
       {/* Pricing Section */}
-      <section className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-[#1a2f6b]">
+      <section className="py-20 relative bg-gradient-to-b from-background via-background to-background">
         {/* Pricing Hero */}
         <PricingHero />
 
@@ -62,7 +62,7 @@ export default function LAD3DShowcase() {
         <PricingBreakdown />
 
         {/* Pricing CTA */}
-        <PricingCTA />
+        {/* <PricingCTA /> */}
       </section>
 
       {/* CTA Section */}

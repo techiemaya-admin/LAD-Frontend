@@ -53,7 +53,7 @@ export default function InteractivePricingCalculator() {
 
   return (
     <motion.div
-      className="my-16 p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-[#1a2f6b] border border-gray-200 dark:border-gray-700"
+      className="my-16 p-8 rounded-2xl py-20 relative bg-gradient-to-b from-background via-background to-background border border-gray-200 dark:border-gray-700"
       variants={containerVariants}
       initial="hidden"
       whileInView="visible"

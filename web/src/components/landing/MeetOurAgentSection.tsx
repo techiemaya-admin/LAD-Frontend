@@ -44,7 +44,7 @@ export default function MeetOurAgentSection() {
   ];
 
   return (
-    <section className="relative py-16 md:py-20 overflow-hidden bg-white dark:bg-[#0B1957]">
+    <section className="py-20 relative bg-gradient-to-b from-background via-background to-background">
       {/* Background Blobs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />

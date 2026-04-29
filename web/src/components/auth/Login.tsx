@@ -81,7 +81,7 @@ const Login: React.FC = () => {
   };
 
   return (
-      <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 border-gray-200 dark:border-gray-700">
+      <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 border-gray-200 dark:border-gray-700">
         {/* Logo */}
         <picture>
           <source media="(prefers-color-scheme: dark)" srcSet="/MrLAD-logo-white.svg" />
@@ -184,7 +184,7 @@ const Login: React.FC = () => {
             type="submit"
             className="
               w-full p-3 rounded-lg text-base font-semibold
-              bg-primary dark:bg-primary text-primary-foreground
+              bg-primary dark:bg-[#000724] text-[#ffffff]
               hover:shadow-lg hover:shadow-primary/50 transition-all duration-300
               transform hover:scale-105 active:scale-95
               uppercase tracking-wide border border-white/20

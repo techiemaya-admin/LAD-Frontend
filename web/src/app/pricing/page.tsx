@@ -414,7 +414,7 @@ export default function PricingPage() {
       </div>
 
       {/* Detailed Pricing Breakdown */}
-      <div className="py-16 bg-white border-t border-gray-200">
+      <div className="py-20 relative bg-gradient-to-b from-background via-background to-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">

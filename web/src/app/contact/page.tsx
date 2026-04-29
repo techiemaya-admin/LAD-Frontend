@@ -43,7 +43,7 @@ const ContactPage = memo(function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-[#1a2f6b] pt-20 pb-16">
+    <div className="min-h-screen py-20 relative bg-gradient-to-b from-background via-background to-background pt-20 pb-16">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div

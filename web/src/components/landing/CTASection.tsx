@@ -76,7 +76,7 @@ export default function CTASection() {
       variants={containerVariants}
     >
       {/* Background with gradient and animation */}
-      <div className="absolute inset-0 bg-white dark:bg-[#000724]" />
+      <div className="absolute inset-0 bg-[#000724] dark:bg-[#000724]" />
       <motion.div
         className="absolute inset-0 opacity-30"
         animate={{
