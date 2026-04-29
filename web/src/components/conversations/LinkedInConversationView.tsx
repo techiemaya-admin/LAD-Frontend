@@ -13,7 +13,7 @@
  *   active   → automated follow-up sent     → chat enabled
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, RefreshCw, Loader2, MessageSquare, Linkedin, Clock, CheckCircle, Zap, Lock } from 'lucide-react';
+import { Send, RefreshCw, Loader2, MessageSquare, Linkedin, Clock, CheckCircle, Zap, Lock, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -269,6 +269,7 @@ function MessageBubble({ msg }: { msg: LinkedInMessage }) {
 
 // ─── Chat disabled banner ─────────────────────────────────────────────────────
 
+
 function ChatDisabledBanner({ conv }: { conv: LinkedInConversation }) {
   const cfg = STATUS_CONFIG[conv.connection_status];
   if (!cfg?.bannerText) return null;
@@ -288,7 +289,19 @@ function ChatDisabledBanner({ conv }: { conv: LinkedInConversation }) {
 
 // ─── Main view ────────────────────────────────────────────────────────────────
 
-export function LinkedInConversationView() {
+export function LinkedInConversationView({ 
+  visibleTabs, 
+  activeTab, 
+  setActiveTab,
+  onBack,
+  isMobile: propIsMobile
+}: { 
+  visibleTabs?: { id: string; label: string; sublabel: string }[];
+  activeTab?: string;
+  setActiveTab?: (tab: any) => void;
+  onBack?: () => void;
+  isMobile?: boolean;
+}) {
   const [conversations, setConversations] = useState<LinkedInConversation[]>([]);
   const [selectedId, setSelectedId]       = useState<string | null>(null);
   const [messages, setMessages]           = useState<LinkedInMessage[]>([]);
@@ -300,6 +313,8 @@ export function LinkedInConversationView() {
   const [error, setError]                 = useState<string | null>(null);
   const [msgError, setMsgError]           = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
   // ── Load conversations ─────────────────────────────────────────────────────
   const loadConversations = useCallback(async () => {
@@ -432,10 +447,14 @@ export function LinkedInConversationView() {
     <div className="flex flex-1 h-full overflow-hidden">
 
       {/* ── Left sidebar ─────────────────────────────────────────────────── */}
-      <div className="w-[340px] flex-shrink-0 flex flex-col border-r border-border bg-card">
+      <div className={cn(
+        "w-full lg:w-[340px] flex-shrink-0 flex flex-col border-r border-border bg-card transition-all",
+        isMobile && selectedId ? "hidden" : "flex"
+      )}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+
+        {/* Header - hidden on mobile as parent provides account tabs */}
+        <div className="hidden lg:flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Linkedin className="w-4 h-4 text-blue-600" />
             <span className="font-semibold text-sm text-slate-800">LinkedIn</span>
@@ -521,7 +540,10 @@ export function LinkedInConversationView() {
       </div>
 
       {/* ── Right panel ──────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-background">
+      <div className={cn(
+        "flex-1 flex flex-col overflow-hidden bg-background",
+        isMobile && !selectedId ? "hidden" : "flex"
+      )}>
         {!selectedConv ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
             <Linkedin className="w-12 h-12 mb-3 opacity-20" />
@@ -531,7 +553,17 @@ export function LinkedInConversationView() {
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-card">
+            <div className="flex items-center gap-3 px-3 py-3 md:px-5 md:py-3.5 border-b border-border bg-card">
+              {isMobile && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 -ml-1" 
+                  onClick={() => setSelectedId(null)}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              )}
               <ContactAvatar contact={selectedConv.contact} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

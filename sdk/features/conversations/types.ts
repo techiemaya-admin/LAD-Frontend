@@ -49,13 +49,77 @@ export interface Message {
   humanAgentId?: string;
   /** Template name if this message was sent via a WhatsApp template */
   templateName?: string;
+
+  // ── Location message fields ──────────────────────────────────────────────
+  /** GPS latitude for location messages */
+  latitude?: number;
+  /** GPS longitude for location messages */
+  longitude?: number;
+  /** Location name or label (e.g. "HAY AL NAHDA") */
+  locationName?: string;
+  /** Location address string */
+  locationAddress?: string;
+
+  // ── Inbound media message fields ─────────────────────────────────────────
+  /** WhatsApp media ID for inbound image/video/audio/document messages */
+  mediaId?: string;
+  /** Media type: 'image' | 'video' | 'audio' | 'document' | 'sticker' */
+  mediaType?: string;
+  /** MIME type of the media (e.g. 'image/jpeg', 'application/pdf') */
+  mediaMimeType?: string;
+  /** Original filename for document messages */
+  mediaFilename?: string;
+  /** Optional caption attached to the media */
+  mediaCaption?: string;
 }
 
 export interface Attachment {
   id: string;
   url: string;
-  type: 'image' | 'document' | 'video';
+  type: 'image' | 'document' | 'video' | 'audio';
   name: string;
+  size?: number;
+}
+
+// ── Rich message types ────────────────────────────────────────────────────────
+
+export type RichMessageType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'document'
+  | 'audio'
+  | 'location'
+  | 'contact'
+  | 'poll';
+
+export interface RichMessagePayload {
+  type: RichMessageType;
+
+  /** Plain text content — required for 'text', optional caption for media */
+  content?: string;
+
+  // ── Media (image / video / document / audio) ────────────────────────────
+  fileBase64?: string;
+  filename?: string;
+  contentType?: string;
+  caption?: string;
+
+  // ── Location ──────────────────────────────────────────────────────────
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  locationAddress?: string;
+
+  // ── Contact card ──────────────────────────────────────────────────────
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactCompany?: string;
+
+  // ── Poll ──────────────────────────────────────────────────────────────
+  pollQuestion?: string;
+  pollOptions?: string[];
 }
 
 export interface Conversation {
@@ -97,10 +161,30 @@ export interface MessageListResponse {
 
 export interface SendMessageRequest {
   conversationId: string;
-  content: string;
   leadId: string;
   phoneNumber?: string;
   humanAgentId?: string;
+  channel?: 'personal' | 'waba';
+  tenantId?: string;  // used for X-Tenant-ID header during multipart media pre-upload
+
+  // Rich payload — all fields from RichMessagePayload forwarded to backend
+  type?: RichMessageType;
+  content?: string;
+  fileBase64?: string;
+  mediaId?: string;   // pre-uploaded WhatsApp media ID (skips base64 in message body)
+  filename?: string;
+  contentType?: string;
+  caption?: string;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  locationAddress?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactCompany?: string;
+  pollQuestion?: string;
+  pollOptions?: string[];
 }
 
 export interface ConversationStats {
@@ -133,10 +217,14 @@ export interface UseConversationsReturn {
     linkedin: number;
     gmail: number;
   };
-  sendMessage: (content: string) => void;
+  sendMessage: (payload: RichMessagePayload) => void;
   markAsResolved: (id: string) => void;
   muteConversation: (id: string) => void;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  // ── Pagination ────────────────────────────────────────────────────────
+  loadMore: () => void;
+  isLoadingMore: boolean;
+  hasMore: boolean;
 }

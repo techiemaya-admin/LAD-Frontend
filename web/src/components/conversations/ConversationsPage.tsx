@@ -9,6 +9,7 @@ import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
+import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,29 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: 'personal' | 'waba'; onShowBroadcastModal?: () => void }) {
+function ChannelConversationView({ 
+  channel, 
+  onShowBroadcastModal,
+  visibleTabs,
+  activeTab,
+  setActiveTab,
+  isPlaygroundOpen,
+  setIsPlaygroundOpen,
+  isSidebarCollapsed,
+  setIsSidebarCollapsed,
+  isMobile
+}: { 
+  channel: 'personal' | 'waba'; 
+  onShowBroadcastModal?: () => void;
+  visibleTabs: { id: WaTab; label: string; sublabel: string }[];
+  activeTab: WaTab;
+  setActiveTab: (tab: WaTab) => void;
+  isPlaygroundOpen: boolean;
+  setIsPlaygroundOpen: (val: boolean) => void;
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (val: boolean) => void;
+  isMobile: boolean;
+}) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -39,15 +62,20 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     sendMessage,
     markAsResolved,
     muteConversation,
+    loadMore,
+    isLoadingMore,
+    hasMore,
   } = useConversations({ channel });
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [createGroupSelectedIds, setCreateGroupSelectedIds] = useState<string[]>([]);
 
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
@@ -215,7 +243,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
+              onShowCreateGroupModal={(ids) => {
+                setCreateGroupSelectedIds(ids);
+                setShowCreateGroupModal(true);
+              }}
               groupRefreshKey={groupRefreshKey}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
             />
           </motion.div>
         )}
@@ -228,39 +263,101 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-50 bg-black/50 lg:hidden"
             onClick={toggleSidebar}
           >
             <motion.div
-              initial={{ x: -340 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -340 }}
-              transition={{ duration: 0.2 }}
-              className="w-[340px] h-full"
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="w-full h-full bg-card flex flex-col pt-14"
               onClick={(e) => e.stopPropagation()}
             >
-              <ConversationSidebar
-                conversations={typedConversations}
-                selectedId={selectedId}
-                onSelectConversation={(id) => {
-                  handleSelectConversation(id);
-                  setIsSidebarCollapsed(true);
-                }}
-                channelFilter={channelFilter}
-                onChannelFilterChange={setChannelFilter}
-                contextStatusFilter={contextStatusFilter}
-                onContextStatusFilterChange={setContextStatusFilter}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                unreadCounts={allUnreadCounts}
-                backendChannel={channel}
-                onBulkAction={handleBulkAction}
-                onRefresh={invalidate}
-                onGroupSelect={handleSelectGroup}
-                onOpenGroupInfo={handleOpenGroupInfo}
-                onShowBroadcastModal={onShowBroadcastModal}
-                groupRefreshKey={groupRefreshKey}
-              />
+              {/* Mobile Sidebar Header with Tabs + Test AI */}
+              <div className="p-3 border-b border-border bg-card flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
+                  {visibleTabs.map(({ id, label, sublabel }) => (
+                    <button
+                      key={id}
+                      onClick={() => setActiveTab(id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap',
+                        activeTab === id
+                          ? 'text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-border'
+                      )}
+                      style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
+                    >
+                      <ChannelIcon
+                        channel={sublabel as any}
+                        size={14}
+                        overrideColor={activeTab === id ? '#ffffff' : undefined}
+                      />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mobile Test AI button */}
+                <Button
+                  variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    "flex-shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold gap-1.5",
+                    isPlaygroundOpen && "text-primary bg-primary/10"
+                  )}
+                  onClick={() => {
+                    setIsPlaygroundOpen(!isPlaygroundOpen);
+                    setIsSidebarCollapsed(true);
+                  }}
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Test AI
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'linkedin' ? (
+                  <LinkedInConversationView 
+                    visibleTabs={visibleTabs}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    onBack={() => setIsSidebarCollapsed(false)}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <ConversationSidebar
+                    conversations={typedConversations}
+                    selectedId={selectedId}
+                    onSelectConversation={(id) => {
+                      handleSelectConversation(id);
+                      setIsSidebarCollapsed(true);
+                    }}
+                    channelFilter={channelFilter}
+                    onChannelFilterChange={setChannelFilter}
+                    contextStatusFilter={contextStatusFilter}
+                    onContextStatusFilterChange={setContextStatusFilter}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    unreadCounts={allUnreadCounts}
+                    backendChannel={channel}
+                    onBulkAction={handleBulkAction}
+                    onRefresh={invalidate}
+                    onGroupSelect={handleSelectGroup}
+                    onOpenGroupInfo={handleOpenGroupInfo}
+                    onShowBroadcastModal={onShowBroadcastModal}
+                    onShowCreateGroupModal={(ids) => {
+                      setCreateGroupSelectedIds(ids);
+                      setShowCreateGroupModal(true);
+                    }}
+                    groupRefreshKey={groupRefreshKey}
+                    onLoadMore={loadMore}
+                    isLoadingMore={isLoadingMore}
+                    hasMore={hasMore}
+                  />
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -301,6 +398,10 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           onExport={handleExport}
           onBlock={handleBlock}
           onDelete={handleDelete}
+          onBack={() => {
+            selectConversation('');
+            setIsSidebarCollapsed(false);
+          }}
           onOpenAssignmentPanel={() => {
             setContextPanelTab('assignment');
             if (!isContextPanelOpen) setIsContextPanelOpen(true);
@@ -312,11 +413,15 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
       <AnimatePresence mode="wait">
         {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
           <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
+            initial={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0 } : { width: 320, opacity: 1 }}
+            exit={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="h-full flex-shrink-0 overflow-hidden hidden md:block"
+            className={cn(
+              "h-full flex-shrink-0 overflow-hidden",
+              "fixed inset-0 z-50 w-full lg:relative lg:inset-auto lg:z-0 lg:w-[320px] bg-background",
+              "pt-14 lg:pt-0"
+            )}
           >
             <ConversationContextPanel
               conversation={typedSelectedConversation}
@@ -325,6 +430,22 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               defaultTab={contextPanelTab}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Broadcast Group Modal */}
+      <AnimatePresence>
+        {showCreateGroupModal && (
+          <CreateBroadcastGroupModal
+            open={showCreateGroupModal}
+            onOpenChange={setShowCreateGroupModal}
+            selectedIds={createGroupSelectedIds}
+            onSuccess={() => {
+              setGroupRefreshKey((prev) => prev + 1);
+              setCreateGroupSelectedIds([]);
+            }}
+            channel={channel}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -338,63 +459,69 @@ type WaTab = 'personal' | 'waba' | 'linkedin';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Check which WhatsApp channels are connected
+// Utility: Check which channels are connected — uses the same endpoints as
+// the Integrations settings page for consistency.
+// All three checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
-async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean; linkedInConnected: boolean }> {
-  try {
-    // Check Personal WhatsApp connections
-    const personalRes = await fetchWithTenant('/api/whatsapp-conversations/accounts');
-    const personalData = personalRes.ok ? await personalRes.json() : null;
-    const personalConnected = personalData?.accounts?.some((a: any) => a.status === 'connected') ?? false;
+interface ChannelConnectionStatus {
+  personal: boolean;
+  waba: boolean;
+  linkedin: boolean;
+}
 
-    // Check WABA connections by attempting to fetch conversations
-    // If the endpoint returns data without error, WABA is connected
-    const wabaRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=waba');
-    const wabaConnected = wabaRes.ok;
+async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
+  const [personalResult, wabaResult, linkedinResult] = await Promise.allSettled([
+    // Personal WA — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/personal-whatsapp/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'connected');
+      })
+      .catch(() => false),
 
-    // Check LinkedIn connection — the backend returns { success: true, data: [], message: 'No LinkedIn account connected...' }
-    // when no Unipile LinkedIn account is registered for this tenant.
-    let linkedInConnected = false;
-    try {
-      const liRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=linkedin');
-      if (liRes.ok) {
-        const liData = await liRes.json();
-        // Connected = endpoint didn't return the "no account" message
-        linkedInConnected = !liData?.message?.toLowerCase().includes('no linkedin account');
-      }
-    } catch {
-      linkedInConnected = false;
-    }
+    // WA Business — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+      })
+      .catch(() => false),
 
-    return { personalConnected, wabaConnected, linkedInConnected };
-  } catch (err) {
-    console.error('Error checking connected channels:', err);
-    return { personalConnected: false, wabaConnected: false, linkedInConnected: false };
-  }
+    // LinkedIn — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/campaigns/linkedin/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data?.data ?? data ?? [];
+        return accounts.some((a: any) =>
+          a.status === 'connected' || a.status === 'active' || a.is_connected === true
+        );
+      })
+      .catch(() => false),
+  ]);
+
+  return {
+    personal: personalResult.status === 'fulfilled' ? personalResult.value : false,
+    waba:     wabaResult.status    === 'fulfilled' ? wabaResult.value    : false,
+    linkedin: linkedinResult.status === 'fulfilled' ? linkedinResult.value : false,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab based on connection status
-// Logic: If both connected → default to Personal, else default to whichever is connected
+// Determine default tab — prefer Personal WA, then WABA, then LinkedIn
 // ─────────────────────────────────────────────────────────────────────────────
-function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTab {
-  // If both are connected, default to Personal WA
-  if (personalConnected && wabaConnected) {
-    return 'personal';
-  }
-  // If only Personal is connected
-  if (personalConnected) {
-    return 'personal';
-  }
-  // If only WABA is connected
-  if (wabaConnected) {
-    return 'waba';
-  }
-  // Fallback to Personal if neither is explicitly connected
-  return 'personal';
+function getDefaultTab(status: ChannelConnectionStatus): WaTab {
+  if (status.personal) return 'personal';
+  if (status.waba)     return 'waba';
+  if (status.linkedin) return 'linkedin';
+  return 'personal'; // fallback (nothing connected)
 }
 
-// All possible tabs — LinkedIn is only included when the tenant has an active LinkedIn account
+// All possible tabs in display order
 const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
   { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
@@ -421,28 +548,46 @@ function getTabColor(tabId: WaTab): string {
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-  const [linkedInConnected, setLinkedInConnected] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  // null = still loading; once resolved, only connected channels are shown
+  const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
 
-  // Load connection status on mount and set default tab
   useEffect(() => {
-    (async () => {
-      const { personalConnected, wabaConnected, linkedInConnected: liConnected } = await getConnectedChannels();
-      const defaultTab = getDefaultTab(personalConnected, wabaConnected);
-      setActiveTab(defaultTab);
-      setLinkedInConnected(liConnected);
-    })();
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Only show LinkedIn tab when the tenant has an active LinkedIn account
-  const visibleTabs = ALL_TABS.filter(t => t.id !== 'linkedin' || linkedInConnected);
+  // Check which channels are connected on mount — three parallel requests
+  useEffect(() => {
+    getConnectedChannels().then((status) => {
+      setChannelStatus(status);
+      setActiveTab(getDefaultTab(status));
+    });
+  }, []);
+
+  // Show only tabs whose channel is actively connected.
+  // While loading (null) render nothing so there's no flash of wrong tabs.
+  const visibleTabs = channelStatus
+    ? ALL_TABS.filter((t) => channelStatus[t.id as keyof ChannelConnectionStatus])
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI toggle */}
+      {/* Top bar: WA channel tabs + AI toggle — now always visible */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
-        {/* Channel tabs */}
+        {/* Channel tabs — only connected channels are rendered */}
         <div className="flex items-center gap-1">
+          {/* Loading skeleton while connection status is being resolved */}
+          {channelStatus === null && (
+            <>
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+            </>
+          )}
           {visibleTabs.map(({ id, label, sublabel }) => (
             <button
               key={id}
@@ -480,9 +625,43 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal'  && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
-        {activeTab === 'waba'      && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
-        {activeTab === 'linkedin'  && <LinkedInConversationView />}
+        {activeTab === 'personal'  && (
+          <ChannelConversationView 
+            channel="personal" 
+            onShowBroadcastModal={() => setShowBroadcastModal(true)} 
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
+        {activeTab === 'waba'      && (
+          <ChannelConversationView 
+            channel="waba" 
+            onShowBroadcastModal={() => setShowBroadcastModal(true)} 
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
+        {activeTab === 'linkedin'  && (
+          <LinkedInConversationView 
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onBack={() => setIsSidebarCollapsed(false)}
+            isMobile={isMobile}
+          />
+        )}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}

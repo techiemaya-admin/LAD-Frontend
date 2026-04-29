@@ -6,12 +6,13 @@ import { MessageList } from './MessageList';
 import { MessageComposer } from './MessageComposer';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import type { RichMessagePayload } from '@lad/frontend-features/conversations';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
   onMarkResolved: (id: string) => void;
   onMute: (id: string) => void;
-  onSendMessage: (content: string) => void;
+  onSendMessage: (payload: RichMessagePayload) => void;
   onTogglePanel: () => void;
   isPanelOpen: boolean;
   backendChannel?: 'personal' | 'waba';
@@ -23,6 +24,7 @@ interface ChatWindowProps {
   onDelete?: (id: string) => void;
   /** Called when agent avatar is clicked — parent should open Assignment tab */
   onOpenAssignmentPanel?: () => void;
+  onBack?: () => void;
 }
 
 // ── Deduplicate messages by ID (newest wins on tie) ───────────────────────────
@@ -35,7 +37,10 @@ function dedupeById(msgs: Message[]): Message[] {
 }
 
 // ── How many messages to load per page ───────────────────────────────────────
-const INITIAL_LIMIT = 500;   // covers full history for most convos
+// 50 recent messages are polled every 3 s — enough to show the current thread
+// without fetching the full history on every interval tick.
+// Older messages are fetched on-demand when the user scrolls up ("load more").
+const INITIAL_LIMIT = 50;
 const LOAD_MORE_LIMIT = 100; // older messages fetched when user scrolls up
 
 export const ChatWindow = memo(function ChatWindow({
@@ -53,8 +58,9 @@ export const ChatWindow = memo(function ChatWindow({
   onBlock,
   onDelete,
   onOpenAssignmentPanel,
+  onBack,
 }: ChatWindowProps) {
-  // ── Latest messages polled every 3 s (large limit for full history) ───────
+  // ── Latest 50 messages polled every 3 s; older ones loaded on scroll-up ────
   const { messages: polledMessages, isLoading: messagesLoading, isAgentTyping, total } =
     useConversationMessages(
       conversation?.id || null,
@@ -170,6 +176,7 @@ export const ChatWindow = memo(function ChatWindow({
         onExport={() => onExport?.(conversation.id)}
         onBlock={() => onBlock?.(conversation.id)}
         onDelete={() => onDelete?.(conversation.id)}
+        onBack={onBack}
       />
 
       {messagesLoading ? (
@@ -191,6 +198,7 @@ export const ChatWindow = memo(function ChatWindow({
 
       <MessageComposer
         channel={conversation.channel}
+        backendChannel={backendChannel}
         onSendMessage={onSendMessage}
         disabled={conversation.status === 'resolved'}
         contactName={conversation.contact?.name}

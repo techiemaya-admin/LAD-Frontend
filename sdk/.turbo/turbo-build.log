@@ -2,11 +2,3 @@
 > @lad/frontend-features@1.0.0 build
 > tsc
 
-tsconfig.json(9,27): error TS5103: Invalid value for '--ignoreDeprecations'.
-npm error Lifecycle script `build` failed with error:
-npm error code 2
-npm error path C:\Users\sandh\Documents\Techiemaya\LAD-Frontend\sdk
-npm error workspace @lad/frontend-features@1.0.0
-npm error location C:\Users\sandh\Documents\Techiemaya\LAD-Frontend\sdk
-npm error command failed
-npm error command C:\Windows\system32\cmd.exe /d /s /c tsc
