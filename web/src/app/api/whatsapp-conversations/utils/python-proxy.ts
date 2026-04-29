@@ -82,6 +82,11 @@ export async function proxyToPythonService(
     // Transform: /api/conversations → /api/linkedin-conversations/conversations
     resolvedBaseUrl = getBackendUrl();
     resolvedPath = '/api/linkedin-conversations' + path.replace(/^\/api/, '');
+  } else if (channel === 'backend') {
+    // Direct Node.js backend route — no path transformation
+    // Use when the full API path is already specified (e.g. /api/personal-whatsapp/prompts)
+    resolvedBaseUrl = getBackendUrl();
+    resolvedPath = path;
   } else {
     // Fallback: use the passed-in baseUrl (backwards compat)
     resolvedBaseUrl = baseUrl;
@@ -147,13 +152,20 @@ export async function proxyToPythonService(
     headers,
   };
 
-  // Forward body for POST/PUT/PATCH
+  // Forward body for POST/PUT/PATCH.
+  // Use req.text() rather than req.json()+JSON.stringify() to:
+  //   1. Avoid double parse/reserialise overhead (important for large base64 payloads like PDFs)
+  //   2. Prevent silent body loss — req.json() throws on any read error and the old catch
+  //      block silently forwarded a body-less POST, causing FastAPI 422 on dict params.
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     try {
-      const body = await req.json();
-      fetchOptions.body = JSON.stringify(body);
-    } catch {
-      // No body or invalid JSON — proceed without body
+      const bodyText = await req.text();
+      if (bodyText) {
+        fetchOptions.body = bodyText;
+      }
+    } catch (bodyErr) {
+      console.error(`[python-proxy] Failed to read request body for ${req.method} ${path}:`, bodyErr);
+      // Body could not be read — proceed without it (FastAPI will return its own validation error)
     }
   }
 
@@ -182,6 +194,16 @@ export async function proxyToPythonService(
     }
 
     const data = await response.json();
+
+    // Log Python-service 5xx errors so the actual exception message is visible
+    // in Next.js dev logs (the global exception handler encodes it in `detail`).
+    if (response.status >= 500) {
+      console.error(
+        `[python-proxy] 5xx from ${url} (${response.status}):`,
+        data?.detail || data?.error || data
+      );
+    }
+
     const nextResponse = NextResponse.json(data, { status: response.status });
     nextResponse.headers.set('X-Debug-Trace-Id', debugTraceId || 'none');
     nextResponse.headers.set('X-Debug-Resolved-Tenant', headers['X-Tenant-ID'] || 'none');

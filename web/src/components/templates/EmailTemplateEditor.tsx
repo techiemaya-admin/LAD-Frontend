@@ -98,10 +98,22 @@ export default function EmailTemplateEditor({
       }
 
       const data = await response.json();
+      const uploadedUrl = data.url || data.data?.url;
       setTemplate((prev) => ({
         ...prev,
-        media_url: data.url || data.data?.url,
+        media_url: uploadedUrl,
       }));
+
+      // Persist uploaded URL to localStorage so MediaInsertionModal can list it
+      if (uploadedUrl) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
+          const entry = { url: uploadedUrl, name: file.name, uploadedAt: new Date().toISOString() };
+          // Prepend and keep last 50 uploads
+          const updated = [entry, ...stored.filter((s: any) => s.url !== uploadedUrl)].slice(0, 50);
+          localStorage.setItem('email_media_uploads', JSON.stringify(updated));
+        } catch { /* non-fatal */ }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       setError(errorMessage);

@@ -171,15 +171,15 @@ export default function StandardPlans() {
                 )}
 
                 <div className="mb-4">
-                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-white' : 'text-[#222B45]' }`}>{plan.name}</h3>
-                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-[#8F9BB3]' }`}>{plan.description}</p>
+                  <h3 className={`text-xl font-bold ${ (plan as any).enterprise ? 'text-gray-900' : 'text-[#222B45]' }`}>{plan.name}</h3>
+                  <p className={`text-sm mt-1 ${ (plan as any).enterprise ? 'text-gray-700' : 'text-[#8F9BB3]' }`}>{plan.description}</p>
                 </div>
 
                 <div className="mb-6">
                   {(plan as any).enterprise ? (
                     <div>
-                      <span className="text-4xl font-bold text-white">Contact Us</span>
-                      <p className="text-sm text-indigo-200 mt-2">Custom pricing for your needs</p>
+                      <span className="text-4xl font-bold text-gray-900">Contact Us</span>
+                      <p className="text-sm text-gray-700 mt-2">Custom pricing for your needs</p>
                     </div>
                   ) : (
                     <>
@@ -204,8 +204,8 @@ export default function StandardPlans() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * featureIndex }}
                     >
-                      <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${ (plan as any).enterprise ? 'text-indigo-200' : 'text-green-500' }`} />
-                      <span className={`${ (plan as any).enterprise ? 'text-indigo-100' : '' } ${typeof feature === 'object' && feature.bold ? 'font-bold' : ''}`}>
+                      <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${ (plan as any).enterprise ? 'text-indigo-600' : 'text-green-500' }`} />
+                      <span className={`${ (plan as any).enterprise ? 'text-gray-800' : '' } ${typeof feature === 'object' && feature.bold ? 'font-bold' : ''}`}>
                         {typeof feature === 'string' ? feature : feature.text}
                       </span>
                     </motion.li>

@@ -19,12 +19,12 @@ export default function FourStepsSection() {
   const steps = [
     {
       number: 1,
-      title: 'Import Prospects',
+      title: 'Find Prospects',
       subtitle: 'From LinkedIn & Sales Navigator',
-      description: 'Import thousands of LinkedIn prospects in seconds. Connect your data sources and build your target list instantly.',
+      description: 'Find thousands of LinkedIn prospects in seconds. Connect your data sources and build your target list instantly.',
       icon: '📥',
       image: '/placeholder-step-1.png',
-      alt: 'Import prospects interface'
+      alt: 'Find prospects interface'
     },
     {
       number: 2,

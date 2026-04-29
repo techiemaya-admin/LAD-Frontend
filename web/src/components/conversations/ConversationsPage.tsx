@@ -9,6 +9,7 @@ import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
+import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,13 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: 'personal' | 'waba'; onShowBroadcastModal?: () => void }) {
+function ChannelConversationView({
+  channel,
+  onShowBroadcastModal,
+}: {
+  channel: 'personal' | 'waba';
+  onShowBroadcastModal?: () => void;
+}) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -39,6 +46,9 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     sendMessage,
     markAsResolved,
     muteConversation,
+    loadMore,
+    isLoadingMore,
+    hasMore,
   } = useConversations({ channel });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -48,6 +58,8 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
   const [groupRefreshKey, setGroupRefreshKey] = useState(0);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [createGroupSelectedIds, setCreateGroupSelectedIds] = useState<string[]>([]);
 
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
@@ -215,7 +227,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
+              onShowCreateGroupModal={(ids) => {
+                setCreateGroupSelectedIds(ids);
+                setShowCreateGroupModal(true);
+              }}
               groupRefreshKey={groupRefreshKey}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
             />
           </motion.div>
         )}
@@ -259,7 +278,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
                 onGroupSelect={handleSelectGroup}
                 onOpenGroupInfo={handleOpenGroupInfo}
                 onShowBroadcastModal={onShowBroadcastModal}
+                onShowCreateGroupModal={(ids) => {
+                  setCreateGroupSelectedIds(ids);
+                  setShowCreateGroupModal(true);
+                }}
                 groupRefreshKey={groupRefreshKey}
+                onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
+                hasMore={hasMore}
               />
             </motion.div>
           </motion.div>
@@ -327,6 +353,22 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Create Broadcast Group Modal */}
+      <AnimatePresence>
+        {showCreateGroupModal && (
+          <CreateBroadcastGroupModal
+            open={showCreateGroupModal}
+            onOpenChange={setShowCreateGroupModal}
+            selectedIds={createGroupSelectedIds}
+            onSuccess={() => {
+              setGroupRefreshKey((prev) => prev + 1);
+              setCreateGroupSelectedIds([]);
+            }}
+            channel={channel}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -338,63 +380,69 @@ type WaTab = 'personal' | 'waba' | 'linkedin';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Check which WhatsApp channels are connected
+// Utility: Check which channels are connected — uses the same endpoints as
+// the Integrations settings page for consistency.
+// All three checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
-async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean; linkedInConnected: boolean }> {
-  try {
-    // Check Personal WhatsApp connections
-    const personalRes = await fetchWithTenant('/api/whatsapp-conversations/accounts');
-    const personalData = personalRes.ok ? await personalRes.json() : null;
-    const personalConnected = personalData?.accounts?.some((a: any) => a.status === 'connected') ?? false;
+interface ChannelConnectionStatus {
+  personal: boolean;
+  waba: boolean;
+  linkedin: boolean;
+}
 
-    // Check WABA connections by attempting to fetch conversations
-    // If the endpoint returns data without error, WABA is connected
-    const wabaRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=waba');
-    const wabaConnected = wabaRes.ok;
+async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
+  const [personalResult, wabaResult, linkedinResult] = await Promise.allSettled([
+    // Personal WA — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/personal-whatsapp/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'connected');
+      })
+      .catch(() => false),
 
-    // Check LinkedIn connection — the backend returns { success: true, data: [], message: 'No LinkedIn account connected...' }
-    // when no Unipile LinkedIn account is registered for this tenant.
-    let linkedInConnected = false;
-    try {
-      const liRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=linkedin');
-      if (liRes.ok) {
-        const liData = await liRes.json();
-        // Connected = endpoint didn't return the "no account" message
-        linkedInConnected = !liData?.message?.toLowerCase().includes('no linkedin account');
-      }
-    } catch {
-      linkedInConnected = false;
-    }
+    // WA Business — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+      })
+      .catch(() => false),
 
-    return { personalConnected, wabaConnected, linkedInConnected };
-  } catch (err) {
-    console.error('Error checking connected channels:', err);
-    return { personalConnected: false, wabaConnected: false, linkedInConnected: false };
-  }
+    // LinkedIn — same endpoint as IntegrationsSettings
+    fetchWithTenant('/api/campaigns/linkedin/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data?.data ?? data ?? [];
+        return accounts.some((a: any) =>
+          a.status === 'connected' || a.status === 'active' || a.is_connected === true
+        );
+      })
+      .catch(() => false),
+  ]);
+
+  return {
+    personal: personalResult.status === 'fulfilled' ? personalResult.value : false,
+    waba:     wabaResult.status    === 'fulfilled' ? wabaResult.value    : false,
+    linkedin: linkedinResult.status === 'fulfilled' ? linkedinResult.value : false,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab based on connection status
-// Logic: If both connected → default to Personal, else default to whichever is connected
+// Determine default tab — prefer Personal WA, then WABA, then LinkedIn
 // ─────────────────────────────────────────────────────────────────────────────
-function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTab {
-  // If both are connected, default to Personal WA
-  if (personalConnected && wabaConnected) {
-    return 'personal';
-  }
-  // If only Personal is connected
-  if (personalConnected) {
-    return 'personal';
-  }
-  // If only WABA is connected
-  if (wabaConnected) {
-    return 'waba';
-  }
-  // Fallback to Personal if neither is explicitly connected
-  return 'personal';
+function getDefaultTab(status: ChannelConnectionStatus): WaTab {
+  if (status.personal) return 'personal';
+  if (status.waba)     return 'waba';
+  if (status.linkedin) return 'linkedin';
+  return 'personal'; // fallback (nothing connected)
 }
 
-// All possible tabs — LinkedIn is only included when the tenant has an active LinkedIn account
+// All possible tabs in display order
 const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
   { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
@@ -422,27 +470,36 @@ export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-  const [linkedInConnected, setLinkedInConnected] = useState(false);
+  // null = still loading; once resolved, only connected channels are shown
+  const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
 
-  // Load connection status on mount and set default tab
+  // Check which channels are connected on mount — three parallel requests
   useEffect(() => {
-    (async () => {
-      const { personalConnected, wabaConnected, linkedInConnected: liConnected } = await getConnectedChannels();
-      const defaultTab = getDefaultTab(personalConnected, wabaConnected);
-      setActiveTab(defaultTab);
-      setLinkedInConnected(liConnected);
-    })();
+    getConnectedChannels().then((status) => {
+      setChannelStatus(status);
+      setActiveTab(getDefaultTab(status));
+    });
   }, []);
 
-  // Only show LinkedIn tab when the tenant has an active LinkedIn account
-  const visibleTabs = ALL_TABS.filter(t => t.id !== 'linkedin' || linkedInConnected);
+  // Show only tabs whose channel is actively connected.
+  // While loading (null) render nothing so there's no flash of wrong tabs.
+  const visibleTabs = channelStatus
+    ? ALL_TABS.filter((t) => channelStatus[t.id as keyof ChannelConnectionStatus])
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Top bar: WA channel tabs + AI toggle */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
-        {/* Channel tabs */}
+        {/* Channel tabs — only connected channels are rendered */}
         <div className="flex items-center gap-1">
+          {/* Loading skeleton while connection status is being resolved */}
+          {channelStatus === null && (
+            <>
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+            </>
+          )}
           {visibleTabs.map(({ id, label, sublabel }) => (
             <button
               key={id}

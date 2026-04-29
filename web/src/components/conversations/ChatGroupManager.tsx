@@ -101,21 +101,23 @@ async function fetchGroups(channel?: 'personal' | 'waba'): Promise<ChatGroup[]> 
   return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
-async function createGroup(name: string, color: string, description?: string): Promise<ChatGroup | null> {
-  const res = await fetch(API_BASE, {
+async function createGroup(name: string, color: string, description?: string, channel?: 'personal' | 'waba'): Promise<ChatGroup | null> {
+  const channelParam = channel === 'personal' ? '?channel=personal' : '';
+  const res = await fetch(`${API_BASE}${channelParam}`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ name, color, description: description || null }),
   });
   const data = await res.json();
 
-  // Python service wraps in {success, data}; handle both formats
+  // Node.js backend returns {success, group}; Python returns {success, data}
+  if (data.success && data.group) return data.group;
   if (data.success && data.data) return data.data;
   // Direct group object (id present = success)
   if (data.id) return data as ChatGroup;
   // 409: group name already exists — fetch existing groups and return the match
   if (res.status === 409) {
-    const listRes = await fetch(API_BASE, { headers: authHeaders() });
+    const listRes = await fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() });
     const listData = await listRes.json();
     const groups: ChatGroup[] = listData.data || listData || [];
     return groups.find((g) => g.name.toLowerCase() === name.toLowerCase()) || null;
@@ -415,13 +417,14 @@ export function ChatGroupManager({
   // Create group with selected contacts
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
-    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined);
+    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined, channel);
     if (group) {
       // If contacts are selected, add them to the group via backend
       if (selectedContacts.size > 0) {
         try {
           const contactsList = Array.from(selectedContacts.values());
-          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts`, {
+          const channelParam = channel === 'personal' ? '?channel=personal' : '';
+          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts${channelParam}`, {
             method: 'POST',
             body: JSON.stringify({
               contacts: contactsList.map(c => ({
@@ -1228,7 +1231,8 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
   const handleAddToGroup = useCallback(async (groupId: string) => {
     if (selectedIds.size === 0) return;
     try {
-      await fetch(`${API_BASE}/${groupId}/conversations`, {
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      await fetch(`${API_BASE}/${groupId}/conversations${channelParam}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selectedIds) }),
@@ -1238,7 +1242,7 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
     }
     setIsOpen(false);
     onDone();
-  }, [selectedIds, onDone]);
+  }, [selectedIds, onDone, channel]);
 
   if (!isOpen) {
     return (
@@ -1262,34 +1266,36 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
 
   return (
     <div className="relative">
-      <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl border border-border bg-card shadow-xl z-50 py-1 overflow-hidden">
+      <div className="absolute bottom-full right-0 mb-1 w-52 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Add to Group</span>
           <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : groups.length === 0 ? (
-          <p className="text-xs text-muted-foreground px-3 py-4 text-center">No groups. Create one first.</p>
-        ) : (
-          groups.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => handleAddToGroup(g.id)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
-            >
-              <GroupAvatar name={g.name} color={g.color} size="sm" />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium truncate block">{g.name}</span>
-                <span className="text-[10px] text-muted-foreground">{g.conversation_count} chats</span>
-              </div>
-            </button>
-          ))
-        )}
+        <div className="max-h-56 overflow-y-auto py-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : groups.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-3 py-4 text-center">No groups. Create one first.</p>
+          ) : (
+            groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => handleAddToGroup(g.id)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
+              >
+                <GroupAvatar name={g.name} color={g.color} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium truncate block">{g.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{g.conversation_count} chats</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
       </div>
       <Tooltip>
         <TooltipTrigger asChild>

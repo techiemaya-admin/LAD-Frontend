@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { AppToasterProvider } from "@/components/ui/app-toaster";
 import { LoadingProvider } from "@/components/providers/loading-provider";
 import Providers from "./providers";
 import LayoutHandler from "@/components/layout/layout-handler";
+import ContactFormModal from "@/components/ContactFormModal";
 // Import VAPI error suppression (temporarily disable VAPI errors)
 import "@/utils/suppressVAPIErrors";
 
@@ -26,7 +28,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/favicon.svg" />
         
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               // Force light mode — remove any saved dark theme preference
@@ -60,6 +64,8 @@ export default function RootLayout({
               <LayoutHandler>
                 {children}
               </LayoutHandler>
+              {/* Contact Form Modal - Available globally */}
+              <ContactFormModal />
             </AppToasterProvider>
           </LoadingProvider>
         </Providers>

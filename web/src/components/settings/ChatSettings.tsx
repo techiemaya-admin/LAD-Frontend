@@ -18,6 +18,7 @@ import {
   Bell,
   Zap,
 } from 'lucide-react';
+import KnowledgeBaseManager from './KnowledgeBaseManager';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ interface Prompt {
 
 interface ChatSettingsConfig {
   knowledge_base: string;
+  typing_indicator: boolean;          // personal WA
+  waba_typing_indicator: boolean;     // WABA (API channel)
   campaign_frequency: {
     enabled: boolean;
     interval_hours: number;
@@ -78,8 +81,12 @@ const FOLLOWUP_CONFIG_API = '/api/whatsapp-conversations/followup-config';
 async function fetchFollowupConfig(): Promise<FollowupTimingConfig> {
   try {
     const res = await fetch(FOLLOWUP_CONFIG_API);
+    if (!res.ok) return DEFAULT_FOLLOWUP_CONFIG;
     const data = await res.json();
-    return data.success ? data.data : DEFAULT_FOLLOWUP_CONFIG;
+    if (!data.success) return DEFAULT_FOLLOWUP_CONFIG;
+    // Accept data.data or data.config
+    const cfg = data.data ?? data.config;
+    return cfg && typeof cfg === 'object' ? { ...DEFAULT_FOLLOWUP_CONFIG, ...cfg } : DEFAULT_FOLLOWUP_CONFIG;
   } catch {
     return DEFAULT_FOLLOWUP_CONFIG;
   }
@@ -93,7 +100,7 @@ async function updateFollowupConfig(config: FollowupTimingConfig): Promise<boole
       body: JSON.stringify(config),
     });
     const data = await res.json();
-    return data.success;
+    return data.success ?? false;
   } catch {
     return false;
   }
@@ -102,7 +109,9 @@ async function updateFollowupConfig(config: FollowupTimingConfig): Promise<boole
 async function fetchPrompts(): Promise<Prompt[]> {
   const res = await fetch(PROMPTS_API);
   const data = await res.json();
-  return data.success ? data.data : [];
+  // Node.js backend returns { success, prompts: [] }; Python returns { success, data: [] }
+  const list = data.prompts ?? data.data ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 async function updatePrompt(name: string, updates: Partial<Prompt>): Promise<boolean> {
@@ -133,22 +142,58 @@ async function deletePrompt(name: string): Promise<boolean> {
   return data.success;
 }
 
+const DEFAULT_CHAT_SETTINGS: ChatSettingsConfig = {
+  knowledge_base: '',
+  typing_indicator: true,
+  waba_typing_indicator: true,
+  campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
+};
+
 async function fetchChatSettings(): Promise<ChatSettingsConfig> {
-  const res = await fetch(SETTINGS_API);
-  const data = await res.json();
-  return data.success
-    ? data.data
-    : { knowledge_base: '', campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 } };
+  // Load personal WA settings and WABA settings in parallel
+  const [personalRes, wabaRes] = await Promise.allSettled([
+    fetch(`${SETTINGS_API}?channel=personal`),
+    fetch(`${SETTINGS_API}?channel=waba`),
+  ]);
+
+  // Personal WA
+  let personalRaw: Record<string, any> = {};
+  if (personalRes.status === 'fulfilled' && personalRes.value.ok) {
+    try {
+      const data = await personalRes.value.json();
+      personalRaw = data.data ?? data.settings ?? data ?? {};
+    } catch { /* ignore */ }
+  }
+
+  // WABA — Python service returns the row directly (not wrapped in { success, data })
+  let wabaRaw: Record<string, any> = {};
+  if (wabaRes.status === 'fulfilled' && wabaRes.value.ok) {
+    try {
+      const data = await wabaRes.value.json();
+      wabaRaw = data.data ?? data.settings ?? data ?? {};
+    } catch { /* ignore */ }
+  }
+
+  return {
+    knowledge_base: personalRaw.knowledge_base ?? '',
+    typing_indicator: personalRaw.typing_indicator !== false,
+    waba_typing_indicator: wabaRaw.typing_indicator !== false,
+    campaign_frequency: personalRaw.campaign_frequency ?? DEFAULT_CHAT_SETTINGS.campaign_frequency,
+  };
 }
 
 async function updateChatSettings(updates: Partial<ChatSettingsConfig>): Promise<boolean> {
-  const res = await fetch(SETTINGS_API, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  });
-  const data = await res.json();
-  return data.success;
+  try {
+    const res = await fetch(SETTINGS_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    return data.success ?? false;
+  } catch {
+    return false;
+  }
 }
 
 // ── Human-readable prompt names ──────────────────────────────────
@@ -174,9 +219,10 @@ function getLabel(name: string): string {
 
 const CHANNELS = [
   { id: 'waba', label: 'WABA', color: 'bg-green-500' },
-  { id: 'personal_whatsapp', label: 'Personal WhatsApp', color: 'bg-emerald-400' },
+  { id: 'personal_whatsapp', label: 'Personal Whatsapp', color: 'bg-emerald-400' },
   { id: 'linkedin', label: 'LinkedIn', color: 'bg-blue-600' },
   { id: 'gmail', label: 'Gmail', color: 'bg-red-500' },
+  { id: 'instagram', label: 'Instagram', color: 'bg-pink-500' },
 ];
 
 // ── Toast notification ───────────────────────────────────────────
@@ -211,7 +257,7 @@ export function ChatSettings() {
   const [savingFollowup, setSavingFollowup] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [activeChannel, setActiveChannel] = useState('whatsapp');
+  const [activeChannel, setActiveChannel] = useState('waba');
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [editedTexts, setEditedTexts] = useState<Record<string, string>>({});
   const [savingPrompt, setSavingPrompt] = useState<string | null>(null);
@@ -229,7 +275,7 @@ export function ChatSettings() {
   useEffect(() => {
     Promise.all([fetchPrompts(), fetchChatSettings(), fetchFollowupConfig()])
       .then(([p, s, f]) => {
-        setPrompts(p);
+        setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
       })
@@ -338,6 +384,29 @@ export function ChatSettings() {
     showToast(ok ? 'Knowledge base saved' : 'Failed to save', ok ? 'success' : 'error');
     setSavingKb(false);
   }, [chatSettings.knowledge_base, showToast]);
+
+  // ── Chat Behaviour save (typing indicator — separate per channel) ──
+
+  const [savingBehaviour, setSavingBehaviour] = useState(false);
+
+  const handleSaveBehaviour = useCallback(async () => {
+    setSavingBehaviour(true);
+    // Personal WA → PUT (Node.js backend)
+    const personalOk = await updateChatSettings({ typing_indicator: chatSettings.typing_indicator });
+    // WABA → PATCH (Python WABA service)
+    let wabaOk = false;
+    try {
+      const res = await fetch(`${SETTINGS_API}?channel=waba`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ typing_indicator: chatSettings.waba_typing_indicator }),
+      });
+      wabaOk = res.ok;
+    } catch { /* ignore */ }
+    const allOk = personalOk && wabaOk;
+    showToast(allOk ? 'Chat behaviour saved' : 'Partially saved — check console', allOk ? 'success' : 'error');
+    setSavingBehaviour(false);
+  }, [chatSettings.typing_indicator, chatSettings.waba_typing_indicator, showToast]);
 
   // ── Campaign Settings save ───────────────────────────────────
 
@@ -575,40 +644,93 @@ export function ChatSettings() {
         </div>
       </div>
 
-      {/* ── Section 2: Knowledge Base ─────────────────────────────── */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <KnowledgeBaseManager />
+      </div>
+
+      {/* ── Section 3: Chat Behaviour ────────────────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
-            <BookOpen className="h-5 w-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Knowledge Base</h2>
+            <Zap className="h-5 w-5 text-violet-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Chat Behaviour</h2>
           </div>
           <p className="text-sm text-gray-500">
-            This content is injected into all AI conversations as context. Add company info, FAQs, product details, etc.
+            Control how the AI agent behaves during conversations.
           </p>
         </div>
-        <div className="p-6">
-          <textarea
-            className="w-full h-48 p-3 text-sm border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-gray-50"
-            value={chatSettings.knowledge_base}
-            onChange={(e) =>
-              setChatSettings((prev) => ({ ...prev, knowledge_base: e.target.value }))
-            }
-            placeholder="Enter knowledge base content here...&#10;&#10;Example:&#10;- Company name: Acme Corp&#10;- Products: Widget A, Widget B&#10;- Support hours: 9am-5pm EST"
-          />
-          <div className="flex justify-end mt-3">
+        <div className="p-6 space-y-5">
+          {/* Typing indicator — per channel */}
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-1">Typing Indicator</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Show "typing…" to the contact while the AI is composing a reply.
+              Configure separately for each channel.
+            </p>
+
+            <div className="space-y-3 border border-gray-100 rounded-lg divide-y divide-gray-100 overflow-hidden">
+              {/* Personal WhatsApp row */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Personal WhatsApp</p>
+                    <p className="text-xs text-gray-500">Sends Baileys composing presence to the contact</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    setChatSettings((prev) => ({ ...prev, typing_indicator: !prev.typing_indicator }))
+                  }
+                  title={chatSettings.typing_indicator ? 'On — click to disable' : 'Off — click to enable'}
+                >
+                  {chatSettings.typing_indicator ? (
+                    <ToggleRight className="h-6 w-6 text-violet-500" />
+                  ) : (
+                    <ToggleLeft className="h-6 w-6 text-gray-300" />
+                  )}
+                </button>
+              </div>
+
+              {/* WABA row */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-2 w-2 rounded-full bg-green-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">WhatsApp Business API</p>
+                    <p className="text-xs text-gray-500">Sends read receipt + typing bubble via Meta Graph API</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    setChatSettings((prev) => ({ ...prev, waba_typing_indicator: !prev.waba_typing_indicator }))
+                  }
+                  title={chatSettings.waba_typing_indicator ? 'On — click to disable' : 'Off — click to enable'}
+                >
+                  {chatSettings.waba_typing_indicator ? (
+                    <ToggleRight className="h-6 w-6 text-violet-500" />
+                  ) : (
+                    <ToggleLeft className="h-6 w-6 text-gray-300" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
             <button
-              onClick={handleSaveKb}
-              disabled={savingKb}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              onClick={handleSaveBehaviour}
+              disabled={savingBehaviour}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
             >
-              {savingKb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Knowledge Base
+              {savingBehaviour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Behaviour
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Section 3: Campaign Settings ──────────────────────────── */}
+      {/* ── Section 5: Campaign Settings ──────────────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
@@ -706,7 +828,7 @@ export function ChatSettings() {
         </div>
       </div>
 
-      {/* ── Section 4: Post-Conversation Follow-up Timing ────────── */}
+      {/* ── Section 6: Post-Conversation Follow-up Timing ────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
