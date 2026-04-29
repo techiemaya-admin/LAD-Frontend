@@ -20,6 +20,10 @@ import {
   Linkedin,
   ThumbsUp,
   MessageCircle,
+  Globe,
+  X,
+  Send,
+  Sparkles,
 } from 'lucide-react';
 import KnowledgeBaseManager from './KnowledgeBaseManager';
 
@@ -44,6 +48,8 @@ interface ChatSettingsConfig {
     interval_hours: number;
     max_daily_messages: number;
   };
+  web_scraping_enabled: boolean;
+  web_scraping_urls: string[];
 }
 
 // ── Types ────────────────────────────────────────────────────────
@@ -150,6 +156,8 @@ const DEFAULT_CHAT_SETTINGS: ChatSettingsConfig = {
   typing_indicator: true,
   waba_typing_indicator: true,
   campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
+  web_scraping_enabled: false,
+  web_scraping_urls: [],
 };
 
 async function fetchChatSettings(): Promise<ChatSettingsConfig> {
@@ -177,11 +185,16 @@ async function fetchChatSettings(): Promise<ChatSettingsConfig> {
     } catch { /* ignore */ }
   }
 
+  const wabaMeta: Record<string, any> =
+    wabaRaw.metadata && typeof wabaRaw.metadata === 'object' ? wabaRaw.metadata : {};
+
   return {
     knowledge_base: personalRaw.knowledge_base ?? '',
     typing_indicator: personalRaw.typing_indicator !== false,
     waba_typing_indicator: wabaRaw.typing_indicator !== false,
     campaign_frequency: personalRaw.campaign_frequency ?? DEFAULT_CHAT_SETTINGS.campaign_frequency,
+    web_scraping_enabled: Boolean(wabaMeta.web_scraping_enabled),
+    web_scraping_urls: Array.isArray(wabaMeta.web_scraping_urls) ? wabaMeta.web_scraping_urls : [],
   };
 }
 
@@ -273,6 +286,32 @@ export function ChatSettings() {
   const [newPromptName, setNewPromptName] = useState('');
   const [newPromptText, setNewPromptText] = useState('');
   const [creatingPrompt, setCreatingPrompt] = useState(false);
+
+  // Web scraping state
+  const [newWebUrl, setNewWebUrl] = useState('');
+  const [webScrapingSaving, setWebScrapingSaving] = useState(false);
+  const [webScrapingDiagnostics, setWebScrapingDiagnostics] = useState<
+    Array<{
+      url: string;
+      ok: boolean;
+      chars: number;
+      error: string | null;
+      status: number | null;
+      content_type: string | null;
+      method?: string | null;
+      auto_discovered?: boolean;
+      discovered_from?: string | null;
+      discovery_method?: string | null;
+    }>
+  >([]);
+
+  // Web scraping test chat state — Claude-powered preview against scraped content
+  const [showWebTestChat, setShowWebTestChat] = useState(false);
+  const [webChatInput, setWebChatInput] = useState('');
+  const [webChatBusy, setWebChatBusy] = useState(false);
+  const [webChatMessages, setWebChatMessages] = useState<
+    { role: 'user' | 'assistant'; content: string; sources?: string[] }[]
+  >([]);
 
   // LinkedIn automation settings
   const [linkedinAutomation, setLinkedinAutomation] = useState({
@@ -463,6 +502,97 @@ export function ChatSettings() {
       setSavingLinkedinAutomation(false);
     }
   }, [linkedinAutomation, showToast]);
+
+  const handleSaveWebScraping = useCallback(async () => {
+    setWebScrapingSaving(true);
+    try {
+      const res = await fetch('/api/whatsapp-conversations/chat-settings/web-scraping', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: chatSettings.web_scraping_enabled,
+          urls: chatSettings.web_scraping_urls,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        const diagnostics = Array.isArray(data?.scraping_diagnostics) ? data.scraping_diagnostics : [];
+        setWebScrapingDiagnostics(diagnostics);
+
+        const okCount = diagnostics.filter((d: any) => d.ok).length;
+        const failCount = diagnostics.length - okCount;
+        const totalChars = data?.scraped_chars ?? 0;
+
+        if (chatSettings.web_scraping_urls.length === 0) {
+          showToast('Website settings saved', 'success');
+        } else if (okCount > 0 && failCount === 0) {
+          showToast(`Scraped ${okCount} URL${okCount > 1 ? 's' : ''} (${totalChars} chars)`, 'success');
+        } else if (okCount > 0 && failCount > 0) {
+          showToast(`Scraped ${okCount}/${diagnostics.length} URLs — see diagnostics below`, 'success');
+        } else {
+          showToast('No content extracted — see diagnostics below', 'error');
+        }
+      } else {
+        const errMsg = data?.detail || `HTTP ${res.status}`;
+        showToast(`Failed to save: ${errMsg}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Failed to save: ${err?.message || 'network error'}`, 'error');
+    } finally {
+      setWebScrapingSaving(false);
+    }
+  }, [chatSettings.web_scraping_enabled, chatSettings.web_scraping_urls, showToast]);
+
+  const handleWebTestChatSend = useCallback(async () => {
+    const text = webChatInput.trim();
+    if (!text || webChatBusy) return;
+
+    // Build the history payload from prior turns BEFORE we mutate state
+    const historyForApi = webChatMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    setWebChatMessages((prev) => [...prev, { role: 'user', content: text }]);
+    setWebChatInput('');
+    setWebChatBusy(true);
+
+    try {
+      const res = await fetch(
+        '/api/whatsapp-conversations/chat-settings/web-scraping/test-chat',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history: historyForApi }),
+        },
+      );
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const errMsg = data?.detail || data?.error || `HTTP ${res.status}`;
+        setWebChatMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `Error: ${errMsg}` },
+        ]);
+      } else {
+        setWebChatMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data?.answer || '(no response)',
+            sources: Array.isArray(data?.sources) ? data.sources : undefined,
+          },
+        ]);
+      }
+    } catch (err: any) {
+      setWebChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `Error: ${err?.message || 'Request failed'}` },
+      ]);
+    } finally {
+      setWebChatBusy(false);
+    }
+  }, [webChatInput, webChatBusy, webChatMessages]);
 
   const updateStage = useCallback(
     (stage: keyof FollowupTimingConfig['stages'], field: 'enabled' | 'delay_hours', value: boolean | number) => {
@@ -686,6 +816,303 @@ export function ChatSettings() {
         <KnowledgeBaseManager />
       </div>
 
+      {/* ── Section 2.5: Company Website Context ─────────────────── */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Company Website Context</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Let the AI answer WhatsApp questions using content from your website or blog pages.
+            URLs are scraped once when you save and the text is cached — no live requests on each reply.
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Enable Website Context</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                When ON, scraped website content is included in every WhatsApp AI reply
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                setChatSettings((prev) => ({
+                  ...prev,
+                  web_scraping_enabled: !prev.web_scraping_enabled,
+                }))
+              }
+              title={chatSettings.web_scraping_enabled ? 'On — click to disable' : 'Off — click to enable'}
+            >
+              {chatSettings.web_scraping_enabled ? (
+                <ToggleRight className="h-6 w-6 text-teal-600" />
+              ) : (
+                <ToggleLeft className="h-6 w-6 text-gray-300" />
+              )}
+            </button>
+          </div>
+
+          {/* URL list */}
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-2">Website URLs</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Add your company website homepage, about page, pricing page, blog, FAQ, etc.
+            </p>
+
+            {chatSettings.web_scraping_urls.length > 0 && (
+              <div className="mb-3 border border-gray-100 rounded-lg divide-y divide-gray-100 overflow-hidden">
+                {chatSettings.web_scraping_urls.map((url, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-3 py-2.5 bg-white hover:bg-gray-50">
+                    <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                      <Globe className="h-3.5 w-3.5 text-teal-500 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">{url}</span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setChatSettings((prev) => ({
+                          ...prev,
+                          web_scraping_urls: prev.web_scraping_urls.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      className="ml-2 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded flex-shrink-0 transition-colors"
+                      title="Remove URL"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add URL input */}
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://yourcompany.com/about"
+                value={newWebUrl}
+                onChange={(e) => setNewWebUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const u = newWebUrl.trim();
+                    if (u && (u.startsWith('http://') || u.startsWith('https://')) &&
+                        !chatSettings.web_scraping_urls.includes(u)) {
+                      setChatSettings((prev) => ({
+                        ...prev,
+                        web_scraping_urls: [...prev.web_scraping_urls, u],
+                      }));
+                      setNewWebUrl('');
+                    }
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400"
+              />
+              <button
+                onClick={() => {
+                  const u = newWebUrl.trim();
+                  if (!u) return;
+                  if (!u.startsWith('http://') && !u.startsWith('https://')) return;
+                  if (chatSettings.web_scraping_urls.includes(u)) return;
+                  setChatSettings((prev) => ({
+                    ...prev,
+                    web_scraping_urls: [...prev.web_scraping_urls, u],
+                  }));
+                  setNewWebUrl('');
+                }}
+                disabled={
+                  !newWebUrl.trim() ||
+                  (!newWebUrl.trim().startsWith('http://') && !newWebUrl.trim().startsWith('https://'))
+                }
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 border border-teal-200 bg-teal-50 rounded-md hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">Press Enter or click Add. Must start with https://</p>
+          </div>
+
+          {/* Per-URL scrape diagnostics — appears after Save & Scrape */}
+          {webScrapingDiagnostics.length > 0 && (
+            <div className="border border-gray-100 rounded-lg overflow-hidden">
+              <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-600 uppercase tracking-wider flex items-center justify-between">
+                <span>Last Scrape Result</span>
+                <span className="text-gray-400 normal-case tracking-normal">
+                  {webScrapingDiagnostics.filter((d) => d.ok).length} / {webScrapingDiagnostics.length} pages scraped
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {webScrapingDiagnostics.map((d, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start justify-between px-3 py-2.5 gap-3 ${
+                      d.auto_discovered ? 'pl-8 bg-gray-50/30' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
+                      {d.ok ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs text-gray-700 truncate" title={d.url}>{d.url}</p>
+                          {d.auto_discovered && (
+                            <span
+                              className="text-[10px] uppercase tracking-wider text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded font-medium"
+                              title={
+                                d.discovery_method === 'sitemap'
+                                  ? `Auto-discovered from sitemap.xml of ${d.discovered_from}`
+                                  : `Auto-discovered from links on ${d.discovered_from}`
+                              }
+                            >
+                              auto · {d.discovery_method === 'sitemap' ? 'sitemap' : 'links'}
+                            </span>
+                          )}
+                        </div>
+                        {d.ok ? (
+                          <p className="text-[11px] text-green-600 mt-0.5">
+                            ✓ {d.chars.toLocaleString()} chars extracted
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-red-600 mt-0.5">
+                            {d.error || 'Failed'}
+                            {d.status ? ` (HTTP ${d.status})` : ''}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-2 gap-2">
+            <button
+              onClick={() => setShowWebTestChat((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 border border-teal-200 bg-white rounded-md hover:bg-teal-50 transition-colors"
+              title="Preview how the AI answers using your scraped website content"
+            >
+              <Sparkles className="h-4 w-4" />
+              {showWebTestChat ? 'Hide Test Chat' : 'Test Chat'}
+            </button>
+            <button
+              onClick={handleSaveWebScraping}
+              disabled={webScrapingSaving}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            >
+              {webScrapingSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {webScrapingSaving ? 'Scraping & saving…' : 'Save & Scrape'}
+            </button>
+          </div>
+
+          {/* Test Chat panel — Claude-powered preview against cached scraped content */}
+          {showWebTestChat && (
+            <div className="mt-4 border border-teal-200 rounded-xl overflow-hidden bg-slate-50/40">
+              <div className="px-4 py-2.5 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-teal-600" />
+                  <span className="text-sm font-medium text-teal-900">
+                    Test against scraped content
+                  </span>
+                </div>
+                {webChatMessages.length > 0 && (
+                  <button
+                    onClick={() => setWebChatMessages([])}
+                    className="text-xs text-teal-700 hover:text-teal-900 font-medium"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[360px] overflow-y-auto p-4 space-y-3">
+                {webChatMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+                    <Sparkles className="h-7 w-7 mb-2 opacity-50" />
+                    <p className="text-xs text-center max-w-xs">
+                      Ask a question to see how the AI answers it using only your scraped website content.
+                      Save & Scrape first if you haven&apos;t yet.
+                    </p>
+                  </div>
+                ) : (
+                  webChatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`flex flex-col w-fit max-w-[85%] ${
+                        msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'
+                      }`}
+                    >
+                      <div
+                        className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                          msg.role === 'user'
+                            ? 'bg-teal-600 text-white rounded-br-sm'
+                            : 'bg-white border border-slate-200 text-slate-700 rounded-bl-sm shadow-sm'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                      {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-1 px-1 text-[10px] text-slate-400 flex flex-wrap gap-1">
+                          <span className="font-semibold uppercase tracking-wider">Sources:</span>
+                          {msg.sources.map((s, idx) => (
+                            <span key={idx} className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 truncate max-w-[200px]" title={s}>
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+                {webChatBusy && (
+                  <div className="flex w-fit max-w-[85%] mr-auto">
+                    <div className="px-3.5 py-2 bg-white border border-slate-200 text-slate-500 rounded-2xl rounded-bl-sm shadow-sm text-sm flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking…
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 border-t border-teal-200 bg-white">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ask a customer-style question…"
+                    value={webChatInput}
+                    onChange={(e) => setWebChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleWebTestChatSend();
+                      }
+                    }}
+                    disabled={webChatBusy}
+                    className="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400 disabled:opacity-60"
+                  />
+                  <button
+                    onClick={handleWebTestChatSend}
+                    disabled={!webChatInput.trim() || webChatBusy}
+                    className="flex items-center justify-center h-9 w-9 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Send"
+                  >
+                    {webChatBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Section 3: Chat Behaviour ────────────────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
@@ -713,7 +1140,7 @@ export function ChatSettings() {
                   <span className="h-2 w-2 rounded-full bg-emerald-400 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-gray-800">Personal WhatsApp</p>
-                    <p className="text-xs text-gray-500">Sends Baileys composing presence to the contact</p>
+                    <p className="text-xs text-gray-500">Shows a "typing…" presence to the contact while replying</p>
                   </div>
                 </div>
                 <button
@@ -736,7 +1163,7 @@ export function ChatSettings() {
                   <span className="h-2 w-2 rounded-full bg-green-500 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-gray-800">WhatsApp Business API</p>
-                    <p className="text-xs text-gray-500">Sends read receipt + typing bubble via Meta Graph API</p>
+                    <p className="text-xs text-gray-500">Sends a read receipt and shows a typing bubble while replying</p>
                   </div>
                 </div>
                 <button
@@ -875,7 +1302,7 @@ export function ChatSettings() {
           </div>
           <p className="text-sm text-gray-500">
             Configure when automated follow-up messages are sent after a conversation ends.
-            Each stage fires once via Cloud Tasks at the scheduled delay.
+            Each stage fires once at the scheduled delay.
           </p>
         </div>
         <div className="p-6 space-y-5">
@@ -986,14 +1413,11 @@ export function ChatSettings() {
             </div>
           </div>
 
-          {/* Cloud Tasks indicator */}
+          {/* Reliability indicator */}
           <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-md border border-indigo-100">
             <Zap className="h-4 w-4 text-indigo-500 flex-shrink-0" />
             <p className="text-xs text-indigo-700">
-              Follow-ups are scheduled via{' '}
-              <span className="font-medium">GCP Cloud Tasks</span> when configured,
-              ensuring reliable delivery even if the server restarts. Falls back to
-              DB polling in local dev.
+              Follow-ups are delivered reliably even if the server restarts.
             </p>
           </div>
 

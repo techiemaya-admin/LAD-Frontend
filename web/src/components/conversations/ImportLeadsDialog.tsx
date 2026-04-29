@@ -18,6 +18,8 @@ import {
   FolderPlus,
   TriangleAlert,
   RefreshCw,
+  Globe,
+  Sparkles,
 } from 'lucide-react';
 import { Workbook } from 'exceljs';
 import { Button } from '@/components/ui/button';
@@ -58,7 +60,9 @@ interface ImportLeadsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
-  channel?: 'personal' | 'waba';
+  channel?: 'personal' | 'waba' | 'gmail' | 'outlook';
+  /** If provided (email mode), imported contacts are also added to this email group */
+  emailGroupId?: string;
 }
 
 const EMPTY_LEAD: Omit<LeadEntry, 'id'> = {
@@ -92,6 +96,7 @@ const CHANNEL_ICONS: Record<string, { icon: typeof Phone; color: string; label: 
 };
 
 const API_BASE = '/api/whatsapp-conversations';
+const EMAIL_API = '/api/email-conversations';
 
 // ── Validation ───────────────────────────────────────────────────
 
@@ -200,7 +205,9 @@ function autoFixPhone(phone: string, countryCode: string): string {
 
 // ── Component ────────────────────────────────────────────────────
 
-export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channel }: ImportLeadsDialogProps) {
+export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channel, emailGroupId }: ImportLeadsDialogProps) {
+  // Email mode: channel is 'gmail' or 'outlook'
+  const isEmailMode = channel === 'gmail' || channel === 'outlook';
   const [activeTab, setActiveTab] = useState('single');
   const [leads, setLeads] = useState<LeadEntry[]>([newLead()]);
   const [groups, setGroups] = useState<ChatGroup[]>([]);
@@ -230,6 +237,12 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
   // Run in background: close dialog immediately and import continues without blocking the UI
   const [runInBackground, setRunInBackground] = useState(false);
 
+  // URL-scrape state
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [scraping, setScraping] = useState(false);
+  const [scrapeError, setScrapeError] = useState('');
+  const [scrapeStats, setScrapeStats] = useState<{ extracted: number; chars: number } | null>(null);
+
   // Compute validation errors for all leads
   const validationErrors = useMemo<Record<string, Record<string, string>>>(() => {
     const result: Record<string, Record<string, string>> = {};
@@ -250,21 +263,28 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
   const invalidCount = invalidLeadIds.size;
 
-  // Load chat groups when dialog opens
+  // Load chat groups / email groups when dialog opens
   useEffect(() => {
     if (!open) return;
-    const channelParam = channel === 'personal' ? '?channel=personal' : '';
-    fetch(`${API_BASE}/chat-groups${channelParam}`, {
-      headers: {
-        'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
-      },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setGroups(data.data || []);
+    if (isEmailMode) {
+      // Email mode: load email broadcast groups
+      fetch(`${EMAIL_API}/groups?channel=${channel}`, {
+        headers: { 'Authorization': `Bearer ${safeStorage.getItem('token') || ''}` },
       })
-      .catch(() => {});
-  }, [open, channel]);
+        .then((r) => r.json())
+        .then((data) => { if (data.success) setGroups(data.data || []); })
+        .catch(() => {});
+    } else {
+      // WhatsApp mode: load chat groups
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      fetch(`${API_BASE}/chat-groups${channelParam}`, {
+        headers: { 'Authorization': `Bearer ${safeStorage.getItem('token') || ''}` },
+      })
+        .then((r) => r.json())
+        .then((data) => { if (data.success) setGroups(data.data || []); })
+        .catch(() => {});
+    }
+  }, [open, channel, isEmailMode]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -282,6 +302,10 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
       setBroadcastCreateError('');
       setSelectedIds(new Set());
       setRunInBackground(false);
+      setScrapeUrl('');
+      setScraping(false);
+      setScrapeError('');
+      setScrapeStats(null);
     }
   }, [open]);
 
@@ -522,9 +546,71 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     }
   }, []);
 
+  // URL Scrape — pull contacts from a webpage and pre-fill the lead list
+  const handleScrapeUrl = useCallback(async () => {
+    const url = scrapeUrl.trim();
+    if (!url) {
+      setScrapeError('Please enter a URL');
+      return;
+    }
+    if (!/^https?:\/\/.+/i.test(url)) {
+      setScrapeError('URL must start with http:// or https://');
+      return;
+    }
+
+    setScraping(true);
+    setScrapeError('');
+    setScrapeStats(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/leads/scrape`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setScrapeError(data.error || data.detail || `Failed (${res.status})`);
+        return;
+      }
+
+      const extracted: any[] = data.data?.leads || [];
+      if (extracted.length === 0) {
+        setScrapeError('No contacts found on that page. Try a different URL or one with a member/team list.');
+        return;
+      }
+
+      const newLeads: LeadEntry[] = extracted.map((c) => ({
+        id: crypto.randomUUID(),
+        name: String(c.name || '').trim(),
+        phone: String(c.phone || '').trim(),
+        email: String(c.email || '').trim(),
+        company: String(c.company || '').trim(),
+        linkedin_url: String(c.linkedin_url || '').trim(),
+        instagram_url: String(c.instagram_url || '').trim(),
+        source: String(c.source || '').trim() || 'url_scrape',
+      }));
+
+      setLeads(newLeads);
+      setSelectedIds(new Set());
+      setScrapeStats({ extracted: newLeads.length, chars: data.data?.scraped_chars || 0 });
+      setActiveTab('single'); // jump to review list so user can edit before importing
+    } catch (err) {
+      setScrapeError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setScraping(false);
+    }
+  }, [scrapeUrl]);
+
   // Import — blocked when there are validation errors
   const handleImport = useCallback(async () => {
-    const validLeads = leads.filter((l) => l.name.trim());
+    const validLeads = isEmailMode
+      ? leads.filter((l) => l.name.trim() && l.email.trim())
+      : leads.filter((l) => l.name.trim());
     if (validLeads.length === 0) return;
 
     // Block if any validation errors remain
@@ -536,13 +622,67 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     setImporting(true);
     setImportResult(null);
 
-    // If "Run in background" is checked, close the dialog immediately and let
-    // the fetch finish without blocking the UI.
-    if (runInBackground) {
-      onOpenChange(false);
-    }
+    if (runInBackground) { onOpenChange(false); }
 
     try {
+      // ── Email mode ─────────────────────────────────────────────────────────
+      if (isEmailMode) {
+        const res = await fetch(`${EMAIL_API}/contacts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+          },
+          body: JSON.stringify({
+            contacts: validLeads.map((l) => ({
+              name: l.name.trim(),
+              email: l.email.trim(),
+              company: l.company.trim() || null,
+            })),
+            channel,
+            ...(emailGroupId ? { group_id: emailGroupId } : {}),
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          // If group assignment requested and we have contact_ids, add them to the group
+          if (emailGroupId && data.data?.contact_ids?.length > 0) {
+            try {
+              await fetch(`${EMAIL_API}/groups/${emailGroupId}/contacts`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${safeStorage.getItem('token') || ''}`,
+                },
+                body: JSON.stringify({ contact_ids: data.data.contact_ids }),
+              });
+            } catch { /* non-fatal */ }
+          }
+          if (runInBackground) {
+            onImportComplete();
+          } else {
+            setImportResult({
+              success: true,
+              imported: data.data.imported ?? validLeads.length,
+              conversations: 0,
+              errors: (data.data.errors || []).map((e: any) => ({ name: e.name || e.email || 'Contact', error: e.error })),
+              skipped: data.data.skipped ? [{ name: `${data.data.skipped} contact(s)`, reason: 'missing name or email' }] : [],
+              conversationIds: [],
+            });
+          }
+        } else {
+          if (!runInBackground) {
+            setImportResult({
+              success: false, imported: 0, conversations: 0,
+              errors: [{ name: 'Import', error: data.error || data.detail || 'Unknown error' }],
+              skipped: [],
+            });
+          }
+        }
+        return;
+      }
+
+      // ── WhatsApp mode ──────────────────────────────────────────────────────
       const channelParam = channel === 'personal' ? '?channel=personal' : '';
       const res = await fetch(`${API_BASE}/leads/import${channelParam}`, {
         method: 'POST',
@@ -567,7 +707,6 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
       const data = await res.json();
       if (data.success) {
         if (runInBackground) {
-          // Dialog already closed — just fire the refresh callback
           onImportComplete();
         } else {
           setImportResult({
@@ -578,14 +717,11 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
             skipped: data.data.skipped || [],
             conversationIds: data.data.conversation_ids || [],
           });
-          // Don't auto-close — wait for user to create broadcast or skip
         }
       } else {
         if (!runInBackground) {
           setImportResult({
-            success: false,
-            imported: 0,
-            conversations: 0,
+            success: false, imported: 0, conversations: 0,
             errors: [{ name: 'Import', error: data.error || 'Unknown error' }],
             skipped: [],
           });
@@ -594,9 +730,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     } catch (err) {
       if (!runInBackground) {
         setImportResult({
-          success: false,
-          imported: 0,
-          conversations: 0,
+          success: false, imported: 0, conversations: 0,
           errors: [{ name: 'Import', error: String(err) }],
           skipped: [],
         });
@@ -604,7 +738,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     } finally {
       setImporting(false);
     }
-  }, [leads, selectedGroupIds, onImportComplete, onOpenChange, invalidCount, invalidLeadIds, runInBackground, channel]);
+  }, [leads, selectedGroupIds, onImportComplete, onOpenChange, invalidCount, invalidLeadIds, runInBackground, channel, isEmailMode, emailGroupId]);
 
   const handleAddToExistingGroups = useCallback(async () => {
     if (postImportGroupIds.size === 0) return;
@@ -639,7 +773,9 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     }
   }, [leads, postImportGroupIds, channel, onImportComplete, onOpenChange]);
 
-  const validCount = leads.filter((l) => l.name.trim()).length;
+  const validCount = isEmailMode
+    ? leads.filter((l) => l.name.trim() && l.email.trim()).length
+    : leads.filter((l) => l.name.trim()).length;
   const hasValidationErrors = invalidCount > 0;
   const allInvalidSelected = invalidCount > 0 && invalidLeadIds.size === selectedIds.size &&
     [...invalidLeadIds].every((id) => selectedIds.has(id));
@@ -650,7 +786,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <UserPlus className="h-5 w-5" />
-            Import Leads
+            {isEmailMode ? 'Import Email Contacts' : 'Import Leads'}
           </DialogTitle>
         </DialogHeader>
 
@@ -664,6 +800,12 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Excel Upload
             </TabsTrigger>
+            {!isEmailMode && (
+              <TabsTrigger value="url" className="text-xs gap-1.5">
+                <Globe className="h-3.5 w-3.5" />
+                Scrape from URL
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* ── Excel Upload Tab ─────────────────────── */}
@@ -702,6 +844,86 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
             </div>
           </TabsContent>
 
+          {/* ── URL Scrape Tab ───────────────────────── */}
+          <TabsContent value="url" className="px-4 py-3 flex-1">
+            <div className="border-2 border-dashed border-border rounded-xl p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium mb-0.5">Extract contacts from any webpage</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paste a URL — member directories, team pages, chapter listings, etc. We'll fetch the
+                    page (JavaScript-rendered pages supported) and use AI to pull out names, phones,
+                    emails, companies, and social profiles.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mb-3">
+                <div className="relative flex-1">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="https://example.com/team or member directory URL"
+                    value={scrapeUrl}
+                    onChange={(e) => { setScrapeUrl(e.target.value); setScrapeError(''); }}
+                    disabled={scraping}
+                    className="pl-9 h-9 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !scraping && scrapeUrl.trim()) {
+                        handleScrapeUrl();
+                      }
+                    }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleScrapeUrl}
+                  disabled={scraping || !scrapeUrl.trim()}
+                  className="gap-1.5 shrink-0"
+                >
+                  {scraping ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Scraping...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Scrape &amp; Extract
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {scraping && (
+                <div className="text-xs text-muted-foreground italic">
+                  Fetching the page and extracting contacts — this can take 20–45 seconds for
+                  JavaScript-heavy pages.
+                </div>
+              )}
+
+              {scrapeError && (
+                <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{scrapeError}</span>
+                </div>
+              )}
+
+              {scrapeStats && !scrapeError && (
+                <div className="flex items-start gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg p-2.5">
+                  <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Extracted <strong>{scrapeStats.extracted}</strong> contact{scrapeStats.extracted !== 1 ? 's' : ''}
+                    {scrapeStats.chars > 0 && ` from ${scrapeStats.chars.toLocaleString()} chars of page content`}.
+                    Switched to the Add Leads tab — review and edit before importing.
+                  </span>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
           {/* ── Single/List Add Tab ────────────────── */}
           <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-4 py-2">
             <div className="flex-1 min-h-0 overflow-y-auto pr-2">
@@ -717,6 +939,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     onRemove={removeLead}
                     onToggleSelect={toggleSelectLead}
                     canRemove={leads.length > 1}
+                    isEmailMode={isEmailMode}
                   />
                 ))}
               </div>
@@ -791,7 +1014,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         )}
 
         {/* ── Broadcast Assignment (pre-import only) ──────────────── */}
-        {groups.length > 0 && !importResult?.success && (
+        {groups.length > 0 && !importResult?.success && !isEmailMode && (
           <div className="px-4 py-3 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
               Assign to Broadcasts
@@ -1112,11 +1335,14 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   </span>
                 ) : (
                   <>
-                    {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
-                    {selectedGroupIds.size > 0 && (
+                    {validCount} {isEmailMode ? 'contact' : 'lead'}{validCount !== 1 ? 's' : ''} ready to import
+                    {!isEmailMode && selectedGroupIds.size > 0 && (
                       <span className="ml-1">
                         into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
                       </span>
+                    )}
+                    {isEmailMode && emailGroupId && (
+                      <span className="ml-1">into group</span>
                     )}
                   </>
                 )}
@@ -1134,7 +1360,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   {importing ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Importing {validCount} Lead{validCount !== 1 ? 's' : ''}...
+                      Importing {validCount} {isEmailMode ? 'Contact' : 'Lead'}{validCount !== 1 ? 's' : ''}...
                     </>
                   ) : runInBackground ? (
                     <>
@@ -1144,7 +1370,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   ) : (
                     <>
                       <UserPlus className="h-3.5 w-3.5" />
-                      Import {validCount} Lead{validCount !== 1 ? 's' : ''}
+                      Import {validCount} {isEmailMode ? 'Contact' : 'Lead'}{validCount !== 1 ? 's' : ''}
                     </>
                   )}
                 </Button>
@@ -1181,9 +1407,10 @@ interface LeadRowProps {
   onRemove: (id: string) => void;
   onToggleSelect: (id: string) => void;
   canRemove: boolean;
+  isEmailMode?: boolean;
 }
 
-function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggleSelect, canRemove }: LeadRowProps) {
+function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggleSelect, canRemove, isEmailMode }: LeadRowProps) {
   const channels = detectChannels(lead);
   const hasErrors = Object.keys(errors).length > 0;
 
@@ -1269,93 +1496,120 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
         </div>
       </div>
 
-      {/* Row 2: Phone + Email */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <div className="space-y-1">
-          <div className="relative">
-            <Phone className={cn(
-              'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
-              errors.phone ? 'text-red-400' : 'text-green-500'
-            )} />
-            <Input
-              placeholder="+971501234567"
-              value={lead.phone}
-              onChange={(e) => onUpdate(lead.id, 'phone', e.target.value)}
-              className={cn(
-                'h-8 text-sm pl-8',
-                errors.phone && 'border-red-400 focus-visible:ring-red-300'
-              )}
-            />
+      {/* Row 2: Phone + Email  (email mode shows only Email, full-width) */}
+      {isEmailMode ? (
+        <div className="mb-2">
+          <div className="space-y-1">
+            <div className="relative">
+              <Mail className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
+                errors.email ? 'text-red-400' : 'text-orange-400'
+              )} />
+              <Input
+                placeholder="Email *"
+                value={lead.email}
+                onChange={(e) => onUpdate(lead.id, 'email', e.target.value)}
+                className={cn(
+                  'h-8 text-sm pl-8',
+                  errors.email && 'border-red-400 focus-visible:ring-red-300'
+                )}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.email}</p>
+            )}
           </div>
-          {errors.phone && (
-            <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.phone}</p>
-          )}
         </div>
-        <div className="space-y-1">
-          <div className="relative">
-            <Mail className={cn(
-              'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
-              errors.email ? 'text-red-400' : 'text-orange-400'
-            )} />
-            <Input
-              placeholder="Email"
-              value={lead.email}
-              onChange={(e) => onUpdate(lead.id, 'email', e.target.value)}
-              className={cn(
-                'h-8 text-sm pl-8',
-                errors.email && 'border-red-400 focus-visible:ring-red-300'
-              )}
-            />
+      ) : (
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="space-y-1">
+            <div className="relative">
+              <Phone className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
+                errors.phone ? 'text-red-400' : 'text-green-500'
+              )} />
+              <Input
+                placeholder="+971501234567"
+                value={lead.phone}
+                onChange={(e) => onUpdate(lead.id, 'phone', e.target.value)}
+                className={cn(
+                  'h-8 text-sm pl-8',
+                  errors.phone && 'border-red-400 focus-visible:ring-red-300'
+                )}
+              />
+            </div>
+            {errors.phone && (
+              <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.phone}</p>
+            )}
           </div>
-          {errors.email && (
-            <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.email}</p>
-          )}
+          <div className="space-y-1">
+            <div className="relative">
+              <Mail className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
+                errors.email ? 'text-red-400' : 'text-orange-400'
+              )} />
+              <Input
+                placeholder="Email"
+                value={lead.email}
+                onChange={(e) => onUpdate(lead.id, 'email', e.target.value)}
+                className={cn(
+                  'h-8 text-sm pl-8',
+                  errors.email && 'border-red-400 focus-visible:ring-red-300'
+                )}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.email}</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Row 3: LinkedIn + Instagram */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <div className="relative">
-            <Linkedin className={cn(
-              'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
-              errors.linkedin_url ? 'text-red-400' : 'text-blue-600'
-            )} />
-            <Input
-              placeholder="linkedin.com/in/..."
-              value={lead.linkedin_url}
-              onChange={(e) => onUpdate(lead.id, 'linkedin_url', e.target.value)}
-              className={cn(
-                'h-8 text-sm pl-8',
-                errors.linkedin_url && 'border-red-400 focus-visible:ring-red-300'
-              )}
-            />
+      {/* Row 3: LinkedIn + Instagram — hidden in email mode */}
+      {!isEmailMode && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <div className="relative">
+              <Linkedin className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
+                errors.linkedin_url ? 'text-red-400' : 'text-blue-600'
+              )} />
+              <Input
+                placeholder="linkedin.com/in/..."
+                value={lead.linkedin_url}
+                onChange={(e) => onUpdate(lead.id, 'linkedin_url', e.target.value)}
+                className={cn(
+                  'h-8 text-sm pl-8',
+                  errors.linkedin_url && 'border-red-400 focus-visible:ring-red-300'
+                )}
+              />
+            </div>
+            {errors.linkedin_url && (
+              <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.linkedin_url}</p>
+            )}
           </div>
-          {errors.linkedin_url && (
-            <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.linkedin_url}</p>
-          )}
-        </div>
-        <div className="space-y-1">
-          <div className="relative">
-            <Instagram className={cn(
-              'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
-              errors.instagram_url ? 'text-red-400' : 'text-pink-500'
-            )} />
-            <Input
-              placeholder="@handle or instagram.com/..."
-              value={lead.instagram_url}
-              onChange={(e) => onUpdate(lead.id, 'instagram_url', e.target.value)}
-              className={cn(
-                'h-8 text-sm pl-8',
-                errors.instagram_url && 'border-red-400 focus-visible:ring-red-300'
-              )}
-            />
+          <div className="space-y-1">
+            <div className="relative">
+              <Instagram className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5',
+                errors.instagram_url ? 'text-red-400' : 'text-pink-500'
+              )} />
+              <Input
+                placeholder="@handle or instagram.com/..."
+                value={lead.instagram_url}
+                onChange={(e) => onUpdate(lead.id, 'instagram_url', e.target.value)}
+                className={cn(
+                  'h-8 text-sm pl-8',
+                  errors.instagram_url && 'border-red-400 focus-visible:ring-red-300'
+                )}
+              />
+            </div>
+            {errors.instagram_url && (
+              <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.instagram_url}</p>
+            )}
           </div>
-          {errors.instagram_url && (
-            <p className="text-[10px] text-red-500 leading-tight pl-1">{errors.instagram_url}</p>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
