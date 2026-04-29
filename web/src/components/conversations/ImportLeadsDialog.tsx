@@ -17,6 +17,7 @@ import {
   Download,
   FolderPlus,
   TriangleAlert,
+  RefreshCw,
 } from 'lucide-react';
 import { Workbook } from 'exceljs';
 import { Button } from '@/components/ui/button';
@@ -226,6 +227,9 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
   // Multi-select state for bulk-delete
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Run in background: close dialog immediately and import continues without blocking the UI
+  const [runInBackground, setRunInBackground] = useState(false);
+
   // Compute validation errors for all leads
   const validationErrors = useMemo<Record<string, Record<string, string>>>(() => {
     const result: Record<string, Record<string, string>> = {};
@@ -277,6 +281,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
       setCreatingBroadcast(false);
       setBroadcastCreateError('');
       setSelectedIds(new Set());
+      setRunInBackground(false);
     }
   }, [open]);
 
@@ -531,6 +536,12 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     setImporting(true);
     setImportResult(null);
 
+    // If "Run in background" is checked, close the dialog immediately and let
+    // the fetch finish without blocking the UI.
+    if (runInBackground) {
+      onOpenChange(false);
+    }
+
     try {
       const channelParam = channel === 'personal' ? '?channel=personal' : '';
       const res = await fetch(`${API_BASE}/leads/import${channelParam}`, {
@@ -555,36 +566,45 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
       const data = await res.json();
       if (data.success) {
-        setImportResult({
-          success: true,
-          imported: data.data.imported,
-          conversations: data.data.conversations_created,
-          errors: data.data.errors || [],
-          skipped: data.data.skipped || [],
-          conversationIds: data.data.conversation_ids || [],
-        });
-        // Don't auto-close — wait for user to create broadcast or skip
+        if (runInBackground) {
+          // Dialog already closed — just fire the refresh callback
+          onImportComplete();
+        } else {
+          setImportResult({
+            success: true,
+            imported: data.data.imported,
+            conversations: data.data.conversations_created,
+            errors: data.data.errors || [],
+            skipped: data.data.skipped || [],
+            conversationIds: data.data.conversation_ids || [],
+          });
+          // Don't auto-close — wait for user to create broadcast or skip
+        }
       } else {
+        if (!runInBackground) {
+          setImportResult({
+            success: false,
+            imported: 0,
+            conversations: 0,
+            errors: [{ name: 'Import', error: data.error || 'Unknown error' }],
+            skipped: [],
+          });
+        }
+      }
+    } catch (err) {
+      if (!runInBackground) {
         setImportResult({
           success: false,
           imported: 0,
           conversations: 0,
-          errors: [{ name: 'Import', error: data.error || 'Unknown error' }],
+          errors: [{ name: 'Import', error: String(err) }],
           skipped: [],
         });
       }
-    } catch (err) {
-      setImportResult({
-        success: false,
-        imported: 0,
-        conversations: 0,
-        errors: [{ name: 'Import', error: String(err) }],
-        skipped: [],
-      });
     } finally {
       setImporting(false);
     }
-  }, [leads, selectedGroupIds, onImportComplete, onOpenChange, invalidCount, invalidLeadIds]);
+  }, [leads, selectedGroupIds, onImportComplete, onOpenChange, invalidCount, invalidLeadIds, runInBackground, channel]);
 
   const handleAddToExistingGroups = useCallback(async () => {
     if (postImportGroupIds.size === 0) return;
@@ -640,49 +660,11 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
               <UserPlus className="h-3.5 w-3.5" />
               Add Leads
             </TabsTrigger>
-            <TabsTrigger value="csv" className="text-xs gap-1.5">
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              CSV Upload
-            </TabsTrigger>
             <TabsTrigger value="excel" className="text-xs gap-1.5">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Excel Upload
             </TabsTrigger>
           </TabsList>
-
-          {/* ── CSV Upload Tab ─────────────────────── */}
-          <TabsContent value="csv" className="px-4 py-3 flex-1">
-            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm font-medium mb-1">Upload CSV file</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Required: <span className="font-medium">name</span>. Optional: phone, email, company, linkedin, instagram, source
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Choose CSV File
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.txt"
-                className="hidden"
-                onChange={handleCsvUpload}
-              />
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg text-left">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Example CSV</p>
-                <code className="text-[11px] text-muted-foreground block whitespace-pre leading-relaxed">
-{`name,phone,email,company,linkedin,instagram
-John Doe,+971501234567,john@example.com,Acme Inc,linkedin.com/in/john,@johndoe
-Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
-                </code>
-              </div>
-            </div>
-          </TabsContent>
 
           {/* ── Excel Upload Tab ─────────────────────── */}
           <TabsContent value="excel" className="px-4 py-3 flex-1">
@@ -1095,45 +1077,78 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
 
         {/* ── Footer ─────────────────────────────── */}
         {!importResult?.success ? (
-          <div className="p-4 border-t border-border flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {hasValidationErrors ? (
-                <span className="text-amber-600 font-medium">
-                  Fix {invalidCount} invalid record{invalidCount !== 1 ? 's' : ''} to continue
-                </span>
-              ) : (
-                <>
-                  {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
-                  {selectedGroupIds.size > 0 && (
-                    <span className="ml-1">
-                      into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleImport}
-                disabled={importing || validCount === 0 || hasValidationErrors}
-                className="gap-1.5"
+          <div className="p-4 border-t border-border space-y-2">
+            {/* Run in background toggle — only shown when importing more than 1 lead */}
+            {validCount > 1 && !hasValidationErrors && (
+              <button
+                type="button"
+                onClick={() => setRunInBackground((v) => !v)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-colors text-left text-xs',
+                  runInBackground
+                    ? 'border-primary/40 bg-primary/5 text-primary'
+                    : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/30 hover:bg-muted/50'
+                )}
               >
-                {importing ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Importing {validCount} Lead{validCount !== 1 ? 's' : ''}...
-                  </>
+                <div className={cn(
+                  'h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors',
+                  runInBackground ? 'bg-primary border-primary text-white' : 'border-muted-foreground/40'
+                )}>
+                  {runInBackground && <Check className="h-2.5 w-2.5" />}
+                </div>
+                <RefreshCw className={cn('h-3.5 w-3.5 shrink-0', runInBackground && 'animate-spin')} />
+                <span>
+                  <span className="font-medium">Run in background</span>
+                  {' '}— close this dialog and continue importing without waiting
+                </span>
+              </button>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {hasValidationErrors ? (
+                  <span className="text-amber-600 font-medium">
+                    Fix {invalidCount} invalid record{invalidCount !== 1 ? 's' : ''} to continue
+                  </span>
                 ) : (
                   <>
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Import {validCount} Lead{validCount !== 1 ? 's' : ''}
+                    {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
+                    {selectedGroupIds.size > 0 && (
+                      <span className="ml-1">
+                        into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
+                      </span>
+                    )}
                   </>
                 )}
-              </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleImport}
+                  disabled={importing || validCount === 0 || hasValidationErrors}
+                  className="gap-1.5"
+                >
+                  {importing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Importing {validCount} Lead{validCount !== 1 ? 's' : ''}...
+                    </>
+                  ) : runInBackground ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Import &amp; Close
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Import {validCount} Lead{validCount !== 1 ? 's' : ''}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
