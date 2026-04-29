@@ -117,6 +117,11 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
   const [editorMode, setEditorMode]   = useState<EditorMode | null>(
     initialTemplate?.content_format === 'html' ? 'html' : null
   );
+  // Track which editors have ever been opened — once mounted they stay in DOM
+  // so internal state (e.g. DragDropEmailEditor blocks) is preserved across switches.
+  const [mountedEditors, setMountedEditors] = useState<Set<EditorMode>>(
+    () => new Set(initialTemplate?.content_format === 'html' ? (['html'] as EditorMode[]) : [])
+  );
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [device, setDevice]           = useState<DeviceType>('desktop');
   const [saving, setSaving]           = useState(false);
@@ -253,7 +258,9 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
 
   const handleSelectTemplate = (t: Template) => {
     setTemplate({ ...t, id: undefined, name: `${t.name} (Copy)` });
-    setEditorMode(t.content_format === 'html' ? 'html' : 'simple');
+    const targetMode: EditorMode = t.content_format === 'html' ? 'html' : 'simple';
+    setEditorMode(targetMode);
+    setMountedEditors((prev) => new Set([...prev, targetMode]));
     setActiveTab('editor');
   };
 
@@ -376,7 +383,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                     {EDITOR_OPTIONS.map(({ mode: m, label, icon }) => (
                       <button
                         key={m}
-                        onClick={() => setEditorMode(m)}
+                        onClick={() => { setEditorMode(m); setMountedEditors((prev) => new Set([...prev, m])); }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           editorMode === m
                             ? 'bg-blue-600 text-white shadow-sm'
@@ -408,7 +415,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                       {EDITOR_OPTIONS.map(({ mode: m, label, desc, icon }) => (
                         <button
                           key={m}
-                          onClick={() => setEditorMode(m)}
+                          onClick={() => { setEditorMode(m); setMountedEditors((prev) => new Set([...prev, m])); }}
                           className="w-full flex items-start gap-4 p-5 bg-white rounded-2xl border-2 border-gray-100 hover:border-blue-400 hover:shadow-md text-left transition-all group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center text-gray-500 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-0.5">
@@ -423,54 +430,69 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                     </div>
                   </div>
 
-                ) : editorMode === 'dragdrop' ? (
-                  <DragDropEmailEditor
-                    htmlContent={template.body_html || ''}
-                    subject={template.subject}
-                    onContentChange={(html) => set('body_html', html)}
-                  />
-
-                ) : editorMode === 'html' ? (
-                  <HtmlEmailEditor
-                    htmlContent={template.body_html || ''}
-                    subject={template.subject}
-                    onContentChange={(html) => set('body_html', html)}
-                  />
-
                 ) : (
-                  /* ── Simple (plain text) editor ── */
-                  <div className="space-y-4">
-                    {/* Personalisation toolbar */}
-                    <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Insert:</span>
-                      {[
-                        { label: 'First Name', val: '{{first_name}}' },
-                        { label: 'Last Name',  val: '{{last_name}}'  },
-                        { label: 'Company',    val: '{{company}}'    },
-                        { label: 'Title',      val: '{{title}}'      },
-                      ].map(({ label, val }) => (
-                        <button
-                          key={val}
-                          onClick={() => set('body', (template.body || '') + val)}
-                          className="px-3 py-1.5 text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                  /* ── Editors: mount-once, toggle visibility to preserve state ── */
+                  <div className="min-h-0">
 
-                    <textarea
-                      name="body"
-                      value={template.body ?? ''}
-                      onChange={handleInput}
-                      placeholder={`Hi {{first_name}},\n\nStart writing your email here...\n\nBest regards,\n[Your Name]`}
-                      rows={18}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white resize-y"
-                    />
-                    <p className="text-xs text-gray-400">
-                      💡 Use <code className="bg-gray-100 px-1 rounded">{'{{first_name}}'}</code>,{' '}
-                      <code className="bg-gray-100 px-1 rounded">{'{{company}}'}</code> etc. for dynamic personalisation
-                    </p>
+                    {/* Drag & Drop — stays mounted after first open */}
+                    {mountedEditors.has('dragdrop') && (
+                      <div className={editorMode === 'dragdrop' ? '' : 'hidden'}>
+                        <DragDropEmailEditor
+                          htmlContent={template.body_html || ''}
+                          subject={template.subject}
+                          onContentChange={(html) => set('body_html', html)}
+                        />
+                      </div>
+                    )}
+
+                    {/* HTML custom code — stays mounted after first open */}
+                    {mountedEditors.has('html') && (
+                      <div className={editorMode === 'html' ? '' : 'hidden'}>
+                        <HtmlEmailEditor
+                          htmlContent={template.body_html || ''}
+                          subject={template.subject}
+                          onContentChange={(html) => set('body_html', html)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Simple plain-text editor — stays mounted after first open */}
+                    {mountedEditors.has('simple') && (
+                      <div className={editorMode === 'simple' ? 'space-y-4' : 'hidden'}>
+                        {/* Personalisation toolbar */}
+                        <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Insert:</span>
+                          {[
+                            { label: 'First Name', val: '{{first_name}}' },
+                            { label: 'Last Name',  val: '{{last_name}}'  },
+                            { label: 'Company',    val: '{{company}}'    },
+                            { label: 'Title',      val: '{{title}}'      },
+                          ].map(({ label, val }) => (
+                            <button
+                              key={val}
+                              onClick={() => set('body', (template.body || '') + val)}
+                              className="px-3 py-1.5 text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <textarea
+                          name="body"
+                          value={template.body ?? ''}
+                          onChange={handleInput}
+                          placeholder={`Hi {{first_name}},\n\nStart writing your email here...\n\nBest regards,\n[Your Name]`}
+                          rows={18}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white resize-y"
+                        />
+                        <p className="text-xs text-gray-400">
+                          💡 Use <code className="bg-gray-100 px-1 rounded">{'{{first_name}}'}</code>,{' '}
+                          <code className="bg-gray-100 px-1 rounded">{'{{company}}'}</code> etc. for dynamic personalisation
+                        </p>
+                      </div>
+                    )}
+
                   </div>
                 )}
               </div>
