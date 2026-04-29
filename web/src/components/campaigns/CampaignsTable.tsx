@@ -174,9 +174,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   });
 
   return (
-    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#1a2a43] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Filters Section */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#1a2a43] bg-white dark:bg-[#000724]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#000724]">
         <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
           <div className="relative min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] dark:text-[#7a8ba3] h-4 w-4" />
@@ -247,7 +247,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             </Table>
             
             {/* Skeleton for pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#1a2a43]">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
               <div className="flex items-center gap-2">
                 <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-12"></div>
                 <div className="h-6 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-12"></div>
@@ -346,7 +346,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0] dark:border-[#1a2a43]">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
                 <div className="flex items-center gap-2 text-sm text-[#64748B] dark:text-[#7a8ba3]">
                   <span>Show</span>
                   <select
@@ -354,7 +354,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     onChange={(e) => {
                       table.setPageSize(Number(e.target.value));
                     }}
-                    className="border border-[#E2E8F0] dark:border-[#1a2a43] dark:bg-[#000724] dark:text-white rounded px-2 py-1 text-sm"
+                    className="border border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724] dark:text-white rounded px-2 py-1 text-sm"
                   >
                     {[5, 10, 20, 50].map((pageSize) => (
                       <option key={pageSize} value={pageSize}>

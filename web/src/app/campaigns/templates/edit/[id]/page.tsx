@@ -56,7 +56,7 @@ export default function EditTemplatePage() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-[#F8F9FE] flex items-center justify-center">
+      <div className="h-screen bg-[#F8F9FE] dark:bg-[#000724] flex items-center justify-center">
         <p className="text-gray-500">Loading template...</p>
       </div>
     );
@@ -64,7 +64,7 @@ export default function EditTemplatePage() {
 
   if (error) {
     return (
-      <div className="h-screen bg-[#F8F9FE] flex items-center justify-center">
+      <div className="h-screen bg-[#F8F9FE] dark:bg-[#000724] flex items-center justify-center">
         <div className="max-w-md w-full bg-white border border-red-200 rounded-2xl p-8 shadow-sm">
           <h2 className="text-lg font-semibold text-red-900 mb-2">Error Loading Template</h2>
           <p className="text-red-700 mb-6 text-sm">{error}</p>
@@ -81,7 +81,7 @@ export default function EditTemplatePage() {
 
   if (!template) {
     return (
-      <div className="h-screen bg-[#F8F9FE] flex items-center justify-center">
+      <div className="h-screen bg-[#F8F9FE] dark:bg-[#000724] flex items-center justify-center">
         <p className="text-gray-500">Template not found</p>
       </div>
     );
