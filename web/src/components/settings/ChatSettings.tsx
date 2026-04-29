@@ -17,6 +17,9 @@ import {
   AlertCircle,
   Bell,
   Zap,
+  Linkedin,
+  ThumbsUp,
+  MessageCircle,
 } from 'lucide-react';
 import KnowledgeBaseManager from './KnowledgeBaseManager';
 
@@ -271,13 +274,31 @@ export function ChatSettings() {
   const [newPromptText, setNewPromptText] = useState('');
   const [creatingPrompt, setCreatingPrompt] = useState(false);
 
+  // LinkedIn automation settings
+  const [linkedinAutomation, setLinkedinAutomation] = useState({
+    auto_like_posts: false,
+    auto_comment_posts: false,
+  });
+  const [savingLinkedinAutomation, setSavingLinkedinAutomation] = useState(false);
+
   // Load data on mount
   useEffect(() => {
-    Promise.all([fetchPrompts(), fetchChatSettings(), fetchFollowupConfig()])
-      .then(([p, s, f]) => {
+    Promise.all([
+      fetchPrompts(),
+      fetchChatSettings(),
+      fetchFollowupConfig(),
+      fetch('/api/social-integration/linkedin/automation-settings').then((r) => r.json()).catch(() => null),
+    ])
+      .then(([p, s, f, liSettings]) => {
         setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
+        if (liSettings?.success && liSettings.data) {
+          setLinkedinAutomation({
+            auto_like_posts:    !!liSettings.data.auto_like_posts,
+            auto_comment_posts: !!liSettings.data.auto_comment_posts,
+          });
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -425,6 +446,23 @@ export function ChatSettings() {
     showToast(ok ? 'Follow-up timing saved' : 'Failed to save', ok ? 'success' : 'error');
     setSavingFollowup(false);
   }, [followupConfig, showToast]);
+
+  const handleSaveLinkedinAutomation = useCallback(async () => {
+    setSavingLinkedinAutomation(true);
+    try {
+      const res = await fetch('/api/social-integration/linkedin/automation-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(linkedinAutomation),
+      });
+      const data = await res.json();
+      showToast(data.success ? 'LinkedIn automation settings saved' : 'Failed to save', data.success ? 'success' : 'error');
+    } catch {
+      showToast('Failed to save', 'error');
+    } finally {
+      setSavingLinkedinAutomation(false);
+    }
+  }, [linkedinAutomation, showToast]);
 
   const updateStage = useCallback(
     (stage: keyof FollowupTimingConfig['stages'], field: 'enabled' | 'delay_hours', value: boolean | number) => {
@@ -967,6 +1005,84 @@ export function ChatSettings() {
             >
               {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Follow-up Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 7: LinkedIn Automation ──────────────────────── */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <Linkedin className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">LinkedIn Automation</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Automatically engage with the post used to personalise each connection request or follow-up message.
+            Actions fire after a successful send — never before.
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="border border-gray-100 rounded-lg divide-y divide-gray-100 overflow-hidden">
+            {/* Auto Like */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <ThumbsUp className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Auto Like Post</p>
+                  <p className="text-xs text-gray-500">
+                    Like the lead&apos;s most recent LinkedIn post when a connection request or follow-up is sent
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  setLinkedinAutomation((prev) => ({ ...prev, auto_like_posts: !prev.auto_like_posts }))
+                }
+                title={linkedinAutomation.auto_like_posts ? 'On — click to disable' : 'Off — click to enable'}
+              >
+                {linkedinAutomation.auto_like_posts ? (
+                  <ToggleRight className="h-6 w-6 text-blue-500" />
+                ) : (
+                  <ToggleLeft className="h-6 w-6 text-gray-300" />
+                )}
+              </button>
+            </div>
+
+            {/* Auto Comment */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <MessageCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Auto Comment on Post</p>
+                  <p className="text-xs text-gray-500">
+                    AI generates a short, natural comment on the lead&apos;s most recent post — no generic phrases
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  setLinkedinAutomation((prev) => ({ ...prev, auto_comment_posts: !prev.auto_comment_posts }))
+                }
+                title={linkedinAutomation.auto_comment_posts ? 'On — click to disable' : 'Off — click to enable'}
+              >
+                {linkedinAutomation.auto_comment_posts ? (
+                  <ToggleRight className="h-6 w-6 text-blue-500" />
+                ) : (
+                  <ToggleLeft className="h-6 w-6 text-gray-300" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveLinkedinAutomation}
+              disabled={savingLinkedinAutomation}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {savingLinkedinAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save LinkedIn Settings
             </button>
           </div>
         </div>

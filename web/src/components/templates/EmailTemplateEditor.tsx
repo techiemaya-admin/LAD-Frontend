@@ -1,9 +1,23 @@
 'use client';
 
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowLeft, Pencil, Check, Eye, ChevronDown,
+  LayoutTemplate, Code, AlignLeft, Loader2,
+  Smartphone, Monitor, Tablet, Upload, X,
+  GalleryHorizontalEnd, Info,
+} from 'lucide-react';
 import ReadyToUseTemplates from './ReadyToUseTemplates';
 import HtmlEmailEditor from './HtmlEmailEditor';
+import DragDropEmailEditor from './DragDropEmailEditor';
+import EmailPreview from './EmailPreview';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type EditorMode = 'dragdrop' | 'simple' | 'html';
+type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
 interface Template {
   id?: string;
@@ -24,20 +38,97 @@ interface EmailTemplateEditorProps {
   initialTemplate?: Template;
 }
 
-export default function EmailTemplateEditor({
-  mode,
-  initialTemplate,
-}: EmailTemplateEditorProps) {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'editor' | 'templates'>('editor');
-  // Initialize editorMode from the template's content_format so HTML templates
-  // open in the HTML editor instead of the plain-text editor.
-  const [editorMode, setEditorMode] = useState<'plain' | 'html'>(
-    initialTemplate?.content_format === 'html' ? 'html' : 'plain'
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { value: 'email_send',     label: 'Initial Email' },
+  { value: 'email_followup', label: 'Follow-up Email' },
+];
+
+const EDITOR_OPTIONS: { mode: EditorMode; label: string; desc: string; icon: React.ReactNode }[] = [
+  {
+    mode: 'dragdrop',
+    label: 'Drag & drop editor',
+    desc: 'Build emails with reusable visual blocks.',
+    icon: <LayoutTemplate className="w-5 h-5" />,
+  },
+  {
+    mode: 'simple',
+    label: 'Simple editor',
+    desc: 'Write plain-text with images and personalization.',
+    icon: <AlignLeft className="w-5 h-5" />,
+  },
+  {
+    mode: 'html',
+    label: 'HTML custom code',
+    desc: 'Full HTML control with live preview.',
+    icon: <Code className="w-5 h-5" />,
+  },
+];
+
+// ── Inline editable template name ─────────────────────────────────────────────
+
+function EditableName({ name, onChange }: { name: string; onChange: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(name);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setVal(name); }, [name]);
+
+  const commit = () => {
+    setEditing(false);
+    if (val.trim()) onChange(val.trim());
+    else setVal(name);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          ref={ref}
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setEditing(false); setVal(name); } }}
+          className="text-lg font-semibold text-gray-900 border-b-2 border-blue-500 outline-none bg-transparent w-64"
+        />
+        <button onClick={commit} className="text-blue-600 hover:text-blue-700">
+          <Check className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 group">
+      <span className="text-lg font-semibold text-gray-900">{name || 'Untitled template'}</span>
+      <Pencil className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+    </button>
   );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemplateEditorProps) {
+  const router = useRouter();
+
+  const [activeTab, setActiveTab]     = useState<'editor' | 'templates'>('editor');
+  const [editorMode, setEditorMode]   = useState<EditorMode | null>(
+    initialTemplate?.content_format === 'html' ? 'html' : null
+  );
+  const [showModeMenu, setShowModeMenu] = useState(false);
+  const [device, setDevice]           = useState<DeviceType>('desktop');
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState('');
+  const [uploading, setUploading]     = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [template, setTemplate] = useState<Template>(
-    initialTemplate || {
-      name: '',
+    initialTemplate ?? {
+      name: 'New template',
       subject: '',
       body: '',
       body_html: '',
@@ -49,424 +140,560 @@ export default function EmailTemplateEditor({
       media_alt_text: '',
     }
   );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  // Close menus on outside click
+  useEffect(() => {
+    const handler = () => { setShowModeMenu(false); setShowSaveMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  const set = useCallback(<K extends keyof Template>(key: K, val: Template[K]) => {
+    setTemplate((p) => ({ ...p, [key]: val }));
+  }, []);
+
+  const handleInput = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setTemplate((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setTemplate((p) => ({ ...p, [name]: value }));
   };
+
+  // ── Media upload ──────────────────────────────────────────────────────────
 
   const handleMediaUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file (JPEG, PNG, etc.)');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { setError('Please upload an image file'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('File size must be less than 5 MB'); return; }
 
     setUploading(true);
     setError('');
-
     try {
       const formData = new FormData();
       formData.append('file', file);
-
-      const response = await fetch('/api/campaigns/email-templates/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload media');
-      }
-
-      const data = await response.json();
-      const uploadedUrl = data.url || data.data?.url;
-      setTemplate((prev) => ({
-        ...prev,
-        media_url: uploadedUrl,
-      }));
-
-      // Persist uploaded URL to localStorage so MediaInsertionModal can list it
-      if (uploadedUrl) {
+      const res = await fetch('/api/campaigns/email-templates/upload', { method: 'POST', body: formData, credentials: 'include' });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      const url = data.url || data.data?.url;
+      set('media_url', url);
+      // Persist to localStorage so HtmlEmailEditor can list it
+      if (url) {
         try {
           const stored = JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
-          const entry = { url: uploadedUrl, name: file.name, uploadedAt: new Date().toISOString() };
-          // Prepend and keep last 50 uploads
-          const updated = [entry, ...stored.filter((s: any) => s.url !== uploadedUrl)].slice(0, 50);
-          localStorage.setItem('email_media_uploads', JSON.stringify(updated));
+          const entry = { url, name: file.name, uploadedAt: new Date().toISOString() };
+          localStorage.setItem('email_media_uploads', JSON.stringify([entry, ...stored.filter((s: any) => s.url !== url)].slice(0, 50)));
         } catch { /* non-fatal */ }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleSave = async () => {
-    const hasContent = editorMode === 'html'
+  // ── Save ──────────────────────────────────────────────────────────────────
+
+  const handleSave = async (andRedirect = true) => {
+    const hasContent = editorMode === 'html' || editorMode === 'dragdrop'
       ? (template.body_html || '').trim().length > 0
       : template.body.trim().length > 0;
 
     if (!template.name.trim() || !template.subject.trim() || !hasContent) {
-      setError('Please fill in all required fields (Name, Subject, Body)');
+      setError('Please fill in Template Name, Subject, and email content.');
       return;
     }
-
-    if (!template.category || !template.category.trim()) {
-      setError('Please select a category');
+    if (!template.category?.trim()) {
+      setError('Please select a category.');
       return;
     }
 
     setSaving(true);
     setError('');
-
     try {
-      const url =
-        mode === 'create'
-          ? '/api/campaigns/email-templates'
-          : `/api/campaigns/email-templates/${template.id}`;
-
+      const url    = mode === 'create' ? '/api/campaigns/email-templates' : `/api/campaigns/email-templates/${template.id}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
+      const isHtmlMode = editorMode === 'html' || editorMode === 'dragdrop';
 
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: template.name,
-          subject: template.subject,
-          body: editorMode === 'html'
-            ? (template.body || (template.body_html || '').replace(/<[^>]*>/g, '').trim())
-            : template.body,
-          body_html: editorMode === 'html' ? (template.body_html || null) : null,
-          content_format: editorMode === 'html' ? 'html' : 'plain_text',
-          category: template.category,
-          description: template.description,
-          is_active: template.is_active,
-          media_url: template.media_url || null,
+          name:           template.name,
+          subject:        template.subject,
+          body:           isHtmlMode
+                            ? (template.body || (template.body_html || '').replace(/<[^>]*>/g, '').trim())
+                            : template.body,
+          body_html:      isHtmlMode ? (template.body_html || null) : null,
+          content_format: isHtmlMode ? 'html' : 'plain_text',
+          category:       template.category,
+          description:    template.description,
+          is_active:      template.is_active,
+          media_url:      template.media_url || null,
           media_alt_text: template.media_alt_text || null,
         }),
       });
 
-      if (!response.ok) {
-        let errorDetail = `${response.status} ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorDetail = errorData.error || errorData.details || errorDetail;
-        } catch (e) {
-          // If response body is not JSON, use status text
-        }
-        throw new Error(`Failed to save template: ${errorDetail}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.details || `${res.status} ${res.statusText}`);
       }
 
-      const data = await response.json();
-      router.push('/campaigns/templates');
+      if (andRedirect) router.push('/campaigns/templates');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
-      console.error('Error saving template:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSelectTemplate = (selectedTemplate: Template) => {
-    setTemplate({
-      ...selectedTemplate,
-      id: undefined, // New template, no ID yet
-      name: `${selectedTemplate.name} (Copy)`,
-    });
+  // ── Select a ready-to-use template ────────────────────────────────────────
+
+  const handleSelectTemplate = (t: Template) => {
+    setTemplate({ ...t, id: undefined, name: `${t.name} (Copy)` });
+    setEditorMode(t.content_format === 'html' ? 'html' : 'simple');
     setActiveTab('editor');
   };
 
-  const convertPlainTextToHtml = () => {
-    const plainText = template.body;
-    // Escape HTML special characters
-    let escaped = plainText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  // ── Preview content ───────────────────────────────────────────────────────
 
-    // Convert line breaks to <br>
-    escaped = escaped.replace(/\n\n/g, '</p><p>');
-    escaped = escaped.replace(/\n/g, '<br>');
+  const previewHtml = editorMode === 'html' || editorMode === 'dragdrop'
+    ? (template.body_html || '')
+    : `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:1.7;color:#374151;">${(template.body || '').replace(/\n/g, '<br/>')}</p>`;
 
-    // Wrap in paragraphs
-    const html = `<p>${escaped}</p>`;
+  // ── Input / label class helpers ───────────────────────────────────────────
 
-    setTemplate((prev) => ({
-      ...prev,
-      body_html: html,
-      content_format: 'html',
-    }));
-    setEditorMode('html');
-  };
+  const inputCls  = 'w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder-gray-400 transition';
+  const labelCls  = 'block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5';
+  const fieldCls  = 'space-y-1.5';
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('editor')}
-          className={`py-3 px-4 font-medium text-sm border-b-2 ${
-            activeTab === 'editor'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+
+      {/* ── Top bar ── */}
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center gap-3">
+        <Link
+          href="/campaigns/templates"
+          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
         >
-          Editor
-        </button>
-        <button
-          onClick={() => setActiveTab('templates')}
-          className={`py-3 px-4 font-medium text-sm border-b-2 ${
-            activeTab === 'templates'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Use Template
-        </button>
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+
+        <div className="flex flex-col min-w-0">
+          <EditableName name={template.name} onChange={(v) => set('name', v)} />
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${template.is_active ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-400">{template.is_active ? 'Active' : 'Inactive'}</span>
+          </div>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Preview & test */}
+          <button
+            onClick={() => setShowPreview(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+          >
+            <Eye className="w-4 h-4" />
+            Preview & test
+          </button>
+
+          {/* Save dropdown */}
+          <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-stretch">
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-l-xl hover:bg-gray-800 disabled:opacity-60 transition-all"
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Save
+              </button>
+              <button
+                onClick={() => setShowSaveMenu((v) => !v)}
+                className="px-2 py-2 bg-gray-900 text-white rounded-r-xl hover:bg-gray-800 border-l border-gray-700 transition-all"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+
+            {showSaveMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                <button
+                  onClick={() => { setShowSaveMenu(false); handleSave(false); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Save without leaving
+                </button>
+                <button
+                  onClick={() => { set('is_active', !template.is_active); setShowSaveMenu(false); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  {template.is_active ? 'Deactivate template' : 'Activate template'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── Tab bar ── */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6">
+        <div className="flex">
+          {(['editor', 'templates'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`py-3.5 px-4 text-sm font-medium border-b-2 transition-colors capitalize ${
+                activeTab === tab
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {tab === 'editor' ? 'Editor' : 'Use Template'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Editor Tab */}
-      {activeTab === 'editor' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
-          <div className="space-y-6">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Template Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={template.name}
-                onChange={handleInputChange}
-                placeholder="e.g., Welcome Email"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+      {/* ── Main area ── */}
+      <div className="flex-1 flex overflow-hidden">
 
-            {/* Subject */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Email Subject *
-              </label>
-              <input
-                type="text"
-                name="subject"
-                value={template.subject}
-                onChange={handleInputChange}
-                placeholder="e.g., Welcome to our service!"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        {/* ═══════ Editor Tab ═══════ */}
+        {activeTab === 'editor' && (
+          <>
+            {/* Left: Content area — 50% */}
+            <div className="w-1/2 flex flex-col overflow-hidden border-r border-gray-200">
 
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Category *
-              </label>
-              <select
-                name="category"
-                value={template.category || ''}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a category</option>
-                <option value="email_send">Initial Email</option>
-                <option value="email_followup">Follow-up Email</option>
-              </select>
-            </div>
+              {/* Editor mode switcher bar (only when a mode is selected) */}
+              {editorMode && (
+                <div className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-white border-b border-gray-100">
+                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Editing with:</span>
+                  <div className="flex gap-1" onMouseDown={(e) => e.stopPropagation()}>
+                    {EDITOR_OPTIONS.map(({ mode: m, label, icon }) => (
+                      <button
+                        key={m}
+                        onClick={() => setEditorMode(m)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          editorMode === m
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {icon}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={template.description ?? ''}
-                onChange={handleInputChange}
-                placeholder="Describe when this template should be used"
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+              {/* Editor content */}
+              <div className="flex-1 overflow-auto p-6">
+                {!editorMode ? (
+                  /* ── Choose editor type ── */
+                  <div className="max-w-lg mx-auto pt-8">
+                    <div className="text-center mb-8">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                        <LayoutTemplate className="w-7 h-7 text-blue-500" />
+                      </div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-2">Design your email</h2>
+                      <p className="text-sm text-gray-500">Choose how you'd like to create your email content.</p>
+                    </div>
 
-            {/* Media Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                📸 Media (Optional)
-              </label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm"
-                >
-                  {uploading ? 'Uploading...' : 'Choose Image'}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleMediaUpload}
-                  className="hidden"
-                />
-                {template.media_url && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600">✓ Image uploaded</span>
-                    <button
-                      type="button"
-                      onClick={() => setTemplate(prev => ({ ...prev, media_url: '' }))}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Remove
-                    </button>
+                    <div className="space-y-3">
+                      {EDITOR_OPTIONS.map(({ mode: m, label, desc, icon }) => (
+                        <button
+                          key={m}
+                          onClick={() => setEditorMode(m)}
+                          className="w-full flex items-start gap-4 p-5 bg-white rounded-2xl border-2 border-gray-100 hover:border-blue-400 hover:shadow-md text-left transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center text-gray-500 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-0.5">
+                            {icon}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm mb-0.5">{label}</p>
+                            <p className="text-xs text-gray-400">{desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                ) : editorMode === 'dragdrop' ? (
+                  <DragDropEmailEditor
+                    htmlContent={template.body_html || ''}
+                    subject={template.subject}
+                    onContentChange={(html) => set('body_html', html)}
+                  />
+
+                ) : editorMode === 'html' ? (
+                  <HtmlEmailEditor
+                    htmlContent={template.body_html || ''}
+                    subject={template.subject}
+                    onContentChange={(html) => set('body_html', html)}
+                  />
+
+                ) : (
+                  /* ── Simple (plain text) editor ── */
+                  <div className="space-y-4">
+                    {/* Personalisation toolbar */}
+                    <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Insert:</span>
+                      {[
+                        { label: 'First Name', val: '{{first_name}}' },
+                        { label: 'Last Name',  val: '{{last_name}}'  },
+                        { label: 'Company',    val: '{{company}}'    },
+                        { label: 'Title',      val: '{{title}}'      },
+                      ].map(({ label, val }) => (
+                        <button
+                          key={val}
+                          onClick={() => set('body', (template.body || '') + val)}
+                          className="px-3 py-1.5 text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      name="body"
+                      value={template.body ?? ''}
+                      onChange={handleInput}
+                      placeholder={`Hi {{first_name}},\n\nStart writing your email here...\n\nBest regards,\n[Your Name]`}
+                      rows={18}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white resize-y"
+                    />
+                    <p className="text-xs text-gray-400">
+                      💡 Use <code className="bg-gray-100 px-1 rounded">{'{{first_name}}'}</code>,{' '}
+                      <code className="bg-gray-100 px-1 rounded">{'{{company}}'}</code> etc. for dynamic personalisation
+                    </p>
                   </div>
                 )}
               </div>
-              {template.media_url && (
-                <div className="mt-3">
-                  <img
-                    src={template.media_url}
-                    alt="Preview"
-                    className="max-h-48 rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    name="media_alt_text"
-                    value={template.media_alt_text || ''}
-                    onChange={handleInputChange}
-                    placeholder="Alt text for accessibility"
-                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
+
+              {/* Error bar */}
+              {error && (
+                <div className="flex-shrink-0 flex items-center gap-3 mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  <Info className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1">{error}</span>
+                  <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Email Content Editor Tabs */}
-            <div>
-              <div className="mb-4 flex gap-3 border-b border-gray-200">
-                <button
-                  onClick={() => setEditorMode('plain')}
-                  className={`py-2 px-4 font-medium text-sm border-b-2 transition ${
-                    editorMode === 'plain'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Plain Text
-                </button>
-                <button
-                  onClick={() => setEditorMode('html')}
-                  className={`py-2 px-4 font-medium text-sm border-b-2 transition ${
-                    editorMode === 'html'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  HTML
-                </button>
-              </div>
+            {/* Right: Settings panel — 50% */}
+            <aside className="w-1/2 bg-white overflow-y-auto flex flex-col">
+              <div className="p-6 space-y-5 flex-1 max-w-2xl mx-auto w-full">
+                {/* Sender / metadata section header */}
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Template details</p>
 
-              {/* Plain Text Editor */}
-              {editorMode === 'plain' && (
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-900">Email Body *</label>
-                  <textarea
-                    name="body"
-                    value={template.body ?? ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter your email content here..."
-                    rows={12}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-500">
-                      💡 Use {'{{'} placeholders {'}}'} for dynamic content like {'{{'} first_name {'}}'}
+                {/* Subject line */}
+                <div className={fieldCls}>
+                  <label className={labelCls}>
+                    Subject line <span className="text-red-400 normal-case font-normal tracking-normal">*</span>
+                  </label>
+                  <input name="subject" type="text" value={template.subject} onChange={handleInput}
+                    placeholder="e.g. Quick question about {{company}}" className={inputCls} />
+                  {template.subject.length > 0 && (
+                    <p className={`text-[11px] ${template.subject.length > 50 ? 'text-amber-500' : 'text-gray-400'}`}>
+                      {template.subject.length}/50 chars — {template.subject.length <= 50 ? 'good length ✓' : 'consider shortening'}
                     </p>
+                  )}
+                </div>
+
+                {/* Category */}
+                <div className={fieldCls}>
+                  <label className={labelCls}>
+                    Category <span className="text-red-400 normal-case font-normal tracking-normal">*</span>
+                  </label>
+                  <select name="category" value={template.category || ''} onChange={handleInput} className={inputCls}>
+                    <option value="">Select category</option>
+                    {CATEGORIES.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div className={fieldCls}>
+                  <label className={labelCls}>Description</label>
+                  <textarea name="description" value={template.description ?? ''} onChange={handleInput}
+                    placeholder="When should this template be used?" rows={3}
+                    className={inputCls + ' resize-none'} />
+                </div>
+
+                {/* Media */}
+                <div className={fieldCls}>
+                  <label className={labelCls}>📸 Header image <span className="normal-case font-normal tracking-normal text-gray-400">(optional)</span></label>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleMediaUpload} className="hidden" />
+
+                  {template.media_url ? (
+                    <div className="space-y-2">
+                      <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                        <img src={template.media_url} alt="Preview" className="w-full max-h-32 object-cover" />
+                        <button
+                          onClick={() => set('media_url', '')}
+                          className="absolute top-2 right-2 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        name="media_alt_text"
+                        value={template.media_alt_text || ''}
+                        onChange={handleInput}
+                        placeholder="Alt text (for accessibility)"
+                        className={inputCls}
+                      />
+                    </div>
+                  ) : (
                     <button
-                      type="button"
-                      onClick={convertPlainTextToHtml}
-                      className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded border border-blue-200 font-medium"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all"
                     >
-                      ✨ Convert to HTML
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      {uploading ? 'Uploading…' : 'Select a file or drop here'}
                     </button>
+                  )}
+                  <p className="text-[11px] text-gray-400">Format: JPG, PNG, GIF · Max 5 MB</p>
+                </div>
+
+                {/* Divider */}
+                <hr className="border-gray-100" />
+
+                {/* Email Preview */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Preview</p>
+                    {/* Device switcher */}
+                    <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                      {([
+                        { id: 'mobile',  icon: <Smartphone className="w-3.5 h-3.5" /> },
+                        { id: 'tablet',  icon: <Tablet className="w-3.5 h-3.5" />     },
+                        { id: 'desktop', icon: <Monitor className="w-3.5 h-3.5" />    },
+                      ] as const).map(({ id, icon }) => (
+                        <button
+                          key={id}
+                          onClick={() => setDevice(id)}
+                          className={`p-1.5 rounded-md transition-all ${device === id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                          title={id}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Preview frame */}
+                  <div className={`rounded-xl border border-gray-200 bg-white overflow-hidden ${device === 'mobile' ? 'max-w-[380px] mx-auto' : device === 'tablet' ? 'max-w-[600px] mx-auto' : 'w-full'}`}>
+                    {/* Subject line preview */}
+                    {template.subject && (
+                      <div className="border-b border-gray-100 px-4 py-2.5">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{template.subject}</p>
+                        <p className="text-[11px] text-gray-400">from: {template.name}</p>
+                      </div>
+                    )}
+                    <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 420px)', minHeight: '320px' }}>
+                      <EmailPreview
+                        htmlContent={previewHtml}
+                        subject={template.subject}
+                        showDeviceSelector={false}
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* HTML Editor */}
-              {editorMode === 'html' && (
-                <HtmlEmailEditor
-                  htmlContent={template.body_html || ''}
-                  subject={template.subject}
-                  onContentChange={(html) => setTemplate((prev) => ({ ...prev, body_html: html }))}
-                />
-              )}
-            </div>
+                {/* Active toggle */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Template status</p>
+                    <p className="text-xs text-gray-400">{template.is_active ? 'Visible and usable in campaigns' : 'Hidden from campaign builder'}</p>
+                  </div>
+                  <button
+                    onClick={() => set('is_active', !template.is_active)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${template.is_active ? 'bg-green-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${template.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
 
-            {/* Error */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700 text-sm">{error}</p>
               </div>
-            )}
 
-            {/* Actions */}
-            <div className="flex gap-4 pt-6">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-              >
-                {saving
-                  ? 'Saving...'
-                  : mode === 'create'
-                    ? 'Create Template'
-                    : 'Save Template'}
-              </button>
-              <button
-                onClick={() => router.push('/campaigns/templates')}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-              >
-                Cancel
-              </button>
+              {/* Save actions */}
+              <div className="border-t border-gray-100 p-5 space-y-2 max-w-2xl mx-auto w-full">
+                <button
+                  onClick={() => handleSave(true)}
+                  disabled={saving}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-all"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {saving ? 'Saving…' : mode === 'create' ? 'Create template' : 'Save changes'}
+                </button>
+                <Link
+                  href="/campaigns/templates"
+                  className="block text-center py-2.5 border border-gray-200 text-sm text-gray-600 rounded-xl hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </Link>
+              </div>
+            </aside>
+          </>
+        )}
+
+        {/* ═══════ Use Template Tab ═══════ */}
+        {activeTab === 'templates' && (
+          <div className="flex-1 overflow-auto p-6">
+            <ReadyToUseTemplates onSelectTemplate={handleSelectTemplate} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Full-screen preview modal ── */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-3xl max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <p className="font-semibold text-gray-900">Email Preview</p>
+                {template.subject && <p className="text-xs text-gray-400 mt-0.5">Subject: {template.subject}</p>}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                  {([
+                    { id: 'mobile',  icon: <Smartphone className="w-4 h-4" />, label: '375px'  },
+                    { id: 'tablet',  icon: <Tablet className="w-4 h-4" />,     label: '768px'  },
+                    { id: 'desktop', icon: <Monitor className="w-4 h-4" />,    label: '1200px' },
+                  ] as const).map(({ id, icon, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => setDevice(id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${device === id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      {icon}
+                      <span className="hidden sm:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setShowPreview(false)} className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-6 bg-gray-50">
+              <div className={`mx-auto bg-white rounded-xl shadow-sm transition-all duration-300 ${device === 'mobile' ? 'max-w-[375px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-full'}`}>
+                <EmailPreview htmlContent={previewHtml} subject={template.subject} showDeviceSelector={false} />
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Templates Tab */}
-      {activeTab === 'templates' && (
-        <ReadyToUseTemplates onSelectTemplate={handleSelectTemplate} />
       )}
     </div>
   );

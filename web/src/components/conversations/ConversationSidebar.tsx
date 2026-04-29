@@ -153,6 +153,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
+  const [templateSendProgress, setTemplateSendProgress] = useState<{ sent: number; total: number; running: boolean } | null>(null);
   const [sendSummary, setSendSummary] = useState<{ sent: number; queued: number; scheduledDays: number } | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -463,6 +464,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const handleTemplateSend = useCallback(
     async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30, dailyLimit: 250 }, headerParamCount = 0, headerType = '', headerUrl = '') => {
       setTemplateSending(true);
+      const totalCount = groupTemplateSendTarget?.count ?? selectedIds.size;
+      setTemplateSendProgress({ sent: 0, total: totalCount, running: true });
       try {
         // If sending to one or more groups (via group manager), call each group's send-template endpoint
         if (groupTemplateSendTarget) {
@@ -470,6 +473,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           const groupIds = groupTemplateSendTarget.groupIds;
           const { batchSize, delayMin, delayRandom, dailyLimit } = batch;
           const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+          let sentTotal = 0;
 
           for (let i = 0; i < groupIds.length; i++) {
             const groupId = groupIds[i];
@@ -497,12 +501,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               const data = await res.json();
               if (!data.success) {
                 console.error(`Group template send failed for ${groupId}:`, data.error);
-              } else if (data.queued > 0) {
-                setSendSummary(prev => ({
-                  sent: (prev?.sent ?? 0) + (data.sent ?? 0),
-                  queued: (prev?.queued ?? 0) + (data.queued ?? 0),
-                  scheduledDays: Math.max(prev?.scheduledDays ?? 0, data.scheduled_days ?? 0),
-                }));
+              } else {
+                sentTotal += data.sent || 0;
+                // Update progress
+                setTemplateSendProgress(prev => prev ? { ...prev, sent: sentTotal } : null);
+                if (data.queued > 0) {
+                  setSendSummary(prev => ({
+                    sent: (prev?.sent ?? 0) + (data.sent ?? 0),
+                    queued: (prev?.queued ?? 0) + (data.queued ?? 0),
+                    scheduledDays: Math.max(prev?.scheduledDays ?? 0, data.scheduled_days ?? 0),
+                  }));
+                }
               }
             } catch (err) {
               console.error(`Group template send error for ${groupId}:`, err);
@@ -544,10 +553,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             }),
           });
           const data = await res.json();
-          if (!data.success) console.error('Bulk template send failed:', data.error);
+          if (!data.success) {
+            console.error('Bulk template send failed:', data.error);
+          } else {
+            // Update progress after response
+            const sent = data.sent || 0;
+            setTemplateSendProgress(prev => prev ? { ...prev, sent, running: false } : null);
+          }
         }
       } catch (err) {
         console.error('Template send error:', err);
+        setTemplateSendProgress(null);
       } finally {
         setTemplateSending(false);
         setIsTemplatePickerOpen(false);
@@ -1371,6 +1387,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+        sendProgress={templateSendProgress}
         channel={backendChannel ?? 'waba'}
         isBulkSend={!!groupTemplateSendTarget || selectedIds.size > 1}
       />

@@ -57,6 +57,8 @@ interface TemplatePickerProps {
   selectedCount: number;
   onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
   sending?: boolean;
+  /** Track progress: { sent: number; total: number; running: boolean } */
+  sendProgress?: { sent: number; total: number; running: boolean } | null;
   /** Which backend channel to fetch templates from. Defaults to 'waba'. */
   channel?: 'personal' | 'waba';
   /** Force batch settings to always be shown (e.g. group sends where count may be 0). */
@@ -90,6 +92,7 @@ export function TemplatePicker({
   selectedCount,
   onSend,
   sending = false,
+  sendProgress = null,
   channel = 'waba',
   isBulkSend = false,
 }: TemplatePickerProps) {
@@ -608,13 +611,29 @@ export function TemplatePicker({
                 onClick={() => onOpenChange(false)}
                 disabled={sending}
               >
-                Cancel
+                {sending ? 'Keep running' : 'Cancel'}
               </Button>
+              {/* Show "Run in Background" button while sending */}
+              {sending && sendProgress?.running && (
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="gap-2"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Run in background
+                </Button>
+              )}
               <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
               >
-                {sending ? (
+                {sending && sendProgress?.running ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending {sendProgress?.sent ?? 0}/{sendProgress?.total ?? 0}...
+                  </>
+                ) : sending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Sending...
