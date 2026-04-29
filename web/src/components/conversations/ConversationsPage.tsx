@@ -9,6 +9,7 @@ import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
+import { EmailChannelView } from './EmailChannelView';
 import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
@@ -455,23 +456,27 @@ function ChannelConversationView({
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba' | 'linkedin';
+type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility: Check which channels are connected — uses the same endpoints as
 // the Integrations settings page for consistency.
-// All three checks run in parallel so the tab bar appears in one paint.
+// All checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
 interface ChannelConnectionStatus {
   personal: boolean;
   waba: boolean;
   linkedin: boolean;
+  gmail: boolean;
+  gmailEmail: string | null;
+  outlook: boolean;
+  outlookEmail: string | null;
 }
 
 async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
-  const [personalResult, wabaResult, linkedinResult] = await Promise.allSettled([
-    // Personal WA — same endpoint as IntegrationsSettings
+  const [personalResult, wabaResult, linkedinResult, emailResult] = await Promise.allSettled([
+    // Personal WA
     fetchWithTenant('/api/personal-whatsapp/accounts')
       .then(async (res) => {
         if (!res.ok) return false;
@@ -481,7 +486,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
       })
       .catch(() => false),
 
-    // WA Business — same endpoint as IntegrationsSettings
+    // WA Business
     fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts')
       .then(async (res) => {
         if (!res.ok) return false;
@@ -491,7 +496,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
       })
       .catch(() => false),
 
-    // LinkedIn — same endpoint as IntegrationsSettings
+    // LinkedIn
     fetchWithTenant('/api/campaigns/linkedin/accounts')
       .then(async (res) => {
         if (!res.ok) return false;
@@ -502,22 +507,47 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
         );
       })
       .catch(() => false),
+
+    // Gmail + Outlook (single status endpoint)
+    fetchWithTenant('/api/email-conversations/status')
+      .then(async (res) => {
+        if (!res.ok) return { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null };
+        const data = await res.json();
+        return {
+          gmail:       !!data?.gmail?.connected,
+          gmailEmail:  data?.gmail?.email || null,
+          outlook:     !!data?.outlook?.connected,
+          outlookEmail: data?.outlook?.email || null,
+        };
+      })
+      .catch(() => ({ gmail: false, gmailEmail: null, outlook: false, outlookEmail: null })),
   ]);
 
+  const emailStatus = emailResult.status === 'fulfilled'
+    ? emailResult.value as { gmail: boolean; gmailEmail: string | null; outlook: boolean; outlookEmail: string | null }
+    : { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null };
+
   return {
-    personal: personalResult.status === 'fulfilled' ? personalResult.value : false,
-    waba:     wabaResult.status    === 'fulfilled' ? wabaResult.value    : false,
-    linkedin: linkedinResult.status === 'fulfilled' ? linkedinResult.value : false,
+    personal:     personalResult.status === 'fulfilled' ? (personalResult.value as boolean) : false,
+    waba:         wabaResult.status    === 'fulfilled' ? (wabaResult.value as boolean)    : false,
+    linkedin:     linkedinResult.status === 'fulfilled' ? (linkedinResult.value as boolean) : false,
+    gmail:        emailStatus.gmail,
+    gmailEmail:   emailStatus.gmailEmail,
+    outlook:      emailStatus.outlook,
+    outlookEmail: emailStatus.outlookEmail,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab — prefer Personal WA, then WABA, then LinkedIn
+// Determine default tab — prefer Personal WA, then WABA, then LinkedIn,
+// then Gmail, then Outlook
 // ─────────────────────────────────────────────────────────────────────────────
 function getDefaultTab(status: ChannelConnectionStatus): WaTab {
   if (status.personal) return 'personal';
   if (status.waba)     return 'waba';
   if (status.linkedin) return 'linkedin';
+  if (status.gmail)    return 'gmail';
+  if (status.outlook)  return 'outlook';
   return 'personal'; // fallback (nothing connected)
 }
 
@@ -526,6 +556,8 @@ const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
   { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
   { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
+  { id: 'gmail',    label: 'Gmail',         sublabel: 'gmail' },
+  { id: 'outlook',  label: 'Outlook',       sublabel: 'outlook' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -533,12 +565,11 @@ const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 function getTabColor(tabId: WaTab): string {
   switch (tabId) {
-    case 'personal':
-      return '#25D366'; // WhatsApp green
-    case 'waba':
-      return '#128C7E'; // WhatsApp Business teal
-    case 'linkedin':
-      return '#0077B5'; // LinkedIn blue
+    case 'personal':  return '#25D366'; // WhatsApp green
+    case 'waba':      return '#128C7E'; // WhatsApp Business teal
+    case 'linkedin':  return '#0077B5'; // LinkedIn blue
+    case 'gmail':     return '#EA4335'; // Gmail red
+    case 'outlook':   return '#0078D4'; // Outlook blue
   }
 }
 
@@ -554,14 +585,7 @@ export function ConversationsPage() {
   // null = still loading; once resolved, only connected channels are shown
   const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Check which channels are connected on mount — three parallel requests
+  // Check which channels are connected on mount — all parallel requests
   useEffect(() => {
     getConnectedChannels().then((status) => {
       setChannelStatus(status);
@@ -572,7 +596,12 @@ export function ConversationsPage() {
   // Show only tabs whose channel is actively connected.
   // While loading (null) render nothing so there's no flash of wrong tabs.
   const visibleTabs = channelStatus
-    ? ALL_TABS.filter((t) => channelStatus[t.id as keyof ChannelConnectionStatus])
+    ? ALL_TABS.filter((t) => {
+        // Gmail and Outlook use separate boolean fields
+        if (t.id === 'gmail')   return channelStatus.gmail;
+        if (t.id === 'outlook') return channelStatus.outlook;
+        return channelStatus[t.id as keyof ChannelConnectionStatus] === true;
+      })
     : [];
 
   return (
@@ -625,48 +654,16 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal'  && (
-          <ChannelConversationView 
-            channel="personal" 
-            onShowBroadcastModal={() => setShowBroadcastModal(true)} 
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            setIsPlaygroundOpen={setIsPlaygroundOpen}
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-            isMobile={isMobile}
-          />
-        )}
-        {activeTab === 'waba'      && (
-          <ChannelConversationView 
-            channel="waba" 
-            onShowBroadcastModal={() => setShowBroadcastModal(true)} 
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            setIsPlaygroundOpen={setIsPlaygroundOpen}
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-            isMobile={isMobile}
-          />
-        )}
-        {activeTab === 'linkedin'  && (
-          <LinkedInConversationView 
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onBack={() => setIsSidebarCollapsed(false)}
-            isMobile={isMobile}
-          />
-        )}
+        {activeTab === 'personal'  && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'waba'      && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'linkedin'  && <LinkedInConversationView />}
+        {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
+        {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}
       <AnimatePresence>
-        {showBroadcastModal && activeTab !== 'linkedin' && (
+        {showBroadcastModal && (activeTab === 'personal' || activeTab === 'waba') && (
           <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab as 'personal' | 'waba'} />
         )}
       </AnimatePresence>

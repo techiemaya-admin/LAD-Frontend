@@ -45,11 +45,61 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
   const [isChatting, setIsChatting] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "bot"; content: string; sources?: string[] }[]>([]);
 
+  // WhatsApp grounding toggle: when ON, the tenant's default KB stores are
+  // attached to every WABA inbound message as Gemini file_search grounding.
+  // The flag lives in chat_settings.metadata.kb_grounding_enabled (per-tenant).
+  const [waGroundingEnabled, setWaGroundingEnabled] = useState(false);
+  const [waGroundingLoading, setWaGroundingLoading] = useState(true);
+  const [waGroundingSaving, setWaGroundingSaving] = useState(false);
+
   useEffect(() => {
     if (effectiveTenantId) {
       rag.fetchStores();
     }
   }, [effectiveTenantId, rag.fetchStores]);
+
+  // Load the WABA grounding toggle from chat_settings.metadata
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/whatsapp-conversations/chat-settings?channel=waba");
+        if (!res.ok) return;
+        const data = await res.json();
+        const settings = data.data ?? data.settings ?? data ?? {};
+        const metadata = settings.metadata ?? {};
+        if (!cancelled) {
+          setWaGroundingEnabled(Boolean(metadata.kb_grounding_enabled));
+        }
+      } catch {
+        /* default to OFF on failure */
+      } finally {
+        if (!cancelled) setWaGroundingLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleToggleWaGrounding = async (enabled: boolean) => {
+    // Optimistic update
+    setWaGroundingEnabled(enabled);
+    setWaGroundingSaving(true);
+    try {
+      const res = await fetch("/api/whatsapp-conversations/chat-settings/kb-grounding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) {
+        // Revert on failure
+        setWaGroundingEnabled(!enabled);
+      }
+    } catch {
+      setWaGroundingEnabled(!enabled);
+    } finally {
+      setWaGroundingSaving(false);
+    }
+  };
 
   // Load documents when a store is selected
   useEffect(() => {
@@ -151,7 +201,7 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
       <div className="flex flex-col items-center justify-center w-full min-h-[300px] text-slate-500">
         <Loader2 className="size-8 animate-spin text-purple-400 mb-4" />
         <p className="text-sm font-medium animate-pulse">Waking up worker environment...</p>
-        <p className="text-xs mt-2 text-slate-400 max-w-[250px] text-center">This may take a few seconds if the Cloud Run instance has scaled down.</p>
+        <p className="text-xs mt-2 text-slate-400 max-w-[250px] text-center">This may take a few seconds if the service is starting up.</p>
       </div>
     );
   }
@@ -554,6 +604,33 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
           </Button>
         )}
       </div>
+
+      {/* WhatsApp grounding toggle — gates whether Knowledge Base folders
+          flagged "Attached" are passed to the WABA AI as Gemini file_search
+          sources at reply time. Only takes effect on tenants using a Gemini
+          model in their WABA chat settings. */}
+      <div className="px-6 py-4 border-b border-gray-100 bg-purple-50/40 flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <MessageSquare className="h-4 w-4 text-purple-600" />
+            <p className="text-sm font-medium text-gray-900">Use Knowledge Base in WhatsApp replies</p>
+          </div>
+          <p className="text-xs text-gray-500">
+            When ON, every inbound WhatsApp message is answered using content from the
+            folders flagged <span className="font-medium">Attached</span> below.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+          {waGroundingSaving && <Loader2 className="size-3.5 animate-spin text-purple-400" />}
+          <Switch
+            checked={waGroundingEnabled}
+            disabled={waGroundingLoading || waGroundingSaving}
+            onCheckedChange={handleToggleWaGrounding}
+            className={waGroundingEnabled ? "bg-purple-600" : ""}
+          />
+        </div>
+      </div>
+
       <div className="p-6">
         {renderContent()}
       </div>
