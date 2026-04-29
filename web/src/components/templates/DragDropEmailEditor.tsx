@@ -24,6 +24,8 @@ import {
   MousePointer, Minus, MoveVertical, Plus, Tags,
   Upload, Loader2, LayoutTemplate,
   Facebook, Instagram, Linkedin, Youtube, Twitter,
+  Bold, Italic, Underline, Strikethrough,
+  List, ListOrdered, Link2, Link2Off,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -84,8 +86,19 @@ function blockToHtml(block: EmailBlock): string {
       return `<h1 style="text-align:${align};color:${color};font-size:32px;font-weight:700;margin:0 0 16px;line-height:1.2;">${props.content}</h1>`;
     case 'h2':
       return `<h2 style="text-align:${align};color:${color};font-size:22px;font-weight:600;margin:0 0 12px;line-height:1.3;">${props.content}</h2>`;
-    case 'text':
-      return `<p style="text-align:${align};color:${color};font-size:15px;line-height:1.7;margin:0 0 12px;">${props.content.replace(/\n/g, '<br/>')}</p>`;
+    case 'text': {
+      // Support rich HTML content (new) and plain text (legacy, has no HTML tags)
+      const hasHtml = /<[a-zA-Z]/.test(props.content || '');
+      // Add inline list styles so email clients (which strip <style> tags) render bullets correctly
+      const textContent = (hasHtml
+        ? props.content
+        : (props.content || '').replace(/\n/g, '<br/>'))
+        .replace(/<ul/g, '<ul style="list-style:disc;padding-left:20px;margin:4px 0;"')
+        .replace(/<ol/g, '<ol style="list-style:decimal;padding-left:20px;margin:4px 0;"')
+        .replace(/<li/g, '<li style="margin:2px 0;"');
+      // Use <div> (not <p>) so nested lists render correctly in email clients
+      return `<div style="text-align:${align};color:${color};font-size:15px;line-height:1.7;margin:0 0 12px;">${textContent}</div>`;
+    }
     case 'image':
       if (!props.src) return `<!-- image block (no src) -->`;
       return `<div style="text-align:${align};margin:0 0 16px;"><img src="${props.src}" alt="${props.alt}" style="max-width:${props.width}%;height:auto;display:inline-block;" /></div>`;
@@ -142,6 +155,205 @@ export function blocksToHtml(blocks: EmailBlock[]): string {
   return `<div style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:24px 20px;">\n${inner}\n</div>`;
 }
 
+// ── HTML → Blocks parser (reverses blocksToHtml) ─────────────────────────────
+// Only recognises HTML produced by this editor (outer max-width:600px wrapper).
+// Returns null if the HTML wasn't created here so the editor starts fresh.
+
+function htmlToBlocks(html: string): EmailBlock[] | null {
+  if (typeof window === 'undefined' || !html?.trim()) return null;
+
+  try {
+    const uid = () => Math.random().toString(36).slice(2, 9);
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(html, 'text/html');
+
+    // Must have our outer wrapper — bail if it doesn't
+    const wrapper = doc.querySelector('div[style*="max-width:600px"]');
+    if (!wrapper) return null;
+
+    const blocks: EmailBlock[] = [];
+
+    for (const child of Array.from(wrapper.children)) {
+      const el       = child as HTMLElement;
+      const tag      = el.tagName.toLowerCase();
+      const styleStr = el.getAttribute('style') || '';
+      const cs       = el.style; // CSSStyleDeclaration
+
+      // ── h1 ──────────────────────────────────────────────────────────────────
+      if (tag === 'h1') {
+        blocks.push({ id: uid(), type: 'h1', props: {
+          content: el.textContent || '',
+          align:   cs.textAlign  || 'left',
+          color:   cs.color      || '#111827',
+        }});
+        continue;
+      }
+
+      // ── h2 ──────────────────────────────────────────────────────────────────
+      if (tag === 'h2') {
+        blocks.push({ id: uid(), type: 'h2', props: {
+          content: el.textContent || '',
+          align:   cs.textAlign  || 'left',
+          color:   cs.color      || '#374151',
+        }});
+        continue;
+      }
+
+      // ── text (p) ─────────────────────────────────────────────────────────────
+      if (tag === 'p') {
+        blocks.push({ id: uid(), type: 'text', props: {
+          content: el.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '') || '',
+          align:   cs.textAlign || 'left',
+          color:   cs.color     || '#374151',
+        }});
+        continue;
+      }
+
+      // ── divider (hr) ─────────────────────────────────────────────────────────
+      if (tag === 'hr') {
+        blocks.push({ id: uid(), type: 'divider', props: {
+          color: cs.borderTopColor || '#e5e7eb',
+        }});
+        continue;
+      }
+
+      // ── div — spacer / image / logo / button / footer / signature ────────────
+      if (tag === 'div') {
+
+        // Spacer: only a height style, no meaningful children
+        if (styleStr.includes('height:') && !el.textContent?.trim() && el.children.length === 0) {
+          blocks.push({ id: uid(), type: 'spacer', props: {
+            height: parseInt(cs.height) || 24,
+          }});
+          continue;
+        }
+
+        // Footer: padding:24px 20px + text-align:center fingerprint
+        if (styleStr.includes('padding:24px') && styleStr.includes('text-align:center')) {
+          const props: Record<string, any> = {
+            ...DEFAULT_PROPS.footer,
+            bgColor:   cs.backgroundColor || '#f3f4f6',
+          };
+          // Extract paragraphs: company name (font-weight:700), address, unsubscribe text
+          const paras = Array.from(el.querySelectorAll('p'));
+          const boldP = paras.find((p) => (p as HTMLElement).style.fontWeight === '700' || (p as HTMLElement).style.fontWeight === 'bold');
+          if (boldP) props.companyName = boldP.textContent || '';
+          const remainingParas = paras.filter((p) => p !== boldP);
+          if (remainingParas[0]) props.address         = remainingParas[0].textContent || '';
+          if (remainingParas[1]) props.unsubscribeText = remainingParas[1].textContent || '';
+          const unsubLink = el.querySelector('a[style*="underline"]');
+          if (unsubLink) {
+            props.unsubscribeLabel = unsubLink.textContent || 'Unsubscribe';
+            props.unsubscribeUrl   = unsubLink.getAttribute('href') || '#';
+          }
+          // Extract social links from <a><img alt="Facebook" /></a> pattern
+          const socials: Record<string, string> = {};
+          el.querySelectorAll('a').forEach((a) => {
+            if (a === unsubLink) return;
+            const img = a.querySelector('img');
+            const alt = img?.getAttribute('alt')?.toLowerCase() || '';
+            const href = a.getAttribute('href') || '';
+            if (alt && href) socials[alt] = href;
+          });
+          props.socials = { ...DEFAULT_PROPS.footer.socials, ...socials };
+          blocks.push({ id: uid(), type: 'footer', props });
+          continue;
+        }
+
+        // Signature: border-left fingerprint
+        if (styleStr.includes('border-left:')) {
+          const props: Record<string, any> = {
+            ...DEFAULT_PROPS.signature,
+            bgColor:     cs.backgroundColor                   || '#ffffff',
+            accentColor: cs.borderLeftColor                   || '#0b1957',
+          };
+          // Logo img (first img without an anchor parent)
+          const logoImg = el.querySelector('img');
+          if (logoImg) {
+            props.logoSrc   = logoImg.getAttribute('src')   || '';
+            props.logoAlt   = logoImg.getAttribute('alt')   || 'Logo';
+            props.logoWidth = parseInt(logoImg.style.width) || 120;
+          }
+          // Name: bold paragraph (font-weight:700)
+          const namePara = el.querySelector('p[style*="font-weight:700"]');
+          if (namePara) props.name = namePara.textContent || '';
+          // Other paragraphs: title, company
+          const otherParas = Array.from(el.querySelectorAll('p')).filter((p) => p !== namePara);
+          if (otherParas[0]) props.title   = otherParas[0].textContent || '';
+          if (otherParas[1]) props.company = otherParas[1].textContent || '';
+          // Contact links
+          const mailto = el.querySelector('a[href^="mailto:"]');
+          const tel    = el.querySelector('a[href^="tel:"]');
+          const web    = Array.from(el.querySelectorAll('a')).find((a) => !a.href.startsWith('mailto:') && !a.href.startsWith('tel:'));
+          if (mailto) props.email   = mailto.textContent || '';
+          if (tel)    props.phone   = tel.textContent    || '';
+          if (web)    props.website = web.getAttribute('href') || '';
+          blocks.push({ id: uid(), type: 'signature', props });
+          continue;
+        }
+
+        // Logo: <div><a href="..."><img /></a></div>
+        const logoAnchor = el.querySelector(':scope > a');
+        if (logoAnchor && logoAnchor.querySelector('img')) {
+          const img = logoAnchor.querySelector('img') as HTMLImageElement;
+          blocks.push({ id: uid(), type: 'logo', props: {
+            src:   img.getAttribute('src')          || '',
+            alt:   img.getAttribute('alt')          || 'Logo',
+            align: cs.textAlign                     || 'center',
+            width: parseInt(img.style.width)        || 160,
+            href:  logoAnchor.getAttribute('href')  || '',
+          }});
+          continue;
+        }
+
+        // Image: <div><img /></div>
+        const img = el.querySelector(':scope > img');
+        if (img) {
+          const wStr = (img as HTMLElement).style.maxWidth || '100%';
+          blocks.push({ id: uid(), type: 'image', props: {
+            src:   img.getAttribute('src')    || '',
+            alt:   img.getAttribute('alt')    || 'Image',
+            align: cs.textAlign               || 'center',
+            width: parseInt(wStr)             || 100,
+          }});
+          continue;
+        }
+
+        // Button: <div><a style="background:...">Label</a></div>
+        // Must be single direct-child <a> with a background colour (distinguishes from inline links)
+        const btnAnchor = el.querySelector(':scope > a[style*="background"]');
+        if (btnAnchor && el.children.length === 1) {
+          const bcs = (btnAnchor as HTMLElement).style;
+          blocks.push({ id: uid(), type: 'button', props: {
+            label:     btnAnchor.textContent          || 'Click Here',
+            href:      btnAnchor.getAttribute('href') || '#',
+            bgColor:   bcs.background || bcs.backgroundColor || '#0b1957',
+            textColor: bcs.color                              || '#ffffff',
+            align:     cs.textAlign                          || 'center',
+          }});
+          continue;
+        }
+
+        // Fallback: any div with text/html content → rich text block
+        // (Catches text blocks written by this editor using <div> wrapper)
+        if (el.innerHTML?.trim()) {
+          blocks.push({ id: uid(), type: 'text', props: {
+            content: el.innerHTML,
+            align:   cs.textAlign || 'left',
+            color:   cs.color     || '#374151',
+          }});
+          continue;
+        }
+      }
+      // unknown element — skip
+    }
+
+    return blocks.length > 0 ? blocks : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Block palette definitions ─────────────────────────────────────────────────
 
 const PALETTE: { type: BlockType; label: string; icon: React.ReactNode; desc: string }[] = [
@@ -171,7 +383,7 @@ const VARIABLES = [
 
 // ── Variable picker button ────────────────────────────────────────────────────
 
-function VariablePicker({ onInsert }: { onInsert: (v: string) => void }) {
+function VariablePicker({ onInsert, dropAlign = 'left' }: { onInsert: (v: string) => void; dropAlign?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -187,7 +399,7 @@ function VariablePicker({ onInsert }: { onInsert: (v: string) => void }) {
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onMouseDown={(e) => { e.preventDefault(); setOpen((v) => !v); }}
         className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
           open
             ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
@@ -199,7 +411,7 @@ function VariablePicker({ onInsert }: { onInsert: (v: string) => void }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 min-w-[180px]">
+        <div className={`absolute ${dropAlign === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 min-w-[180px]`}>
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-3 pb-1.5">Insert variable</p>
           {VARIABLES.map(({ label, val }) => (
             <button
@@ -588,6 +800,254 @@ function ImageBlockEditor({
   );
 }
 
+// ── Rich text editor (contenteditable with toolbar) ───────────────────────────
+
+const FONT_SIZES    = ['11','12','13','14','15','16','18','20','22','24','28','32'];
+const FONT_FAMILIES = [
+  { label: 'Default',        value: ''                              },
+  { label: 'Arial',          value: 'Arial, sans-serif'            },
+  { label: 'Georgia',        value: 'Georgia, serif'               },
+  { label: 'Helvetica',      value: 'Helvetica, sans-serif'        },
+  { label: 'Times New Roman',value: "'Times New Roman', serif"     },
+  { label: 'Trebuchet MS',   value: "'Trebuchet MS', sans-serif"   },
+  { label: 'Verdana',        value: 'Verdana, sans-serif'          },
+];
+
+function RichTextEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (html: string) => void;
+}) {
+  const editorRef     = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  // Set initial content once on mount only (avoids cursor jumping on every keystroke)
+  useEffect(() => {
+    if (editorRef.current) {
+      // Backward-compat: legacy plain-text content has no HTML tags → convert \n → <br>
+      const hasHtml = /<[a-zA-Z]/.test(value || '');
+      editorRef.current.innerHTML = hasHtml
+        ? (value || '')
+        : (value || '').replace(/\n/g, '<br>');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync contenteditable HTML back to parent state
+  const sync = useCallback(() => {
+    onChange(editorRef.current?.innerHTML || '');
+  }, [onChange]);
+
+  // Save caret/selection before toolbar interactions blur the editor
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel?.rangeCount) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+  };
+
+  // Restore saved selection (used when colour picker causes editor blur)
+  const restoreSelection = () => {
+    if (!savedRangeRef.current) return;
+    editorRef.current?.focus();
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(savedRangeRef.current);
+  };
+
+  // Run a document.execCommand and sync HTML immediately after
+  const exec = (cmd: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val ?? '');
+    setTimeout(sync, 0);
+  };
+
+  // List insertion — falls back to insertHTML when execCommand list command fails
+  // (execCommand insertUnorderedList/insertOrderedList can silently fail if caret
+  //  is inside a <div> with no block content before it)
+  const insertList = (type: 'ul' | 'ol') => {
+    editorRef.current?.focus();
+    const cmd = type === 'ul' ? 'insertUnorderedList' : 'insertOrderedList';
+    const beforeHtml = editorRef.current?.innerHTML || '';
+    document.execCommand(cmd, false, '');
+    // If innerHTML is unchanged the command did nothing — fall back to raw HTML insert
+    if (editorRef.current?.innerHTML === beforeHtml) {
+      const sel = window.getSelection();
+      const selected = sel?.toString() || '';
+      if (selected) {
+        const items = selected.split('\n').filter(Boolean).map((l) => `<li>${l}</li>`).join('');
+        document.execCommand('insertHTML', false, `<${type}>${items}</${type}><br>`);
+      } else {
+        document.execCommand('insertHTML', false, `<${type}><li>​</li></${type}><br>`);
+      }
+    }
+    setTimeout(sync, 0);
+  };
+
+  // Font-size: execCommand uses 1-7 sizes; we mark with 7 then replace with real px
+  const setFontSize = (px: string) => {
+    editorRef.current?.focus();
+    document.execCommand('fontSize', false, '7');
+    editorRef.current?.querySelectorAll('font[size="7"]').forEach((el) => {
+      const span = document.createElement('span');
+      span.style.fontSize = `${px}px`;
+      span.innerHTML = (el as HTMLElement).innerHTML;
+      el.parentNode?.replaceChild(span, el);
+    });
+    sync();
+  };
+
+  // Insert a {{variable}} at current caret position
+  const insertVariable = (variable: string) => {
+    editorRef.current?.focus();
+    document.execCommand('insertText', false, variable);
+    setTimeout(sync, 0);
+  };
+
+  // Link insertion — uses saved selection so focus loss doesn't break it
+  const insertLink = () => {
+    saveSelection();
+    const url = window.prompt('Enter URL:', 'https://');
+    if (!url) return;
+    restoreSelection();
+    const sel = window.getSelection();
+    if (sel?.toString()) {
+      document.execCommand('createLink', false, url);
+    } else {
+      document.execCommand('insertHTML', false,
+        `<a href="${url}" style="color:#2563eb;text-decoration:underline;">${url}</a>`);
+    }
+    setTimeout(sync, 0);
+  };
+
+  // ── Toolbar sub-components ─────────────────────────────────────────────────
+
+  const Btn = ({
+    onClick, title, children,
+  }: { onClick: () => void; title: string; children: React.ReactNode }) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      className="p-1.5 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors flex items-center justify-center"
+    >
+      {children}
+    </button>
+  );
+
+  const Sep = () => <span className="w-px h-4 bg-gray-300 mx-0.5 flex-shrink-0" />;
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-400 transition-shadow">
+
+      {/* ── Toolbar ── */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+
+        {/* Format */}
+        <Btn title="Bold (Cmd+B)"      onClick={() => exec('bold')}         ><Bold          className="w-3.5 h-3.5" /></Btn>
+        <Btn title="Italic (Cmd+I)"    onClick={() => exec('italic')}       ><Italic        className="w-3.5 h-3.5" /></Btn>
+        <Btn title="Underline (Cmd+U)" onClick={() => exec('underline')}    ><Underline     className="w-3.5 h-3.5" /></Btn>
+        <Btn title="Strikethrough"     onClick={() => exec('strikeThrough')}><Strikethrough className="w-3.5 h-3.5" /></Btn>
+        <Sep />
+
+        {/* Lists */}
+        <Btn title="Bullet list"   onClick={() => insertList('ul')}><List        className="w-3.5 h-3.5" /></Btn>
+        <Btn title="Numbered list" onClick={() => insertList('ol')}><ListOrdered className="w-3.5 h-3.5" /></Btn>
+        <Sep />
+
+        {/* Font size */}
+        <select
+          title="Font size"
+          onMouseDown={(e) => e.stopPropagation()}
+          onFocus={saveSelection}
+          onChange={(e) => { setFontSize(e.target.value); (e.target as HTMLSelectElement).value = ''; }}
+          className="text-xs border border-gray-200 rounded px-1 py-1 bg-white text-gray-600 focus:outline-none cursor-pointer"
+          defaultValue=""
+        >
+          <option value="" disabled>Size</option>
+          {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
+        </select>
+
+        {/* Font family */}
+        <select
+          title="Font family"
+          onMouseDown={(e) => e.stopPropagation()}
+          onFocus={saveSelection}
+          onChange={(e) => {
+            if (e.target.value) { restoreSelection(); exec('fontName', e.target.value); }
+            (e.target as HTMLSelectElement).value = '';
+          }}
+          className="text-xs border border-gray-200 rounded px-1 py-1 bg-white text-gray-600 focus:outline-none cursor-pointer max-w-[90px]"
+          defaultValue=""
+        >
+          <option value="" disabled>Font</option>
+          {FONT_FAMILIES.map(({ label, value }) => <option key={label} value={value}>{label}</option>)}
+        </select>
+        <Sep />
+
+        {/* Text colour */}
+        <label
+          title="Text colour"
+          className="flex items-center gap-0.5 p-1.5 rounded hover:bg-gray-200 cursor-pointer"
+          onMouseDown={saveSelection}
+        >
+          <span className="text-[13px] font-bold text-gray-700 select-none" style={{ textDecoration: 'underline wavy' }}>A</span>
+          <input
+            ref={colorInputRef}
+            type="color"
+            defaultValue="#000000"
+            className="w-0 h-0 opacity-0 absolute pointer-events-none"
+            onChange={(e) => { restoreSelection(); exec('foreColor', e.target.value); }}
+          />
+          <span
+            className="w-3 h-2 rounded-sm border border-gray-300 ml-0.5"
+            style={{ background: '#000000' }}
+            onClick={() => colorInputRef.current?.click()}
+          />
+        </label>
+        <Sep />
+
+        {/* Links */}
+        <Btn title="Insert link"  onClick={insertLink}            ><Link2    className="w-3.5 h-3.5" /></Btn>
+        <Btn title="Remove link"  onClick={() => exec('unlink')}  ><Link2Off className="w-3.5 h-3.5" /></Btn>
+        <Sep />
+
+        {/* Clear formatting */}
+        <Btn title="Clear formatting" onClick={() => exec('removeFormat')}>
+          <span className="text-[11px] font-semibold leading-none">Tx</span>
+        </Btn>
+        <Sep />
+
+        {/* Variables — opens right-aligned so it stays inside the toolbar */}
+        <VariablePicker onInsert={insertVariable} dropAlign="right" />
+      </div>
+
+      {/* ── Editable content area ── */}
+      {/* [&_ul] / [&_ol] override Tailwind Preflight's list-style:none reset so bullets render */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={sync}
+        onBlur={sync}
+        onPaste={(e) => {
+          // Paste as plain text to avoid messy external HTML
+          e.preventDefault();
+          const text = e.clipboardData.getData('text/plain');
+          document.execCommand('insertText', false, text);
+          setTimeout(sync, 0);
+        }}
+        className="min-h-[140px] max-h-[300px] overflow-y-auto p-3 text-sm text-gray-800 focus:outline-none
+          [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1
+          [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1
+          [&_li]:my-0.5"
+        style={{ lineHeight: '1.7', wordBreak: 'break-word' }}
+      />
+    </div>
+  );
+}
+
 // ── Inline block editor ───────────────────────────────────────────────────────
 
 function BlockEditor({
@@ -600,40 +1060,21 @@ function BlockEditor({
   onClose: () => void;
 }) {
   const [local, setLocal] = useState({ ...block.props });
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const inputRef    = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const set = (key: string, val: any) => setLocal((p) => ({ ...p, [key]: val }));
   const handleSave = () => { onUpdate(local); onClose(); };
 
-  // Insert variable at cursor position in the active content field
+  // Cursor-aware variable insert for plain inputs (h1, h2, button label)
   const insertVariable = (variable: string) => {
-    if (block.type === 'text') {
-      const el = textareaRef.current;
-      if (!el) { set('content', (local.content || '') + variable); return; }
-      const start = el.selectionStart ?? (local.content || '').length;
-      const end   = el.selectionEnd   ?? start;
-      const newVal = (local.content || '').substring(0, start) + variable + (local.content || '').substring(end);
-      set('content', newVal);
-      setTimeout(() => {
-        el.focus();
-        const pos = start + variable.length;
-        el.setSelectionRange(pos, pos);
-      }, 0);
-    } else if (['h1', 'h2'].includes(block.type)) {
+    if (['h1', 'h2'].includes(block.type)) {
       const el = inputRef.current;
       if (!el) { set('content', (local.content || '') + variable); return; }
       const start = el.selectionStart ?? (local.content || '').length;
       const end   = el.selectionEnd   ?? start;
-      const newVal = (local.content || '').substring(0, start) + variable + (local.content || '').substring(end);
-      set('content', newVal);
-      setTimeout(() => {
-        el.focus();
-        const pos = start + variable.length;
-        el.setSelectionRange(pos, pos);
-      }, 0);
+      set('content', (local.content || '').substring(0, start) + variable + (local.content || '').substring(end));
+      setTimeout(() => { el.focus(); const pos = start + variable.length; el.setSelectionRange(pos, pos); }, 0);
     } else if (block.type === 'button') {
-      // Insert into button label
       set('label', (local.label || '') + variable);
     }
   };
@@ -641,35 +1082,34 @@ function BlockEditor({
   const labelCls = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1';
   const inputCls = 'w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
 
-  const showVariables = ['h1', 'h2', 'text', 'button'].includes(block.type);
-
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-2 space-y-3">
 
-      {/* Text content */}
-      {['h1', 'h2', 'text'].includes(block.type) && (
+      {/* Rich text editor for text blocks */}
+      {block.type === 'text' && (
+        <div>
+          <label className={labelCls}>Content</label>
+          <RichTextEditor
+            value={local.content || ''}
+            onChange={(html) => set('content', html)}
+          />
+        </div>
+      )}
+
+      {/* Plain input for headings (with variable picker) */}
+      {['h1', 'h2'].includes(block.type) && (
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className={labelCls} style={{ marginBottom: 0 }}>Content</label>
             <VariablePicker onInsert={insertVariable} />
           </div>
-          {block.type === 'text' ? (
-            <textarea
-              ref={textareaRef}
-              value={local.content || ''}
-              onChange={(e) => set('content', e.target.value)}
-              rows={4}
-              className={inputCls + ' resize-y mt-1.5'}
-            />
-          ) : (
-            <input
-              ref={inputRef}
-              type="text"
-              value={local.content || ''}
-              onChange={(e) => set('content', e.target.value)}
-              className={inputCls + ' mt-1.5'}
-            />
-          )}
+          <input
+            ref={inputRef}
+            type="text"
+            value={local.content || ''}
+            onChange={(e) => set('content', e.target.value)}
+            className={inputCls + ' mt-1.5'}
+          />
         </div>
       )}
 
@@ -944,10 +1384,19 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
   // Track whether we've initialised from external htmlContent already
   const [initialised, setInitialised] = useState(false);
 
-  // On first mount, if there's existing html, start with empty canvas
-  // (converting arbitrary html → blocks is non-trivial; start fresh is safer)
+  // On first mount: restore blocks from saved HTML (if it was generated by this editor).
+  // htmlToBlocks recognises the outer max-width:600px wrapper fingerprint.
+  // Returns null for arbitrary HTML → editor starts empty in that case.
   useEffect(() => {
-    if (!initialised) setInitialised(true);
+    if (!initialised) {
+      if (htmlContent?.trim()) {
+        const restored = htmlToBlocks(htmlContent);
+        if (restored && restored.length > 0) {
+          setBlocks(restored);
+        }
+      }
+      setInitialised(true);
+    }
   }, []);
 
   // Whenever blocks change → regenerate HTML
