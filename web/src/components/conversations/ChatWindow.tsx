@@ -195,6 +195,7 @@ export const ChatWindow = memo(function ChatWindow({
 
       <MessageComposer
         channel={conversation.channel}
+        backendChannel={backendChannel}
         onSendMessage={onSendMessage}
         disabled={conversation.status === 'resolved'}
         contactName={conversation.contact?.name}
