@@ -22,6 +22,7 @@ interface FieldOption { label: string; value: string; hint: string; }
 const FIELD_OPTIONS: FieldOption[] = [
   { label: 'Contact name (full)',  value: '{member_name}',       hint: 'e.g. Naveen Reddy'         },
   { label: 'Contact first name',  value: '{member_first_name}', hint: 'e.g. Naveen'               },
+  { label: 'Company',             value: '{member_company}',    hint: 'e.g. Acme Corp'            },
   { label: 'Phone number',        value: '{member_phone}',      hint: 'e.g. +971501234567'        },
   { label: 'Email address',       value: '{member_email}',      hint: 'e.g. naveen@example.com'   },
   { label: 'Custom value…',       value: '__custom__',          hint: 'Same text sent to everyone' },
@@ -170,18 +171,34 @@ export function TemplatePicker({
 
   const handleSelectTemplate = useCallback(async (template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
-    // Auto-fill known contact fields with sentinels so the backend can personalize per-contact
+    // Auto-fill known contact fields with sentinels so the backend can personalize per-contact.
+    // Priority: exact FIELD_OPTIONS match → CONTACT_NAME_FIELDS → CONTACT_COMPANY_FIELDS
     const params = template.parameters || [];
     const defaults = params.map((p) => {
       const key = p.toLowerCase();
+      // Exact match against a FIELD_OPTIONS sentinel — e.g. param "member_first_name" → '{member_first_name}'
+      const exactMatch = FIELD_OPTIONS.find(
+        o => o.value !== '__custom__' && o.value.toLowerCase() === `{${key}}`
+      );
+      if (exactMatch) return exactMatch.value;
+      // Legacy CONTACT_NAME_FIELDS match → full name sentinel
       if (CONTACT_NAME_FIELDS.includes(key)) return '{member_name}';
+      // Company field
       if (CONTACT_COMPANY_FIELDS.includes(key)) return '{member_company}';
+      // Params containing "name" or "first" → first-name sentinel
+      if (key.includes('first') || (key.includes('name') && !key.includes('company'))) return '{member_first_name}';
+      // Params containing "phone" or "mobile"
+      if (key.includes('phone') || key.includes('mobile')) return '{member_phone}';
+      // Params containing "email"
+      if (key.includes('email')) return '{member_email}';
+      // Params containing "company"
+      if (key.includes('company') || key.includes('business')) return '{member_company}';
       return '';
     });
-    // For positional templates ({{1}}, {{2}}, …): default first param to name,
+    // For positional templates ({{1}}, {{2}}, …): default first param to first-name,
     // leave the rest as empty so user picks from the dropdown.
     if (defaults.length > 0 && defaults[0] === '' && !isNaN(Number(params[0]))) {
-      defaults[0] = '{member_name}';
+      defaults[0] = '{member_first_name}';
     }
     setParamValues(defaults);
 
@@ -222,23 +239,29 @@ export function TemplatePicker({
 
   const handleSend = useCallback(() => {
     if (!selectedTemplate) return;
+    // WABA handles rate-limiting server-side — pass zeroes so the backend sends
+    // without artificial throttling. Personal WA uses the user-configured schedule
+    // to avoid account restrictions from rapid bulk sends.
+    const scheduleParams = channel === 'personal'
+      ? { batchSize, delayMin, delayRandom, dailyLimit }
+      : { batchSize: 0, delayMin: 0, delayRandom: 0, dailyLimit: 0 };
     onSend(
       selectedTemplate.name,
       selectedTemplate.language,
       paramValues.length > 0 ? paramValues : [],
       nameFormat,
-      { batchSize, delayMin, delayRandom, dailyLimit },
+      scheduleParams,
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
     );
-  }, [selectedTemplate, paramValues, nameFormat, batchSize, delayMin, delayRandom, onSend, headerMediaUrl]);
+  }, [selectedTemplate, paramValues, nameFormat, channel, batchSize, delayMin, delayRandom, dailyLimit, onSend, headerMediaUrl]);
 
   // Whether any parameter is a name-type field (controls name format picker visibility)
   const hasNameParam = useMemo(() => {
     return (selectedTemplate?.parameters || []).some(p =>
       CONTACT_NAME_FIELDS.includes(p.toLowerCase())
-    ) || paramValues.some(v => v === '{member_name}');
+    ) || paramValues.some(v => v === '{member_name}' || v === '{member_first_name}');
   }, [selectedTemplate, paramValues]);
 
   // Preview body with params filled in (lenient: handles {{name}}, {name}}, {name} etc.)
@@ -246,12 +269,19 @@ export function TemplatePicker({
     if (!selectedTemplate) return '';
     let body = selectedTemplate.body;
     const params = selectedTemplate.parameters || [];
+    const sampleFirst = 'Naveen';
+    const sampleFull  = 'Naveen Reddy';
+    // Sentinel → sample text mapping for all FIELD_OPTIONS
+    const sentinelSamples: Record<string, string> = {
+      '{member_name}':       nameFormat === 'first' ? sampleFirst : sampleFull,
+      '{member_first_name}': sampleFirst,
+      '{member_phone}':      '+971501234567',
+      '{member_email}':      'naveen@example.com',
+      '{member_company}':    '[Company]',
+    };
     paramValues.forEach((val, i) => {
       const placeholder = params[i] || String(i + 1);
-      const sampleName = nameFormat === 'first' ? 'Naveen' : 'Naveen Reddy';
-      const displayVal = val === '{member_name}' ? sampleName
-        : val === '{member_company}' ? '[Company]'
-        : (val || `{{${placeholder}}}`);
+      const displayVal = sentinelSamples[val] ?? (val || `{{${placeholder}}}`);
       // Lenient regex: match {+placeholder}+
       const re = new RegExp(`\\{+${placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}+`, 'gi');
       body = body.replace(re, displayVal);
@@ -261,7 +291,7 @@ export function TemplatePicker({
 
   const canSend = selectedTemplate && (
     selectedTemplate.parameter_count === 0 ||
-    paramValues.every((v) => v.trim().length > 0 && v !== '__custom__')
+    paramValues.every((v) => v.trim().length > 0 && v !== '__custom__' && v !== '')
   );
 
   return (
@@ -536,8 +566,9 @@ export function TemplatePicker({
               </div>
             </div>
 
-              {/* Batch & Delay settings — always shown for bulk/group sends */}
-              {(isBulkSend || selectedCount > 1) && (
+              {/* Batch & Delay settings — personal WhatsApp only (avoids ban from rapid bulk sends).
+                  WABA handles its own rate-limiting server-side; no schedule needed. */}
+              {channel === 'personal' && (isBulkSend || selectedCount > 1) && (
                 <div className="space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                   <p className="text-xs font-semibold text-amber-800">
                     Sending schedule {selectedCount > 0 ? `(${selectedCount} contacts)` : ''}

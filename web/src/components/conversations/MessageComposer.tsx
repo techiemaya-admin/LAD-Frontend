@@ -622,7 +622,7 @@ export const MessageComposer = memo(function MessageComposer({
           }),
         });
       } else {
-        res = await fetchWithTenant(`${CONV_API}/bulk?channel=${backendChannel}`, {
+        res = await fetchWithTenant(`${CONV_API}/bulk?channel=${resolvedBackendChannel}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
