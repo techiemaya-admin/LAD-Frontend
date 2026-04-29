@@ -939,11 +939,20 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
                     {member.company ? ` · ${member.company}` : ''}
                   </span>
                 </div>
-                {member.channel && member.channel !== 'whatsapp' && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
-                    {member.channel}
-                  </span>
-                )}
+                {member.channel && member.channel !== 'whatsapp' && (() => {
+                  const ch = member.channel.startsWith('personal') ? 'personal' : member.channel;
+                  const label = ch === 'personal' ? 'Personal WA' : ch === 'waba' ? 'WABA' : ch.toUpperCase();
+                  const style = ch === 'personal'
+                    ? { background: '#dcfce7', color: '#15803d' }
+                    : ch === 'waba'
+                    ? { background: '#d1fae5', color: '#065f46' }
+                    : { background: '#dbeafe', color: '#1d4ed8' };
+                  return (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-medium" style={style}>
+                      {label}
+                    </span>
+                  );
+                })()}
 
                 {/* Action toggle */}
                 <button

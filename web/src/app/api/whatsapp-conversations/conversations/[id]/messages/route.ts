@@ -10,6 +10,9 @@
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWABAServiceUrl } from '../../../utils/python-proxy';
 
+// Increase maxDuration to 5 minutes for large payload processing
+export const maxDuration = 300;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

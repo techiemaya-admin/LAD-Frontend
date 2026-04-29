@@ -8,7 +8,8 @@
  * This replaces the old mock-based useConversations hook.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';import {
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
   getConversationsInfiniteOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
@@ -22,6 +23,7 @@ import type {
   Message,
   UseConversationsReturn,
   ConversationListFilters,
+  RichMessagePayload,
 } from '../types';
 
 export interface UseConversationsOptions {
@@ -106,7 +108,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
-  }, [hookOptions?.channel, conversationsQuery]);
+  }, [hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -121,17 +123,38 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   });
 
   const sendMessage = useCallback(
-    (content: string) => {
-      if (!effectiveSelectedId || !content.trim() || !selectedConversation) return;
+    (payload: RichMessagePayload) => {
+      if (!effectiveSelectedId || !selectedConversation) return;
+      // Require at least some content for text messages (also guard against missing type)
+      const payloadType = payload.type || 'text';
+      if (payloadType === 'text' && !payload.content?.trim()) return;
 
       sendMutation.mutate({
         conversationId: effectiveSelectedId,
-        content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
+        channel: hookOptions?.channel,
+        // spread all rich fields
+        type:            payloadType,
+        content:         payload.content ?? '',  // always send content key, even if empty (non-text types)
+
+        fileBase64:      payload.fileBase64,
+        filename:        payload.filename,
+        contentType:     payload.contentType,
+        caption:         payload.caption,
+        latitude:        payload.latitude,
+        longitude:       payload.longitude,
+        locationName:    payload.locationName,
+        locationAddress: payload.locationAddress,
+        contactName:     payload.contactName,
+        contactPhone:    payload.contactPhone,
+        contactEmail:    payload.contactEmail,
+        contactCompany:  payload.contactCompany,
+        pollQuestion:    payload.pollQuestion,
+        pollOptions:     payload.pollOptions,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation]
+    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations
@@ -181,6 +204,6 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     refetch: conversationsQuery.refetch,
     loadMore,
     hasMore: conversationsQuery.hasNextPage ?? false,
-    isFetchingMore: conversationsQuery.isFetchingNextPage,
+    isLoadingMore: conversationsQuery.isFetchingNextPage,
   };
 }
