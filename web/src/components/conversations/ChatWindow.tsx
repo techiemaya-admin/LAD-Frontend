@@ -24,6 +24,7 @@ interface ChatWindowProps {
   onDelete?: (id: string) => void;
   /** Called when agent avatar is clicked — parent should open Assignment tab */
   onOpenAssignmentPanel?: () => void;
+  onBack?: () => void;
 }
 
 // ── Deduplicate messages by ID (newest wins on tie) ───────────────────────────
@@ -57,6 +58,7 @@ export const ChatWindow = memo(function ChatWindow({
   onBlock,
   onDelete,
   onOpenAssignmentPanel,
+  onBack,
 }: ChatWindowProps) {
   // ── Latest 50 messages polled every 3 s; older ones loaded on scroll-up ────
   const { messages: polledMessages, isLoading: messagesLoading, isAgentTyping, total } =
@@ -174,6 +176,7 @@ export const ChatWindow = memo(function ChatWindow({
         onExport={() => onExport?.(conversation.id)}
         onBlock={() => onBlock?.(conversation.id)}
         onDelete={() => onDelete?.(conversation.id)}
+        onBack={onBack}
       />
 
       {messagesLoading ? (
