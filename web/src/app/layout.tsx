@@ -30,9 +30,23 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Force light mode — remove any saved dark theme preference
-              document.documentElement.classList.remove('dark');
-              try { localStorage.removeItem('theme'); } catch(e) {}
+              // Initialize theme from localStorage or system preference
+              (function() {
+                try {
+                  const theme = localStorage.getItem('theme');
+                  const isDark = theme === 'dark' || (theme === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch(e) {
+                  // Fallback to system preference
+                  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                  }
+                }
+              })();
               // Suppress Chrome extension message passing errors immediately
               window.addEventListener('error', function(event) {
                 if (event.message && event.message.includes('A listener indicated an asynchronous response')) {

@@ -873,7 +873,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               onClick={() => onViewModeChange?.('kanban')}
               className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
                 viewMode === 'kanban'
-                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -885,7 +885,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               onClick={() => onViewModeChange?.('list')}
               className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -924,7 +924,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
           {/* Row 3: Search box */}
           <div className="w-full lg:w-60 lg:ml-auto">
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
+            <div className="relative bg-white dark:bg-[#1a2f6b] rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
               <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"

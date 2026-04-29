@@ -33,12 +33,12 @@ export default function LAD3DShowcase() {
       {/* Clone Yourself Section */}
       <CloneYourselfSection />
 
-      {/* Meet Our Agent Section */}
-      <MeetOurAgentSection />
-
       {/* How It Works Section */}
       <HowItWorksSection />
 
+      {/* Meet Our Agent Section */}
+      <MeetOurAgentSection />
+      
       {/* Parallax Features Section */}
       <ParallaxFeaturesSection />
 
@@ -46,7 +46,7 @@ export default function LAD3DShowcase() {
       <SocialProofSection />
 
       {/* Pricing Section */}
-      <section>
+      <section className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-[#1a2f6b]">
         {/* Pricing Hero */}
         <PricingHero />
 

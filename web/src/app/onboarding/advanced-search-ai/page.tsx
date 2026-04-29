@@ -9130,4 +9130,139 @@ const css = `
                 .adv-gemini-chip {padding: 7px 12px; font-size: 11.5px; gap: 6px; }
                 .adv-chat-input-box {margin: 0 4px; }
             }
+
+            /* Dark Mode Styling - uses .dark class on <html> */
+            .dark .adv-landing { background: #000724; color: #ffffff; }
+            .dark .adv-chat-root { background: #000724; color: #ffffff; }
+            .dark .adv-chat-body { background: #000724; }
+            .dark .adv-chat-left { background: #000724; }
+            .dark .adv-chat-left-empty .adv-chat-input-wrap { background: transparent; }
+
+            /* Text & Titles */
+            .dark .adv-title { color: #ffffff; }
+            .dark .adv-gemini-title { color: #ffffff; }
+            .dark .adv-message { color: #ffffff; }
+
+            /* Input & Surface Elements */
+            .dark .adv-input-outer { background: #1A2A43; border: 1px solid #000724; }
+            .dark .adv-input-box { background: #1A2A43; color: #ffffff; border: none; }
+            .dark .adv-input-box::placeholder { color: #7a8ba3; }
+
+            /* Chips & Interactive Elements */
+            .dark .adv-chip { background: #1A2A43; color: #ffffff; border: 1px solid #000724; }
+            .dark .adv-chip:hover { background: #2B7CFF; color: #ffffff; }
+            .dark .adv-gemini-chip { background: #1A2A43; color: #ffffff; border: 1px solid #000724; }
+            .dark .adv-gemini-chip:hover { background: #2B7CFF; color: #ffffff; }
+
+            /* Options & Dropdowns */
+            .dark .adv-close-btn { color: #ffffff; }
+            .dark .adv-options-container { background: #1A2A43; }
+            .dark .adv-option-item { color: #ffffff; border-color: #000724; }
+            .dark .adv-option-item:hover { background: #2B7CFF; color: #ffffff; }
+
+            /* Buttons */
+            .dark .adv-button { background: #2B7CFF; color: #ffffff; }
+            .dark .adv-button:hover { background: #1e5fa8; }
+            .dark .adv-send-btn { color: #2B7CFF; }
+            .dark .adv-send-btn:hover { color: #ffffff; }
+            .dark .adv-send-circle.adv-send-sm { background: #1A2A43 !important; border: 1px solid #484b4f !important; box-shadow: none !important; color: #ffffff; }
+            .dark .adv-send-circle.adv-send-sm svg { stroke: #ffffff; }
+            .dark .adv-send-circle.adv-send-sm:hover { background: #253456 !important; border-color: #484b4f !important; }
+
+            /* Chat Input */
+            .dark .adv-chat-input-box { background: #1A2A43; color: #ffffff; border-color: #000724; box-shadow: none; z-index: auto; }
+            .dark .adv-chat-input-box::before { display: none; }
+            .dark .adv-chat-input-box::placeholder { color: #7a8ba3; }
+            .dark .adv-chat-input-box textarea,
+            .dark .adv-chat-input-box input { color: #ffffff; }
+            .dark .adv-chat-input-foot { border-top: none; }
+            .dark .adv-chat-ta { color: #ffffff; }
+            .dark .adv-chat-ta::placeholder { color: #7a8ba3; }
+
+            /* Recent Items */
+            .dark .adv-recent-item { color: #ffffff; background: #1A2A43; }
+            .dark .adv-recent-item:hover { background: #2B7CFF; color: #ffffff; }
+
+            /* Mobile Button */
+            .dark .adv-mobile-icp-btn { background: #2B7CFF; color: #ffffff; }
+            .dark .adv-mobile-icp-btn:hover { background: #1e5fa8; }
+
+            /* CHAT BUBBLES & MESSAGES */
+            .dark .adv-user-msg { background: #2563eb; color: #ffffff; box-shadow: 0 2px 14px rgba(37, 99, 235, 0.3); }
+            .dark .adv-ai-avatar { background: linear-gradient(135deg, #2563eb, #1e40af); box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3); }
+            .dark .adv-ai-name { color: #60a5fa; }
+            .dark .adv-ai-text { color: #e5e7eb; }
+            .dark .adv-ai-h3 { color: #f3f4f6; }
+            .dark .adv-ai-bullet-dot { background: #2B7CFF; }
+            .dark .adv-ai-num-badge { background: linear-gradient(135deg, #253456, #1A2A43); color: #60a5fa; }
+
+            /* LEADS PANEL */
+            .dark .adv-leads-panel { background: #000724; border-left-color: #000724; }
+            .dark .adv-panel-header { background: #0f1629; border-bottom-color: #000724; }
+            .dark .adv-panel-body { background: #000724; }
+            .dark .adv-panel-title { color: #ffffff; }
+            .dark .adv-panel-desc { background: #1A2A43; color: #7a8ba3; border-color: #000724; }
+            .dark .adv-lead-card { background: transparent; }
+            .dark .adv-lead-card:hover { background: #253456; }
+            .dark .adv-lead-name { color: #ffffff; }
+            .dark .adv-lead-title { color: #7a8ba3; }
+            .dark .adv-lead-action { background: #1A2A43; border-color: #000724; color: #ffffff; }
+            .dark .adv-lead-action:hover:not(:disabled) { border-color: #000724; background: #253456; }
+            .dark .adv-lead-avatar-img { border-color: #000724; }
+
+            /* RESULT CARDS */
+            .dark .adv-result-cards { color: #ffffff; }
+            .dark .adv-rc { background: #1A2A43; border-color: #000724; color: #ffffff; }
+            .dark .adv-rc:hover { border-color: #000724; background: #253456; box-shadow: 0 2px 8px rgba(43, 124, 255, 0.15); }
+            .dark .adv-rc-icon { background: #253456; }
+            .dark .adv-rc-label { color: #ffffff; }
+            .dark .adv-rc-sub { color: #7a8ba3; }
+
+            /* MINI LEADS */
+            .dark .adv-mini-leads { background: #1A2A43; border-color: #000724; }
+            .dark .adv-ml-header { color: #60a5fa; }
+            .dark .adv-ml-count { background: #253456; color: #60a5fa; }
+            .dark .adv-ml-item { border-top-color: #000724; }
+            .dark .adv-ml-name { color: #ffffff; }
+            .dark .adv-ml-title { color: #7a8ba3; }
+
+            /* ACTION BUTTONS */
+            .dark .adv-act-btn { border-color: #000724; background: transparent; color: #2B7CFF; }
+            .dark .adv-act-btn:hover { background: #2B7CFF; color: #000724; }
+            .dark .adv-opt-btn { background: #1A2A43; border-color: #000724; color: #ffffff; }
+            .dark .adv-opt-btn:hover { border-color: #000724; background: #253456; color: #ffffff; }
+            .dark .adv-opt-btn:first-child { background: #2B7CFF; color: #000724; border-color: #000724; }
+            .dark .adv-opt-btn:first-child:hover { background: #1e5fa8; border-color: #1e5fa8; }
+
+            /* MOBILE NAVIGATION */
+            .dark .adv-mobile-nav { background: rgba(10, 7, 36, 0.9); border-color: #000724; box-shadow: 0 8px 32px rgba(11, 25, 87, 0.4); }
+            .dark .adv-nav-btn { background: transparent; color: #7a8ba3; }
+            .dark .adv-nav-btn:hover { background: #1A2A43; color: #2B7CFF; }
+            .dark .adv-nav-btn-active { background: #2B7CFF; color: #000724; box-shadow: 0 4px 12px rgba(43, 124, 255, 0.3); }
+
+            /* BACK & CLOSE BUTTONS */
+            .dark .adv-back, .dark .adv-chat-back { background: #1A2A43; border-color: #000724; color: #ffffff; }
+            .dark .adv-back svg, .dark .adv-chat-back svg { stroke: #ffffff; }
+            .dark .adv-back:hover, .dark .adv-chat-back:hover { background: #253456; border-color: #000724; }
+            .dark .adv-close-panel { background: #1A2A43; border-color: #000724; color: #ffffff; }
+            .dark .adv-close-panel:hover { background: #253456; border-color: #000724; }
+
+            /* ATTACH & UNLOCK BUTTONS */
+            .dark .adv-chat-attach-btn { background: #1A2A43; border: 1px solid #484b4f; color: #ffffff; box-shadow: none; }
+            .dark .adv-chat-attach-btn svg { stroke: #ffffff; }
+            .dark .adv-chat-attach-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-unlock-btn { background: #2B7CFF; color: #000724; }
+            .dark .adv-unlock-btn:hover { background: #1e5fa8; box-shadow: 0 4px 12px rgba(43, 124, 255, 0.3); }
+
+            /* TARGETING CARD */
+            .dark .adv-targeting-card { background: linear-gradient(135deg, #1A2A43, #253456); border-color: #000724; }
+            .dark .adv-tc-header { color: #60a5fa; }
+            .dark .adv-tag-label { color: #7a8ba3; }
+            .dark .adv-tag { background: #253456; color: #ffffff; border-color: #000724; }
+
+            /* MISC ELEMENTS */
+            .dark .adv-gemini-sparkle { color: #2B7CFF; }
+            .dark .adv-web-searched { background: #1A2A43; border-color: #000724; color: #7a8ba3; }
+            .dark .adv-thinking-wrap { color: #60a5fa; }
+            .dark .adv-gemini-logo { filter: brightness(0) invert(1); }
             `;

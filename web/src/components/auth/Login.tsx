@@ -81,31 +81,34 @@ const Login: React.FC = () => {
   };
 
   return (
-      <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-white/60 border-gray-200">
+      <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 border-gray-200 dark:border-gray-700">
         {/* Logo */}
-        <img
-          src="/logo.png"
-          className="w-24 mx-auto mb-2 opacity-100 drop-shadow-md"
-          alt="logo"
-        />
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcSet="/MrLAD-logo-white.svg" />
+          <img
+            src="/MrLAD-logo.svg"
+            className="w-24 mx-auto mb-2 opacity-100 drop-shadow-md"
+            alt="logo"
+          />
+        </picture>
         {/* Title */}
-        <h2 className="text-center text-2xl font-bold text-gray-800 mb-1">
+        <h2 className="text-center text-2xl font-bold text-gray-900 dark:text-white mb-1">
           👋 Welcome Back!
         </h2>
-        <p className="text-center text-gray-600 mb-6 text-sm">
+        <p className="text-center text-gray-600 dark:text-gray-200 mb-6 text-sm">
           We're happy to see you again. Please sign in.
         </p>
         {formErrors.submit && (
-          <div className="mb-3 rounded-md border border-red-300 bg-red-100 text-red-700 text-sm px-3 py-2">
+          <div className="mb-3 rounded-md border border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm px-3 py-2">
             ❗ {formErrors.submit}
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email Input */}
           <div>
-            <label className="text-gray-700 text-sm font-semibold">Email</label>
+            <label className="text-gray-900 dark:text-white text-sm font-semibold">Email</label>
             <div className="relative mt-1">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" size={20} />
               <input
                 name="email"
                 value={formData.email}
@@ -115,9 +118,9 @@ const Login: React.FC = () => {
                 placeholder="you@example.com"
                 className="
                   w-full rounded-xl pl-10 pr-3 py-3
-                  bg-white border border-gray-300
-                  text-gray-800 placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-blue-500
+                  bg-white/80 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-600
+                  text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
                   transition shadow-sm
                 "
               />
@@ -128,9 +131,9 @@ const Login: React.FC = () => {
           </div>
           {/* Password Input */}
           <div>
-            <label className="text-gray-700 text-sm font-semibold">Password</label>
+            <label className="text-gray-900 dark:text-white text-sm font-semibold">Password</label>
             <div className="relative mt-1">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" size={20} />
               <input
                 name="password"
                 type={showPassword ? "text" : "password"}
@@ -140,16 +143,16 @@ const Login: React.FC = () => {
                 placeholder="•••••••••"
                 className="
                   w-full rounded-xl pl-10 pr-10 py-3
-                  bg-white border border-gray-300
-                  text-gray-800 placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-blue-500
+                  bg-white/80 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-600
+                  text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
                   transition shadow-sm
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-400"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -167,11 +170,11 @@ const Login: React.FC = () => {
               id="rememberMe"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
             />
             <label
               htmlFor="rememberMe"
-              className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
+              className="ml-2 text-sm text-gray-700 dark:text-white cursor-pointer select-none"
             >
               Remember
             </label>
@@ -180,10 +183,11 @@ const Login: React.FC = () => {
           <Button
             type="submit"
             className="
-              w-full p-6 rounded-lg text-lg font-semibold
-              bg-[#0b1957] text-white
-              hover:shadow-lg transition-shadow
-
+              w-full p-3 rounded-lg text-base font-semibold
+              bg-primary dark:bg-primary text-primary-foreground
+              hover:shadow-lg hover:shadow-primary/50 transition-all duration-300
+              transform hover:scale-105 active:scale-95
+              uppercase tracking-wide border border-white/20
             "
           >
             {loading ? "⏳ Signing in..." : "Sign In"}

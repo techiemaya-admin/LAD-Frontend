@@ -43,7 +43,7 @@ const ContactPage = memo(function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-[#0b1957] dark:via-[#0b1957] dark:to-[#0b1957] pt-20 pb-16">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-[#1a2f6b] pt-20 pb-16">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -66,48 +66,48 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-white dark:bg-gray-800/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
-                <Mail className="w-6 h-6 text-[#0b1957]" />
+                <Mail className="w-6 h-6 text-[#0b1957] dark:text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Email</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">support@techiemaya.com</p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">We'll get back to you within 24 hours</p>
+            <p className="text-gray-600 dark:text-white">support@techiemaya.com</p>
+            <p className="text-gray-500 dark:text-white/80 text-sm mt-2">We'll get back to you within 24 hours</p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white dark:bg-gray-800/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
-                <Phone className="w-6 h-6 text-[#0b1957]" />
+                <Phone className="w-6 h-6 text-[#0b1957] dark:text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Phone</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">+971 (506) 34-1191</p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Monday to Friday, 8am to 11pm GST</p>
+            <p className="text-gray-600 dark:text-white">+971 (506) 34-1191</p>
+            <p className="text-gray-500 dark:text-white/80 text-sm mt-2">Monday to Friday, 8am to 11pm GST</p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-gray-800/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
-                <MapPin className="w-6 h-6 text-[#0b1957]" />
+                <MapPin className="w-6 h-6 text-[#0b1957] dark:text-white" />
               </div>
               <h3 className="text-xl font-bold text-[#0b1957] dark:text-white">Location</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">IDS Business Center, Al Karama</p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Dubai, UAE</p>
+            <p className="text-gray-600 dark:text-white">IDS Business Center, Al Karama</p>
+            <p className="text-gray-500 dark:text-white/80 text-sm mt-2">Dubai, UAE</p>
           </motion.div>
         </div>
 
@@ -118,7 +118,7 @@ const ContactPage = memo(function ContactPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="max-w-2xl mx-auto"
         >
-          <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg">
             <h2 className="text-3xl font-bold text-[#0b1957] dark:text-white mb-8">Send us a Message</h2>
 
             {submitSuccess && (

@@ -20,10 +20,10 @@ export default function PricingPage() {
     }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="min-h-screen bg-white dark:bg-[#000724]">
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-black dark:to-black py-16">
+      <div className="bg-gradient-to-b from-gray-50 to-white dark:from-[#000724] dark:to-[#000724] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             Simple, credit-based
@@ -49,7 +49,7 @@ export default function PricingPage() {
         </div>
       </div>
       {/* Pricing Plans - Subscription Tiers */}
-      <div className="py-16 bg-white dark:bg-black">
+      <div className="py-16 bg-white dark:bg-[#000724]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">

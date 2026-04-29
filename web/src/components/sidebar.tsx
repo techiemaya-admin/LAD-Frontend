@@ -24,6 +24,7 @@ import {
   LayoutTemplate
 } from "lucide-react";
 import { NavLink } from "./NavLink";
+import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +33,7 @@ import { logout as logoutAction } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +74,7 @@ export function Sidebar() {
   const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
   const { tenant, setTenantById, tenants } = useTenant();
+  const { isDark } = useTheme();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -222,7 +225,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <img
-            src="/MrLAD-logo.svg"
+            src={isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg"}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -246,14 +249,14 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center">
             <img
-              src="/MrLAD-logo.svg" 
+              src={isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg"}
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
               decoding="async"
               className="h-9 w-auto object-contain"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
+                (e.target as HTMLImageElement).src = isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg";
               }}
             />
           </div>
@@ -377,6 +380,10 @@ export function Sidebar() {
               <Settings className="h-4 w-4" />
               <span>Settings</span>
             </NavLink>
+            <div className="w-full flex items-center justify-between rounded-xl px-4 py-2 text-sm text-sidebar-foreground">
+              <span>Theme</span>
+              <ThemeToggle />
+            </div>
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
@@ -397,7 +404,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
-          "bg-white",
+          "bg-white dark:bg-[#000724]",
           "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
           "overflow-hidden fixed left-0 top-0 z-50",
           isExpanded ? "w-64" : "w-16",
@@ -413,7 +420,7 @@ export function Sidebar() {
           )}
         >
           <img
-            src={isExpanded ? "/MrLAD-logo.svg" : "/logo.svg"}
+            src={isDark ? (isExpanded ? "/MrLAD-logo-dark.svg" : "/logo-white.svg") : (isExpanded ? "/MrLAD-logo.svg" : "/logo.svg")}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -423,7 +430,7 @@ export function Sidebar() {
               isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = isExpanded ? "/MrLAD-logo.svg" : "/logo.svg";
+              (e.target as HTMLImageElement).src = isDark ? (isExpanded ? "/MrLAD-logo-dark.svg" : "/logo-white.svg") : (isExpanded ? "/MrLAD-logo.svg" : "/logo.svg");
             }}
           />
         </div>
@@ -473,10 +480,10 @@ export function Sidebar() {
                         "h-5 w-5 transition-colors duration-300 relative z-10",
                         isActive
                           ? "text-white"
-                          : "text-gray-900 group-hover:text-black",
+                          : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
                       style={
-                        !isActive ? { color: "#1a1a1a !important" } : undefined
+                        !isActive ? { color: undefined } : undefined
                       }
                     />
                   </div>
@@ -488,11 +495,8 @@ export function Sidebar() {
                         "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
                         isActive
                           ? "text-white group-hover:text-white"
-                          : "text-gray-900 group-hover:text-black",
+                          : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
-                      style={
-                        !isActive ? { color: "#1a1a1a !important" } : undefined
-                      }
                     >
                       {n.label}
                     </span>
@@ -511,8 +515,7 @@ export function Sidebar() {
                     )}
                   >
                     <span
-                      className="block text-xs font-medium text-gray-900"
-                      style={{ color: "oklch(0.145 0 0)", WebkitTextFillColor: "oklch(0.145 0 0)" }}
+                      className="block text-xs font-medium text-gray-900 dark:text-gray-300"
                     >
                       {n.label}
                     </span>
@@ -535,11 +538,10 @@ export function Sidebar() {
                                 "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium pointer-events-auto",
                                 childActive
                                   ? "bg-primary/90 text-white"
-                                  : "hover:bg-white/10 text-gray-900",
+                                  : "hover:bg-white/10 text-gray-900 dark:text-gray-300",
                               )}
-                              style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
                             >
-                              <ChildIcon className={cn("h-3.5 w-3.5 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                              <ChildIcon className={cn("h-3.5 w-3.5 flex-shrink-0", childActive ? "text-white" : "text-gray-700 dark:text-gray-400")} />
                               {child.label}
                             </NavLink>
                           );
@@ -562,13 +564,12 @@ export function Sidebar() {
                             "transition-all duration-200",
                             childActive
                               ? "bg-primary/90 text-white"
-                              : "hover:bg-white/10 text-gray-900",
+                              : "hover:bg-white/10 dark:hover:bg-white/5 text-gray-900 dark:text-gray-300",
                           )}
                         >
-                          <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                          <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childActive ? "text-white" : "text-gray-700 dark:text-gray-400")} />
                           <span
-                            className={cn("ml-2 text-sm font-medium whitespace-nowrap", childActive ? "text-white" : "text-gray-900")}
-                            style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
+                            className={cn("ml-2 text-sm font-medium whitespace-nowrap", childActive ? "text-white" : "text-gray-900 dark:text-gray-300")}
                           >
                             {child.label}
                           </span>
@@ -587,7 +588,7 @@ export function Sidebar() {
             <DropdownMenuTrigger asChild>
               <div
                 className={cn(
-                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5",
+                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10",
                   isExpanded ? "justify-start gap-3" : "justify-center",
                 )}
               >
@@ -608,11 +609,7 @@ export function Sidebar() {
                   <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
                     <div className="flex flex-col items-start justify-center min-w-0 flex-1">
                       <div
-                        className="text-sm text-gray-900 font-medium leading-tight truncate w-full"
-                        style={{
-                          color: "oklch(0.145 0 0)",
-                          WebkitTextFillColor: "oklch(0.145 0 0)",
-                        }}
+                        className="text-sm text-gray-900 dark:text-gray-300 font-medium leading-tight truncate w-full"
                       >
                         {displayName}
                       </div>
@@ -659,6 +656,12 @@ export function Sidebar() {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </NavLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-sm">Theme</span>
+                  <ThemeToggle />
+                </div>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleLogout}

@@ -41,7 +41,7 @@ export default function MRLadsSection() {
   return (
     <motion.section
       ref={containerRef}
-      className="relative py-16 md:py-20 overflow-hidden bg-white dark:bg-black"
+      className="relative py-16 md:py-20 overflow-hidden bg-white dark:bg-[#000724]"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}

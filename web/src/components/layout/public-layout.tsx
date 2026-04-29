@@ -10,7 +10,7 @@ import Footer from "./Footer";
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   // Public pages (landing, login, pricing, etc.) get full width layout
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-black">
+    <div className="min-h-screen w-full bg-white dark:bg-[#000724]">
       <Header />
       <main className="w-full mt-3">
         {children}

@@ -30,15 +30,15 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#1a2a43] shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-[#253456] rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -70,7 +70,7 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div
-      className={`bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+      className={`bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#1a2a43] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
       onClick={onClick}
     >
       <div className="flex-1 flex flex-col p-4">
@@ -83,10 +83,10 @@ const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
               {title}
             </p>
-            <h5 className="text-2xl font-bold text-slate-800">
+            <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
               <AnimatedValue value={value} />
             </h5>
           </div>
@@ -120,21 +120,21 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
         onClick={() => router.push('/campaigns')}
       >
-        <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
+        <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#1a2a43] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
           <div className="flex-1 flex flex-col p-4">
             <div className="flex flex-col h-full">
               <div className="flex justify-end mb-2">
-                <Avatar className="bg-blue-100 w-12 h-12 rounded-full">
-                  <AvatarFallback className="bg-blue-100">
-                    <BarChart3 className="w-6 h-6 text-blue-600" />
+                <Avatar className="bg-blue-100 dark:bg-[#253456] w-12 h-12 rounded-full">
+                  <AvatarFallback className="bg-blue-100 dark:bg-[#253456]">
+                    <BarChart3 className="w-6 h-6 text-blue-600 dark:text-[#60a5fa]" />
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="flex-1 flex flex-col justify-end">
-                <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                   Total Campaigns
                 </p>
-                <h5 className="text-2xl font-bold text-slate-800">
+                <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
                   <AnimatedValue value={stats.total_campaigns} />
                 </h5>
               </div>
@@ -184,14 +184,14 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         return (
           <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
             <div
-              className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#1a2a43] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
               onClick={() => router.push('/campaigns')}
             >
               <div className="flex-1 flex flex-col p-4">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-start mb-2">
-                    <Avatar className="bg-blue-100 w-12 h-12 rounded-full">
-                      <AvatarFallback className="bg-blue-100">
+                    <Avatar className="bg-blue-100 dark:bg-[#253456] w-12 h-12 rounded-full">
+                      <AvatarFallback className="bg-blue-100 dark:bg-[#253456]">
                         <Linkedin className="w-6 h-6 text-[#0077B5]" />
                       </AvatarFallback>
                     </Avatar>
@@ -203,10 +203,10 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-end">
-                    <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                       {displayLabel}
                     </p>
-                    <h5 className="text-2xl font-bold text-slate-800">
+                    <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
                       <AnimatedValue value={displayValue} />
                     </h5>
                   </div>

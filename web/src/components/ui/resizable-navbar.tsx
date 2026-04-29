@@ -106,9 +106,9 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         minWidth: "800px",
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full flex-row items-center justify-between self-start px-6 py-4 lg:flex dark:bg-black",
+        "relative z-[60] mx-auto hidden w-full flex-row items-center justify-between self-start px-6 py-4 lg:flex dark:bg-[#000724]",
         "bg-white/50 rounded-full max-w-7xl",
-        visible && "bg-white/90 dark:bg-black backdrop-blur-md dark:rounded-none dark:w-full",
+        visible && "bg-white/90 dark:bg-[#000724] backdrop-blur-md dark:rounded-none dark:w-full",
         className,
       )}
     >
@@ -175,9 +175,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full flex-col items-center justify-between px-0 py-4 lg:hidden dark:bg-black",
+        "relative z-50 mx-auto flex w-full flex-col items-center justify-between px-0 py-4 lg:hidden dark:bg-[#000724]",
         "bg-white/50 max-w-[calc(100vw-2rem)]",
-        visible && "bg-white/90 dark:bg-black backdrop-blur-md",
+        visible && "bg-white/90 dark:bg-[#000724] backdrop-blur-md",
         className,
       )}
     >
@@ -247,7 +247,8 @@ export const NavbarLogo = () => {
       href="/"
       className="relative z-20 mr-4 flex h-12 w-32 items-center space-x-2 px-2 py-1 text-sm font-normal text-black dark:text-white"
     >
-      <Image className="absolute dark:invert" src="/MrLAD-logo.svg" alt="LAD hero" fill />
+      <Image className="absolute hidden dark:block" src="/MrLAD-logo-white.svg" alt="LAD hero" fill />
+      <Image className="absolute block dark:hidden" src="/MrLAD-logo.svg" alt="LAD hero" fill />
     </Link>
   );
 };
@@ -274,7 +275,7 @@ export const NavbarButton = ({
 
   const variantStyles = {
     primary:
-      "bg-white dark:bg-black text-black dark:text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset] dark:border dark:border-gray-700",
+      "bg-white dark:bg-[#000724] text-black dark:text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset] dark:border dark:border-gray-700",
     secondary: "bg-transparent shadow-none text-gray-700 dark:text-white hover:text-black dark:hover:text-gray-200",
     dark: "bg-black text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
     gradient:

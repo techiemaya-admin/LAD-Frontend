@@ -258,7 +258,7 @@ const CharacterSection = () => {
 export default function NewHeroSection() {
   return (
     <motion.section
-      className="relative pt-6 md:pt-6 lg:pt-6 overflow-hidden bg-white dark:bg-black"
+      className="relative pt-6 md:pt-6 lg:pt-6 overflow-hidden bg-white dark:bg-[#000724]"
       initial="hidden"
       animate="visible"
       variants={containerVariants}

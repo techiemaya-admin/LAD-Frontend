@@ -82,7 +82,7 @@ export default function ValuePropositionSection() {
 
   return (
     <motion.section
-      className="py-20 relative overflow-hidden bg-[#1A3F7F] dark:bg-black"
+      className="py-20 relative overflow-hidden bg-[#1A3F7F] dark:bg-[#0B1957]"
       id="value-proposition"
       initial="hidden"
       whileInView="visible"
