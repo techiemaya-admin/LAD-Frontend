@@ -177,6 +177,14 @@ const AddMembersPanel = memo(function AddMembersPanel({
   // Channel source selector: 'personal' | 'waba'
   const [contactSource, setContactSource] = useState<'personal' | 'waba'>('personal');
 
+  // New contact form state
+  const [showNewContactForm, setShowNewContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   // Saved contacts state
   const [savedContacts, setSavedContacts] = useState<ConversationResult[]>([]);
   const [contactsLoading, setContactsLoading] = useState(true);
@@ -297,6 +305,44 @@ const AddMembersPanel = memo(function AddMembersPanel({
     }
   }, [groupId, channel, selected, onMembersAdded]);
 
+  const handleCreateContact = useCallback(async () => {
+    const name = newContactName.trim();
+    const phone = newContactPhone.trim();
+    if (!name || !phone) {
+      setCreateError('Name and phone are required.');
+      return;
+    }
+    setCreatingContact(true);
+    setCreateError(null);
+    try {
+      const contact: Record<string, string> = { name, phone };
+      if (newContactEmail.trim()) contact.email = newContactEmail.trim();
+      const res = await fetch(`${GROUP_API}/${groupId}/import-contacts?channel=${channel}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ contacts: [contact] }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data?.error || data?.message || 'Failed to create contact');
+        return;
+      }
+      console.log('[AddMembersPanel] contact created:', data);
+      // Reset form
+      setNewContactName('');
+      setNewContactPhone('');
+      setNewContactEmail('');
+      setShowNewContactForm(false);
+      // Refresh both contact list and group members
+      loadContactsPage(1, '', contactSource);
+      onMembersAdded();
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create contact');
+    } finally {
+      setCreatingContact(false);
+    }
+  }, [groupId, channel, newContactName, newContactPhone, newContactEmail, contactSource, loadContactsPage, onMembersAdded]);
+
   return (
     <div className="absolute inset-0 z-10 bg-card flex flex-col">
       <div className="h-14 px-4 flex items-center gap-3 border-b border-border flex-shrink-0">
@@ -343,6 +389,78 @@ const AddMembersPanel = memo(function AddMembersPanel({
             autoFocus
           />
         </div>
+      </div>
+
+      {/* New Contact Button + Inline Form */}
+      <div className="px-4 pb-2">
+        {!showNewContactForm ? (
+          <button
+            onClick={() => { setShowNewContactForm(true); setCreateError(null); }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-green-400 text-green-600 hover:bg-green-50 transition-colors text-sm font-medium"
+          >
+            <UserPlus className="h-4 w-4 flex-shrink-0" />
+            Create new contact
+          </button>
+        ) : (
+          <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+              New Contact
+            </p>
+            <Input
+              placeholder="Full name *"
+              value={newContactName}
+              onChange={(e) => setNewContactName(e.target.value)}
+              className="h-8 text-sm"
+              autoFocus
+            />
+            <Input
+              placeholder="Phone number * (e.g. +971501234567)"
+              value={newContactPhone}
+              onChange={(e) => setNewContactPhone(e.target.value)}
+              className="h-8 text-sm"
+              type="tel"
+            />
+            <Input
+              placeholder="Email (optional)"
+              value={newContactEmail}
+              onChange={(e) => setNewContactEmail(e.target.value)}
+              className="h-8 text-sm"
+              type="email"
+            />
+            {createError && (
+              <p className="text-xs text-red-500">{createError}</p>
+            )}
+            <div className="flex gap-2 pt-1">
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleCreateContact}
+                disabled={creatingContact}
+              >
+                {creatingContact ? (
+                  <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Creating...</>
+                ) : (
+                  'Create & Add'
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setShowNewContactForm(false);
+                  setNewContactName('');
+                  setNewContactPhone('');
+                  setNewContactEmail('');
+                  setCreateError(null);
+                }}
+                disabled={creatingContact}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Selected chips */}
@@ -535,22 +653,39 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  // Optimistic removal: track IDs removed this session so they disappear
+  // immediately without waiting for the server refresh round-trip.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+
+  // When the parent re-fetches detail (after add/remove), clear stale optimistic IDs
+  // so we don't accidentally hide a member that was re-added.
+  const prevMembersRef = useRef(detail.members);
+  if (prevMembersRef.current !== detail.members) {
+    prevMembersRef.current = detail.members;
+    if (removedIds.size > 0) setRemovedIds(new Set());
+  }
+
+  const visibleMembers = detail.members.filter(
+    (m) => !removedIds.has(m.conversation_id)
+  );
 
   const existingConvIds = useMemo(
-    () => new Set(detail.members.map((m) => m.conversation_id)),
-    [detail.members]
+    () => new Set(visibleMembers.map((m) => m.conversation_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [detail.members, removedIds]
   );
 
   const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return detail.members;
+    if (!memberSearch.trim()) return visibleMembers;
     const q = memberSearch.toLowerCase();
-    return detail.members.filter(
+    return visibleMembers.filter(
       (m) =>
         m.name.toLowerCase().includes(q) ||
         (m.phone && m.phone.includes(q)) ||
         (m.company && m.company.toLowerCase().includes(q))
     );
-  }, [detail.members, memberSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.members, memberSearch, removedIds]);
 
   const getUserId = useCallback(async (): Promise<string | null> => {
     const token = safeStorage.getItem('token') || '';
@@ -687,6 +822,10 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
         method: 'DELETE',
         headers: authHeaders(),
       });
+      // Optimistic update: hide the member immediately without waiting for the
+      // server refresh round-trip (detail prop may be stale until parent re-fetches).
+      setRemovedIds((prev) => new Set([...prev, conversationId]));
+      // Also trigger the parent refresh so the canonical detail syncs from server.
       onMembersChanged();
     } catch (err) {
       console.error('Error removing member:', err);

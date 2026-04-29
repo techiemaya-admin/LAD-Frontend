@@ -274,10 +274,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     const ch = backendChannel || 'waba';
 
     // Helper: map raw contact/conversation record → { id, contact: { name, phone } }
+    // Handles both personal WA contacts (name/phone) and WABA conversations (lead_name/lead_phone)
     const mapContact = (raw: any): Conversation =>
       raw.contact
         ? raw // already shaped as Conversation
-        : { id: raw.id, contact: { name: raw.name || raw.contact_name || '', phone: raw.phone || '' } } as unknown as Conversation;
+        : { id: raw.id, contact: { name: raw.lead_name || raw.name || raw.contact_name || '', phone: raw.lead_phone || raw.phone || '' } } as unknown as Conversation;
 
     if (ch === 'personal') {
       // Personal WA: load from /contacts endpoint (wa_contacts table)
@@ -320,13 +321,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
       loadPage(0, []).finally(() => setNewChatContactsLoading(false));
     } else {
-      // WABA: load from conversations endpoint
+      // WABA: load from conversations endpoint — map through mapContact so
+      // lead_name/lead_phone are normalised into { contact: { name, phone } }
       fetchWithTenant(`/api/whatsapp-conversations/conversations?channel=waba&limit=500`)
         .then((r) => r.json())
         .then((data) => {
-          const list: Conversation[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+          const raw: any[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+          const list: Conversation[] = raw.map(mapContact);
           setNewChatContacts(list);
-          setNewChatContactsTotal(list.length);
+          setNewChatContactsTotal(data.total || list.length);
         })
         .catch(() => {})
         .finally(() => setNewChatContactsLoading(false));
