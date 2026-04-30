@@ -72,7 +72,9 @@ function normalizeList(value: any): string[] {
         if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
       } catch { }
     }
-    if (v.includes(",")) return v.split(",").map((x) => x.trim()).filter(Boolean);
+    // Only split by newlines or semicolons, not commas, to avoid breaking sentences
+    if (v.includes("\n")) return v.split("\n").map((x) => x.trim()).filter(Boolean);
+    if (v.includes(";")) return v.split(";").map((x) => x.trim()).filter(Boolean);
     return [v];
   }
   if (typeof value === "object") return Object.values(value).map(String).filter(Boolean);
@@ -168,12 +170,12 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
   // Data for the boxes
   const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? (log as any)?.lead_score ?? (log as any)?.score ?? 0;
   let category = (
-    analysis?.lead_category || 
-    analysis?.category || 
-    analysis?.raw_analysis?.lead_category || 
-    analysis?.raw_analysis?.category || 
-    log?.lead_category || 
-    log?.category || 
+    analysis?.lead_category ||
+    analysis?.category ||
+    analysis?.raw_analysis?.lead_category ||
+    analysis?.raw_analysis?.category ||
+    log?.lead_category ||
+    log?.category ||
     "WARM"
   ).toUpperCase();
 
@@ -183,21 +185,20 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
   // Logic for completion percentage based on questions asked vs answered
   const getCompletionStats = () => {
     if (!segments || segments.length === 0) return { percent: 0, answered: 0, total: 0 };
-    
+
     let total = 0;
     let answered = 0;
-    
+
     // Keywords for filler/greeting questions to ignore
     const fillerKeywords = ["hello", "hi ", "hey ", "are you there", "am i audible", "anybody there", "how are you"];
-    
+
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       const speaker = (seg.speaker || "").toLowerCase();
       const text = seg.text.trim().toLowerCase();
-      
       // Heuristic for agent/assistant
       const isAgent = speaker.includes("agent") || speaker.includes("assistant") || speaker.includes("ai") || speaker.includes("mira");
-      
+
       // Filter out greetings and short filler questions
       const isFiller = text.length < 15 || fillerKeywords.some(k => text.includes(k));
 
@@ -209,13 +210,12 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
           if (next) {
             const nextSpeaker = (next.speaker || "").toLowerCase();
             const nextText = next.text.trim().toLowerCase();
-            
             const isUser = nextSpeaker.includes("user") || nextSpeaker.includes("lead") || nextSpeaker.includes("customer") || nextSpeaker.includes("human") || nextSpeaker.includes("prospect") ||
-                           (!nextSpeaker.includes("agent") && !nextSpeaker.includes("assistant") && !nextSpeaker.includes("ai") && !nextSpeaker.includes("mira"));
-            
+              (!nextSpeaker.includes("agent") && !nextSpeaker.includes("assistant") && !nextSpeaker.includes("ai") && !nextSpeaker.includes("mira"));
+
             // Ignore very short responses or simple greetings as an "answer"
             const isMeaningfulResponse = nextText.length > 3 && !["hi", "hello", "yes", "okay"].includes(nextText);
-            
+
             if (isUser && isMeaningfulResponse) {
               answered++;
               break;
@@ -224,7 +224,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
         }
       }
     }
-    
+
     const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
     return { percent, answered, total };
   };
@@ -319,8 +319,8 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatBox label="Lead Score" value={`${score}/10`} subValue={getScoreTier(score)} colorClass={theme.text} />
           <StatBox label="Category" value={category} subValue={getCategoryDesc(category)} colorClass={theme.text} />
-          <StatBox 
-            label="Emotion" 
+          <StatBox
+            label="Emotion"
             value={(() => {
               const text = (analysis?.sentiment || analysis?.raw_analysis?.sentiment || "").toLowerCase();
               if (text.includes("interested")) return "Interested";
@@ -331,9 +331,9 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
               if (text.includes("angry")) return "Angry";
               if (text.includes("polite")) return "Polite";
               return "Neutral";
-            })()} 
-            subValue="Call mindset" 
-            colorClass="text-purple-600" 
+            })()}
+            subValue="Call mindset"
+            colorClass="text-purple-600"
           />
           <StatBox label="Stage Completion" value={`${completionPercent}%`} subValue={`${answeredCount}/${totalQuestions} answered`} colorClass="text-blue-600" />
         </div>
@@ -433,22 +433,45 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <Lightbulb className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
+              <Zap className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
               <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
             </div>
-            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
-              {recoList.length > 0 ? (
-                recoList.map((r, i) => (
-                  <div key={i} className="flex items-start gap-3 group">
-                    <div className={cn("mt-1 flex-shrink-0", theme.text)}>
-                      <CheckCircle className="h-4 w-4" />
+            <div className="space-y-4 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
+              {/* Current Lead Stage Information */}
+              {(lead?.stage || lead?.stages) && (
+                <div className="flex flex-col gap-2 pb-3 border-b border-gray-100/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Current Pipeline Stage</span>
+                      <span className="text-sm font-bold text-[#172560] capitalize">
+                        {String(lead.stage || lead.stages).replace(/_/g, ' ')}
+                      </span>
                     </div>
-                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{r}</span>
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 font-bold px-3 py-1">
+                      ACTIVE
+                    </Badge>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 italic">No recommendations available.</p>
+                </div>
               )}
+
+              <div className="space-y-3">
+                {recoList.length > 0 ? (
+                  recoList
+                    .flatMap((r) => r.split(/[.!?]/).filter((s) => s.trim().length > 0))
+                    .map((sentence, i) => (
+                      <div key={i} className="flex items-start gap-3 group">
+                        <div className={cn("mt-1 flex-shrink-0", theme.text)}>
+                          <CheckCircle className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">
+                          {sentence.trim()}.
+                        </span>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-gray-500 italic">No specific recommendations identified.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

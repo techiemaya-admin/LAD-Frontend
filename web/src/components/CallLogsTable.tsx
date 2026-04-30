@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
+import { cn } from "@/lib/utils";
 import {
   PhoneIncoming,
   PhoneOutgoing,
@@ -397,6 +398,7 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
+      meta: { sticky: 'left-0', zIndex: 'z-40' },
       header: ({ table }) => {
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
@@ -442,6 +444,7 @@ export function CallLogsTable({
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
+      meta: { sticky: 'left-[44px]', zIndex: 'z-30' },
       header: 'S/No',
       size: 60,
       maxSize: 80,
@@ -455,6 +458,7 @@ export function CallLogsTable({
     {
       id: 'assistant',
       accessorKey: 'assistant',
+      meta: { sticky: 'left-[104px]', zIndex: 'z-20' },
       header: 'Agent',
       size: 120,
       maxSize: 150,
@@ -463,6 +467,7 @@ export function CallLogsTable({
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
+      meta: { sticky: 'left-[224px]', zIndex: 'z-10' },
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
@@ -809,17 +814,20 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-              <TableCell
-                key={`${callId}-${column.id}`}
-                onClick={(e) => {
-                  if (column.id === 'select' || column.id === 'actions') {
-                    e.stopPropagation();
-                  }
-                }}
-                className={cellIndex === 0 && indent ? "pl-8" : ""}
-              >
-                {flexRender(column.cell, cellContext as any)}
-              </TableCell>
+                <TableCell
+                  key={`${callId}-${column.id}`}
+                  onClick={(e) => {
+                    if (column.id === 'select' || column.id === 'actions') {
+                      e.stopPropagation();
+                    }
+                  }}
+                  className={cn(
+                    cellIndex === 0 && indent ? "pl-8" : "",
+                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                  )}
+                >
+                  {flexRender(column.cell, cellContext as any)}
+                </TableCell>
             );
           })}
         </TableRow>
@@ -842,7 +850,10 @@ export function CallLogsTable({
                 e.stopPropagation();
               }
             }}
-            className={cellIndex === 0 && indent ? "pl-8" : ""}
+            className={cn(
+              cellIndex === 0 && indent ? "pl-8" : "",
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+            )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
@@ -973,15 +984,18 @@ export function CallLogsTable({
       </div>
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
         <div className="min-w-[1000px] w-full">
-          <Table>
-            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0] hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className={`font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                        }`}
+                      className={cn(
+                        "font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] sticky top-0 z-30",
+                        header.column.getCanSort() ? 'cursor-pointer select-none' : '',
+                        (header.column.columnDef.meta as any)?.sticky ? `sticky ${(header.column.columnDef.meta as any)?.sticky} z-50` : ''
+                      )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {header.isPlaceholder ? null : (

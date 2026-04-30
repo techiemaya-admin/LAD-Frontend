@@ -24,12 +24,28 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({
-  channel,
+function ChannelConversationView({ 
+  channel, 
   onShowBroadcastModal,
-}: {
-  channel: 'personal' | 'waba';
+  visibleTabs,
+  activeTab,
+  setActiveTab,
+  isPlaygroundOpen,
+  setIsPlaygroundOpen,
+  isSidebarCollapsed,
+  setIsSidebarCollapsed,
+  isMobile
+}: { 
+  channel: 'personal' | 'waba'; 
   onShowBroadcastModal?: () => void;
+  visibleTabs: { id: WaTab; label: string; sublabel: string }[];
+  activeTab: WaTab;
+  setActiveTab: (tab: WaTab) => void;
+  isPlaygroundOpen: boolean;
+  setIsPlaygroundOpen: (val: boolean) => void;
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (val: boolean) => void;
+  isMobile: boolean;
 }) {
   const queryClient = useQueryClient();
   const {
@@ -52,7 +68,7 @@ function ChannelConversationView({
     hasMore,
   } = useConversations({ channel });
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
@@ -248,46 +264,101 @@ function ChannelConversationView({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-50 bg-black/50 lg:hidden"
             onClick={toggleSidebar}
           >
             <motion.div
-              initial={{ x: -340 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -340 }}
-              transition={{ duration: 0.2 }}
-              className="w-[340px] h-full"
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="w-full h-full bg-card flex flex-col pt-14"
               onClick={(e) => e.stopPropagation()}
             >
-              <ConversationSidebar
-                conversations={typedConversations}
-                selectedId={selectedId}
-                onSelectConversation={(id) => {
-                  handleSelectConversation(id);
-                  setIsSidebarCollapsed(true);
-                }}
-                channelFilter={channelFilter}
-                onChannelFilterChange={setChannelFilter}
-                contextStatusFilter={contextStatusFilter}
-                onContextStatusFilterChange={setContextStatusFilter}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                unreadCounts={allUnreadCounts}
-                backendChannel={channel}
-                onBulkAction={handleBulkAction}
-                onRefresh={invalidate}
-                onGroupSelect={handleSelectGroup}
-                onOpenGroupInfo={handleOpenGroupInfo}
-                onShowBroadcastModal={onShowBroadcastModal}
-                onShowCreateGroupModal={(ids) => {
-                  setCreateGroupSelectedIds(ids);
-                  setShowCreateGroupModal(true);
-                }}
-                groupRefreshKey={groupRefreshKey}
-                onLoadMore={loadMore}
-                isLoadingMore={isLoadingMore}
-                hasMore={hasMore}
-              />
+              {/* Mobile Sidebar Header with Tabs + Test AI */}
+              <div className="p-3 border-b border-border bg-card flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
+                  {visibleTabs.map(({ id, label, sublabel }) => (
+                    <button
+                      key={id}
+                      onClick={() => setActiveTab(id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap',
+                        activeTab === id
+                          ? 'text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-border'
+                      )}
+                      style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
+                    >
+                      <ChannelIcon
+                        channel={sublabel as any}
+                        size={14}
+                        overrideColor={activeTab === id ? '#ffffff' : undefined}
+                      />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mobile Test AI button */}
+                <Button
+                  variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    "flex-shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold gap-1.5",
+                    isPlaygroundOpen && "text-primary bg-primary/10"
+                  )}
+                  onClick={() => {
+                    setIsPlaygroundOpen(!isPlaygroundOpen);
+                    setIsSidebarCollapsed(true);
+                  }}
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Test AI
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'linkedin' ? (
+                  <LinkedInConversationView 
+                    visibleTabs={visibleTabs}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    onBack={() => setIsSidebarCollapsed(false)}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <ConversationSidebar
+                    conversations={typedConversations}
+                    selectedId={selectedId}
+                    onSelectConversation={(id) => {
+                      handleSelectConversation(id);
+                      setIsSidebarCollapsed(true);
+                    }}
+                    channelFilter={channelFilter}
+                    onChannelFilterChange={setChannelFilter}
+                    contextStatusFilter={contextStatusFilter}
+                    onContextStatusFilterChange={setContextStatusFilter}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    unreadCounts={allUnreadCounts}
+                    backendChannel={channel}
+                    onBulkAction={handleBulkAction}
+                    onRefresh={invalidate}
+                    onGroupSelect={handleSelectGroup}
+                    onOpenGroupInfo={handleOpenGroupInfo}
+                    onShowBroadcastModal={onShowBroadcastModal}
+                    onShowCreateGroupModal={(ids) => {
+                      setCreateGroupSelectedIds(ids);
+                      setShowCreateGroupModal(true);
+                    }}
+                    groupRefreshKey={groupRefreshKey}
+                    onLoadMore={loadMore}
+                    isLoadingMore={isLoadingMore}
+                    hasMore={hasMore}
+                  />
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -328,6 +399,10 @@ function ChannelConversationView({
           onExport={handleExport}
           onBlock={handleBlock}
           onDelete={handleDelete}
+          onBack={() => {
+            selectConversation('');
+            setIsSidebarCollapsed(false);
+          }}
           onOpenAssignmentPanel={() => {
             setContextPanelTab('assignment');
             if (!isContextPanelOpen) setIsContextPanelOpen(true);
@@ -339,11 +414,15 @@ function ChannelConversationView({
       <AnimatePresence mode="wait">
         {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
           <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
+            initial={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0 } : { width: 320, opacity: 1 }}
+            exit={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="h-full flex-shrink-0 overflow-hidden hidden md:block"
+            className={cn(
+              "h-full flex-shrink-0 overflow-hidden",
+              "fixed inset-0 z-50 w-full lg:relative lg:inset-auto lg:z-0 lg:w-[320px] bg-background",
+              "pt-14 lg:pt-0"
+            )}
           >
             <ConversationContextPanel
               conversation={typedSelectedConversation}
@@ -500,7 +579,9 @@ function getTabColor(tabId: WaTab): string {
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   // null = still loading; once resolved, only connected channels are shown
   const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
 
@@ -525,7 +606,7 @@ export function ConversationsPage() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI toggle */}
+      {/* Top bar: WA channel tabs + AI toggle — now always visible */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
         {/* Channel tabs — only connected channels are rendered */}
         <div className="flex items-center gap-1">
