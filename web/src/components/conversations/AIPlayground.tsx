@@ -23,6 +23,7 @@ import {
   Mail,
   Cpu,
   Hash,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTenant } from "@/lib/fetch-with-tenant";
@@ -43,6 +44,12 @@ interface PlaygroundSettings {
   knowledge_base: string | null;
   tone: string;
   language: string;
+}
+
+interface WebScrapingStatus {
+  enabled: boolean;
+  chars: number;
+  urls: string[];
 }
 
 interface ChatMessage {
@@ -191,6 +198,8 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
   const [knowledgeBase, setKnowledgeBase]     = useState<string>("");
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
+  const [webScraping, setWebScraping] = useState<WebScrapingStatus | null>(null);
+  const [showWebScraping, setShowWebScraping] = useState(false);
 
   // Chat state
   const [messages, setMessages]   = useState<ChatMessage[]>([]);
@@ -230,6 +239,15 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
         setSettings(data.settings);
         setPrompts(data.prompts || []);
         setKnowledgeBase(data.settings?.knowledge_base || "");
+        setWebScraping(
+          data.web_scraping
+            ? {
+                enabled: !!data.web_scraping.enabled,
+                chars: Number(data.web_scraping.chars) || 0,
+                urls: Array.isArray(data.web_scraping.urls) ? data.web_scraping.urls : [],
+              }
+            : { enabled: false, chars: 0, urls: [] }
+        );
 
         // Auto-select first active whatsapp prompt
         const activePrompt = (data.prompts || []).find(
@@ -632,6 +650,75 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
                     <p className="text-[10px] text-muted-foreground mt-1">
                       Overrides the knowledge base from Chat Settings for this session only.
                     </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Website Context status ──────────────────────────────── */}
+            {/* Mirrors what the WhatsApp pipeline injects so playground replies
+                use the same scraped company-website grounding. Read-only here —
+                edit URLs in Chat Settings → Company Website Context. */}
+            <div>
+              <button
+                onClick={() => setShowWebScraping((v) => !v)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showWebScraping ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                <Globe className="h-3.5 w-3.5" />
+                Website Context
+                {webScraping?.enabled && webScraping.chars > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                    ON · {webScraping.chars.toLocaleString()} chars
+                  </span>
+                ) : webScraping?.enabled ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    ON · no cached content
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/70">OFF</span>
+                )}
+              </button>
+              <AnimatePresence>
+                {showWebScraping && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-2 text-[11px] text-muted-foreground bg-background border border-border rounded-md px-3 py-2 space-y-1.5">
+                      {webScraping?.enabled && webScraping.chars > 0 && (
+                        <p className="text-foreground">
+                          Cached website text is automatically appended to the system prompt for every test reply — same as WhatsApp.
+                        </p>
+                      )}
+                      {webScraping?.enabled && webScraping.chars === 0 && (
+                        <p className="text-amber-700 dark:text-amber-400">
+                          Website Context is ON but no content was captured. Re-save in Chat Settings to refresh.
+                        </p>
+                      )}
+                      {!webScraping?.enabled && (
+                        <p>
+                          Disabled. Enable & add URLs in <a href="/settings?tab=chat" className="text-primary hover:underline">Chat Settings → Company Website Context</a> to ground replies on your website content.
+                        </p>
+                      )}
+                      {webScraping && webScraping.urls.length > 0 && (
+                        <div>
+                          <span className="block text-muted-foreground/70 mb-0.5">Sources ({webScraping.urls.length}):</span>
+                          <ul className="space-y-0.5">
+                            {webScraping.urls.map((u) => (
+                              <li key={u} className="truncate">
+                                <a href={u} target="_blank" rel="noopener noreferrer" className="text-primary/80 hover:text-primary hover:underline">
+                                  {u}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
