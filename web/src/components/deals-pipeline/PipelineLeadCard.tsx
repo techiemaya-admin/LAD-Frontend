@@ -1371,6 +1371,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={true}
+                    fullWidthButton={true}
                   />
                 ) : (
                   <BookingSlot 
@@ -1381,6 +1382,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={false}
+                    fullWidthButton={true}
                   />
                 )}
               </div>

@@ -14,6 +14,7 @@ import { useDeleteBookingFollowup } from '@lad/frontend-features/deals-pipeline'
 import { selectPipelineSettings } from '@/store/slices/uiSlice';
 import { selectUser } from '@/store/slices/authSlice';
 import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 interface TimeSlot {
   id: string;
   startTime: string;
@@ -40,6 +41,7 @@ interface BookingSlotProps {
     email: string;
   }>;
   isEditMode?: boolean;
+  fullWidthButton?: boolean;
 }
 // Simple toast notification helper
 const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -60,6 +62,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   createdBy,
   users = [],
   isEditMode = false,
+  fullWidthButton = false,
 }) => {
   // Get pipeline settings from Redux
   const pipelineSettings = useSelector(selectPipelineSettings);
@@ -987,7 +990,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             </div>
             {/* Book Slot Button */}
             {startTime && endTime && endTime > startTime && (
-              <div className="flex justify-end pt-2">
+              <div className={cn("pt-2", !fullWidthButton && "flex justify-end")}>
                 <Button
                   onClick={() => {
                     if (!selectedUser) {
@@ -1011,7 +1014,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                     setSelectedSlotForBooking(customSlot);
                     setConfirmDialogOpen(true);
                   }}
-                  className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl h-11 px-8 font-bold shadow-sm transition-all"
+                  className={cn("bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl h-11 px-8 font-bold shadow-sm transition-all", fullWidthButton && "w-full")}
                   disabled={
                     loading ||
                     !selectedUser ||
