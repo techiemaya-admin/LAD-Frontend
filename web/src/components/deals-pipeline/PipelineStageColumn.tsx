@@ -1,6 +1,6 @@
 // PipelineStageColumn.tsx
 import React, { useState, useMemo, useCallback } from 'react';
-import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogHeader, DialogActions } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Edit, Trash2, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import PipelineLeadCard from './PipelineLeadCard';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -241,121 +242,139 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
         </SortableContext>
       </div>
       <Dialog open={editDialogOpen} onOpenChange={(isOpen) => !isOpen && setEditDialogOpen(false)}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#3A3A4F]">Edit Stage</span>
-            <button
-              onClick={() => setEditDialogOpen(false)}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </DialogTitle>
-          <div className="pt-2">
-            <div className="mb-6">
-              <Label htmlFor="stage-name" className="text-sm font-medium mb-2 block">Stage Name</Label>
-              <Input
-                id="stage-name"
-                autoFocus
-                value={editFormData.stageName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFormData({ ...editFormData, stageName: e.target.value })}
-                className={error ? 'border-red-500' : ''}
-              />
-              {error && (
-                <p className="text-sm text-red-500 mt-1">{error}</p>
-              )}
+        <DialogContent className="sm:w-[90vw] h-auto max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
+                <Edit className="h-5 w-5" />
+              </div>
+              <DialogTitle>Edit Stage</DialogTitle>
             </div>
-            <h4 className="text-base font-semibold mb-4">Change Position (Optional)</h4>
-            <div className="mb-4">
-              <Label htmlFor="stage-position" className="text-sm font-medium mb-2 block">Position</Label>
-              <Select
-                value={
-                  editFormData.position
-                    ? `${editFormData.positionType}:${editFormData.position}`
-                    : '__none__'
-                }
-                onValueChange={(value: string) => {
-                  if (value === '__none__') {
-                    setEditFormData({ ...editFormData, position: '' });
-                    return;
-                  }
+          </DialogHeader>
 
-                  const [positionType, position] = value.split(':');
-                  setEditFormData({
-                    ...editFormData,
-                    positionType: (positionType as 'before' | 'after') || 'after',
-                    position: position || ''
-                  });
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="No position change" />
-                </SelectTrigger>
-                <SelectContent side="bottom" position="popper" avoidCollisions={false} className="z-[1001] max-h-[300px]">
-                  <SelectItem value="__none__">No position change</SelectItem>
-                  {allStages
-                    .filter(s => (s.key || s.id) !== (stage.key || stage.id))
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .flatMap((stageOption) => {
-                      const id = String(stageOption.key || stageOption.id);
-                      const label = stageOption.name || stageOption.label;
-                      return [
-                        <SelectItem key={`before:${id}`} value={`before:${id}`}>
-                          Before: {label}
-                        </SelectItem>,
-                        <SelectItem key={`after:${id}`} value={`after:${id}`}>
-                          After: {label}
-                        </SelectItem>
-                      ];
-                    })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-4 border-t mt-6">
-              <Button
-                onClick={() => setEditDialogOpen(false)}
-                variant="outline"
-                className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEditStage}
-                className="rounded-lg font-semibold bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                Save
-              </Button>
+          <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="stage-name" className="text-sm font-medium text-gray-700">Stage Name</Label>
+                <Input
+                  id="stage-name"
+                  autoFocus
+                  value={editFormData.stageName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFormData({ ...editFormData, stageName: e.target.value })}
+                  className={cn("h-11 rounded-xl", error ? 'border-red-500' : 'border-gray-200')}
+                />
+                {error && (
+                  <p className="text-xs text-red-500 font-medium pl-1">{error}</p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                    Positioning
+                  </h3>
+                  <div className="h-px flex-1 bg-gray-100" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="stage-position" className="text-sm font-medium text-gray-700">Relative to Stage</Label>
+                  <Select
+                    value={
+                      editFormData.position
+                        ? `${editFormData.positionType}:${editFormData.position}`
+                        : '__none__'
+                    }
+                    onValueChange={(value: string) => {
+                      if (value === '__none__') {
+                        setEditFormData({ ...editFormData, position: '' });
+                        return;
+                      }
+
+                      const [positionType, position] = value.split(':');
+                      setEditFormData({
+                        ...editFormData,
+                        positionType: (positionType as 'before' | 'after') || 'after',
+                        position: position || ''
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                      <SelectValue placeholder="No position change" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl z-[1001] max-h-[300px]">
+                      <SelectItem value="__none__">No position change</SelectItem>
+                      {allStages
+                        .filter(s => (s.key || s.id) !== (stage.key || stage.id))
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .flatMap((stageOption) => {
+                          const id = String(stageOption.key || stageOption.id);
+                          const label = stageOption.name || stageOption.label;
+                          return [
+                            <SelectItem key={`before:${id}`} value={`before:${id}`}>
+                              Before: {label}
+                            </SelectItem>,
+                            <SelectItem key={`after:${id}`} value={`after:${id}`}>
+                              After: {label}
+                            </SelectItem>
+                          ];
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
+
+          <DialogActions>
+            <Button
+              onClick={() => setEditDialogOpen(false)}
+              variant="outline"
+              className="rounded-xl px-6 h-11 font-semibold text-gray-500 border-gray-200 hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditStage}
+              className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+            >
+              Save Changes
+            </Button>
+          </DialogActions>
         </DialogContent>
       </Dialog>
+
       <Dialog open={deleteDialogOpen} onOpenChange={(isOpen) => !isOpen && setDeleteDialogOpen(false)}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Stage</span>
-            <button
-              onClick={() => setDeleteDialogOpen(false)}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </DialogTitle>
-          <p className="mt-4">Are you sure you want to delete the stage "{stage.name || stage.label}"?</p>
-          <div className="flex gap-2 pt-4 border-t mt-6">
+        <DialogContent className="overflow-hidden flex flex-col p-0">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-red-50 text-red-600 border border-red-100 shadow-sm">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <DialogTitle>Delete Stage</DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="px-8 py-6">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure you want to delete the stage <span className="font-bold text-gray-900">"{stage.name || stage.label}"</span>? This action cannot be undone.
+            </p>
+          </div>
+
+          <DialogActions className="bg-red-50/30">
             <Button
               onClick={() => setDeleteDialogOpen(false)}
               variant="outline"
-              className="rounded-lg font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
+              className="rounded-xl px-6 h-11 font-semibold text-gray-500 border-gray-200 hover:bg-gray-50 transition-all"
             >
               Cancel
             </Button>
             <Button
               onClick={handleDeleteStage}
-              className="rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white"
+              className="rounded-xl px-8 h-11 font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg transition-all"
             >
-              Delete
+              Delete Stage
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
     </>

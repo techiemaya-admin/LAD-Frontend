@@ -82,28 +82,21 @@ const LeadDetailsDialog: React.FC<LeadDetailsDialogProps> = ({ open, onClose, le
   const leadCloseDate = (lead as { closeDate?: string }).closeDate;
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent showCloseButton={true} className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-10 h-10">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {lead.name?.charAt(0)?.toUpperCase() || 'L'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <DialogTitle>{lead.name || 'Unnamed Lead'}</DialogTitle>
-                {leadCompany && (
-                  <p className="text-sm text-muted-foreground">
-                    {leadCompany}
-                  </p>
-                )}
-                {leadTitle && (
-                  <p className="text-sm text-muted-foreground">
-                    {leadTitle}
-                  </p>
-                )}
-              </div>
+      <DialogContent className="overflow-hidden flex flex-col p-0 sm:h-[90vh]">
+        <DialogHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="w-10 h-10">
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                {lead.name?.charAt(0)?.toUpperCase() || 'L'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <DialogTitle>{lead.name || 'Unnamed Lead'}</DialogTitle>
+              {(leadCompany || leadTitle) && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {[leadCompany, leadTitle].filter(Boolean).join(' • ')}
+                </p>
+              )}
             </div>
           </div>
         </DialogHeader>

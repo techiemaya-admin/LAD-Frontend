@@ -127,7 +127,7 @@ export function QuickReplyPicker({ onSelect, contactName, disabled }: QuickReply
           <Zap className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
+      <DialogContent className="max-h-[80vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Quick Replies</DialogTitle>

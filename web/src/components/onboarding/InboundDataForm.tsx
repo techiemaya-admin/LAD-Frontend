@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useRef } from 'react';
 import { InboundLeadData } from '@/store/onboardingStore';
-import { 
-  Download, 
+import {
+  Download,
   Upload,
   FileSpreadsheet,
   CheckCircle2,
@@ -305,8 +305,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
     }
     // Aggregate data from all leads into the format expected by the store
     const aggregatedData: InboundLeadData = {
-      companyName: parsedLeads.length === 1 
-        ? parsedLeads[0].companyName 
+      companyName: parsedLeads.length === 1
+        ? parsedLeads[0].companyName
         : `${parsedLeads.length} Companies`,
       platforms: {
         linkedin: parsedLeads.some(l => l.linkedinProfile),
@@ -324,9 +324,9 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       phoneNumbers: parsedLeads.map(l => l.phone).filter(Boolean),
       notes: `Uploaded ${parsedLeads.length} lead(s). ${parsedLeads.map(l => l.notes).filter(Boolean).join(' | ')}`,
     };
-    logger.debug('Submitting aggregated inbound data', { 
+    logger.debug('Submitting aggregated inbound data', {
       leadCount: parsedLeads.length,
-      platforms: aggregatedData.platforms 
+      platforms: aggregatedData.platforms
     });
     onSubmit(aggregatedData);
   };
@@ -379,23 +379,20 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             return (
               <React.Fragment key={s.key}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                    isComplete ? 'bg-green-500 text-white' :
-                    isActive ? 'bg-green-100 text-green-600 ring-2 ring-green-500' :
-                    'bg-gray-100 text-gray-400'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isComplete ? 'bg-green-500 text-white' :
+                      isActive ? 'bg-green-100 text-green-600 ring-2 ring-green-500' :
+                        'bg-gray-100 text-gray-400'
+                    }`}>
                     {isComplete ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                   </div>
-                  <span className={`text-sm font-medium hidden sm:block ${
-                    isActive || isComplete ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-medium hidden sm:block ${isActive || isComplete ? 'text-gray-900' : 'text-gray-400'
+                    }`}>
                     {s.label}
                   </span>
                 </div>
                 {index < 3 && (
-                  <div className={`flex-1 h-0.5 mx-3 rounded ${
-                    isComplete ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
+                  <div className={`flex-1 h-0.5 mx-3 rounded ${isComplete ? 'bg-green-500' : 'bg-gray-200'
+                    }`} />
                 )}
               </React.Fragment>
             );
@@ -414,7 +411,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               Step 1: Download Template
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
-              Download our Excel template, fill in your inbound leads data with contact information, 
+              Download our Excel template, fill in your inbound leads data with contact information,
               then upload it back. We'll analyze and set up your campaign automatically.
             </p>
             <button
@@ -427,8 +424,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <div className="mt-6 pt-6 border-t border-gray-100">
               <p className="text-sm text-gray-500">
                 Already have leads in a spreadsheet?{' '}
-                <button 
-                  onClick={() => setStep('upload')} 
+                <button
+                  onClick={() => setStep('upload')}
                   className="text-green-600 hover:text-green-700 font-medium hover:underline"
                 >
                   Skip to upload →
@@ -451,11 +448,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer ${
-                isProcessing 
-                  ? 'border-gray-300 bg-gray-50' 
+              className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer ${isProcessing
+                  ? 'border-gray-300 bg-gray-50'
                   : 'border-gray-300 hover:border-green-500 hover:bg-green-50/50'
-              }`}
+                }`}
               onClick={() => !isProcessing && fileInputRef.current?.click()}
             >
               {isProcessing ? (
@@ -492,8 +488,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               </div>
             )}
             <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
-              <button 
-                onClick={() => setStep('download')} 
+              <button
+                onClick={() => setStep('download')}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -565,7 +561,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-end pt-4 border-t border-gray-100 gap-4">
               <button
                 onClick={() => { setStep('upload'); resetUpload(); }}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
@@ -628,7 +624,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             ) : (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {parsedLeads.map((lead, index) => (
-                  <div 
+                  <div
                     key={index}
                     className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors"
                   >
@@ -735,21 +731,12 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           </div>
         )}
       </div>
-      {/* Footer Actions */}
-      <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex gap-3 flex-shrink-0">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSubmitting}
-          className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
-        >
-          Cancel
-        </button>
+      <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 flex justify-end">
         {step === 'preview' && parsedLeads.length > 0 && (
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+            className="px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-100"
           >
             {isSubmitting ? (
               <>
@@ -767,4 +754,4 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       </div>
     </div>
   );
-}
+}

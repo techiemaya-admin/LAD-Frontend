@@ -661,20 +661,10 @@ export function ChatSettings() {
                 <button
                   onClick={handleCreatePrompt}
                   disabled={!newPromptName.trim() || !newPromptText.trim() || creatingPrompt}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {creatingPrompt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                  Create
-                </button>
-                <button
-                  onClick={() => {
-                    setShowNewPrompt(false);
-                    setNewPromptName('');
-                    setNewPromptText('');
-                  }}
-                  className="px-4 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
+                  {creatingPrompt ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  Create Prompt
                 </button>
               </div>
             </div>

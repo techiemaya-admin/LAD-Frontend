@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogHeader, DialogActions } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Chip } from '@/components/ui/chip';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
+import { X, Filter } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '@/store/slices/masterDataSlice';
 import { selectUsers, selectUsersLoading } from '@/store/slices/usersSlice';
@@ -190,114 +191,119 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent showCloseButton={true} className="p-6 pt-2 overflow-y-auto rounded-3xl">
-        <DialogTitle className="flex justify-between items-center pb-1 mt-4">
-          <span className="text-lg font-semibold text-primary">Filter Leads</span>
-        </DialogTitle>
-        <div className="mt-2 rounded-xl border border-gray-200 p-4 bg-[#f9fafb]">
+      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 max-h-[90vh]">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+              <Filter className="h-5 w-5 stroke-[2.5px]" />
+            </div>
+            <DialogTitle>Filter Leads</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <MultiSelect
-            label="Stages"
-            options={testStages.map(stage => ({
-              key: stage.key || String(stage.id),
-              label: stage.label || stage.name || String(stage.id)
-            }))}
-            value={safeFilters.stages}
-            onChange={(value) => handleFilterChange('stages', value)}
-            renderChip={(key) => {
-              const stage = testStages.find(s => (s.key || s.id) === key);
-              return stage?.label || stage?.name || key;
-            }}
-          />
-          <MultiSelect
-            label="Statuses"
-            options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
-            value={safeFilters.statuses}
-            onChange={(value) => handleFilterChange('statuses', value)}
-            renderChip={(key) => {
-              const statusOption = statusOptions.find(s => s.key === key);
-              return statusOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Priorities"
-            options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
-            value={safeFilters.priorities}
-            onChange={(value) => handleFilterChange('priorities', value)}
-            renderChip={(key) => {
-              const priorityOption = priorityOptions.find(p => p.key === key);
-              return priorityOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Sources"
-            options={Array.isArray(sourceOptions) ? sourceOptions.map(s => ({ key: s.key, label: s.label })) : []}
-            value={safeFilters.sources}
-            onChange={(value) => handleFilterChange('sources', value)}
-            renderChip={(key) => {
-              const sourceOption = sourceOptions.find(s => s.key === key);
-              return sourceOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Assignees"
-            options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
-            value={Array.isArray(safeFilters.assignees) ? safeFilters.assignees : []}
-            onChange={(value) => handleFilterChange('assignees', value)}
-            disabled={usersLoading}
-            renderChip={(key) => {
-              const user = teamMembers.find(u => String(u.id) === key);
-              return user?.name || key;
-            }}
-          />
-          <div className="sm:col-span-2">
-            <Label className="text-sm font-medium mb-2 block">Date Range</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="start-date" className="text-xs text-gray-500 mb-1 block">Start Date</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={safeFilters.dateRange?.start || ''}
-                  max={safeFilters.dateRange?.end || undefined}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  className="w-full h-11 rounded-lg"
-                />
-              </div>
-              <div>
-                <Label htmlFor="end-date" className="text-xs text-gray-500 mb-1 block">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={safeFilters.dateRange?.end || ''}
-                  min={safeFilters.dateRange?.start || undefined}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  className="w-full h-11 rounded-lg"
-                />
+            <MultiSelect
+              label="Stages"
+              options={testStages.map(stage => ({
+                key: stage.key || String(stage.id),
+                label: stage.label || stage.name || String(stage.id)
+              }))}
+              value={safeFilters.stages}
+              onChange={(value) => handleFilterChange('stages', value)}
+              renderChip={(key) => {
+                const stage = testStages.find(s => (s.key || s.id) === key);
+                return stage?.label || stage?.name || key;
+              }}
+            />
+            <MultiSelect
+              label="Statuses"
+              options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
+              value={safeFilters.statuses}
+              onChange={(value) => handleFilterChange('statuses', value)}
+              renderChip={(key) => {
+                const statusOption = statusOptions.find(s => s.key === key);
+                return statusOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Priorities"
+              options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
+              value={safeFilters.priorities}
+              onChange={(value) => handleFilterChange('priorities', value)}
+              renderChip={(key) => {
+                const priorityOption = priorityOptions.find(p => p.key === key);
+                return priorityOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Sources"
+              options={Array.isArray(sourceOptions) ? sourceOptions.map(s => ({ key: s.key, label: s.label })) : []}
+              value={safeFilters.sources}
+              onChange={(value) => handleFilterChange('sources', value)}
+              renderChip={(key) => {
+                const sourceOption = sourceOptions.find(s => s.key === key);
+                return sourceOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Assignees"
+              options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
+              value={Array.isArray(safeFilters.assignees) ? safeFilters.assignees : []}
+              onChange={(value) => handleFilterChange('assignees', value)}
+              disabled={usersLoading}
+              renderChip={(key) => {
+                const user = teamMembers.find(u => String(u.id) === key);
+                return user?.name || key;
+              }}
+            />
+            <div className="sm:col-span-2">
+              <Label className="text-sm font-medium mb-3 block text-gray-700">Date Range</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-date" className="text-xs text-gray-500 font-semibold uppercase tracking-wider pl-1">Start Date</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={safeFilters.dateRange?.start || ''}
+                    max={safeFilters.dateRange?.end || undefined}
+                    onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                    className="w-full h-11 rounded-xl border-gray-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date" className="text-xs text-gray-500 font-semibold uppercase tracking-wider pl-1">End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={safeFilters.dateRange?.end || ''}
+                    min={safeFilters.dateRange?.start || undefined}
+                    onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                    className="w-full h-11 rounded-xl border-gray-200"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-        </div>
-        {/* Action Buttons */}
-        <div className="flex flex-row items-center justify-between gap-2 pt-4 border-t mt-6">
-          <Button 
+
+        <DialogActions className="gap-3">
+          <div className="flex-1" />
+          <Button
             onClick={onClearFilters}
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
+            variant="ghost"
+            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl px-4"
           >
             <X className="mr-2 h-4 w-4" />
-            Clear All
+            Clear All Filters
           </Button>
-          <div className="flex items-center justify-end gap-2">
-            <Button 
-              onClick={onClose}
-              className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
-            >
-              Apply Filters
-            </Button>
-          </div>
-        </div>
+          <Button
+            onClick={onClose}
+            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+          >
+            Apply Filters
+          </Button>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );

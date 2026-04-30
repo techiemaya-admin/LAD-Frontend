@@ -71,7 +71,7 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
-          <Button 
+          <Button
             onClick={onClose}
             className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
           >

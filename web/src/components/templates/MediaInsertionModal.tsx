@@ -239,10 +239,7 @@ export default function MediaInsertionModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
+        <div className="flex justify-end pt-4 border-t border-gray-200">
           <Button
             onClick={handleInsert}
             disabled={!selectedMedia || loading}

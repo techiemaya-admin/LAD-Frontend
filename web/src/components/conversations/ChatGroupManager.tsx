@@ -522,7 +522,7 @@ export function ChatGroupManager({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl sm:w-[90vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <div className="bg-primary/5 border-b border-border px-4 py-3">
           <DialogHeader>
@@ -695,14 +695,7 @@ export function ChatGroupManager({
                     <Button size="sm" className="h-8 text-xs" variant="outline" onClick={handleCreate} disabled={!newName.trim()}>
                       Skip & Create
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); }}
-                    >
-                      Cancel
-                    </Button>
+
                   </div>
                 </>
               ) : (
@@ -935,14 +928,7 @@ export function ChatGroupManager({
                         ? `Create Group with ${selectedContacts.size} Contact${selectedContacts.size > 1 ? 's' : ''}`
                         : 'Create Group'}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); setSelectedContacts(new Map()); }}
-                    >
-                      Cancel
-                    </Button>
+
                   </div>
                 </>
               )}
@@ -1012,9 +998,7 @@ export function ChatGroupManager({
                         <Button size="sm" className="h-7 text-[11px] flex-1" onClick={handleUpdate}>
                           Save
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => setEditingId(null)}>
-                          Cancel
-                        </Button>
+
                       </div>
                     </div>
                   ) : confirmDeleteId === group.id ? (
@@ -1034,14 +1018,7 @@ export function ChatGroupManager({
                         >
                           Delete
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-[11px]"
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Cancel
-                        </Button>
+
                       </div>
                     </div>
                   ) : (

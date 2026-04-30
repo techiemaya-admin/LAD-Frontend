@@ -1107,7 +1107,7 @@ export function CallOptions(props: CallOptionsProps) {
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-2">
+          <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600">Phone</label>
             <Input value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600">Name</label>
@@ -1176,9 +1176,13 @@ export function CallOptions(props: CallOptionsProps) {
             </div>
           </div>
           <DialogActions>
-            <div className="flex gap-2">
-              <Button onClick={saveEditor} disabled={savingSummary} className="w-full">{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
-            </div>
+            <Button 
+              onClick={saveEditor} 
+              disabled={savingSummary} 
+              className="rounded-xl px-10 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-sm transition-all"
+            >
+              {savingSummary ? 'Saving...' : 'Save & Send'}
+            </Button>
           </DialogActions>
         </DialogContent>
       </Dialog>

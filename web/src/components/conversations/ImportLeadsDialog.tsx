@@ -28,6 +28,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActions,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -626,16 +627,18 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-4 pb-0">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserPlus className="h-5 w-5" />
+      <DialogContent className="sm:w-[90vw] h-auto max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-orange-50 text-orange-600 border border-orange-100 shadow-sm flex items-center justify-center w-10 h-10">
+              <UserPlus className="h-6 w-6 stroke-[2.5px]" />
+            </div>
             Import Leads
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="mx-4 mt-3 w-auto self-start">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden bg-gray-50/30">
+          <TabsList className="mx-8 mt-6 w-auto self-start">
             <TabsTrigger value="single" className="text-xs gap-1.5">
               <UserPlus className="h-3.5 w-3.5" />
               Add Leads
@@ -651,7 +654,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           </TabsList>
 
           {/* ── CSV Upload Tab ─────────────────────── */}
-          <TabsContent value="csv" className="px-4 py-3 flex-1">
+          <TabsContent value="csv" className="px-8 py-6 flex-1">
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium mb-1">Upload CSV file</p>
@@ -685,7 +688,7 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
 
           {/* ── Excel Upload Tab ─────────────────────── */}
-          <TabsContent value="excel" className="px-4 py-3 flex-1">
+          <TabsContent value="excel" className="px-8 py-6 flex-1">
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium mb-1">Upload Excel file (.xlsx)</p>
@@ -721,7 +724,7 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
           </TabsContent>
 
           {/* ── Single/List Add Tab ────────────────── */}
-          <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-4 py-2">
+          <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-8 py-6">
             <div className="flex-1 min-h-0 overflow-y-auto pr-2">
               <div className="space-y-3">
                 {leads.map((lead, idx) => (
@@ -754,7 +757,7 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
 
         {/* ── Invalid Records Banner ──────────────── */}
         {hasValidationErrors && !importResult?.success && (
-          <div className="mx-4 mb-1 rounded-lg bg-amber-50 border border-amber-200 overflow-hidden">
+          <div className="mx-8 mb-4 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden shadow-sm">
             {/* Top row: summary + bulk actions */}
             <div className="px-3 py-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-amber-700 min-w-0">
@@ -1094,53 +1097,44 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
         )}
 
         {/* ── Footer ─────────────────────────────── */}
-        {!importResult?.success ? (
-          <div className="p-4 border-t border-border flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {hasValidationErrors ? (
-                <span className="text-amber-600 font-medium">
-                  Fix {invalidCount} invalid record{invalidCount !== 1 ? 's' : ''} to continue
-                </span>
-              ) : (
-                <>
-                  {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
-                  {selectedGroupIds.size > 0 && (
-                    <span className="ml-1">
-                      into {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleImport}
-                disabled={importing || validCount === 0 || hasValidationErrors}
-                className="gap-1.5"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Importing {validCount} Lead{validCount !== 1 ? 's' : ''}...
-                  </>
+        <DialogActions>
+          {!importResult?.success ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="text-sm font-medium">
+                {hasValidationErrors ? (
+                  <span className="text-amber-600">
+                    Fix {invalidCount} invalid record{invalidCount !== 1 ? 's' : ''} to continue
+                  </span>
                 ) : (
-                  <>
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Import {validCount} Lead{validCount !== 1 ? 's' : ''}
-                  </>
+                  <span className="text-muted-foreground">
+                    {validCount} lead{validCount !== 1 ? 's' : ''} ready to import
+                  </span>
                 )}
-              </Button>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleImport}
+                  disabled={importing || validCount === 0 || hasValidationErrors}
+                  className="rounded-xl px-8 py-2.5 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all disabled:opacity-50"
+                >
+                  {importing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Import {validCount} Lead{validCount !== 1 ? 's' : ''}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="p-4 border-t border-border flex justify-end gap-2">
+          ) : (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              className="rounded-xl px-6 py-2.5 font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
               onClick={() => {
                 onOpenChange(false);
                 onImportComplete();
@@ -1148,8 +1142,8 @@ Jane Smith,+971507654321,jane@corp.com,Corp Ltd,,@janesmith`}
             >
               {showBroadcastPrompt ? 'Cancel' : 'Skip & Close'}
             </Button>
-          </div>
-        )}
+          )}
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );

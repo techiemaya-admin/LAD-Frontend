@@ -164,22 +164,11 @@ export const CreditsSettings: React.FC = () => {
                   </p>
                 </div>
               )}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowAddCreditsModal(false);
-                    setSelectedAmount(null);
-                    setCustomAmount('');
-                  }}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
+              <div className="pt-4">
                 <button
                   onClick={handleProceedToPayment}
                   disabled={(!selectedAmount && !customAmount) || isProcessing}
-                  className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
+                  className={`w-full px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center font-medium ${
                     (selectedAmount || customAmount) && !isProcessing
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'

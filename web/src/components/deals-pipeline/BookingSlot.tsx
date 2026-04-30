@@ -305,13 +305,13 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             );
             return booked
               ? {
-                  ...slot,
-                  isBooked: true,
-                  bookedBy: booked.bookedBy,
-                  userId: booked.userId,
-                  userName: booked.userName,
-                  userEmail: booked.userEmail,
-                }
+                ...slot,
+                isBooked: true,
+                bookedBy: booked.bookedBy,
+                userId: booked.userId,
+                userName: booked.userName,
+                userEmail: booked.userEmail,
+              }
               : slot;
           })
         );
@@ -564,13 +564,13 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         prevSlots.map((s) =>
           s.id === selectedSlotForBooking.id
             ? {
-                ...s,
-                isBooked: true,
-                bookedBy: user?.name || '',
-                userId: selectedUser,
-                userName: user?.name || '',
-                userEmail: user?.email || '',
-              }
+              ...s,
+              isBooked: true,
+              bookedBy: user?.name || '',
+              userId: selectedUser,
+              userName: user?.name || '',
+              userEmail: user?.email || '',
+            }
             : s
         )
       );
@@ -598,7 +598,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
       // Extract error message - the error.message should already contain the backend message
       let errorMessage = error.message || 'Failed to book slot. Please try again.';
       // Check if it's an availability/unavailability error (should be shown as warning, not error)
-      const isAvailabilityError = 
+      const isAvailabilityError =
         errorMessage.toLowerCase().includes('unavailable') ||
         errorMessage.toLowerCase().includes('booking') ||
         errorMessage.toLowerCase().includes('buffer period') ||
@@ -626,10 +626,10 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   const handleCancelBooking = async (slotId: string) => {
     try {
       setLoading(true);
-      
+
       // Find the slot to get booking information
       const slot = bookedSlots.find(s => s.id === slotId);
-      
+
       // If this is a followup booking, use the SDK hook
       if (slot?.bookingType === 'manual_followup') {
         // Extract booking ID from slot or use leadId as fallback
@@ -642,19 +642,19 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         // Use bookingService for regular bookings
         await bookingService.cancelBooking(slotId);
       }
-      
+
       // Update the slot as available
       setTimeSlots((prevSlots) =>
         prevSlots.map((s) =>
           s.id === slotId
             ? {
-                ...s,
-                isBooked: false,
-                bookedBy: undefined,
-                userId: undefined,
-                userName: undefined,
-                userEmail: undefined,
-              }
+              ...s,
+              isBooked: false,
+              bookedBy: undefined,
+              userId: undefined,
+              userName: undefined,
+              userEmail: undefined,
+            }
             : s
         )
       );
@@ -721,63 +721,63 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                         ) : (
                           <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
                         )}
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900 flex flex-wrap items-center gap-x-2">
-                              <span>{formatDate(slot.date)}</span>
-                              {slot.bookingType ? (
-                                <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
-                              ) : null}
-                              <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
-                            </div>
-                            <div className="text-sm text-gray-700 mt-1">
-                              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                            </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 flex flex-wrap items-center gap-x-2">
+                            <span>{formatDate(slot.date)}</span>
+                            {slot.bookingType ? (
+                              <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
+                            ) : null}
+                            <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
+                          </div>
+                          <div className="text-sm text-gray-700 mt-1">
+                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                           </div>
                         </div>
-                        {slot.userName && (
-                          <div className="flex items-center gap-2 text-xs text-gray-600 ml-7">
-                            <User className="h-3 w-3" />
-                            <span>
-                              {slot.userName}
-                              {slot.userEmail && ` (${slot.userEmail})`}
-                            </span>
-                          </div>
-                        )}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleCancelBooking(slot.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                        disabled={loading}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Cancel
-                      </Button>
+                      {slot.userName && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600 ml-7">
+                          <User className="h-3 w-3" />
+                          <span>
+                            {slot.userName}
+                            {slot.userEmail && ` (${slot.userEmail})`}
+                          </span>
+                        </div>
+                      )}
                     </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCancelBooking(slot.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                      disabled={loading}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
                   </div>
-                ))}
-              </div>
-              {bookedSlots.length > 5 && (
-                <div className="mt-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-700"
-                    onClick={() => setShowAllBookedAppointments((v) => !v)}
-                  >
-                    {showAllBookedAppointments ? 'View less' : 'View more'}
-                  </Button>
                 </div>
-              )}
+              ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm">No appointments scheduled</p>
-            </div>
-          )}
+            {bookedSlots.length > 5 && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-700"
+                  onClick={() => setShowAllBookedAppointments((v) => !v)}
+                >
+                  {showAllBookedAppointments ? 'View less' : 'View more'}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
+            <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-sm">No appointments scheduled</p>
+          </div>
+        )}
         {/* Allow booking new appointments in edit mode */}
         <div className="pt-4 border-t border-gray-200">
           <Label className="text-sm text-gray-600 mb-3 block font-medium">
@@ -814,19 +814,19 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                       createdBy && currentUser?.email
                         ? `Auto-selected: ${currentUser.email}`
                         : createdBy
-                        ? 'Using logged-in user'
-                        : users.length === 0
-                          ? 'No users available'
-                          : 'Choose a user...'
+                          ? 'Using logged-in user'
+                          : users.length === 0
+                            ? 'No users available'
+                            : 'Choose a user...'
                     }
                   >
                     {selectedUser && currentUser && String(currentUser.id) === selectedUser && currentUser.email
                       ? `${currentUser.name || 'Current User'} (${currentUser.email})`
                       : selectedUser && users.find(u => String(u.id) === selectedUser)
                         ? (() => {
-                            const user = users.find(u => String(u.id) === selectedUser);
-                            return `${user?.name} ${user?.email ? `(${user.email})` : ''}`;
-                          })()
+                          const user = users.find(u => String(u.id) === selectedUser);
+                          return `${user?.name} ${user?.email ? `(${user.email})` : ''}`;
+                        })()
                         : null}
                   </SelectValue>
                 </SelectTrigger>
@@ -987,45 +987,47 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             </div>
             {/* Book Slot Button */}
             {startTime && endTime && endTime > startTime && (
-              <Button
-                onClick={() => {
-                  if (!selectedUser) {
-                    showToast('Please select a user first', 'warning');
-                    return;
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={() => {
+                    if (!selectedUser) {
+                      showToast('Please select a user first', 'warning');
+                      return;
+                    }
+                    // Final validation before booking
+                    // isTimeRangeBooked() returns true if time IS WITHIN available slots (valid for booking)
+                    // So we should show error only if it returns false (NOT within available slots)
+                    if (!isTimeRangeBooked(startTime, endTime)) {
+                      showToast('This time range is not within available slots. Please select a different time.', 'warning');
+                      return;
+                    }
+                    const customSlot: TimeSlot = {
+                      id: `${selectedDate}-${startTime}`,
+                      startTime: startTime,
+                      endTime: endTime,
+                      date: selectedDate,
+                      isBooked: false,
+                    };
+                    setSelectedSlotForBooking(customSlot);
+                    setConfirmDialogOpen(true);
+                  }}
+                  className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl h-11 px-8 font-bold shadow-sm transition-all"
+                  disabled={
+                    loading ||
+                    !selectedUser ||
+                    !isTimeRangeBooked(startTime, endTime)
                   }
-                  // Final validation before booking
-                  // isTimeRangeBooked() returns true if time IS WITHIN available slots (valid for booking)
-                  // So we should show error only if it returns false (NOT within available slots)
-                  if (!isTimeRangeBooked(startTime, endTime)) {
-                    showToast('This time range is not within available slots. Please select a different time.', 'warning');
-                    return;
-                  }
-                  const customSlot: TimeSlot = {
-                    id: `${selectedDate}-${startTime}`,
-                    startTime: startTime,
-                    endTime: endTime,
-                    date: selectedDate,
-                    isBooked: false,
-                  };
-                  setSelectedSlotForBooking(customSlot);
-                  setConfirmDialogOpen(true);
-                }}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all"
-                disabled={
-                  loading ||
-                  !selectedUser ||
-                  !isTimeRangeBooked(startTime, endTime)
-                }
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                {!selectedUser ? (
-                  <>User not available</>
-                ) : !isTimeRangeBooked(startTime, endTime) ? (
-                  <>Select Valid Time Within Available Slots</>
-                ) : (
-                  <>Book Slot ({formatTime(startTime)} - {formatTime(endTime)})</>
-                )}
-              </Button>
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {!selectedUser ? (
+                    <>User not available</>
+                  ) : !isTimeRangeBooked(startTime, endTime) ? (
+                    <>Select Valid Time Within Available Slots</>
+                  ) : (
+                    <>Book Slot ({formatTime(startTime)} - {formatTime(endTime)})</>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -1038,7 +1040,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 Confirm Booking
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="flex-1 overflow-y-auto p-6">
               {selectedSlotForBooking && (
                 <div className="space-y-6">
@@ -1129,18 +1131,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
               )}
             </div>
 
-            <DialogActions className="p-6 pt-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setConfirmDialogOpen(false);
-                  setSelectedSlotForBooking(null);
-                }}
-                className="px-6 border-gray-300 text-gray-700 h-11 font-medium"
-                disabled={loading}
-              >
-                Cancel
-              </Button>
+            <DialogActions className="p-6 pt-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0 flex justify-end">
               <Button
                 onClick={handleConfirmBooking}
                 disabled={loading || !tenantId || !createdBy}

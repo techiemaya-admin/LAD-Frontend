@@ -658,7 +658,7 @@ export const IntegrationsSettings: React.FC = () => {
                         }}
                         className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        ✕ Cancel
+                        <span className="text-lg leading-none">✕</span>
                       </button>
                     </div>
 
@@ -1103,19 +1103,9 @@ export const IntegrationsSettings: React.FC = () => {
                 <button
                   type="submit"
                   disabled={mindBodyConnecting}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {mindBodyConnecting ? 'Connecting...' : 'Connect'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMindBodyModal(false);
-                    mindBodyFormReset();
-                  }}
-                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
-                >
-                  Cancel
                 </button>
               </div>
             </form>

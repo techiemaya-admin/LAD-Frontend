@@ -195,17 +195,13 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
                   value={newStoreDesc}
                   onChange={(e) => setNewStoreDesc(e.target.value)}
                 />
-                <div className="flex gap-2 justify-end pt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setShowCreateStore(false)}>
-                    Cancel
-                  </Button>
+                <div className="pt-2">
                   <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    className="w-full bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl"
                     onClick={handleCreateStore}
                     disabled={!newStoreName.trim() || creatingStore}
                   >
-                    {creatingStore ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+                    {creatingStore ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
                     Create Folder
                   </Button>
                 </div>

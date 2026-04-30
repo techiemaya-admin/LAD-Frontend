@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { useState } from "react";
 import {
   Table,
@@ -1320,21 +1320,30 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar rounded-3xl">
-          <DialogTitle className="text-lg font-semibold mb-4">
-            Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
-          </DialogTitle>
-          {selectedLead && (
-            <BookingSlot
-              leadId={selectedLead.id}
-              tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
-              studentId={String(selectedLead.id)}
-              assignedUserId={currentUser?.id || undefined}
-              createdBy={currentUser?.id || undefined}
-              users={bookingUsers}
-              isEditMode={true}
-            />
-          )}
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+                <CalendarRange className="h-5 w-5" />
+              </div>
+              <DialogTitle>
+                Schedule Appointment {selectedLead?.name ? `— ${selectedLead.name}` : ''}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            {selectedLead && (
+              <BookingSlot
+                leadId={selectedLead.id}
+                tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
+                studentId={String(selectedLead.id)}
+                assignedUserId={currentUser?.id || undefined}
+                createdBy={currentUser?.id || undefined}
+                users={bookingUsers}
+                isEditMode={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
