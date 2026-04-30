@@ -691,7 +691,7 @@ export function ChatSettings() {
                       title={prompt.is_active ? 'Active — click to deactivate' : 'Inactive — click to activate'}
                     >
                       {prompt.is_active ? (
-                        <ToggleRight className="h-5 w-5 text-green-500" />
+                        <ToggleRight className="h-5 w-5 text-blue-500" />
                       ) : (
                         <ToggleLeft className="h-5 w-5 text-gray-300" />
                       )}
@@ -820,7 +820,7 @@ export function ChatSettings() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
-            <Globe className="h-5 w-5 text-teal-600" />
+            <Globe className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">Company Website Context</h2>
           </div>
           <p className="text-sm text-gray-500">
@@ -847,7 +847,7 @@ export function ChatSettings() {
               title={chatSettings.web_scraping_enabled ? 'On — click to disable' : 'Off — click to enable'}
             >
               {chatSettings.web_scraping_enabled ? (
-                <ToggleRight className="h-6 w-6 text-teal-600" />
+                <ToggleRight className="h-6 w-6 text-blue-600" />
               ) : (
                 <ToggleLeft className="h-6 w-6 text-gray-300" />
               )}
@@ -866,7 +866,7 @@ export function ChatSettings() {
                 {chatSettings.web_scraping_urls.map((url, idx) => (
                   <div key={idx} className="flex items-center justify-between px-3 py-2.5 bg-white hover:bg-gray-50">
                     <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                      <Globe className="h-3.5 w-3.5 text-teal-500 flex-shrink-0" />
+                      <Globe className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                       <span className="text-sm text-gray-700 truncate">{url}</span>
                     </div>
                     <button
@@ -907,7 +907,7 @@ export function ChatSettings() {
                     }
                   }
                 }}
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400"
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               />
               <button
                 onClick={() => {
@@ -925,7 +925,7 @@ export function ChatSettings() {
                   !newWebUrl.trim() ||
                   (!newWebUrl.trim().startsWith('http://') && !newWebUrl.trim().startsWith('https://'))
                 }
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 border border-teal-200 bg-teal-50 rounded-md hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 border border-blue-200 bg-blue-50 rounded-md hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add
@@ -994,7 +994,7 @@ export function ChatSettings() {
           <div className="flex justify-between items-center pt-2 gap-2">
             <button
               onClick={() => setShowWebTestChat((v) => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 border border-teal-200 bg-white rounded-md hover:bg-teal-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 border border-blue-200 bg-white rounded-md hover:bg-blue-50 transition-colors"
               title="Preview how the AI answers using your scraped website content"
             >
               <Sparkles className="h-4 w-4" />
@@ -1003,7 +1003,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveWebScraping}
               disabled={webScrapingSaving}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {webScrapingSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {webScrapingSaving ? 'Scraping & saving…' : 'Save & Scrape'}
@@ -1012,18 +1012,18 @@ export function ChatSettings() {
 
           {/* Test Chat panel — Claude-powered preview against cached scraped content */}
           {showWebTestChat && (
-            <div className="mt-4 border border-teal-200 rounded-xl overflow-hidden bg-slate-50/40">
-              <div className="px-4 py-2.5 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
+            <div className="mt-4 border border-blue-200 rounded-xl overflow-hidden bg-slate-50/40">
+              <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-teal-600" />
-                  <span className="text-sm font-medium text-teal-900">
+                  <Sparkles className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">
                     Test against scraped content
                   </span>
                 </div>
                 {webChatMessages.length > 0 && (
                   <button
                     onClick={() => setWebChatMessages([])}
-                    className="text-xs text-teal-700 hover:text-teal-900 font-medium"
+                    className="text-xs text-blue-700 hover:text-blue-900 font-medium"
                   >
                     Clear
                   </button>
@@ -1050,7 +1050,7 @@ export function ChatSettings() {
                       <div
                         className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                           msg.role === 'user'
-                            ? 'bg-teal-600 text-white rounded-br-sm'
+                            ? 'bg-blue-600 text-white rounded-br-sm'
                             : 'bg-white border border-slate-200 text-slate-700 rounded-bl-sm shadow-sm'
                         }`}
                       >
@@ -1078,7 +1078,7 @@ export function ChatSettings() {
                 )}
               </div>
 
-              <div className="p-3 border-t border-teal-200 bg-white">
+              <div className="p-3 border-t border-blue-200 bg-white">
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1092,12 +1092,12 @@ export function ChatSettings() {
                       }
                     }}
                     disabled={webChatBusy}
-                    className="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400 disabled:opacity-60"
+                    className="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-60"
                   />
                   <button
                     onClick={handleWebTestChatSend}
                     disabled={!webChatInput.trim() || webChatBusy}
-                    className="flex items-center justify-center h-9 w-9 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center justify-center h-9 w-9 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     title="Send"
                   >
                     {webChatBusy ? (
@@ -1117,7 +1117,7 @@ export function ChatSettings() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-5 w-5 text-violet-600" />
+            <Zap className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">Chat Behaviour</h2>
           </div>
           <p className="text-sm text-gray-500">
@@ -1150,7 +1150,7 @@ export function ChatSettings() {
                   title={chatSettings.typing_indicator ? 'On — click to disable' : 'Off — click to enable'}
                 >
                   {chatSettings.typing_indicator ? (
-                    <ToggleRight className="h-6 w-6 text-violet-500" />
+                    <ToggleRight className="h-6 w-6 text-blue-500" />
                   ) : (
                     <ToggleLeft className="h-6 w-6 text-gray-300" />
                   )}
@@ -1173,7 +1173,7 @@ export function ChatSettings() {
                   title={chatSettings.waba_typing_indicator ? 'On — click to disable' : 'Off — click to enable'}
                 >
                   {chatSettings.waba_typing_indicator ? (
-                    <ToggleRight className="h-6 w-6 text-violet-500" />
+                    <ToggleRight className="h-6 w-6 text-blue-500" />
                   ) : (
                     <ToggleLeft className="h-6 w-6 text-gray-300" />
                   )}
@@ -1186,7 +1186,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveBehaviour}
               disabled={savingBehaviour}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {savingBehaviour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Behaviour
@@ -1199,7 +1199,7 @@ export function ChatSettings() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="h-5 w-5 text-orange-600" />
+            <Clock className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">Campaign Settings</h2>
           </div>
           <p className="text-sm text-gray-500">
@@ -1225,7 +1225,7 @@ export function ChatSettings() {
               }
             >
               {chatSettings.campaign_frequency.enabled ? (
-                <ToggleRight className="h-6 w-6 text-green-500" />
+                <ToggleRight className="h-6 w-6 text-blue-500" />
               ) : (
                 <ToggleLeft className="h-6 w-6 text-gray-300" />
               )}
@@ -1252,7 +1252,7 @@ export function ChatSettings() {
                   },
                 }))
               }
-              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
+              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
             />
           </div>
 
@@ -1276,7 +1276,7 @@ export function ChatSettings() {
                   },
                 }))
               }
-              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
+              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
             />
           </div>
 
@@ -1284,7 +1284,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveCampaign}
               disabled={savingSettings}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Campaign Settings
@@ -1297,7 +1297,7 @@ export function ChatSettings() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-1">
-            <Bell className="h-5 w-5 text-indigo-600" />
+            <Bell className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">Post-Conversation Follow-ups</h2>
           </div>
           <p className="text-sm text-gray-500">
@@ -1318,7 +1318,7 @@ export function ChatSettings() {
               onClick={() => setFollowupConfig((prev) => ({ ...prev, enabled: !prev.enabled }))}
             >
               {followupConfig.enabled ? (
-                <ToggleRight className="h-6 w-6 text-indigo-500" />
+                <ToggleRight className="h-6 w-6 text-blue-500" />
               ) : (
                 <ToggleLeft className="h-6 w-6 text-gray-300" />
               )}
@@ -1363,7 +1363,7 @@ export function ChatSettings() {
                             value={stage.delay_hours}
                             disabled={!followupConfig.enabled || !stage.enabled}
                             onChange={(e) => updateStage(key, 'delay_hours', parseInt(e.target.value) || 24)}
-                            className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 disabled:opacity-40 disabled:bg-gray-50"
+                            className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-40 disabled:bg-gray-50"
                           />
                           <span className="text-xs text-gray-400">h</span>
                         </div>
@@ -1374,7 +1374,7 @@ export function ChatSettings() {
                           onClick={() => updateStage(key, 'enabled', !stage.enabled)}
                         >
                           {stage.enabled ? (
-                            <ToggleRight className="h-5 w-5 text-indigo-500 disabled:opacity-40" />
+                            <ToggleRight className="h-5 w-5 text-blue-500 disabled:opacity-40" />
                           ) : (
                             <ToggleLeft className="h-5 w-5 text-gray-300" />
                           )}
@@ -1407,16 +1407,16 @@ export function ChatSettings() {
                     meeting_reminder_delay_hours: parseInt(e.target.value) || 24,
                   }))
                 }
-                className="w-24 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-24 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               />
               <span className="text-sm text-gray-500">hours before the meeting time</span>
             </div>
           </div>
 
           {/* Reliability indicator */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-md border border-indigo-100">
-            <Zap className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-            <p className="text-xs text-indigo-700">
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-md border border-blue-100">
+            <Zap className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            <p className="text-xs text-blue-700">
               Follow-ups are delivered reliably even if the server restarts.
             </p>
           </div>
@@ -1425,7 +1425,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveFollowup}
               disabled={savingFollowup}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Follow-up Settings
