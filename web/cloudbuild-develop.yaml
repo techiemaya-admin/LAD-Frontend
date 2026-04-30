@@ -107,7 +107,7 @@ options:
 # Timeout for the entire build
 timeout: '1800s'
 
-# Substitutions for Development Environment
+# Substitutions for Development Environment #
 substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'lad-frontend-develop'
