@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 
-const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "";
+const isWorkerConfigured = workerUrl.startsWith("https://");
 
 export interface PlaygroundStore {
   id: string;
@@ -33,16 +34,18 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   const sessionId = useRef("");
 
   useEffect(() => {
+    if (!isWorkerConfigured) return;
+
     if (!sessionId.current) {
       sessionId.current = crypto.randomUUID();
     }
     let active = true;
-    
+
     const wakeWorker = async () => {
       try {
         const res = await fetch(`${workerUrl}/worker-status`);
         if (!res.ok) throw new Error("Worker not reachable");
-        
+
         // Start hold
         fetch(`${workerUrl}/hold-for-call`, {
           method: "POST",
@@ -51,13 +54,13 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
         }).catch(e => {
             // Ignore abort or network errors from the long-polling hold
         });
-        
+
         if (active) setIsAwake(true);
       } catch (e: any) {
         if (active) setWakeError(e.message || "Failed to wake worker.");
       }
     };
-    
+
     wakeWorker();
 
     return () => {
