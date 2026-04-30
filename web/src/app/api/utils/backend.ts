@@ -49,7 +49,7 @@ export function getBackendUrl(): string {
   if (publicBackendUrl) return publicBackendUrl;
 
   // Safe local default to prevent accidental remote calls during dev.
-  return 'https://lad-backend-develop-160078175457.us-central1.run.app';
+  return 'http://localhost:3004';
 }
 
 /**
