@@ -379,6 +379,18 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
     }
   }, [isAuthenticated, dispatch]);
 
+  // Synchronize limits with view mode defaults (Kanban: 100, List: 20)
+  useEffect(() => {
+    // If switching to list view and limit is still 100 (Kanban default), switch to 20
+    if (viewMode === 'list' && limit === 100) {
+      onLimitChange?.(20);
+    } 
+    // If switching to kanban view and limit is 20 (List default), switch to 100
+    else if (viewMode === 'kanban' && limit === 20) {
+      onLimitChange?.(100);
+    }
+  }, [viewMode, limit, onLimitChange]);
+
   // Infinite scroll handler for Kanban board
   useEffect(() => {
     const handleScroll = async () => {

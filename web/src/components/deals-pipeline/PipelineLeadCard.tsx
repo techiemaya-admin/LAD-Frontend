@@ -1225,7 +1225,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         const sourceKey = String((lead as any)?.source || '').toLowerCase();
                         const sourceLabel = getOptionLabel(sourceOptions, String((lead as any)?.source) || undefined) || '';
                         const displayLabel = sourceLabel || (sourceKey ? sourceKey : 'No source');
-                        const isLinkedin = sourceKey === 'linkedin' || displayLabel.toLowerCase() === 'linkedin';
+                        const isLinkedin = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'].includes(sourceKey) || displayLabel.toLowerCase() === 'linkedin';
 
                         return (
                           <span className="text-gray-900">

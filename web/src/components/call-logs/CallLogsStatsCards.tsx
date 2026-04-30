@@ -150,6 +150,12 @@ export default function CallLogsStatsCards({
         value={stats.total_calls || 0} 
         icon={<BookUser className="w-6 h-6 text-blue-600" />} 
         bgColor="bg-blue-100" 
+        onClick={() => {
+          onStatusChange?.(null);
+          onLeadTagChange?.(null);
+        }}
+        isLeadTag={false}
+        isSelected={!selectedStatus && !selectedLeadTag}
       />
       
       {/* Completed Calls (Ended) */}

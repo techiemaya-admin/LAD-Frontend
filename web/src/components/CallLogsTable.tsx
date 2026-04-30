@@ -865,7 +865,7 @@ export function CallLogsTable({
   return (
     <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0]">
+      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1004,10 +1004,10 @@ export function CallLogsTable({
                           {header.column.getCanSort() && (
                             <span>
                               {{
-                                asc: <ArrowUp className="w-4 h-4 text-primary" />,
-                                desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                                asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                                desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
                               }[header.column.getIsSorted() as string] ?? (
-                                  <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                                 )}
                             </span>
                           )}
@@ -1235,7 +1235,7 @@ export function CallLogsTable({
       </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC]">
           {/* Left Side: Records per page */}
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
             <div className="flex items-center gap-2">
