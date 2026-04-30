@@ -90,7 +90,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       });
       if (!res.ok) throw new Error("Failed to fetch stores");
       const data = await res.json();
-      setStores(data);
+      setStores(Array.isArray(data) ? data : (data?.stores ?? data?.items ?? []));
     } catch (err: any) {
       setError(err.message || "An error occurred fetching stores.");
     } finally {
@@ -245,6 +245,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
     setError,
     isAwake,
     wakeError,
+    isConfigured: isWorkerConfigured,
     fetchStores,
     createStore,
     deleteStore,

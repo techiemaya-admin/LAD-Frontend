@@ -593,6 +593,13 @@ export function ConversationsPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // Show only tabs whose channel is actively connected.
   // While loading (null) render nothing so there's no flash of wrong tabs.
   const visibleTabs = channelStatus
@@ -654,8 +661,34 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal'  && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
-        {activeTab === 'waba'      && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'personal' && (
+          <ChannelConversationView
+            channel="personal"
+            onShowBroadcastModal={() => setShowBroadcastModal(true)}
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
+        {activeTab === 'waba' && (
+          <ChannelConversationView
+            channel="waba"
+            onShowBroadcastModal={() => setShowBroadcastModal(true)}
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
         {activeTab === 'linkedin'  && <LinkedInConversationView />}
         {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
         {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
