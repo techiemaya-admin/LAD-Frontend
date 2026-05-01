@@ -345,10 +345,15 @@ export function CallLogsTable({
 
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
-    if (statusFilter === 'all') return itemsWithTags;
-    return itemsWithTags.filter(item =>
-      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
-    );
+    return itemsWithTags.filter(item => {
+      const itemStatus = item.status?.toLowerCase() || "";
+      const filter = statusFilter.toLowerCase();
+      if (filter === 'all') return true;
+      if (filter === 'ended' || filter === 'completed') {
+        return itemStatus === 'ended' || itemStatus === 'completed';
+      }
+      return itemStatus.includes(filter);
+    });
   }, [itemsWithTags, statusFilter]);
 
   // Apply global search filter
@@ -398,7 +403,7 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
-      meta: { sticky: 'left-0', zIndex: 'z-40' },
+      meta: { zIndex: 'z-40' },
       header: ({ table }) => {
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
@@ -444,7 +449,7 @@ export function CallLogsTable({
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
-      meta: { sticky: 'left-[44px]', zIndex: 'z-30' },
+      meta: { zIndex: 'z-30' },
       header: 'S/No',
       size: 60,
       maxSize: 80,
@@ -458,7 +463,7 @@ export function CallLogsTable({
     {
       id: 'assistant',
       accessorKey: 'assistant',
-      meta: { sticky: 'left-[104px]', zIndex: 'z-20' },
+      meta: { zIndex: 'z-20' },
       header: 'Agent',
       size: 120,
       maxSize: 150,
@@ -467,7 +472,7 @@ export function CallLogsTable({
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
-      meta: { sticky: 'left-[224px]', zIndex: 'z-10' },
+      meta: { zIndex: 'z-10' },
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
@@ -732,24 +737,24 @@ export function CallLogsTable({
             ) : (
               <ChevronRight className="w-5 h-5 text-primary" />
             )}
-            <div className="flex-1 flex items-center gap-6">
-              <div>
+            <div className="flex-1 flex items-center gap-12">
+              <div className="min-w-[180px]">
                 <span className="font-semibold text-foreground">Batch:</span>
                 <span className="ml-2 font-mono text-sm text-muted-foreground">
                   {batchId.slice(0, 8)}...
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-muted-foreground">
+              <div className="flex items-center gap-8 text-sm">
+                <span className="text-muted-foreground min-w-[80px]">
                   <span className="font-semibold text-foreground">{totalCalls}</span> calls
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground min-w-[100px]">
                   <span className="font-semibold text-foreground">{completedCalls}</span> completed
                 </span>
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground ml-4">
                   {hasAttachment && `${formatAttachmentFileName(attachmentFileName)}`}
                 </span>
               </div>
@@ -814,20 +819,20 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-                <TableCell
-                  key={`${callId}-${column.id}`}
-                  onClick={(e) => {
-                    if (column.id === 'select' || column.id === 'actions') {
-                      e.stopPropagation();
-                    }
-                  }}
-                  className={cn(
-                    cellIndex === 0 && indent ? "pl-8" : "",
-                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
-                  )}
-                >
-                  {flexRender(column.cell, cellContext as any)}
-                </TableCell>
+              <TableCell
+                key={`${callId}-${column.id}`}
+                onClick={(e) => {
+                  if (column.id === 'select' || column.id === 'actions') {
+                    e.stopPropagation();
+                  }
+                }}
+                className={cn(
+                  cellIndex === 0 && indent ? "pl-8" : "",
+                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} ${indent ? "bg-[#F8FAFC]" : "bg-white"} ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                )}
+              >
+                {flexRender(column.cell, cellContext as any)}
+              </TableCell>
             );
           })}
         </TableRow>
@@ -852,7 +857,7 @@ export function CallLogsTable({
             }}
             className={cn(
               cellIndex === 0 && indent ? "pl-8" : "",
-              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} ${indent ? "bg-[#F8FAFC]" : "bg-white"} ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
             )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1040,9 +1045,10 @@ export function CallLogsTable({
                   );
 
                   // Use filteredBatchGroups instead of batchGroups
+                  // Use filteredBatchGroups instead of batchGroups
                   const groupsToRender = filteredBatchGroups || batchGroups;
 
-                  // Add batch groups with their earliest timestamp
+                  // Add batch groups with their latest timestamp (to show newest batches first)
                   Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
                     // For expanded batches, show all calls; for collapsed batches, only show headers
                     const callsToRender = expandedBatches.has(batchId)
@@ -1050,13 +1056,16 @@ export function CallLogsTable({
                       : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
 
                     if (callsToRender.length === 0) return;
-                    const earliestTimestamp = Math.min(
-                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                    
+                    // Use the LATEST timestamp in the batch to represent its position in the timeline
+                    const latestTimestamp = Math.max(
+                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : 0)
                     );
+
                     timelineItems.push({
                       type: 'batch',
                       data: { batchId, calls: callsToRender },
-                      timestamp: earliestTimestamp
+                      timestamp: latestTimestamp || Date.now()
                     });
                   });
 
@@ -1069,6 +1078,9 @@ export function CallLogsTable({
                       timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
                     });
                   });
+
+                  // SORT timeline items by timestamp DESC (newest first)
+                  timelineItems.sort((a, b) => b.timestamp - a.timestamp);
 
                   // Check if there's any data
                   if (timelineItems.length === 0) {
@@ -1213,7 +1225,7 @@ export function CallLogsTable({
                     className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
                       }`}
                   >
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell, cellIndex) => (
                       <TableCell
                         key={cell.id}
                         onClick={(e) => {
@@ -1222,6 +1234,9 @@ export function CallLogsTable({
                             e.stopPropagation();
                           }
                         }}
+                        className={cn(
+                          (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                        )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

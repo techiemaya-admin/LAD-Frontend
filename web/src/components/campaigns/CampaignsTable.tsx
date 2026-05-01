@@ -186,18 +186,18 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Filters Section */}
       <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative min-w-[300px]">
+        <div className="flex gap-2 sm:gap-3 flex-row justify-between items-center">
+          <div className="relative flex-1 sm:min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
             <Input
               placeholder="Search campaigns..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-10 h-10 w-full"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="min-w-[150px] h-10">
+            <SelectTrigger className="w-[120px] sm:w-[150px] h-10 shrink-0">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -294,7 +294,8 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
         ) : (
           <>
             <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] relative">
-              <Table containerClassName="overflow-visible" className="w-full table-fixed border-separate border-spacing-0">
+              <div className="min-w-[1000px] w-full">
+                <Table containerClassName="overflow-visible" className="w-full border-separate border-spacing-0">
               <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-sm">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-[#F8FAFC] hover:bg-transparent">
@@ -352,18 +353,19 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
               </TableBody>
             </Table>
           </div>
+        </div>
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-                <div className="flex items-center gap-2 text-sm text-[#64748B]">
+              <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+                <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
                   <span>Show</span>
                   <select
                     value={table.getState().pagination.pageSize}
                     onChange={(e) => {
                       table.setPageSize(Number(e.target.value));
                     }}
-                    className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+                    className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
                   >
                   {[10, 20, 50, 100].map((pageSize) => (
                     <option key={pageSize} value={pageSize}>
@@ -371,13 +373,13 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     </option>
                   ))}
                   </select>
-                  <span>
+                  <span className="whitespace-nowrap">
                     of {table.getFilteredRowModel().rows.length} campaigns
                   </span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <div className="text-sm text-[#64748B]">
+                  <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
                     Page {table.getState().pagination.pageIndex + 1} of{' '}
                     {table.getPageCount()}
                   </div>

@@ -395,14 +395,8 @@ export function CallOptions(props: CallOptionsProps) {
           title: "Bulk Calls Started",
           description: `${payload.entries.length} numbers queued.`,
         });
-        if (jobId) {
-          router.push(
-            `/call-logs?jobId=${encodeURIComponent(jobId)}&mode=current-batch`
-          );
-        } else {
-          // Fallback: go to generic call logs if no job_id was returned
-          router.push("/call-logs");
-        }
+        
+        router.push("/call-logs");
         return;
       }
       if (!dial) throw new Error("Please enter a phone number to call");

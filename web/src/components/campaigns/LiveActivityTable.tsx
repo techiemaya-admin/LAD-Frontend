@@ -471,16 +471,16 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   return (
     <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex justify-between items-center p-4 border-b border-[#E2E8F0] bg-[#F8FAFC] gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] bg-[#F8FAFC] gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
-          <h6 className="text-lg font-semibold text-[#1E293B]">
+          <h6 className="text-base sm:text-lg font-semibold text-[#1E293B]">
             Live Activity Feed
           </h6>
-          <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-xs" />
+          <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-[10px] sm:text-xs" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 scrollbar-hide">
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px] flex-1 sm:flex-none h-9 text-sm">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -493,7 +493,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px] flex-1 sm:flex-none h-9 text-sm">
               <SelectValue placeholder="Action" />
             </SelectTrigger>
             <SelectContent>
@@ -510,7 +510,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               <TooltipTrigger asChild>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" disabled={isLoading}>
+                    <Button variant="outline" size="icon" disabled={isLoading} className="h-9 w-9 flex-shrink-0">
                       <Download className={`h-4 w-4 ${isLoading ? 'opacity-50' : ''}`} />
                     </Button>
                   </DropdownMenuTrigger>
@@ -558,7 +558,8 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Activity Table */}
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
-        <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
+        <div className="min-w-[1000px] w-full">
+          <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
           <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] shadow-sm">
             <TableRow className="bg-[#F8FAFC] hover:bg-transparent">
               <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[110px] sticky top-0 z-40 bg-[#F8FAFC]">
@@ -698,10 +699,10 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all ${isDone
-                                      ? 'bg-green-100 text-green-700 border border-green-300'
-                                      : isActive
-                                        ? 'bg-blue-100 text-blue-700 border-2 border-blue-400'
-                                        : 'bg-gray-100 text-gray-500 border border-gray-300'
+                                    ? 'bg-green-100 text-green-700 border border-green-300'
+                                    : isActive
+                                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-400'
+                                      : 'bg-gray-100 text-gray-500 border border-gray-300'
                                     }`}>
                                     {isDone ? '✓' : step.id}
                                   </div>
@@ -753,11 +754,12 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </TableBody>
         </Table>
       </div>
+    </div>
 
       {/* Pagination Controls */}
       {totalLeads > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
             <span>Show</span>
             <select
               value={currentPageSize}
@@ -765,7 +767,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 setCurrentPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
             >
               {[10, 20, 50, 100].map((size) => (
                 <option key={size} value={size}>
@@ -773,13 +775,13 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 </option>
               ))}
             </select>
-            <span>
+            <span className="whitespace-nowrap">
               of {totalLeads} leads
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
 

@@ -29,6 +29,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout as logoutAction } from "@/store/slices/authSlice";
+import { setCompanyName } from "@/store/slices/settingsSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
@@ -90,6 +91,13 @@ export function Sidebar() {
     if (!isHydrated) return;
     setDisplayName(user?.name || "User");
   }, [user, isHydrated]);
+
+  // Sync current tenant name to settings store
+  useEffect(() => {
+    if (tenant?.name && tenant.name !== "Default") {
+      dispatch(setCompanyName(tenant.name));
+    }
+  }, [tenant?.name, dispatch]);
   const handleLogout = async () => {
     try {
       await authService.logout();

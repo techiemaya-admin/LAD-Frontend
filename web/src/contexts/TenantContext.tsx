@@ -37,28 +37,44 @@ function loadTenantsFromAuth(): Tenant[] {
   return [];
 }
 
+import { useAuth } from './AuthContext';
+
 export function TenantProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Load tenants from auth data + restore last selection
   useEffect(() => {
-    const loaded = loadTenantsFromAuth();
+    let loaded: Tenant[] = [];
+    
+    if (user && Array.isArray(user.tenants)) {
+      loaded = user.tenants.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+      }));
+    } else {
+      loaded = loadTenantsFromAuth();
+    }
+    
     setTenants(loaded);
+    
     const stored = safeStorage.getItem(STORAGE_KEY);
     if (stored && loaded.find((t) => t.id === stored)) {
       setSelectedId(stored);
     } else if (loaded.length > 0) {
-      // Default to first tenant (primary tenant is first from backend)
+      // Default to first tenant
       setSelectedId(loaded[0].id);
     }
-  }, []);
+  }, [user]);
 
-  // Re-sync when storage changes (e.g. after login in another tab)
+  // Re-sync when storage changes
   useEffect(() => {
     const onStorage = () => {
-      const loaded = loadTenantsFromAuth();
-      setTenants(loaded);
+      if (!user) {
+        const loaded = loadTenantsFromAuth();
+        setTenants(loaded);
+      }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

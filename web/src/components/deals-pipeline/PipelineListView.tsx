@@ -995,7 +995,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         </div>
       </div>
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
-        <div className="min-w-[800px] w-full relative">
+        <div className="min-w-[1000px] w-full relative">
           <Table containerClassName="overflow-visible" className={`${compactMode ? 'text-sm' : ''} border-separate border-spacing-0`}>
             <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] shadow-sm">
               <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
