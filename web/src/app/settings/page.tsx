@@ -1,7 +1,7 @@
 'use client';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
@@ -11,37 +11,462 @@ import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { CompanySettings } from '../../components/settings/CompanySettings';
 import { TeamManagement } from '../../components/settings/TeamManagement';
-import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload, MessageSquare } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+import { Concept } from '../../types/concept';
+import { cn } from '../../lib/utils';
+import { EmailTemplates, Template } from './EmailTemplates';
+import { QuotationTemplates } from './QuotationTemplates';
+// Import the LeadRequirements component (ensure path is correct based on your project)
+import { LeadRequirements } from './LeadRequirements';
+import { RequirementConfig } from '../../types/requirement_config';
+import { ConceptManagement } from './ConceptManagement';
+import { PricingRules } from './PricingRules';
+import {
+  Building2, Users, UserCircle, Globe, Plug,
+  Terminal, CreditCard, Coins, Upload, ClipboardCheck,
+  X, // Added ClipboardCheck icon
+  Sparkles,
+  Tag,
+  Settings,
+  DollarSign,
+  MessageSquare,
+  Mail,
+  FileText
+} from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits';
+import { motion, AnimatePresence } from 'motion/react';
+import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
+import { PricingRule } from '@/types/pricing_rule';
+
+type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState<boolean | null>(null);
+  // --- ADD THESE TOP-LEVEL STATES ---
+  // Inside SettingsPage component
+  const [requirementConfigs, setRequirementConfigs] = useState<RequirementConfig[]>([]);
+  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules' | 'email_templates' | 'quotation-templates'>('lead_config');
+  const [editingConfig, setEditingConfig] = useState<RequirementConfig | null>(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false); // Move this HERE
+  const [isConceptModalOpen, setIsConceptModalOpen] = useState(false);
+  const [editingConcept, setEditingConcept] = useState<Concept | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [tenantId, setTenantId] = useState<string>("");
+  const [pricingModels, setpricingModels] = useState<{ value: string; label: string }[]>([]);
+  const [selectedConceptServices, setSelectedConceptServices] = useState<string[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [placeholders, setPlaceholders] = useState<any[]>([]);
+  const [quotationTemplates, setQuotationTemplates] = useState<any[]>([]);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isPreviewQuotationModalOpen, setIsPreviewQuotationModalOpen] = useState(false);
+
+
+  // Get tenant_id from current user
   useEffect(() => {
-    (async () => {
+    const fetchUser = async () => {
       try {
-        await getCurrentUser();
-        setAuthed(true);
-      } catch {
-        setAuthed(false);
-        const redirect = encodeURIComponent('/settings');
-        router.replace(`/login?redirect_url=${redirect}`);
+        console.log('Fetching current user to get tenant_id...');
+        const user: any = await getCurrentUser();
+        const userTenantId = user?.user?.tenantId
+        console.log('Fetched user tenant_id:', userTenantId);
+        if (userTenantId) {
+          setTenantId(userTenantId);
+        }
+        setAuthed(true); // <--- ADD THIS
+        // 2. ONLY call fetchConfigs AFTER we have the tenant_id
+        await fetchConfigs(userTenantId);
+        await fetchConcepts(userTenantId);
+        await fetchPricingRules(userTenantId);
+        await fetchpricingModels(userTenantId); // Fetch pricing modals after getting tenant_id
+        await fetchEmailTemplates(userTenantId); // Fetch email templates after getting tenant_id
+        await fetchQuotationTemplates(userTenantId);
+        await fetchPlaceholders(userTenantId);
+      } catch (error) {
+        setAuthed(false); // <--- ADD THIS
+        logger.error("[Call Logs] Failed to get user tenant_id", error);
       }
-    })();
-  }, [router]);
+    };
+    fetchUser();
+  }, []);
+  // ----------------------------------
+  const handleDeleteConfig = async (id: string) => {
+    if (confirm('Are you sure you want to delete this configuration?')) {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Configuration deleted');
+        fetchConfigs(tenantId);
+      }
+    }
+  };
+  const fetchpricingModels = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-models/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched pricing modals:', data);
+      setpricingModels(data); // Expecting [{ value: 'per_person', label: 'Per Person (Event)' }, ...] [cite: 238]
+    } catch (error) {
+      logger.error("Failed to fetch pricing modals", error); // 
+    }
+  };
+
+
+  const fetchPlaceholders = async (tenantId: string) => {
+    try {
+      console.log("Fetching placeholder for tenant id : " + tenantId)
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched placeholders :', data.data);
+      setPlaceholders(data.data);
+    } catch (error) {
+      logger.error("Failed to fetch placeholders ", error); // 
+    }
+  };
+
+
+  const fetchEmailTemplates = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched email templates:', data);
+      setEmailTemplates(data);
+    } catch (error) {
+      logger.error("Failed to fetch email templates", error); // 
+    }
+  };
+
+
+  const fetchQuotationTemplates = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const data = await res.json();
+      console.log('Fetched quotation templates:', data);
+      setQuotationTemplates(data);
+    } catch (error) {
+      logger.error("Failed to fetch quotation templates", error); // 
+    }
+  };
+
+
+  const fetchConfigs = async (tenantId: string) => {
+    try {
+      console.log("FEtch config >>> Tenant ID: " + tenantId);
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${tenantId}`);
+      console.log('Fetch lead configs response:', res);
+      const data = await res.json();
+      setRequirementConfigs(data);
+    } catch (error) {
+      logger.error("Failed to fetch lead requirement configs", error);
+    }
+  };
+
+  const fetchConcepts = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tenantId}`);
+      const data = await res.json();
+      console.log('Fetched concepts:', data);
+      setConcepts(data);
+    } catch (error) {
+      logger.error("Failed to fetch concepts", error);
+
+    }
+  };
+
+
+  const fetchPricingRules = async (tenantId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tenantId}`);
+      const data = await res.json();
+      console.log('Fetched pricing rules:', data);
+      setPricingRules(data);
+    } catch (error) {
+      logger.error("Failed to fetch pricing rules", error);
+    }
+  };
+
+  const handleUploadEmailTemplate = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
+    try {
+      console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
+      const formData = new FormData();
+      formData.append('template_name', template_name);
+      formData.append('is_default', String(isDefault));
+      formData.append('subject_line', subjectLine);
+      formData.append('file', file);
+
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/upload/${tenantId}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Email template uploaded and saved');
+        fetchEmailTemplates(tenantId);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload email template');
+      }
+    } catch (error: any) {
+      console.error('Upload email template failed:', error);
+      toast.error(error.message || 'Failed to upload email template');
+    }
+  };
+
+
+  const handleUploadQuotationTemplate = async (template_name: string, isDefault: boolean, file: File) => {
+    try {
+      console.log('Uploading Quotation template:', { template_name, isDefault, file });
+      const formData = new FormData();
+      formData.append('template_name', template_name);
+      formData.append('is_default', String(isDefault));
+      formData.append('file', file);
+
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/upload/${tenantId}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Quotation template uploaded and saved');
+        fetchQuotationTemplates(tenantId);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload Quotation template');
+      }
+    } catch (error: any) {
+      console.error('Upload Quotation template failed:', error);
+      toast.error(error.message || 'Failed to upload Quotation template');
+    }
+  };
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+
+  const handlePreviewTemplate = async (template: Template) => {
+    try {
+      // Fetch the file as a blob (binary data)
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${template.id}/preview`);
+
+      if (!response.ok) throw new Error("Failed to fetch preview");
+
+      const blob = await response.blob();
+
+      // Create a temporary URL for the PDF blob
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setIsPreviewModalOpen(true);
+
+    } catch (error) {
+      toast.error("Visual preview failed to load");
+      console.error(error);
+    }
+  };
+
+  const [previewQuotationUrl, setPreviewQuotationUrl] = useState<string | null>(null);
+
+  const handlePreviewQuotationTemplate = async (template: Template) => {
+    try {
+      // Fetch the file as a blob (binary data)
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${template.id}/preview`);
+
+      if (!response.ok) throw new Error("Failed to fetch Quotation preview");
+
+      const blob = await response.blob();
+
+      // Create a temporary URL for the PDF blob
+      const url = window.URL.createObjectURL(blob);
+      setPreviewQuotationUrl(url);
+      setIsPreviewQuotationModalOpen(true);
+
+    } catch (error) {
+      toast.error("Visual preview failed to load for quotation");
+      console.error(error);
+    }
+  };
+
+  // Cleanup memory when modal closes
+  const closePreview = () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setIsPreviewModalOpen(false);
+    setPreviewQuotationUrl(null);
+    setIsPreviewQuotationModalOpen(false);
+  };
+  const handleSetDefaultEmailTemplate = async (id: string) => {
+    try {
+      await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}/set-default/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_default: true })
+      });
+
+      toast.success('Default email template updated');
+      fetchEmailTemplates(tenantId);
+    } catch (error) {
+      console.error('Set default email template failed:', error);
+    }
+  };
+
+  const handleSetDefaultQuotationTemplate = async (id: string) => {
+    try {
+      console.log("tenant id : " + tenantId + " id : " + id)
+      await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}/set-default/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_default: true })
+      });
+
+      toast.success('Default quotation template updated');
+      fetchQuotationTemplates(tenantId);
+    } catch (error) {
+      console.error('Set default quotation template failed:', error);
+    }
+  };
+
+  const handleDeleteEmailTemplate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this email template?')) return;
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Email template deleted');
+        fetchEmailTemplates(tenantId);
+      }
+    } catch (error) {
+      console.error('Delete email template failed:', error);
+      toast.error('Failed to delete email template');
+    }
+  };
+
+
+  const handleDeleteQuotationTemplate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this quotation template?')) return;
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('quotation template deleted');
+        fetchQuotationTemplates(tenantId);
+      }
+    } catch (error) {
+      console.error('Delete quotation template failed:', error);
+      toast.error('Failed to delete quotation template');
+    }
+  };
+
+  const handleSavePricingRule = async (ruleData: Partial<PricingRule>) => {
+    const url = ruleData.id ? `${getApiBaseUrlForLocal()}/api/pricing-rules/${ruleData.id}` : `${getApiBaseUrlForLocal()}/api/pricing-rules`;
+    const method = ruleData.id ? 'PUT' : 'POST';
+    ruleData.tenant_id = tenantId; // Ensure tenant_id is included
+    console.log('Saving pricing rule:', ruleData);
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleData),
+    });
+
+    if (res.ok) {
+      toast.success(ruleData.id ? 'Pricing rule updated' : 'Pricing rule created');
+      fetchPricingRules(tenantId);
+    }
+  };
+
+  const handleDeletePricingRule = async (id: string) => {
+    if (confirm('Are you sure you want to delete this pricing rule?')) {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Pricing rule deleted');
+        fetchPricingRules(tenantId);
+      }
+    }
+  };
+
+  const handleSaveConcept = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const conceptData = {
+      tenant_id: tenantId, // Ensure this is populated
+      name: formData.get('name'),
+      pricing_type: formData.get('pricing_type'),
+      minimum_cost: parseFloat(formData.get('minimum_cost') as string) || 0,
+      description: formData.get('description'),
+      requirement_config_ids: selectedConceptServices // Assuming this is an array of selected requirement config IDs
+    };
+    console.log('Saving concept:', conceptData);
+    const url = editingConcept ? `${getApiBaseUrlForLocal()}/api/concepts/${editingConcept.id}` : `${getApiBaseUrlForLocal()}/api/concepts`;
+    const method = editingConcept ? 'PUT' : 'POST';
+    console.log('Concept API URL: ', url + " method: " + method);
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(conceptData),
+    });
+
+    if (res.ok) {
+      toast.success(editingConcept ? 'Concept updated' : 'Concept created');
+      fetchConcepts(tenantId);
+      setIsConceptModalOpen(false);
+      setEditingConcept(null);
+    }
+  };
+
+  const handleDeleteConcept = async (id: string) => {
+    if (confirm('Are you sure you want to delete this concept?')) {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Concept deleted');
+        fetchConcepts(tenantId);
+      }
+    }
+  };
+
+  const handleSaveConfig = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    // You must get the tenant_id from your auth state/context
+    const configData = {
+      tenant_id: tenantId, // Ensure this is populated
+      field_key: formData.get('field_key'),
+      label: formData.get('label'),
+      is_active: formData.get('is_active') === 'on',
+      base_price: parseFloat(formData.get('base_price') as string) || 0,
+      pricing_model_id: formData.get('pricing_model_id') // Assuming this is a select input with pricing model IDs as values
+    };
+    console.log('Saving config:', configData);
+    // ... rest of your fetch logic [cite: 13, 20, 21]
+
+    const url = editingConfig ? `${getApiBaseUrlForLocal()}/api/lead-requirement-config/${editingConfig.id}` : `${getApiBaseUrlForLocal()}/api/lead-requirement-config`;
+    const method = editingConfig ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(configData),
+    });
+
+    if (res.ok) {
+      toast.success(editingConfig ? 'Configuration updated' : 'Configuration created');
+      fetchConfigs(tenantId);
+      setIsConfigModalOpen(false);
+      setEditingConfig(null);
+    }
+  };
+
   const dispatch = useDispatch();
   const companyName = useSelector((state: any) => state.settings.companyName);
   const companyLogo = useSelector((state: any) => state.settings.companyLogo);
   const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [renewalDate, setRenewalDate] = useState<string>('');
   const [logoError, setLogoError] = useState(false);
+  const [concepts, setConcepts] = useState<Concept[]>([]);
   useEffect(() => {
     if (authed !== true) return;
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
-    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits'];
+
+    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
     if (allowed.includes(tabParam as ActiveTab)) {
       setActiveTab(tabParam as ActiveTab);
     }
@@ -72,6 +497,8 @@ const SettingsPage: React.FC = () => {
     );
   }
   if (!authed) return <></>;
+
+  // 3. Add Lead Requirements to the tabs array
   const tabs = [
     { id: 'company' as ActiveTab, label: 'Company', icon: Building2 },
     { id: 'team' as ActiveTab, label: 'Team', icon: Users },
@@ -82,6 +509,7 @@ const SettingsPage: React.FC = () => {
     { id: 'api' as ActiveTab, label: 'Voice Settings', icon: Terminal },
     { id: 'billing' as ActiveTab, label: 'Billing', icon: CreditCard },
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
+    { id: 'proposal_settings' as ActiveTab, label: 'Proposal Settings', icon: ClipboardCheck },
   ];
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -125,8 +553,8 @@ const SettingsPage: React.FC = () => {
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                    ? 'bg-white text-blue-700 shadow-md font-semibold'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                  ? 'bg-white text-blue-700 shadow-md font-semibold'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
                   }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -414,6 +842,480 @@ const SettingsPage: React.FC = () => {
         )}
         {activeTab === 'billing' && <BillingSettings />}
         {activeTab === 'credits' && <CreditsSettings />}
+        {/* 4. Render LeadRequirements component when tab is active */}
+        {activeTab === 'proposal_settings' && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4">
+              {[
+                { id: 'lead_config', label: 'Lead Requirement', icon: Settings },
+                { id: 'concepts', label: 'Concept Management', icon: Sparkles },
+                { id: 'pricing_rules', label: 'Pricing Rules', icon: DollarSign },
+                { id: 'email_templates', label: 'Email Templates', icon: Mail },
+                { id: 'quotation-templates', label: 'Quotation Template', icon: FileText },
+              ].map((subTab) => (
+                <button
+                  key={subTab.id}
+                  onClick={() => setProposalSubTab(subTab.id as any)}
+                  className={cn(
+                    "px-4 py-2 text-sm font-medium transition-colors relative",
+                    proposalSubTab === subTab.id
+                      ? "text-[#4F46E5]"
+                      : "text-[#6B7280] hover:text-[#1F2937]"
+                  )}
+                >
+                  {subTab.label}
+                  {proposalSubTab === subTab.id && (
+                    <motion.div
+                      layoutId="proposalSubTab"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#4F46E5]"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {proposalSubTab === 'lead_config' && (
+              <LeadRequirements
+                requirementConfigs={requirementConfigs}
+                pricingModels={pricingModels}
+                onEdit={(config) => {
+                  setEditingConfig(config);
+                  setIsConfigModalOpen(true);
+                }}
+                onDelete={handleDeleteConfig}
+                onAdd={() => {
+                  setEditingConfig(null);
+                  setIsConfigModalOpen(true);
+                }}
+              />
+            )}
+
+            {proposalSubTab === 'concepts' && (
+              <ConceptManagement
+                concepts={concepts}
+                requirementConfigs={requirementConfigs}
+                onEdit={(concept) => {
+                  setEditingConcept(concept);
+
+                  const requirementConfigIds = concept.requirement_configs.map(item => item.id);
+                  console.log('Editing concept with requirement config IDs:', requirementConfigIds);
+                  setSelectedConceptServices(requirementConfigIds || []);
+                  setIsConceptModalOpen(true);
+                }}
+                onDelete={handleDeleteConcept}
+                onAdd={() => {
+                  setEditingConcept(null);
+                  setSelectedConceptServices([]);
+                  setIsConceptModalOpen(true);
+                }}
+              />
+            )}
+
+            {proposalSubTab === 'pricing_rules' && (
+              <PricingRules
+                pricingRules={pricingRules}
+                concepts={concepts}
+                requirementConfigs={requirementConfigs}
+                onSave={handleSavePricingRule}
+                onDelete={handleDeletePricingRule}
+              />
+            )}
+            {proposalSubTab === 'email_templates' && (
+              <EmailTemplates
+                templates={emailTemplates}
+                onUpload={handleUploadEmailTemplate}
+                onDelete={handleDeleteEmailTemplate}
+                onPreview={handlePreviewTemplate}
+                onSetDefault={handleSetDefaultEmailTemplate}
+                placeholderList={placeholders}
+              />
+            )}
+            {proposalSubTab === 'quotation-templates' && (
+              <QuotationTemplates
+                templates={quotationTemplates}
+                onUpload={handleUploadQuotationTemplate}
+                onDelete={handleDeleteQuotationTemplate}
+                onPreview={handlePreviewQuotationTemplate}
+                onSetDefault={handleSetDefaultQuotationTemplate}
+                placeholderList={placeholders}
+              />
+            )}
+
+          </div>
+        )}
+
+        {/* Quotation Template Modal */}
+        <AnimatePresence>
+          {isPreviewQuotationModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
+              >
+                <div className="p-6 border-b flex justify-between items-center bg-white">
+                  <h2 className="font-bold text-slate-800 text-lg">Quotation Template Preview</h2>
+                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="flex-1 bg-slate-100 p-4">
+                  {previewQuotationUrl && (
+                    <iframe
+                      src={`${previewQuotationUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full rounded-xl border-none shadow-lg"
+                      title="Visual Preview"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        {/* Email Template Modal */}
+        <AnimatePresence>
+          {isPreviewModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
+              >
+                <div className="p-6 border-b flex justify-between items-center bg-white">
+                  <h2 className="font-bold text-slate-800 text-lg">Email Template Preview</h2>
+                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="flex-1 bg-slate-100 p-4">
+                  {previewUrl && (
+                    <iframe
+                      src={`${previewUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full rounded-xl border-none shadow-lg"
+                      title="Visual Preview"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Concept Modal */}
+        <AnimatePresence>
+          {isConceptModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsConceptModalOpen(false)}
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                <form onSubmit={handleSaveConcept}>
+                  <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
+                    <h2 className="text-xl font-bold text-[#1F2937]">{editingConcept ? 'Edit Concept' : 'Add New Concept'}</h2>
+                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] rounded-full">
+                      <X className="w-5 h-5 text-[#6B7280]" />
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Concept Name</label>
+                      <input name="name" defaultValue={editingConcept?.name} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. LITE, IMPACT" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Minimum Cost</label>
+                      <input name="minimum_cost" type="number" step="0.01" defaultValue={editingConcept?.minimum_cost} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. 5000.00" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Included Services</label>
+                      <div className="space-y-3">
+                        <select
+                          className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !selectedConceptServices.includes(val)) {
+                              setSelectedConceptServices([...selectedConceptServices, val]);
+                            }
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="">Add a service...</option>
+                          {requirementConfigs.filter(c => !selectedConceptServices.includes(c.id)).map(config => (
+                            <option key={config.id} value={config.id}>{config.label}</option>
+                          ))}
+                        </select>
+
+                        <div className="flex flex-wrap gap-2">
+                          {selectedConceptServices.length === 0 && (
+                            <p className="text-[10px] text-[#9CA3AF] italic">No services selected.</p>
+                          )}
+                          {selectedConceptServices.map(id => {
+                            const config = requirementConfigs.find(c => c.id === id);
+                            return (
+                              <div key={id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FF] text-[#4F46E5] rounded-xl text-xs font-bold border border-[#C7D2FE] shadow-sm">
+                                {config?.label || id}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedConceptServices(selectedConceptServices.filter(sid => sid !== id))}
+                                  className="hover:text-[#4338CA] transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-[#9CA3AF] mt-2">Select the services that are part of this concept. Pricing will be calculated based on these selections.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Description</label>
+                      <textarea name="description" defaultValue={editingConcept?.description} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm h-24 resize-none" placeholder="Describe the concept..." />
+                    </div>
+                  </div>
+                  <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
+                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="flex-1 py-2.5 border border-[#E5E7EB] text-[#6B7280] rounded-xl font-bold text-sm hover:bg-white transition-colors">
+                      Cancel
+                    </button>
+                    <button type="submit" className="flex-1 py-2.5 bg-[#4F46E5] text-white rounded-xl font-bold text-sm hover:bg-[#4338CA] transition-colors">
+                      {editingConcept ? 'Update Concept' : 'Create Concept'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Config Modal */}
+        <AnimatePresence>
+          {isConfigModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsConfigModalOpen(false)}
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                <form onSubmit={handleSaveConfig}>
+                  <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
+                    <h2 className="text-xl font-bold text-[#1F2937]">{editingConfig ? 'Edit Field' : 'Add New Field'}</h2>
+                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] rounded-full">
+                      <X className="w-5 h-5 text-[#6B7280]" />
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Label</label>
+                      <input name="label" defaultValue={editingConfig?.label} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Field Key</label>
+                      <input name="field_key" defaultValue={editingConfig?.field_key} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Base Price</label>
+                        <input name="base_price" type="number" step="0.01" defaultValue={editingConfig?.base_price} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Pricing Model</label>
+                        <select name="pricing_model_id" defaultValue={editingConfig?.pricing_model_id} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm">
+                          {pricingModels.map(pm => (
+                            <option key={pm.id} value={pm.id}>{pm.value} ({pm.label})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm text-[#4B5563]">
+                        <input type="checkbox" name="is_active" defaultChecked={editingConfig?.is_active ?? true} /> Active
+                      </label>
+                    </div>
+                  </div>
+                  <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
+                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="flex-1 py-2 text-sm font-bold text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl">Cancel</button>
+                    <button type="submit" className="flex-1 py-2 text-sm font-bold text-white bg-[#4F46E5] rounded-xl">Save</button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Requirements & Pricing Modal */}
+        <AnimatePresence>
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsModalOpen(false)}
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
+                  <div>
+                    <h2 className="text-xl font-bold text-[#1F2937]">Lead Requirements & Pricing</h2>
+                    <p className="text-xs text-[#6B7280] mt-1">Review and edit lead details for {activeLead?.name}</p>
+                  </div>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="p-2 hover:bg-[#E5E7EB] rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-[#6B7280]" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8">
+                  {/* Requirements Section */}
+                  <div className="mb-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#9CA3AF] flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Lead Details
+                      </h3>
+                      <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="text-xs font-semibold text-[#4F46E5] hover:underline flex items-center gap-1"
+                      >
+                        {isEditing ? <><Check className="w-3 h-3" /> Done</> : <><Edit2 className="w-3 h-3" /> Edit Fields</>}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      {requirements.map(req => (
+                        <div key={req.id} className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">
+                            {req.field_key.replace('_', ' ')}
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={req.value}
+                              onChange={(e) => updateRequirementValue(req.id, e.target.value)}
+                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
+                            />
+                          ) : (
+                            <div className="p-3 bg-[#F3F4F6] rounded-xl text-sm font-medium text-[#1F2937]">
+                              {req.value || 'Not specified'}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pricing Section */}
+                  {pricing && (
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#9CA3AF] mb-6 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" /> Pricing Breakdown
+                      </h3>
+
+                      <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl overflow-hidden">
+                        <div className="p-6 space-y-4">
+                          {Object.entries(pricing.breakdown).map(([key, value]) => (
+                            <div key={key} className="flex justify-between items-center">
+                              <span className="text-sm text-[#4B5563] capitalize">{key.replace('_', ' ')}</span>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={value}
+                                  onChange={(e) => updateBreakdownValue(key, parseFloat(e.target.value) || 0)}
+                                  className="w-32 p-1 text-right bg-white border border-[#E5E7EB] rounded text-sm font-bold text-[#1F2937]"
+                                />
+                              ) : (
+                                <span className="text-sm font-bold text-[#1F2937]">${value.toLocaleString()}</span>
+                              )}
+                            </div>
+                          ))}
+
+                          <div className="pt-4 border-t border-[#E5E7EB] space-y-3">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-[#6B7280]">Markup ({pricing.markup}%)</span>
+                              <span className="text-[#10B981] font-medium">+${(Object.values(pricing.breakdown).reduce((a, b) => a + b, 0) * pricing.markup / 100).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-[#6B7280]">Discount ({pricing.discount}%)</span>
+                              <span className="text-[#EF4444] font-medium">-${(Object.values(pricing.breakdown).reduce((a, b) => a + b, 0) * pricing.discount / 100).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#4F46E5] p-6 flex justify-between items-center">
+                          <span className="text-white/80 font-medium">Final Quotation Price</span>
+                          <span className="text-2xl font-bold text-white">${pricing.final_price.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {isEditing && (
+                        <div className="grid grid-cols-2 gap-4 mt-6">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">Markup %</label>
+                            <input
+                              type="number"
+                              value={pricing.markup}
+                              onChange={(e) => updatePricingField('markup', parseFloat(e.target.value) || 0)}
+                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">Discount %</label>
+                            <input
+                              type="number"
+                              value={pricing.discount}
+                              onChange={(e) => updatePricingField('discount', parseFloat(e.target.value) || 0)}
+                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 py-3.5 text-sm font-bold text-[#4B5563] bg-white border border-[#E5E7EB] rounded-2xl hover:bg-[#F3F4F6] transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={handleSaveRequirements}
+                    className="flex-1 py-3.5 text-sm font-bold text-white bg-[#4F46E5] rounded-2xl hover:bg-[#4338CA] shadow-lg shadow-[#4F46E5]/20 transition-all"
+                  >
+                    Save & Generate Quotation
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
       </div>
     </div>
   );
