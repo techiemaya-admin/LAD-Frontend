@@ -758,17 +758,17 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
           {/* Tabs: Assignment, Notes & Internal Comments */}
           <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-9">
-              <TabsTrigger value="assignment" className="text-xs">
-                <UserCheck className="h-3 w-3 mr-1.5" />
+            <TabsList className="w-full grid grid-cols-3 h-10 bg-muted/50 p-1 rounded-full border border-border/50">
+              <TabsTrigger value="assignment" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                <UserCheck className="h-3 w-3 mr-0.5" />
                 Assignment
               </TabsTrigger>
-              <TabsTrigger value="notes" className="text-xs">
-                <Tag className="h-3 w-3 mr-1.5" />
+              <TabsTrigger value="notes" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                <Tag className="h-3 w-3 mr-1" />
                 Notes
               </TabsTrigger>
-              <TabsTrigger value="comments" className="text-xs">
-                <MessageSquare className="h-3 w-3 mr-1.5" />
+              <TabsTrigger value="comments" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                <MessageSquare className="h-3 w-3 mr-0.75" />
                 Internal
               </TabsTrigger>
             </TabsList>
@@ -787,14 +787,21 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   className="min-h-[60px] text-xs"
                 />
               </div>
-              <Button size="sm" className="w-full mb-4" disabled={!newNote.trim()} onClick={addNote}>
-                Add Note
-              </Button>
+              <div className="flex justify-center mb-4">
+                <Button 
+                  size="sm" 
+                  className="h-8 px-10 rounded-full text-[11px] font-semibold shadow-sm" 
+                  disabled={!newNote.trim()} 
+                  onClick={addNote}
+                >
+                  Add Note
+                </Button>
+              </div>
 
               {/* Notes list */}
               <div className="space-y-2">
                 {notes.length === 0 && (contact.notes || []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">No notes yet</p>
+                  <p className="text-xs text-muted-foreground text-center py-6">No notes yet</p>
                 ) : (
                   <>
                     {notes.map((note) => (
@@ -878,10 +885,16 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   className="min-h-[60px] text-xs"
                 />
               </div>
-              <Button size="sm" className="w-full mb-4" disabled={!newComment.trim()}>
-                <Send className="h-3 w-3 mr-1.5" />
-                Post Comment
-              </Button>
+              <div className="flex justify-center mb-4">
+                <Button 
+                  size="sm" 
+                  className="h-8 px-10 rounded-full text-[11px] font-semibold shadow-sm" 
+                  disabled={!newComment.trim()}
+                >
+                  <Send className="h-3 w-3 mr-1.5" />
+                  Post Comment
+                </Button>
+              </div>
 
               {/* Internal comments */}
               <div className="space-y-3">

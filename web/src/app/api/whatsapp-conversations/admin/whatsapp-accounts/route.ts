@@ -138,13 +138,20 @@ async function callNodeBackend(
 }
 
 export async function GET(req: NextRequest) {
-  // Resolve the current tenant ID from the request
-  const tenantId = req.headers.get('x-tenant-id') ?? null;
+  // Resolve the current tenant ID from the request.
+  // Try x-tenant-id header first, then fall back to ?tenant_id= query param so
+  // that direct admin-tool calls (e.g. curl ?tenant_id=xxx) also work.
+  const url = new URL(req.url);
+  const tenantId =
+    req.headers.get('x-tenant-id') ||
+    url.searchParams.get('tenant_id') ||
+    null;
 
-  // Fetch from both sources in parallel to minimise latency
+  // Skip the Python call entirely when we have no tenant context — there is no
+  // point making a round-trip that will just return [] and log a warning.
   const [nodeAccounts, pythonAccountsRaw] = await Promise.all([
     fetchNodeAccounts(req),
-    fetchPythonAccounts(req, tenantId),
+    tenantId ? fetchPythonAccounts(req, tenantId) : Promise.resolve([]),
   ]);
 
   // Secondary client-side guard: only keep accounts that explicitly belong to

@@ -867,15 +867,18 @@ export function ChatGroupManager({
                                         <p className="text-xs font-medium truncate">
                                           {contact.name || contact.phone || contact.email || 'Unknown'}
                                         </p>
-                                        {contact.channel && (
-                                          <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
-                                            style={{
-                                              background: contact.channel === 'personal' ? '#dcfce7' : contact.channel === 'waba' ? '#d1fae5' : '#dbeafe',
-                                              color:      contact.channel === 'personal' ? '#15803d' : contact.channel === 'waba' ? '#065f46' : '#1d4ed8',
-                                            }}>
-                                            {contact.channel === 'personal' ? 'Personal WA' : contact.channel === 'waba' ? 'WA Business' : contact.channel.toUpperCase()}
-                                          </span>
-                                        )}
+                                        {contact.channel && (() => {
+                                          const ch = contact.channel.startsWith('personal') ? 'personal' : contact.channel;
+                                          return (
+                                            <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
+                                              style={{
+                                                background: ch === 'personal' ? '#dcfce7' : ch === 'waba' ? '#d1fae5' : '#dbeafe',
+                                                color:      ch === 'personal' ? '#15803d' : ch === 'waba' ? '#065f46' : '#1d4ed8',
+                                              }}>
+                                              {ch === 'personal' ? 'Personal WA' : ch === 'waba' ? 'WA Business' : ch.toUpperCase()}
+                                            </span>
+                                          );
+                                        })()}
                                       </div>
                                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                         {contact.phone && (
