@@ -4,7 +4,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   Send, Smile, X, Bot, User, Plus, Camera, FileText, Music,
   MapPin, Phone, BarChart2, Star, Calendar, Image as ImageIcon,
-  ChevronRight, Loader2, Paperclip,
+  ChevronRight, Loader2, Paperclip, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { QuickReplyPicker } from './QuickReplyPicker';
+import { TemplatePicker } from './TemplatePicker';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -44,12 +45,15 @@ interface PendingFile {
 }
 
 export interface MessageComposerProps {
-  channel:        Channel;
-  onSendMessage:  (payload: RichMessagePayload) => void;
-  disabled?:      boolean;
-  contactName?:   string;
+  channel:         Channel;
+  /** Explicit backend routing channel — 'personal' for Baileys, 'waba' for Meta Graph API.
+   *  When omitted, falls back to inferring from `channel` (always 'waba' for 'whatsapp'). */
+  backendChannel?: 'personal' | 'waba';
+  onSendMessage:   (payload: RichMessagePayload) => void;
+  disabled?:       boolean;
+  contactName?:    string;
   conversationId?: string;
-  owner?:         string | null;
+  owner?:          string | null;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -436,8 +440,12 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
 }
 
 export const MessageComposer = memo(function MessageComposer({
-  channel, onSendMessage, disabled = false, contactName, conversationId, owner,
+  channel, backendChannel: backendChannelProp, onSendMessage, disabled = false, contactName, conversationId, owner,
 }: MessageComposerProps) {
+  // Resolve which backend this conversation belongs to.
+  // Explicit backendChannel prop takes priority; falls back to inferring from channel.
+  const resolvedBackendChannel: 'personal' | 'waba' =
+    backendChannelProp ?? (channel === 'whatsapp' ? 'waba' : 'waba');
 
   // ── State ────────────────────────────────────────────────────────────────
   const [message,            setMessage]            = useState('');
@@ -451,6 +459,10 @@ export const MessageComposer = memo(function MessageComposer({
   const [showContact,        setShowContact]        = useState(false);
   const [showEvent,          setShowEvent]          = useState(false);
   const [showLocation,       setShowLocation]       = useState(false);
+  const [isTemplatePickerOpen,  setIsTemplatePickerOpen]  = useState(false);
+  const [templateSending,       setTemplateSending]       = useState(false);
+  const [templateSendResult,    setTemplateSendResult]    = useState<{ success: boolean; message: string } | null>(null);
+  const [templateSendProgress,  setTemplateSendProgress]  = useState<{ sent: number; total: number; running: boolean } | null>(null);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
@@ -577,6 +589,78 @@ export const MessageComposer = memo(function MessageComposer({
   const handleQuickReplySelect = useCallback((content: string) => {
     setMessage(content); textareaRef.current?.focus();
   }, []);
+
+  // ── Template send (single-conversation mode) ──────────────────────────────
+  const handleTemplateSendFromComposer = useCallback(async (
+    templateName: string,
+    languageCode: string,
+    parameters: string[],
+    _nameFormat: 'first' | 'full',
+    _batch: { batchSize: number; delayMin: number; delayRandom: number; dailyLimit: number },
+    headerParamCount: number,
+    headerType: string,
+    headerUrl: string,
+  ) => {
+    if (!conversationId) return;
+    setTemplateSending(true);
+    setTemplateSendResult(null);
+    setTemplateSendProgress({ sent: 0, total: 1, running: true });
+    try {
+      const isPersonal = resolvedBackendChannel === 'personal';
+      const CONV_API = '/api/whatsapp-conversations/conversations';
+
+      let res: Response;
+      if (isPersonal) {
+        res = await fetchWithTenant(`${CONV_API}/bulk/send-template?channel=personal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversation_ids: [conversationId],
+            template_name:    templateName,
+            language_code:    languageCode,
+            parameters:       parameters || [],
+          }),
+        });
+      } else {
+        res = await fetchWithTenant(`${CONV_API}/bulk?channel=${resolvedBackendChannel}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action:             'send-template',
+            conversation_ids:   [conversationId],
+            template_name:      templateName,
+            language_code:      languageCode,
+            parameters:         parameters || [],
+            header_param_count: headerParamCount ?? 0,
+            header_type:        headerType || '',
+            header_url:         headerUrl || '',
+          }),
+        });
+      }
+
+      const data = await res.json();
+      const sent = data.sent || (data.success ? 1 : 0);
+      const total = 1;
+
+      // Update progress before checking for errors
+      setTemplateSendProgress({ sent, total, running: false });
+
+      if (!data.success || (data.failed && data.failed > 0)) {
+        const firstFailed = data.results?.find((r: any) => r.status === 'failed');
+        throw new Error(firstFailed?.error || data.error || 'Failed to send template');
+      }
+      setTemplateSendResult({ success: true, message: `Template "${templateName}" sent to 1 conversation` });
+      // Keep showing the dialog for a moment so user sees the progress
+      setTimeout(() => setIsTemplatePickerOpen(false), 500);
+      // Clear result after 3 seconds
+      setTimeout(() => setTemplateSendResult(null), 3000);
+    } catch (err: any) {
+      setTemplateSendResult({ success: false, message: err.message || 'Failed to send template' });
+      setTemplateSendProgress(null);
+    } finally {
+      setTemplateSending(false);
+    }
+  }, [conversationId, channel, resolvedBackendChannel]);
 
   const handleAttachItem = useCallback((id: string) => {
     setShowAttachMenu(false);
@@ -718,8 +802,27 @@ export const MessageComposer = memo(function MessageComposer({
           )}
         </div>
 
-        {/* ── Quick Reply Picker ── */}
-        <QuickReplyPicker onSelect={handleQuickReplySelect} contactName={contactName} disabled={disabled}/>
+        {/* ── Template Picker (replaces Quick Replies) ── */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
+          disabled={disabled || !conversationId}
+          title="Send template message"
+          onClick={() => setIsTemplatePickerOpen(true)}
+        >
+          <LayoutTemplate className="h-5 w-5" />
+        </Button>
+        <TemplatePicker
+          open={isTemplatePickerOpen}
+          onOpenChange={setIsTemplatePickerOpen}
+          selectedCount={1}
+          onSend={handleTemplateSendFromComposer}
+          sending={templateSending}
+          sendProgress={templateSendProgress}
+          channel={channel === 'whatsapp' ? 'waba' : (channel as 'personal' | 'waba')}
+          isBulkSend={false}
+        />
 
         {/* ── Text input ── */}
         <div className="flex-1 relative">
@@ -767,6 +870,18 @@ export const MessageComposer = memo(function MessageComposer({
           <Send className="h-4 w-4"/>
         </Button>
       </div>
+
+      {/* ── Template send result toast ── */}
+      {templateSendResult && (
+        <div className={cn(
+          'mt-1.5 px-3 py-1.5 rounded-md text-xs flex items-center gap-2',
+          templateSendResult.success
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        )}>
+          {templateSendResult.success ? '✓' : '✕'} {templateSendResult.message}
+        </div>
+      )}
 
       {/* ── Hint bar ── */}
       <p className="text-[10px] text-muted-foreground mt-2 px-1">

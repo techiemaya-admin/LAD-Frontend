@@ -7942,7 +7942,7 @@ function CheckpointFormInline({
                                                 }} onClick={() => setEnableAiPersonalization(!enableAiPersonalization)}>
                                                     <div>
                                                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>✨ AI-generate unique message per lead</div>
-                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Gemini creates a personalised connect + follow-up using live web & post data{(!enableDailyWebPresence && !enableDailyPosts) ? ' — enable web presence or posts first' : ''}</div>
+                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>AI creates a personalised connect + follow-up using live web & post data{(!enableDailyWebPresence && !enableDailyPosts) ? ' — enable web presence or posts first' : ''}</div>
                                                     </div>
                                                     <div style={{
                                                         width: '32px', height: '18px', borderRadius: '99px', flexShrink: 0,

@@ -212,15 +212,15 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center justify-between px-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center px-3">
         <button
           aria-label="Open menu"
-          className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
+          className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition z-10"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <Menu className="h-6 w-6 text-sidebar-foreground" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <img
             src="/MrLAD-logo.svg"
             alt="Company Logo"
@@ -229,11 +229,10 @@ export function Sidebar() {
             decoding="async"
             className="w-8 h-8 object-contain"
           />
-          <span className="text-sm font-medium text-sidebar-foreground/90">
+          <span className="text-sm font-medium text-sidebar-foreground/90 truncate max-w-[120px]">
             {displayName}
           </span>
         </div>
-        <div className="w-10" />
       </div>
       {/* Mobile Drawer */}
       <div

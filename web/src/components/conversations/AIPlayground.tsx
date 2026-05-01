@@ -427,11 +427,9 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
         <div className="flex items-center gap-2">
           <FlaskConical className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-sm">AI Playground</h2>
-          {settings?.ai_model && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {settings.ai_model}
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {settings?.ai_model || "claude-sonnet-4-6"}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadConfig} title="Reload config">
