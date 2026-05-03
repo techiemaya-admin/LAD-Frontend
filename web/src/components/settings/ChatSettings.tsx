@@ -27,7 +27,15 @@ import {
   Sparkles,
 } from 'lucide-react';
 import KnowledgeBaseManager from './KnowledgeBaseManager';
-import { AIPlayground } from '../conversations/AIPlayground';
+import dynamic from 'next/dynamic';
+
+// AIPlayground is a heavy client-only component (framer-motion, refs, browser
+// APIs). Loading it dynamically with ssr:false keeps it out of the SSR bundle
+// and only fetches the chunk when the user clicks "Test in AI Playground".
+const AIPlayground = dynamic(
+  () => import('../conversations/AIPlayground').then((m) => m.AIPlayground),
+  { ssr: false },
+);
 
 // ── Types ────────────────────────────────────────────────────────
 
