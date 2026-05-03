@@ -10,6 +10,7 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -49,6 +50,7 @@ export function NavbarDemo() {
           <NavbarLogo />
           <NavItems items={navItems} activePath={pathname} />
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <NavbarButton variant="secondary" onClick={login}>Login</NavbarButton>
             <NavbarButton variant="primary" onClick={handleGetStarted}>Get Started</NavbarButton>
           </div>
@@ -71,10 +73,13 @@ export function NavbarDemo() {
                 ))}
               </div>
             ) : (
-              <MobileNavToggle
-                isOpen={isMobileMenuOpen}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <MobileNavToggle
+                  isOpen={isMobileMenuOpen}
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                />
+              </div>
             )}
           </MobileNavHeader>
 
@@ -82,6 +87,10 @@ export function NavbarDemo() {
             isOpen={isMobileMenuOpen}
             onClose={() => setIsMobileMenuOpen(false)}
           >
+            <div className="mb-4 flex items-center gap-2 border-b pb-4">
+              <span className="text-sm font-medium text-foreground">Theme:</span>
+              <ThemeToggle />
+            </div>
             {navItems.map((item, idx) => (
               <a
                 key={`mobile-link-${idx}`}

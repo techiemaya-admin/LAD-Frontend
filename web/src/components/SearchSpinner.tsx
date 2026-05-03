@@ -42,7 +42,7 @@ const SearchSpinner = ({ size = 'md', message }: SearchSpinnerProps) => {
             background: 'var(--background, #ffffff)',
             boxShadow: 'inset 0 0 8px rgba(0,0,0,0.45)',
           }}
-          className="dark:bg-gray-900"
+          className="dark:bg-[#0B1957]"
         />
       </div>
       {message && (

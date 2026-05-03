@@ -382,7 +382,7 @@ export default function WhatsAppTemplateCreatePage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F8F9FE]" onClick={() => setShowBtnMenu(false)}>
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724]" onClick={() => setShowBtnMenu(false)}>
 
       {/* ── Sticky header bar — back only ── */}
       <div className="bg-white border-b border-[#E2E8F0] px-6 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
