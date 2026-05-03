@@ -74,7 +74,7 @@ export function Sidebar() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
