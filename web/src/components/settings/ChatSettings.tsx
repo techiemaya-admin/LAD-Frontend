@@ -1181,6 +1181,10 @@ export function ChatSettings() {
                 </button>
               </div>
             </>
+          )}
+        </div>
+      </div>
+
       {/* ── Section 2.5: Company Website Context ─────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
