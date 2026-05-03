@@ -12,6 +12,7 @@ import {
   Target,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 
 // Animation variants
@@ -224,6 +225,18 @@ const CharacterSection = () => {
   const { isDark } = useTheme();
   const videoSrc = isDark ? "/hero-character-dark.mp4" : "/hero-character.mp4";
 
+  // Track whether the current theme's video has loaded enough to render its
+  // first frame. While false we render nothing in the video slot so the
+  // previous theme's video is never visible during a theme swap.
+  const [loaded, setLoaded] = useState(false);
+
+  // Reset the loaded flag whenever the source changes (i.e. the user toggles
+  // theme). The keyed <video> below remounts at the same time, so the new
+  // element starts fetching the new file and we wait for onLoadedData.
+  useEffect(() => {
+    setLoaded(false);
+  }, [videoSrc]);
+
   return (
     <motion.div
       variants={characterVariants}
@@ -231,18 +244,21 @@ const CharacterSection = () => {
       animate="visible"
       className="relative w-full h-full flex items-center justify-center"
     >
-      {/* Video */}
-      <div>
+      {/* Video slot — reserves the same space whether or not the video has
+          loaded so layout doesn't jump. */}
+      <div className="w-70 h-180 relative z-10">
         <video
+          key={videoSrc}
+          src={videoSrc}
           autoPlay
           loop
           muted
           playsInline
-          className="w-70 h-180 object-cover relative z-10"
-        >
-          <source src={videoSrc} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+          onLoadedData={() => setLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
       </div>
 
       {/* Floating Particles */}
