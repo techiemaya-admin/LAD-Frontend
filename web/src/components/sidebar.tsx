@@ -263,7 +263,7 @@ export function Sidebar() {
           <button
             aria-label="Close menu"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="p-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
           >
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
@@ -337,9 +337,9 @@ export function Sidebar() {
                     setIsMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition",
-                    tenant.id === t.id 
-                      ? "bg-primary/20 text-primary font-bold" 
+                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition active:scale-95",
+                    tenant.id === t.id
+                      ? "bg-primary/20 text-primary font-bold"
                       : "text-sidebar-foreground/70 hover:bg-white/5"
                   )}
                 >
@@ -386,7 +386,7 @@ export function Sidebar() {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 active:scale-95 transition text-sm text-sidebar-foreground"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -588,7 +588,7 @@ export function Sidebar() {
             <DropdownMenuTrigger asChild>
               <div
                 className={cn(
-                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10",
+                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 transition-transform select-none",
                   isExpanded ? "justify-start gap-3" : "justify-center",
                 )}
               >
