@@ -20,8 +20,10 @@ import {
   Linkedin,
   ThumbsUp,
   MessageCircle,
+  FlaskConical,
 } from 'lucide-react';
 import KnowledgeBaseManager from './KnowledgeBaseManager';
+import { AIPlayground } from '../conversations/AIPlayground';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -44,6 +46,15 @@ interface ChatSettingsConfig {
     interval_hours: number;
     max_daily_messages: number;
   };
+}
+
+interface ShareableAsset {
+  key?: string;
+  url: string;
+  filename?: string;
+  mime_type?: string;
+  media_type?: 'document' | 'image';
+  trigger_keywords: string[];
 }
 
 // ── Types ────────────────────────────────────────────────────────
@@ -80,6 +91,31 @@ const DEFAULT_FOLLOWUP_CONFIG: FollowupTimingConfig = {
 const PROMPTS_API = '/api/whatsapp-conversations/prompts';
 const SETTINGS_API = '/api/whatsapp-conversations/chat-settings';
 const FOLLOWUP_CONFIG_API = '/api/whatsapp-conversations/followup-config';
+const SHAREABLE_ASSETS_API = '/api/whatsapp-conversations/chat-settings/shareable-assets';
+
+async function fetchShareableAssets(): Promise<ShareableAsset[]> {
+  try {
+    const res = await fetch(SHAREABLE_ASSETS_API);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.assets) ? data.assets : [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveShareableAssets(assets: ShareableAsset[]): Promise<boolean> {
+  try {
+    const res = await fetch(SHAREABLE_ASSETS_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assets }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 async function fetchFollowupConfig(): Promise<FollowupTimingConfig> {
   try {
@@ -268,6 +304,17 @@ export function ChatSettings() {
   const [savingKb, setSavingKb] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Shareable assets — files (price list, brochure…) the AI can auto-attach
+  const [shareableAssets, setShareableAssets] = useState<ShareableAsset[]>([]);
+  const [savingAssets, setSavingAssets] = useState(false);
+  const [loadingAssets, setLoadingAssets] = useState(true);
+  // Track which asset row is expanded for editing (others render as compact row).
+  // Newly-added (unsaved) assets are auto-expanded; saved ones collapse by default.
+  const [expandedAssetIdx, setExpandedAssetIdx] = useState<number | null>(null);
+
+  // AI Playground panel — testers can validate prompt + KB + assets without leaving the page
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+
   // New prompt form
   const [showNewPrompt, setShowNewPrompt] = useState(false);
   const [newPromptName, setNewPromptName] = useState('');
@@ -288,8 +335,9 @@ export function ChatSettings() {
       fetchChatSettings(),
       fetchFollowupConfig(),
       fetch('/api/social-integration/linkedin/automation-settings').then((r) => r.json()).catch(() => null),
+      fetchShareableAssets(),
     ])
-      .then(([p, s, f, liSettings]) => {
+      .then(([p, s, f, liSettings, assets]) => {
         setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
@@ -299,8 +347,10 @@ export function ChatSettings() {
             auto_comment_posts: !!liSettings.data.auto_comment_posts,
           });
         }
+        setShareableAssets(Array.isArray(assets) ? assets : []);
+        setLoadingAssets(false);
       })
-      .catch(() => {})
+      .catch(() => { setLoadingAssets(false); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -406,6 +456,68 @@ export function ChatSettings() {
     setSavingKb(false);
   }, [chatSettings.knowledge_base, showToast]);
 
+  // ── Shareable Assets handlers ─────────────────────────────────
+  const addShareableAsset = useCallback(() => {
+    setShareableAssets((prev) => {
+      const next = [
+        ...prev,
+        {
+          key: '',
+          url: '',
+          filename: '',
+          mime_type: 'application/pdf',
+          media_type: 'document' as const,
+          trigger_keywords: [],
+        },
+      ];
+      // Auto-expand the just-added row so the user can fill it in immediately
+      setExpandedAssetIdx(next.length - 1);
+      return next;
+    });
+  }, []);
+
+  const updateShareableAsset = useCallback(
+    (idx: number, patch: Partial<ShareableAsset>) => {
+      setShareableAssets((prev) =>
+        prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
+      );
+    },
+    [],
+  );
+
+  const removeShareableAsset = useCallback((idx: number) => {
+    setShareableAssets((prev) => prev.filter((_, i) => i !== idx));
+    setExpandedAssetIdx((cur) => (cur === idx ? null : cur && cur > idx ? cur - 1 : cur));
+  }, []);
+
+  const handleSaveShareableAssets = useCallback(async () => {
+    // Client-side validation matching backend rules
+    for (const [i, a] of shareableAssets.entries()) {
+      const url = (a.url || '').trim();
+      if (!url) {
+        showToast(`Asset #${i + 1}: URL is required`, 'error');
+        setExpandedAssetIdx(i);
+        return;
+      }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        showToast(`Asset #${i + 1}: URL must start with http(s)://`, 'error');
+        setExpandedAssetIdx(i);
+        return;
+      }
+      if (!a.trigger_keywords?.length) {
+        showToast(`Asset #${i + 1}: at least one trigger keyword is required`, 'error');
+        setExpandedAssetIdx(i);
+        return;
+      }
+    }
+    setSavingAssets(true);
+    const ok = await saveShareableAssets(shareableAssets);
+    showToast(ok ? 'Shareable assets saved' : 'Failed to save shareable assets',
+              ok ? 'success' : 'error');
+    if (ok) setExpandedAssetIdx(null); // Collapse all on successful save
+    setSavingAssets(false);
+  }, [shareableAssets, showToast]);
+
   // ── Chat Behaviour save (typing indicator — separate per channel) ──
 
   const [savingBehaviour, setSavingBehaviour] = useState(false);
@@ -488,7 +600,20 @@ export function ChatSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* ── Sticky "Test in Playground" button ─────────────────────── */}
+      <div className="sticky top-2 z-10 flex justify-end pointer-events-none">
+        <button
+          type="button"
+          onClick={() => setPlaygroundOpen(true)}
+          className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-lg shadow-lg hover:bg-violet-700 transition-colors"
+          title="Open the AI Playground to test your prompts, knowledge base, and shareable assets"
+        >
+          <FlaskConical className="h-4 w-4" />
+          Test in AI Playground
+        </button>
+      </div>
+
       {/* ── Section 1: System Prompts ─────────────────────────────── */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
@@ -684,6 +809,242 @@ export function ChatSettings() {
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <KnowledgeBaseManager />
+      </div>
+
+      {/* ── Shareable Assets ─────────────────────────────────────── */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <BookOpen className="h-5 w-5 text-violet-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Shareable Assets</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Files (price list, brochure, menu…) the AI agent can attach automatically
+            in WhatsApp when the customer asks. The system listens for the trigger
+            keywords in the AI's reply, downloads the file from the URL, and sends
+            it as a real attachment — so customers never see a raw link.
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          {loadingAssets ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading assets…
+            </div>
+          ) : (
+            <>
+              {shareableAssets.length === 0 && (
+                <p className="text-sm text-gray-400 italic">
+                  No assets configured yet. Click "Add Asset" to register your first one.
+                </p>
+              )}
+
+              {shareableAssets.map((asset, idx) => {
+                const isExpanded = expandedAssetIdx === idx;
+
+                // ── Compact (collapsed) row — like a Knowledge Base folder ──
+                if (!isExpanded) {
+                  const triggers = (asset.trigger_keywords || []).join(', ');
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => setExpandedAssetIdx(idx)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <BookOpen className="h-5 w-5 text-violet-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {asset.filename || asset.key || `Asset #${idx + 1}`}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {triggers ? `Triggers: ${triggers}` : 'No trigger keywords set'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeShareableAsset(idx);
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Remove this asset"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Expanded editor (existing detailed form) ──
+                return (
+                  <div
+                    key={idx}
+                    className="border border-violet-300 rounded-lg p-4 space-y-3 bg-gray-50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAssetIdx(null)}
+                        className="text-xs font-semibold text-violet-600 uppercase tracking-wide hover:text-violet-700 flex items-center gap-1"
+                        title="Collapse"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                        Asset #{idx + 1}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeShareableAsset(idx)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove this asset"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Display Filename
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Price_List.pdf"
+                          value={asset.filename || ''}
+                          onChange={(e) =>
+                            updateShareableAsset(idx, { filename: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Internal Key (optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="price_list"
+                          value={asset.key || ''}
+                          onChange={(e) =>
+                            updateShareableAsset(idx, { key: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        File URL <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/uc?export=download&id=…"
+                        value={asset.url}
+                        onChange={(e) =>
+                          updateShareableAsset(idx, { url: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Must be a publicly downloadable URL. For Google Drive use
+                        <code className="text-xs bg-gray-200 px-1 mx-1 rounded">uc?export=download&id=…</code>
+                        format (not the share-view link).
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          MIME Type
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="application/pdf"
+                          value={asset.mime_type || 'application/pdf'}
+                          onChange={(e) =>
+                            updateShareableAsset(idx, { mime_type: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Send As
+                        </label>
+                        <select
+                          value={asset.media_type || 'document'}
+                          onChange={(e) =>
+                            updateShareableAsset(idx, {
+                              media_type: e.target.value as 'document' | 'image',
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                          <option value="document">Document (file)</option>
+                          <option value="image">Image (preview)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Trigger Keywords <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="price list, pricing, rates, cost per session"
+                        value={(asset.trigger_keywords || []).join(', ')}
+                        onChange={(e) =>
+                          updateShareableAsset(idx, {
+                            trigger_keywords: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Comma-separated. The file is sent when ANY keyword appears in
+                        the AI's reply (case-insensitive).
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={addShareableAsset}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-violet-600 hover:text-violet-700"
+                >
+                  <Plus className="h-4 w-4" /> Add Asset
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveShareableAssets}
+                  disabled={savingAssets}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {savingAssets ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Assets
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Section 3: Chat Behaviour ────────────────────────────── */}
@@ -1090,6 +1451,19 @@ export function ChatSettings() {
 
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* AI Playground side panel — opens over current page */}
+      {playgroundOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={() => setPlaygroundOpen(false)}
+          />
+          <div className="fixed top-0 right-0 z-50 h-full w-full sm:w-[480px] bg-background shadow-2xl">
+            <AIPlayground onClose={() => setPlaygroundOpen(false)} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
