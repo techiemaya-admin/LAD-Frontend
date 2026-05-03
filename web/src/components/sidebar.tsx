@@ -34,14 +34,6 @@ import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
 import LAD3DShowcase from "@/app/page";
 type RootState = {
   auth: {
@@ -82,6 +74,7 @@ export function Sidebar() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
@@ -582,96 +575,121 @@ export function Sidebar() {
             );
           })}
         </nav>
-        {/* User Profile Dropdown Section */}
+        {/* User Profile Inline Section */}
         <div className="border-t border-sidebar-border mt-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {/* Avatar / profile row — click to toggle inline panel */}
+          <div
+            onClick={() => setIsUserPanelOpen((v) => !v)}
+            className={cn(
+              "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
+              isExpanded ? "justify-start gap-3" : "justify-center",
+            )}
+          >
+            {/* Avatar */}
+            {isHydrated && user?.avatar ? (
+              <img
+                src={user.avatar}
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                alt="avatar"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {/* User Info - shown when expanded */}
+            {isExpanded && (
+              <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
+                <div className="flex flex-col items-start justify-center min-w-0 flex-1">
+                  <div className="text-sm text-gray-900 dark:text-gray-300 font-medium leading-tight truncate w-full">
+                    {displayName}
+                  </div>
+                  <div className="text-xs text-muted-foreground/80 leading-tight">
+                    {user?.role || "admin"}
+                  </div>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground/60 flex-shrink-0 transition-transform duration-300",
+                    isUserPanelOpen && "rotate-180",
+                  )}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Inline user panel — shown when isUserPanelOpen */}
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300 ease-in-out",
+              isUserPanelOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
+            )}
+          >
+            <div className="px-2 pb-2 space-y-1">
+              {/* Tenant section — only if multiple tenants */}
+              {tenants.length > 1 && (
+                <div className="px-2 pt-1 pb-0.5">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold">Tenant</span>
+                  <div className="mt-1 space-y-0.5">
+                    {tenants.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTenantById(t.id)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
+                          tenant.id === t.id
+                            ? "bg-primary/20 text-primary font-semibold"
+                            : "text-muted-foreground hover:bg-white/5",
+                        )}
+                      >
+                        <span className="truncate">{t.name}</span>
+                        {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Settings */}
+              <NavLink
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all",
+                  "text-gray-700 dark:text-gray-300 hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
+                  isExpanded ? "w-full" : "w-10 mx-auto justify-center",
+                )}
+              >
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                {isExpanded && <span>Settings</span>}
+              </NavLink>
+
+              {/* Theme */}
               <div
                 className={cn(
-                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 transition-transform select-none",
-                  isExpanded ? "justify-start gap-3" : "justify-center",
+                  "flex items-center rounded-xl px-3 h-10 text-sm font-medium",
+                  "text-gray-700 dark:text-gray-300",
+                  isExpanded ? "justify-between w-full" : "justify-center w-10 mx-auto",
                 )}
               >
-                {/* Avatar */}
-                {isHydrated && user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                    alt="avatar"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                {/* User Info - shown when expanded */}
-                {isExpanded && (
-                  <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
-                    <div className="flex flex-col items-start justify-center min-w-0 flex-1">
-                      <div
-                        className="text-sm text-gray-900 dark:text-gray-300 font-medium leading-tight truncate w-full"
-                      >
-                        {displayName}
-                      </div>
-                      <div className="text-xs text-muted-foreground/80 leading-tight">
-                        {user?.role || "admin"}
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
-                  </div>
-                )}
+                {isExpanded && <span>Theme</span>}
+                <ThemeToggle />
               </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="top"
-              className="w-56 mb-2 ml-2"
-            >
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Tenant</DropdownMenuLabel>
-              {tenants.map((t) => (
-                <DropdownMenuItem
-                  key={t.id}
-                  onClick={() => setTenantById(t.id)}
-                  className={cn("cursor-pointer", tenant.id === t.id && "bg-accent font-medium")}
-                >
-                  {tenant.id === t.id && <span className="mr-1">✓</span>}
-                  <span>{t.name}</span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              {/* <DropdownMenuItem asChild>
-                <NavLink
-                  href="/pricing"
-                  className="flex items-center cursor-pointer"
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  <span>Pricing</span>
-                </NavLink>
-              </DropdownMenuItem> */}
-              <DropdownMenuItem asChild>
-                <NavLink
-                  href="/settings"
-                  className="flex items-center cursor-pointer"
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </NavLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-sm">Theme</span>
-                  <ThemeToggle />
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
+
+              {/* Logout */}
+              <button
                 onClick={handleLogout}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all w-full",
+                  "text-red-500 hover:bg-red-500/10 active:scale-95 select-none",
+                  !isExpanded && "justify-center",
+                )}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                {isExpanded && <span>Logout</span>}
+              </button>
+            </div>
+          </div>
+
           {/* Version Number */}
           <div className="h-10 flex items-center justify-center border-t border-sidebar-border/50">
             {isExpanded && (
