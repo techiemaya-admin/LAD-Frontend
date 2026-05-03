@@ -131,24 +131,30 @@ export const NavItems = ({ items, className, onItemClick, activePath }: NavItems
       {items.map((item, idx) => {
         const isActive = activePath === item.link;
         return (
-          <Link
+          <motion.div
             key={`link-${idx}`}
-            href={item.link}
-            onMouseEnter={() => setHovered(idx)}
-            onClick={onItemClick}
-            className={cn(
-              "relative px-4 py-2 text-neutral-600 dark:text-gray-300 pointer-events-auto",
-              isActive && "font-bold text-[#0b1957] dark:text-white"
-            )}
+            className="pointer-events-auto"
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
-            {hovered === idx && (
-              <motion.div
-                layoutId="hovered"
-                className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
-              />
-            )}
-            <span className="relative z-20 text-lg">{item.name}</span>
-          </Link>
+            <Link
+              href={item.link}
+              onMouseEnter={() => setHovered(idx)}
+              onClick={onItemClick}
+              className={cn(
+                "relative px-4 py-2 text-neutral-600 dark:text-gray-300 block",
+                isActive && "font-bold text-[#0b1957] dark:text-white"
+              )}
+            >
+              {hovered === idx && (
+                <motion.div
+                  layoutId="hovered"
+                  className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
+                />
+              )}
+              <span className="relative z-20 text-lg">{item.name}</span>
+            </Link>
+          </motion.div>
         );
       })}
     </motion.div>
@@ -271,7 +277,7 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"button">
 )) => {
   const baseStyles =
-    "px-4 py-2 rounded-md button text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center text-lg";
+    "px-4 py-2 rounded-md button text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition duration-200 inline-block text-center text-lg select-none";
 
   const variantStyles = {
     primary:
