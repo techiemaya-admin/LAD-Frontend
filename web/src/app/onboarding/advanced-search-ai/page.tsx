@@ -445,8 +445,8 @@ export default function AdvancedSearchAIPage() {
     const aiChat = useAIChat();
     const campaignCreation = useCampaignCreation();
     const { fetchLeadSummaryPreview, saveProspectFeedback, generateProspectSummary } = campaignCreation;
-    const voiceAgent = useVoiceAgent(true);
-    const billing = useBilling(true);
+    const voiceAgent = useVoiceAgent(false);
+    const billing = useBilling(false);
 
     // Unified single-screen mode - always show chat interface
     // const [screen, setScreen] = useState<'landing' | 'chat'>('landing');
@@ -730,38 +730,12 @@ export default function AdvancedSearchAIPage() {
         geographicFocus: '', valueProposition: '', competitors: '', campaignTone: '',
     });
 
-    // Load profile + history from backend on mount
+    // Load profile from localStorage on mount
     useEffect(() => {
-        fetch('/api/ai-playground', { credentials: 'include' })
-            .then(r => r.json())
-            .then(d => {
-                if (d.success) {
-                    if (d.profile && Object.keys(d.profile).length > 0) {
-                        setBusinessProfile(prev => ({ ...prev, ...d.profile }));
-                    }
-                    if (Array.isArray(d.history) && d.history.length > 0) {
-                        // Filter out bootstrap trigger messages, restore history
-                        const filtered = d.history
-                            .filter((m: any) => m.content !== '__init__' && m.content !== "Hello, let's get started!")
-                            .map((m: any) => ({
-                                role: m.role === 'user' ? 'user' : 'assistant',
-                                content: m.content,
-                            }));
-                        if (filtered.length > 0) setPgChatHistory(filtered);
-                    }
-                } else {
-                    try {
-                        const stored = localStorage.getItem('lad_business_profile');
-                        if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
-                    } catch { }
-                }
-            })
-            .catch(() => {
-                try {
-                    const stored = localStorage.getItem('lad_business_profile');
-                    if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
-                } catch { }
-            });
+        try {
+            const stored = localStorage.getItem('lad_business_profile');
+            if (stored) setBusinessProfile(prev => ({ ...prev, ...JSON.parse(stored) }));
+        } catch { }
     }, []);
 
     // Auto-scroll playground chat — also fires when busy clears (card widget appears)
@@ -1235,6 +1209,24 @@ export default function AdvancedSearchAIPage() {
             }
         }
     }, [voiceAgent.agents, voiceAgent.numbers]);
+
+    // Lazy-fetch voice agent data only when the campaign checkpoint form first opens
+    const voiceAgentFetchedRef = useRef(false);
+    useEffect(() => {
+        if (cpStep >= 0 && !voiceAgentFetchedRef.current) {
+            voiceAgentFetchedRef.current = true;
+            voiceAgent.fetchAll().catch(err => console.warn('Failed to lazy-fetch voice config:', err));
+        }
+    }, [cpStep, voiceAgent.fetchAll]);
+
+    // Lazy-fetch billing wallet on the user's first chat message
+    const billingFetchedRef = useRef(false);
+    useEffect(() => {
+        if (messages.some(m => m.role === 'user') && !billingFetchedRef.current) {
+            billingFetchedRef.current = true;
+            billing.fetchWallet().catch(err => console.warn('Failed to lazy-fetch wallet:', err));
+        }
+    }, [messages, billing.fetchWallet]);
 
     /**
      * Shared summary loader — used by both initial open and force-refresh.
