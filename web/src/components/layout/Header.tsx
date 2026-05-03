@@ -11,6 +11,7 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -63,13 +64,15 @@ export function NavbarDemo() {
             {isLoginPage ? (
               <div className="flex items-center gap-3 pr-2">
                 {navItems.map((item, idx) => (
-                  <a
+                  <motion.a
                     key={`header-link-${idx}`}
                     href={item.link}
-                    className="text-[12px] font-semibold text-[#0b1957] hover:opacity-80 transition-opacity"
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    className="text-[12px] font-semibold text-[#0b1957] hover:opacity-80 transition-opacity select-none"
                   >
                     {item.name}
-                  </a>
+                  </motion.a>
                 ))}
               </div>
             ) : (
@@ -92,14 +95,16 @@ export function NavbarDemo() {
               <ThemeToggle />
             </div>
             {navItems.map((item, idx) => (
-              <a
+              <motion.a
                 key={`mobile-link-${idx}`}
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`relative text-neutral-600 dark:text-neutral-300 ${pathname === item.link ? 'font-bold text-[#0b1957] dark:text-[#0b1957]' : ''}`}
+                whileTap={{ scale: 0.92 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                className={`relative text-neutral-600 dark:text-neutral-300 select-none ${pathname === item.link ? 'font-bold text-[#0b1957] dark:text-[#0b1957]' : ''}`}
               >
                 <span className="block">{item.name}</span>
-              </a>
+              </motion.a>
             ))}
             <div className="flex w-full flex-col gap-4">
               <NavbarButton
