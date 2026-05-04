@@ -21,6 +21,7 @@ import { LeadRequirements } from './LeadRequirements';
 import { RequirementConfig } from '../../types/requirement_config';
 import { ConceptManagement } from './ConceptManagement';
 import { PricingRules } from './PricingRules';
+import QuotationEmailTemplateEditor from '@/app/settings/QuotationEmailTemplateEditor';
 import {
   Building2, Users, UserCircle, Globe, Plug,
   Terminal, CreditCard, Coins, Upload, ClipboardCheck,
@@ -39,6 +40,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { PricingRule } from '@/types/pricing_rule';
+import { EmailTemplatesDragDrop } from './EmailTemplatesDragDrop';
 
 type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
 const SettingsPage: React.FC = () => {
@@ -130,7 +132,7 @@ const SettingsPage: React.FC = () => {
 
   const fetchEmailTemplates = async (tenantId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}`); // Your backend endpoint [cite: 238, 256]
       const data = await res.json();
       console.log('Fetched email templates:', data);
       setEmailTemplates(data);
@@ -189,6 +191,34 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleUploadEmailTemplate = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
+    try {
+      console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
+      const formData = new FormData();
+      formData.append('template_name', template_name);
+      formData.append('is_default', String(isDefault));
+      formData.append('subject_line', subjectLine);
+      formData.append('file', file);
+
+      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/upload/${tenantId}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Email template uploaded and saved');
+        fetchEmailTemplates(tenantId);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload email template');
+      }
+    } catch (error: any) {
+      console.error('Upload email template failed:', error);
+      toast.error(error.message || 'Failed to upload email template');
+    }
+  };
+
+
+  const handleSaveEmailTemplateDesign = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
     try {
       console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
       const formData = new FormData();
@@ -296,7 +326,7 @@ const SettingsPage: React.FC = () => {
   };
   const handleSetDefaultEmailTemplate = async (id: string) => {
     try {
-      await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${tenantId}/set-default/${id}`, {
+      await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}/set-default/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_default: true })
@@ -328,7 +358,7 @@ const SettingsPage: React.FC = () => {
   const handleDeleteEmailTemplate = async (id: string) => {
     if (!confirm('Are you sure you want to delete this email template?')) return;
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Email template deleted');
         fetchEmailTemplates(tenantId);
@@ -921,14 +951,25 @@ const SettingsPage: React.FC = () => {
               />
             )}
             {proposalSubTab === 'email_templates' && (
-              <EmailTemplates
-                templates={emailTemplates}
-                onUpload={handleUploadEmailTemplate}
-                onDelete={handleDeleteEmailTemplate}
-                onPreview={handlePreviewTemplate}
-                onSetDefault={handleSetDefaultEmailTemplate}
-                placeholderList={placeholders}
-              />
+              // <EmailTemplates
+              //   templates={emailTemplates}
+              //   onUpload={handleUploadEmailTemplate}
+              //   onDelete={handleDeleteEmailTemplate}
+              //   onPreview={handlePreviewTemplate}
+              //   onSetDefault={handleSetDefaultEmailTemplate}
+              //   placeholderList={placeholders}
+              // />
+              // <QuotationEmailTemplateEditor mode="create" />
+              <EmailTemplatesDragDrop
+                      templates={emailTemplates}
+                      placeholders={placeholders}
+                      tenantId={tenantId}
+                      onUpload={() => fetchEmailTemplates(tenantId)}
+                      onSaveDesign={handleSaveEmailTemplateDesign}
+                      onDelete={handleDeleteEmailTemplate}
+                      onPreview={handlePreviewTemplate}
+                      onSetDefault={handleSetDefaultEmailTemplate}
+                    />
             )}
             {proposalSubTab === 'quotation-templates' && (
               <QuotationTemplates
