@@ -146,14 +146,14 @@ const AgentGuide = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="absolute -top-32 -left-16 w-64 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-xl border border-gray-200 dark:border-gray-700"
+            className="absolute -top-32 -left-16 w-64 bg-white dark:bg-[#1a2f6b] rounded-2xl p-4 shadow-xl border border-gray-200 dark:border-gray-700"
             style={{
               transform: 'translateZ(50px)',
             }}
           >
             {/* Tail */}
-            <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white dark:bg-gray-800 rounded-full" />
-            <div className="absolute -bottom-2 right-6 w-6 h-6 bg-white dark:bg-gray-800 transform rotate-45" />
+            <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white dark:bg-[#1a2f6b] rounded-full" />
+            <div className="absolute -bottom-2 right-6 w-6 h-6 bg-white dark:bg-[#1a2f6b] transform rotate-45" />
 
             {/* Message text */}
             <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-medium">

@@ -246,17 +246,17 @@ export default function CampaignsListPage() {
     [campaigns, searchQuery],
   );
   return (
-    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Goal className="w-8 h-8 text-[#1E293B]" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+            <Goal className="w-8 h-8 text-[#1E293B] dark:text-white" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white">
               Campaigns
             </h1>
           </div>
-          <p className="text-sm text-[#64748B] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
             Manage your multi-channel outreach campaigns
           </p>
         </div>
@@ -296,18 +296,18 @@ export default function CampaignsListPage() {
       {(stats as any)?.linkedin_rate_limits && (() => {
         const linkedinStats = (stats as any).linkedin_rate_limits;
         return (
-        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0]">
+        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0] dark:border-[#262831]">
           <div className="flex items-center gap-4 mb-6">
             <Avatar className="w-11 h-11 bg-[#0A66C2]/10 border border-[#0A66C2]/30 shadow-sm">
               <AvatarFallback>
-                <Gauge className="w-5 h-5 text-[#0A66C2]" />
+                <Gauge className="w-5 h-5 text-[#0A66C2] dark:text-white" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h6 className="text-lg font-bold text-[#1E293B]">
+              <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">
                 LinkedIn Rate Limits
               </h6>
-              <p className="text-sm text-[#64748B]">
+              <p className="text-sm text-[#64748B] dark:text-[#7a8ba3]">
                 Weekly connection limits and usage tracking
               </p>
             </div>
@@ -319,7 +319,7 @@ export default function CampaignsListPage() {
           {/* Rate Limits Grid - 2x2 Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Daily Limit Card */}
-            <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -329,27 +329,27 @@ export default function CampaignsListPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-semibold text-[#1E293B]">
+                      <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                         Daily Limit
                       </p>
-                      <p className="text-xs text-[#64748B]">
+                      <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
                         Per account maximum
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <p className="text-3xl font-bold text-[#0b1957]">
+                  <p className="text-3xl font-bold text-[#0b1957] dark:text-white">
                     {linkedinStats.daily.max}
                   </p>
-                  <p className="text-sm text-[#64748B]">connections/day</p>
+                  <p className="text-sm text-[#64748B] dark:text-white">connections/day</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0]">
-                  <p className="text-xs text-[#64748B] mb-1">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
+                  <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">
                     Total accounts:{" "}
                     {linkedinStats.daily.account_count}
                   </p>
-                  <p className="text-xs font-medium text-[#0b1957]">
+                  <p className="text-xs font-medium text-[#0b1957] dark:text-white">
                     Total daily capacity:{" "}
                     {linkedinStats.daily.total}
                   </p>
@@ -358,7 +358,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Limit Card */}
-            <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -368,26 +368,26 @@ export default function CampaignsListPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-semibold text-[#1E293B]">
+                      <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                         Weekly Limit
                       </p>
-                      <p className="text-xs text-[#64748B]">
+                      <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
                         7-day rolling window
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <p className="text-3xl font-bold text-[#0b1957]">
+                  <p className="text-3xl font-bold text-[#0b1957] dark:text-white">
                     {linkedinStats.weekly.max}
                   </p>
-                  <p className="text-sm text-[#64748B]">connections/week</p>
+                  <p className="text-sm text-[#64748B] dark:text-white">connections/week</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0]">
-                  <p className="text-xs text-[#64748B] mb-1">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
+                  <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">
                     Total capacity: {linkedinStats.weekly.total}
                   </p>
-                  <p className="text-xs font-medium text-[#0b1957]">
+                  <p className="text-xs font-medium text-[#0b1957] dark:text-white">
                     Used this week:{" "}
                     {linkedinStats.usage.sent_last_7_days}
                   </p>
@@ -396,7 +396,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Usage Chart */}
-            <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
+            <Card className="bg-white dark:bg-[#000724] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <Avatar className="w-10 h-10 bg-green-100">
@@ -405,10 +405,10 @@ export default function CampaignsListPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-[#1E293B]">
+                    <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                       7-Day Connection Activity
                     </p>
-                    <p className="text-xs text-[#64748B]">
+                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
                       Daily breakdown of sent connections
                     </p>
                   </div>
@@ -443,14 +443,14 @@ export default function CampaignsListPage() {
                           return (
                             <div key={idx} className="space-y-1">
                               <div className="flex justify-between items-center text-xs">
-                                <span className="text-[#64748B]">
+                                <span className="text-[#64748B] dark:text-[#7a8ba3]">
                                   {dayName}
                                 </span>
                                 <span className="font-semibold text-[#0b1957]">
                                   {day.sent} sent
                                 </span>
                               </div>
-                              <div className="relative h-2 rounded-full bg-[#E2E8F0] overflow-hidden">
+                              <div className="relative h-2 rounded-full bg-[#E2E8F0] dark:bg-[#253456] overflow-hidden">
                                 <div
                                   className="absolute h-2 rounded-full bg-gradient-to-r from-[#0A66C2] to-[#004182] transition-all duration-300"
                                   style={{
@@ -464,29 +464,29 @@ export default function CampaignsListPage() {
                       );
                     })()
                   ) : (
-                    <p className="text-sm text-[#64748B] py-4 text-center">
+                    <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] py-4 text-center">
                       No activity in the last 7 days
                     </p>
                   )}
                 </div>
 
                 {/* Weekly Usage Summary */}
-                <div className="mt-6 pt-6 border-t border-[#E2E8F0] grid grid-cols-3 gap-4">
+                <div className="mt-6 pt-6 border-t border-[#E2E8F0] dark:border-[#262831] grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] mb-1">Total Sent</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Total Sent</p>
                     <p className="text-2xl font-bold text-green-600">
                       {linkedinStats?.usage?.sent_last_7_days ??
                         0}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] mb-1">Weekly Limit</p>
-                    <p className="text-2xl font-bold text-[#0b1957]">
+                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Weekly Limit</p>
+                    <p className="text-2xl font-bold text-[#0b1957] dark:text-white">
                       {linkedinStats?.weekly?.total ?? 0}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] mb-1">Capacity Used</p>
+                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Capacity Used</p>
                     <p
                       className={`text-2xl font-bold ${
                         parseInt(
@@ -531,7 +531,7 @@ export default function CampaignsListPage() {
               setStatusFilter("all");
               router.push("/campaigns");
             }}
-            className="ml-auto text-xs text-slate-500 hover:text-red-500 underline"
+            className="ml-auto text-xs text-slate-500 dark:text-[#7a8ba3] hover:text-red-500 underline"
           >
             Clear filter
           </button>

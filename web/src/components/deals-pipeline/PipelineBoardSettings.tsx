@@ -143,7 +143,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
             <h2 className="text-xl font-semibold flex-grow">Pipeline Board Settings</h2>
             <button
               onClick={handleReset}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-[#253456] rounded-lg transition-colors"
               title="Reset to defaults"
             >
               
@@ -151,13 +151,13 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
           </div>
         </DialogTitle>
           {/* Business Hours Settings */}
-          <div className="p-6 bg-gray-50 rounded-lg">
-            <h3 className="text-base font-semibold mb-4">
+          <div className="p-6 bg-gray-50 dark:bg-[#1a2a43] rounded-lg">
+            <h3 className="text-base font-semibold mb-4 dark:text-white">
               Business Hours
             </h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <Label htmlFor="business-start" className="text-sm font-medium mb-2 block">
+                <Label htmlFor="business-start" className="text-sm font-medium mb-2 block dark:text-[#7a8ba3]">
                   Start Time
                 </Label>
                 <Input
@@ -169,7 +169,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                 />
               </div>
               <div>
-                <Label htmlFor="business-end" className="text-sm font-medium mb-2 block">
+                <Label htmlFor="business-end" className="text-sm font-medium mb-2 block dark:text-[#7a8ba3]">
                   End Time
                 </Label>
                 <Input
@@ -182,7 +182,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </div>
             </div>
             <div>
-              <Label htmlFor="timezone" className="text-sm font-medium mb-2 block">
+              <Label htmlFor="timezone" className="text-sm font-medium mb-2 block dark:text-[#7a8ba3]">
                 Timezone
               </Label>
               <Select
@@ -204,7 +204,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
               </Select>
             </div>
           </div>
-          <div className="flex gap-2 mt-6 pt-6 border-t">
+          <div className="flex gap-2 mt-6 pt-6 border-t dark:border-[#262831]">
             {/* <Button 
               onClick={handleCancel} 
               variant="outline"

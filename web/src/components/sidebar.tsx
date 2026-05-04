@@ -24,6 +24,7 @@ import {
   LayoutTemplate
 } from "lucide-react";
 import { NavLink } from "./NavLink";
+import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,14 +33,7 @@ import { logout as logoutAction } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
 type RootState = {
   auth: {
@@ -72,6 +66,7 @@ export function Sidebar() {
   const queryClient = useQueryClient();
   const { hasFeature } = useAuth();
   const { tenant, setTenantById, tenants } = useTenant();
+  const { isDark } = useTheme();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -79,6 +74,7 @@ export function Sidebar() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
@@ -212,27 +208,28 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center px-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center justify-between px-3">
         <button
           aria-label="Open menu"
-          className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition z-10"
+          className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <Menu className="h-6 w-6 text-sidebar-foreground" />
         </button>
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <img
-            src="/MrLAD-logo.svg"
+            src={isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg"}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
             decoding="async"
             className="w-8 h-8 object-contain"
           />
-          <span className="text-sm font-medium text-sidebar-foreground/90 truncate max-w-[120px]">
+          <span className="text-sm font-medium text-sidebar-foreground/90">
             {displayName}
           </span>
         </div>
+        <div className="w-10" />
       </div>
       {/* Mobile Drawer */}
       <div
@@ -245,21 +242,21 @@ export function Sidebar() {
         <div className="h-14 px-3 flex items-center justify-between border-b border-sidebar-border">
           <div className="flex items-center">
             <img
-              src="/MrLAD-logo.svg" 
+              src={isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg"}
               alt="Company Logo"
               loading="eager"
               fetchPriority="high"
               decoding="async"
               className="h-9 w-auto object-contain"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/MrLAD-logo.svg";
+                (e.target as HTMLImageElement).src = isDark ? "/MrLAD-logo-dark.svg" : "/MrLAD-logo.svg";
               }}
             />
           </div>
           <button
             aria-label="Close menu"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="p-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
           >
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
@@ -333,9 +330,9 @@ export function Sidebar() {
                     setIsMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition",
-                    tenant.id === t.id 
-                      ? "bg-primary/20 text-primary font-bold" 
+                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition active:scale-95",
+                    tenant.id === t.id
+                      ? "bg-primary/20 text-primary font-bold"
                       : "text-sidebar-foreground/70 hover:bg-white/5"
                   )}
                 >
@@ -376,9 +373,13 @@ export function Sidebar() {
               <Settings className="h-4 w-4" />
               <span>Settings</span>
             </NavLink>
+            <div className="w-full flex items-center justify-between rounded-xl px-4 py-2 text-sm text-sidebar-foreground">
+              <span>Theme</span>
+              <ThemeToggle />
+            </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 text-sm text-sidebar-foreground"
+              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 active:scale-95 transition text-sm text-sidebar-foreground"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -396,7 +397,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
-          "bg-white",
+          "bg-white dark:bg-[#000724]",
           "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
           "overflow-hidden fixed left-0 top-0 z-50",
           isExpanded ? "w-64" : "w-16",
@@ -412,7 +413,7 @@ export function Sidebar() {
           )}
         >
           <img
-            src={isExpanded ? "/MrLAD-logo.svg" : "/logo.svg"}
+            src={isDark ? (isExpanded ? "/MrLAD-logo-dark.svg" : "/logo-white.svg") : (isExpanded ? "/MrLAD-logo.svg" : "/logo.svg")}
             alt="Company Logo"
             loading="eager"
             fetchPriority="high"
@@ -422,7 +423,7 @@ export function Sidebar() {
               isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = isExpanded ? "/MrLAD-logo.svg" : "/logo.svg";
+              (e.target as HTMLImageElement).src = isDark ? (isExpanded ? "/MrLAD-logo-dark.svg" : "/logo-white.svg") : (isExpanded ? "/MrLAD-logo.svg" : "/logo.svg");
             }}
           />
         </div>
@@ -472,10 +473,10 @@ export function Sidebar() {
                         "h-5 w-5 transition-colors duration-300 relative z-10",
                         isActive
                           ? "text-white"
-                          : "text-gray-900 group-hover:text-black",
+                          : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
                       style={
-                        !isActive ? { color: "#1a1a1a !important" } : undefined
+                        !isActive ? { color: undefined } : undefined
                       }
                     />
                   </div>
@@ -487,11 +488,8 @@ export function Sidebar() {
                         "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
                         isActive
                           ? "text-white group-hover:text-white"
-                          : "text-gray-900 group-hover:text-black",
+                          : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
-                      style={
-                        !isActive ? { color: "#1a1a1a !important" } : undefined
-                      }
                     >
                       {n.label}
                     </span>
@@ -510,8 +508,7 @@ export function Sidebar() {
                     )}
                   >
                     <span
-                      className="block text-xs font-medium text-gray-900"
-                      style={{ color: "oklch(0.145 0 0)", WebkitTextFillColor: "oklch(0.145 0 0)" }}
+                      className="block text-xs font-medium text-gray-900 dark:text-gray-300"
                     >
                       {n.label}
                     </span>
@@ -534,11 +531,10 @@ export function Sidebar() {
                                 "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium pointer-events-auto",
                                 childActive
                                   ? "bg-primary/90 text-white"
-                                  : "hover:bg-white/10 text-gray-900",
+                                  : "hover:bg-white/10 text-gray-900 dark:text-gray-300",
                               )}
-                              style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
                             >
-                              <ChildIcon className={cn("h-3.5 w-3.5 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                              <ChildIcon className={cn("h-3.5 w-3.5 flex-shrink-0", childActive ? "text-white" : "text-gray-700 dark:text-gray-400")} />
                               {child.label}
                             </NavLink>
                           );
@@ -561,13 +557,12 @@ export function Sidebar() {
                             "transition-all duration-200",
                             childActive
                               ? "bg-primary/90 text-white"
-                              : "hover:bg-white/10 text-gray-900",
+                              : "hover:bg-white/10 dark:hover:bg-white/5 text-gray-900 dark:text-gray-300",
                           )}
                         >
-                          <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childActive ? "text-white" : "text-gray-700")} />
+                          <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childActive ? "text-white" : "text-gray-700 dark:text-gray-400")} />
                           <span
-                            className={cn("ml-2 text-sm font-medium whitespace-nowrap", childActive ? "text-white" : "text-gray-900")}
-                            style={!childActive ? { color: "oklch(0.145 0 0)" } : undefined}
+                            className={cn("ml-2 text-sm font-medium whitespace-nowrap", childActive ? "text-white" : "text-gray-900 dark:text-gray-300")}
                           >
                             {child.label}
                           </span>
@@ -580,94 +575,121 @@ export function Sidebar() {
             );
           })}
         </nav>
-        {/* User Profile Dropdown Section */}
+        {/* User Profile Inline Section */}
         <div className="border-t border-sidebar-border mt-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {/* Avatar / profile row — click to toggle inline panel */}
+          <div
+            onClick={() => setIsUserPanelOpen((v) => !v)}
+            className={cn(
+              "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
+              isExpanded ? "justify-start gap-3" : "justify-center",
+            )}
+          >
+            {/* Avatar */}
+            {isHydrated && user?.avatar ? (
+              <img
+                src={user.avatar}
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                alt="avatar"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {/* User Info - shown when expanded */}
+            {isExpanded && (
+              <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
+                <div className="flex flex-col items-start justify-center min-w-0 flex-1">
+                  <div className="text-sm text-gray-900 dark:text-gray-300 font-medium leading-tight truncate w-full">
+                    {displayName}
+                  </div>
+                  <div className="text-xs text-muted-foreground/80 leading-tight">
+                    {user?.role || "admin"}
+                  </div>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground/60 flex-shrink-0 transition-transform duration-300",
+                    isUserPanelOpen && "rotate-180",
+                  )}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Inline user panel — shown when isUserPanelOpen */}
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300 ease-in-out",
+              isUserPanelOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
+            )}
+          >
+            <div className="px-2 pb-2 space-y-1">
+              {/* Tenant section — only if multiple tenants */}
+              {tenants.length > 1 && (
+                <div className="px-2 pt-1 pb-0.5">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold">Tenant</span>
+                  <div className="mt-1 space-y-0.5">
+                    {tenants.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTenantById(t.id)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
+                          tenant.id === t.id
+                            ? "bg-primary/20 text-primary font-semibold"
+                            : "text-muted-foreground hover:bg-white/5",
+                        )}
+                      >
+                        <span className="truncate">{t.name}</span>
+                        {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Settings */}
+              <NavLink
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all",
+                  "text-gray-700 dark:text-gray-300 hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
+                  isExpanded ? "w-full" : "w-10 mx-auto justify-center",
+                )}
+              >
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                {isExpanded && <span>Settings</span>}
+              </NavLink>
+
+              {/* Theme */}
               <div
                 className={cn(
-                  "flex items-center p-3 transition-all duration-500 cursor-pointer hover:bg-white/5",
-                  isExpanded ? "justify-start gap-3" : "justify-center",
+                  "flex items-center rounded-xl px-3 h-10 text-sm font-medium",
+                  "text-gray-700 dark:text-gray-300",
+                  isExpanded ? "justify-between w-full" : "justify-center w-10 mx-auto",
                 )}
               >
-                {/* Avatar */}
-                {isHydrated && user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                    alt="avatar"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-white font-semibold text-sm flex-shrink-0">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                {/* User Info - shown when expanded */}
-                {isExpanded && (
-                  <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
-                    <div className="flex flex-col items-start justify-center min-w-0 flex-1">
-                      <div
-                        className="text-sm text-gray-900 font-medium leading-tight truncate w-full"
-                        style={{
-                          color: "oklch(0.145 0 0)",
-                          WebkitTextFillColor: "oklch(0.145 0 0)",
-                        }}
-                      >
-                        {displayName}
-                      </div>
-                      <div className="text-xs text-muted-foreground/80 leading-tight">
-                        {user?.role || "admin"}
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
-                  </div>
-                )}
+                {isExpanded && <span>Theme</span>}
+                <ThemeToggle />
               </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="top"
-              className="w-56 mb-2 ml-2"
-            >
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Tenant</DropdownMenuLabel>
-              {tenants.map((t) => (
-                <DropdownMenuItem
-                  key={t.id}
-                  onClick={() => setTenantById(t.id)}
-                  className={cn("cursor-pointer", tenant.id === t.id && "bg-accent font-medium")}
-                >
-                  {tenant.id === t.id && <span className="mr-1">✓</span>}
-                  <span>{t.name}</span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              {/* <DropdownMenuItem asChild>
-                <NavLink
-                  href="/pricing"
-                  className="flex items-center cursor-pointer"
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  <span>Pricing</span>
-                </NavLink>
-              </DropdownMenuItem> */}
-              <DropdownMenuItem asChild>
-                <NavLink
-                  href="/settings"
-                  className="flex items-center cursor-pointer"
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </NavLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem
+
+              {/* Logout */}
+              <button
                 onClick={handleLogout}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all w-full",
+                  "text-red-500 hover:bg-red-500/10 active:scale-95 select-none",
+                  !isExpanded && "justify-center",
+                )}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                {isExpanded && <span>Logout</span>}
+              </button>
+            </div>
+          </div>
+
           {/* Version Number */}
           <div className="h-10 flex items-center justify-center border-t border-sidebar-border/50">
             {isExpanded && (

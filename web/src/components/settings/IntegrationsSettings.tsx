@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock } from 'lucide-react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
+import { CustomEmailIntegration } from './CustomEmailIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
@@ -85,6 +86,14 @@ const INTEGRATIONS: IntegrationCard[] = [
       </svg>
     ),
     iconBg: 'bg-blue-50',
+    category: 'Email & Calendar',
+  },
+  {
+    id: 'custom-email',
+    name: 'Custom Email (SMTP)',
+    description: 'Connect Roundcube, cPanel mail, Zoho, Yandex, Fastmail, or any self-hosted webmail.',
+    icon: <Server className="h-6 w-6 text-emerald-600" />,
+    iconBg: 'bg-emerald-50',
     category: 'Email & Calendar',
   },
   {
@@ -367,6 +376,17 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('microsoft', 'disconnected'); }
     };
 
+    // Custom SMTP — checks whether a self-hosted webmail account is connected
+    const checkCustomEmail = async () => {
+      setStatus('custom-email', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/email/custom/status', { method: 'POST' });
+        if (!res.ok) { setStatus('custom-email', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('custom-email', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('custom-email', 'disconnected'); }
+    };
+
     // LinkedIn
     const checkLinkedIn = async () => {
       setStatus('linkedin', 'loading');
@@ -416,6 +436,7 @@ export const IntegrationsSettings: React.FC = () => {
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
+    checkCustomEmail();
     checkLinkedIn();
     checkGHL();
     checkMindBody();
@@ -569,6 +590,13 @@ export const IntegrationsSettings: React.FC = () => {
         )}
         {activeView === 'google' && <GoogleAuthIntegration />}
         {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
+        {activeView === 'custom-email' && (
+          <CustomEmailIntegration
+            onStatusChange={(connected) =>
+              setStatus('custom-email', connected ? 'connected' : 'disconnected')
+            }
+          />
+        )}
         {activeView === 'linkedin' && <LinkedInIntegration />}
         {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
         {activeView === 'slack' && (

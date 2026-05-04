@@ -80,7 +80,7 @@ const PipelineKanbanView: React.FC<PipelineKanbanViewProps> = ({
   return (
     <>
       <div
-        className="flex gap-2 min-h-[calc(100vh-200px)] pb-4 px-2 pr-2 bg-[#f8f9fe]"
+        className="flex gap-2 min-h-[calc(100vh-200px)] pb-4 px-2 pr-2 bg-[#f8f9fe] dark:bg-[#000724]"
       >
         <SortableContext items={sortableStageIds} strategy={horizontalListSortingStrategy}>
           {stages.map((stage, index) => {
