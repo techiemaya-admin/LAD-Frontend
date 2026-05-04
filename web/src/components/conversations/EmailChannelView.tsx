@@ -53,7 +53,7 @@ interface EmailTemplate {
   category: string;
 }
 
-type EmailProvider = 'gmail' | 'outlook';
+type EmailProvider = 'gmail' | 'outlook' | 'custom';
 
 interface EmailChannelViewProps {
   provider: EmailProvider;
@@ -68,7 +68,31 @@ const TEMPLATES_API  = '/api/campaigns/email-templates';
 const PROVIDER_COLOR: Record<EmailProvider, string> = {
   gmail:   '#EA4335',
   outlook: '#0078D4',
+  custom:  '#059669',  // emerald — matches the integration tile
 };
+
+const PROVIDER_LABEL: Record<EmailProvider, string> = {
+  gmail:   'Gmail',
+  outlook: 'Outlook',
+  custom:  'Custom SMTP',
+};
+
+const PROVIDER_ICON: Record<EmailProvider, string> = {
+  gmail:   '📧',
+  outlook: '📨',
+  custom:  '✉️',
+};
+
+/**
+ * Map our UI provider key onto the backend's provider string used by the
+ * /send-bulk + /messages endpoints. Single source of truth so we never
+ * introduce another `provider === 'outlook' ? 'microsoft' : 'google'` ternary.
+ */
+function toBackendProvider(p: EmailProvider): string {
+  if (p === 'outlook') return 'microsoft';
+  if (p === 'custom')  return 'custom_smtp';
+  return 'google';
+}
 
 const AVATAR_GRADIENTS = [
   'from-indigo-400 to-purple-500',
@@ -319,7 +343,7 @@ interface ContactDetailsPanelProps {
 
 function ContactDetailsPanel({ contact, provider, groups, onClose, onAddToGroup }: ContactDetailsPanelProps) {
   const providerColor = PROVIDER_COLOR[provider];
-  const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook';
+  const providerLabel = PROVIDER_LABEL[provider];
 
   const contactGroups = groups.filter(g => g.channel === provider);
 
@@ -490,7 +514,7 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
   const threadEndRef   = useRef<HTMLDivElement>(null);
 
   const providerColor = PROVIDER_COLOR[provider];
-  const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook';
+  const providerLabel = PROVIDER_LABEL[provider];
 
   // ── Load thread ──────────────────────────────────────────────────────────────
   const loadThread = useCallback(async () => {
@@ -546,7 +570,7 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
     setSending(true);
     setError('');
     try {
-      const backendProvider = provider === 'outlook' ? 'microsoft' : 'google';
+      const backendProvider = toBackendProvider(provider);
 
       // Serialize File[] → base64 payloads
       const attachmentPayloads = await Promise.all(
@@ -908,7 +932,7 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
             ) : sending ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…</>
             ) : (
-              <><Send className="h-3.5 w-3.5" /> Send via {provider === 'gmail' ? 'Gmail' : 'Outlook'}</>
+              <><Send className="h-3.5 w-3.5" /> Send via {PROVIDER_LABEL[provider]}</>
             )}
           </Button>
         </div>
@@ -1086,7 +1110,7 @@ const EmailGroupWindow = memo(function EmailGroupWindow({
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm truncate">{group.name}</h3>
           <p className="text-xs text-muted-foreground">
-            {provider === 'gmail' ? '📧 Gmail' : '📨 Outlook'} broadcast · {detail?.member_count ?? group.member_count} members
+            {PROVIDER_ICON[provider]} {PROVIDER_LABEL[provider]} broadcast · {detail?.member_count ?? group.member_count} members
           </p>
         </div>
         <Button
@@ -1121,7 +1145,7 @@ const EmailGroupWindow = memo(function EmailGroupWindow({
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'Members', value: detail?.member_count ?? 0, icon: Users, color: 'text-blue-600 bg-blue-50' },
-              { label: 'Channel', value: provider === 'gmail' ? 'Gmail' : 'Outlook', icon: Mail, color: 'text-green-600 bg-green-50' },
+              { label: 'Channel', value: PROVIDER_LABEL[provider], icon: Mail, color: 'text-green-600 bg-green-50' },
               { label: 'Status', value: 'Active', icon: Check, color: 'text-emerald-600 bg-emerald-50' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="p-3 rounded-xl border border-border bg-card">
@@ -1473,8 +1497,8 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
   }, [selectedContacts, provider]);
 
   const providerColor = PROVIDER_COLOR[provider];
-  const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook';
-  const providerIcon  = provider === 'gmail' ? '📧' : '📨';
+  const providerLabel = PROVIDER_LABEL[provider];
+  const providerIcon  = PROVIDER_ICON[provider];
 
   // ── Group detail view ──────────────────────────────────────────────────────
 
