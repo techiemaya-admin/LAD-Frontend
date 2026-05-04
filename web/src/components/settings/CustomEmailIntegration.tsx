@@ -175,11 +175,22 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
     }
   };
 
+  // From-address must look like an email. We've seen users paste the SMTP host
+  // (e.g. mailbox.example.com) here; without this guard the SMTP server would
+  // accept the message but recipients would silently drop it for an invalid
+  // From header. Default-mirror to username so this is a no-op for most users.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const fromAddressValue = (form.from_address || form.username).trim();
+  const fromAddressLooksLikeEmail = EMAIL_RE.test(fromAddressValue);
+  const usernameLooksLikeEmail    = EMAIL_RE.test(form.username.trim());
+
   const isFormValid =
     form.host.trim() &&
     Number(form.port) > 0 &&
     form.username.trim() &&
-    form.password;
+    form.password &&
+    usernameLooksLikeEmail &&
+    fromAddressLooksLikeEmail;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -316,11 +327,16 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
               <div>
                 <label className="text-xs font-medium text-muted-foreground">From address (optional)</label>
                 <Input
-                  placeholder="Defaults to username"
+                  placeholder="you@yourdomain.com (defaults to username)"
                   value={form.from_address}
                   onChange={e => setForm(f => ({ ...f, from_address: e.target.value }))}
                   className="mt-1"
                 />
+                {form.from_address && !fromAddressLooksLikeEmail && (
+                  <p className="text-[11px] text-red-600 mt-1">
+                    Must be an email address (e.g. <code>you@yourdomain.com</code>) — not a hostname.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Display name (optional)</label>

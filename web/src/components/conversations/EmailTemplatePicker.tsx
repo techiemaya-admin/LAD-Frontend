@@ -44,7 +44,13 @@ interface EmailGroupDetail {
   members: EmailContact[];
 }
 
-type EmailProvider = 'gmail' | 'outlook';
+type EmailProvider = 'gmail' | 'outlook' | 'custom';
+
+/** Map UI provider key onto the backend's provider string. */
+const toBackendProvider = (p: EmailProvider): string =>
+  p === 'outlook' ? 'microsoft'
+  : p === 'custom' ? 'custom_smtp'
+  : 'google';
 
 interface EmailTemplatePickerProps {
   open: boolean;
@@ -227,8 +233,8 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
         return;
       }
 
-      // Backend expects 'google' | 'microsoft' (not 'gmail' | 'outlook')
-      const backendProvider = provider === 'outlook' ? 'microsoft' : 'google';
+      // Map UI provider → backend provider key.
+      const backendProvider = toBackendProvider(provider);
       const res = await fetch(`${EMAIL_API}/send-bulk`, {
         method: 'POST',
         headers: authHeaders(),
@@ -263,7 +269,10 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
-  const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook';
+  const providerLabel =
+    provider === 'gmail'   ? 'Gmail'
+    : provider === 'outlook' ? 'Outlook'
+    : 'Custom SMTP';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
