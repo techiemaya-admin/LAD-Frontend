@@ -78,26 +78,58 @@ interface FollowupStageConfig {
   delay_hours: number;
 }
 
+interface FollowupStageConfigWithTemplate extends FollowupStageConfig {
+  // Approved WhatsApp template name to use for this stage.  Required for
+  // any stage whose delay pushes the customer outside Meta's 24-hour
+  // free-text window (anything > 24 h, in practice).  Empty = AI-generated
+  // free text (only safe within 24 h).
+  template_name?: string;
+}
+
+interface BookingReminderEntry {
+  delay_hours: number;
+  template_name: string;
+}
+
 interface FollowupTimingConfig {
   enabled: boolean;
   stages: {
-    FIRST: FollowupStageConfig;
-    SECOND: FollowupStageConfig;
-    THIRD: FollowupStageConfig;
-    FOURTH: FollowupStageConfig;
+    FIRST: FollowupStageConfigWithTemplate;
+    SECOND: FollowupStageConfigWithTemplate;
+    THIRD: FollowupStageConfigWithTemplate;
+    FOURTH: FollowupStageConfigWithTemplate;
   };
-  meeting_reminder_delay_hours: number;
+  // List of pre-booking reminders (e.g. 24h heads-up + 3h nudge).
+  // Each entry has its own delay-before-start + template.
+  booking_reminders: BookingReminderEntry[];
+  // ── Legacy fields (kept readable for back-compat with older API versions);
+  // the backend transparently migrates these into booking_reminders[0].
+  booking_reminder_delay_hours?: number;
+  booking_reminder_template_name?: string;
+  meeting_reminder_delay_hours?: number;
+}
+
+interface WhatsAppApprovedTemplate {
+  name: string;
+  language: string;
+  status: string;
+  category: string;
+  body: string;
+  parameter_count: number;
 }
 
 const DEFAULT_FOLLOWUP_CONFIG: FollowupTimingConfig = {
   enabled: true,
   stages: {
-    FIRST:  { enabled: true, delay_hours: 24 },
-    SECOND: { enabled: true, delay_hours: 72 },
-    THIRD:  { enabled: true, delay_hours: 168 },
-    FOURTH: { enabled: true, delay_hours: 336 },
+    FIRST:  { enabled: true, delay_hours: 24,  template_name: '' },
+    SECOND: { enabled: true, delay_hours: 72,  template_name: '' },
+    THIRD:  { enabled: true, delay_hours: 168, template_name: '' },
+    FOURTH: { enabled: true, delay_hours: 336, template_name: '' },
   },
-  meeting_reminder_delay_hours: 24,
+  booking_reminders: [
+    { delay_hours: 24, template_name: '' },
+    { delay_hours: 3,  template_name: '' },
+  ],
 };
 
 // ── API helpers ──────────────────────────────────────────────────
@@ -106,6 +138,22 @@ const PROMPTS_API = '/api/whatsapp-conversations/prompts';
 const SETTINGS_API = '/api/whatsapp-conversations/chat-settings';
 const FOLLOWUP_CONFIG_API = '/api/whatsapp-conversations/followup-config';
 const SHAREABLE_ASSETS_API = '/api/whatsapp-conversations/chat-settings/shareable-assets';
+const APPROVED_TEMPLATES_API = '/api/whatsapp-conversations/followup-settings/templates';
+
+async function fetchApprovedTemplates(): Promise<WhatsAppApprovedTemplate[]> {
+  try {
+    const res = await fetch(APPROVED_TEMPLATES_API);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data?.success) return [];
+    const list = Array.isArray(data.data) ? data.data : [];
+    return list.filter((t: WhatsAppApprovedTemplate) =>
+      t && typeof t.name === 'string' && t.status === 'APPROVED'
+    );
+  } catch {
+    return [];
+  }
+}
 
 async function fetchShareableAssets(): Promise<ShareableAsset[]> {
   try {
@@ -137,9 +185,23 @@ async function fetchFollowupConfig(): Promise<FollowupTimingConfig> {
     if (!res.ok) return DEFAULT_FOLLOWUP_CONFIG;
     const data = await res.json();
     if (!data.success) return DEFAULT_FOLLOWUP_CONFIG;
-    // Accept data.data or data.config
     const cfg = data.data ?? data.config;
-    return cfg && typeof cfg === 'object' ? { ...DEFAULT_FOLLOWUP_CONFIG, ...cfg } : DEFAULT_FOLLOWUP_CONFIG;
+    if (!cfg || typeof cfg !== 'object') return DEFAULT_FOLLOWUP_CONFIG;
+    const merged: FollowupTimingConfig = { ...DEFAULT_FOLLOWUP_CONFIG, ...cfg };
+    // Defence-in-depth: if the backend returned only the legacy singular
+    // fields (older deploys, in-flight migration), synthesize a one-item
+    // booking_reminders list so the UI's add/remove buttons still work.
+    if (!Array.isArray(merged.booking_reminders) || merged.booking_reminders.length === 0) {
+      const legacyDelay =
+        merged.booking_reminder_delay_hours
+        ?? merged.meeting_reminder_delay_hours
+        ?? 24;
+      merged.booking_reminders = [{
+        delay_hours:   legacyDelay,
+        template_name: merged.booking_reminder_template_name ?? '',
+      }];
+    }
+    return merged;
   } catch {
     return DEFAULT_FOLLOWUP_CONFIG;
   }
@@ -314,6 +376,10 @@ export function ChatSettings() {
     campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
   });
   const [followupConfig, setFollowupConfig] = useState<FollowupTimingConfig>(DEFAULT_FOLLOWUP_CONFIG);
+  // Approved WhatsApp templates fetched from Meta — used to populate the
+  // template-picker dropdown for each follow-up stage + booking reminder.
+  const [approvedTemplates, setApprovedTemplates] = useState<WhatsAppApprovedTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [savingFollowup, setSavingFollowup] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -332,6 +398,10 @@ export function ChatSettings() {
   // Track which asset row is expanded for editing (others render as compact row).
   // Newly-added (unsaved) assets are auto-expanded; saved ones collapse by default.
   const [expandedAssetIdx, setExpandedAssetIdx] = useState<number | null>(null);
+  // Per-row in-progress draft for the trigger-keywords text input.
+  // Without this the input filtered/dedupes mid-keystroke and the cursor
+  // jumped backwards as soon as the user typed a comma + space.
+  const [triggerInputDrafts, setTriggerInputDrafts] = useState<Record<number, string>>({});
 
   // AI Playground panel — testers can validate prompt + KB + assets without leaving the page
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -377,14 +447,16 @@ export function ChatSettings() {
 
   // Load data on mount
   useEffect(() => {
+    setLoadingTemplates(true);
     Promise.all([
       fetchPrompts(),
       fetchChatSettings(),
       fetchFollowupConfig(),
       fetch('/api/social-integration/linkedin/automation-settings').then((r) => r.json()).catch(() => null),
       fetchShareableAssets(),
+      fetchApprovedTemplates(),
     ])
-      .then(([p, s, f, liSettings, assets]) => {
+      .then(([p, s, f, liSettings, assets, tmpl]) => {
         setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
@@ -396,8 +468,10 @@ export function ChatSettings() {
         }
         setShareableAssets(Array.isArray(assets) ? assets : []);
         setLoadingAssets(false);
+        setApprovedTemplates(Array.isArray(tmpl) ? tmpl : []);
+        setLoadingTemplates(false);
       })
-      .catch(() => { setLoadingAssets(false); })
+      .catch(() => { setLoadingAssets(false); setLoadingTemplates(false); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -715,7 +789,11 @@ export function ChatSettings() {
   }, [webChatInput, webChatBusy, webChatMessages]);
 
   const updateStage = useCallback(
-    (stage: keyof FollowupTimingConfig['stages'], field: 'enabled' | 'delay_hours', value: boolean | number) => {
+    (
+      stage: keyof FollowupTimingConfig['stages'],
+      field: 'enabled' | 'delay_hours' | 'template_name',
+      value: boolean | number | string,
+    ) => {
       setFollowupConfig((prev) => ({
         ...prev,
         stages: {
@@ -1137,20 +1215,48 @@ export function ChatSettings() {
                       <input
                         type="text"
                         placeholder="price list, pricing, rates, cost per session"
-                        value={(asset.trigger_keywords || []).join(', ')}
+                        // Show the raw in-progress text when editing, fall back
+                        // to the joined array otherwise.  Without this, every
+                        // keystroke ran .split(',').filter(Boolean) → typing
+                        // "price list," and a space would drop the trailing
+                        // empty token mid-edit, kicking the cursor backwards
+                        // and making it impossible to add more keywords.
+                        value={
+                          triggerInputDrafts[idx] !== undefined
+                            ? triggerInputDrafts[idx]
+                            : (asset.trigger_keywords || []).join(', ')
+                        }
                         onChange={(e) =>
-                          updateShareableAsset(idx, {
-                            trigger_keywords: e.target.value
+                          // Hold the raw text in a per-row draft state — do NOT
+                          // split/filter on each keystroke (was the bug).
+                          setTriggerInputDrafts((prev) => ({
+                            ...prev,
+                            [idx]: e.target.value,
+                          }))
+                        }
+                        onBlur={(e) => {
+                          // Commit on blur: split + trim + dedupe + drop empties
+                          const parsed = Array.from(new Set(
+                            e.target.value
                               .split(',')
                               .map((s) => s.trim())
-                              .filter(Boolean),
-                          })
-                        }
+                              .filter(Boolean)
+                          ));
+                          updateShareableAsset(idx, { trigger_keywords: parsed });
+                          // Clear the draft so the value field reflects the
+                          // canonical joined-array view (with our normalised spacing)
+                          setTriggerInputDrafts((prev) => {
+                            const next = { ...prev };
+                            delete next[idx];
+                            return next;
+                          });
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Comma-separated. The file is sent when ANY keyword appears in
-                        the AI's reply (case-insensitive).
+                        the AI's reply (matches plurals + variants — e.g. "pricelist"
+                        also matches "prices", "pricing", "price list").
                       </p>
                     </div>
                   </div>
@@ -1701,7 +1807,8 @@ export function ChatSettings() {
                 <tr>
                   <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-32">Stage</th>
                   <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">Description</th>
-                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-40">Delay (hours)</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-32">Delay (hrs)</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-56">WhatsApp Template</th>
                   <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-20">Enabled</th>
                 </tr>
               </thead>
@@ -1715,6 +1822,9 @@ export function ChatSettings() {
                   ] as Array<{ key: keyof FollowupTimingConfig['stages']; label: string; desc: string; color: string }>
                 ).map(({ key, label, desc, color }) => {
                   const stage = followupConfig.stages[key];
+                  // Past 24h, free text is blocked by Meta — flag stages that need a template
+                  const needsTemplate = stage.delay_hours > 24;
+                  const templateMissing = needsTemplate && !(stage.template_name || '').trim();
                   return (
                     <tr key={key} className={!followupConfig.enabled ? 'opacity-50' : ''}>
                       <td className="px-4 py-3">
@@ -1738,6 +1848,39 @@ export function ChatSettings() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
+                        <select
+                          value={stage.template_name || ''}
+                          disabled={!followupConfig.enabled || !stage.enabled || loadingTemplates}
+                          onChange={(e) => updateStage(key, 'template_name', e.target.value)}
+                          className={`w-full px-2 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-40 disabled:bg-gray-50 ${
+                            templateMissing ? 'border-red-300' : 'border-gray-200'
+                          }`}
+                          title={
+                            needsTemplate
+                              ? 'Required: Meta blocks free-text replies after 24 h'
+                              : 'Optional: leave blank to use AI-generated reply within 24 h window'
+                          }
+                        >
+                          <option value="">
+                            {loadingTemplates
+                              ? 'Loading templates…'
+                              : needsTemplate
+                                ? '— Pick a template (required) —'
+                                : '— AI-generated (within 24 h) —'}
+                          </option>
+                          {approvedTemplates.map((t) => (
+                            <option key={t.name} value={t.name}>
+                              {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {templateMissing && (
+                          <p className="text-[10px] text-red-600 mt-1">
+                            Required — delays past 24 h need an approved template
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         <button
                           disabled={!followupConfig.enabled}
                           onClick={() => updateStage(key, 'enabled', !stage.enabled)}
@@ -1754,32 +1897,133 @@ export function ChatSettings() {
                 })}
               </tbody>
             </table>
+            {!loadingTemplates && approvedTemplates.length === 0 && (
+              <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-[11px] text-amber-700">
+                No approved WhatsApp templates found.  Add and approve templates in your Meta Business Manager — without a template, follow-ups past 24 h will fail to send.
+              </div>
+            )}
           </div>
 
-          {/* Meeting reminder delay */}
-          <div>
-            <label className="block text-sm font-medium text-gray-800 mb-1">
-              Meeting Reminder Delay (hours)
-            </label>
-            <p className="text-xs text-gray-500 mb-2">
-              How many hours after a 1-2-1 meeting is confirmed to send reminders to both parties
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                max={72}
-                value={followupConfig.meeting_reminder_delay_hours}
-                onChange={(e) =>
-                  setFollowupConfig((prev) => ({
-                    ...prev,
-                    meeting_reminder_delay_hours: parseInt(e.target.value) || 24,
-                  }))
-                }
-                className="w-24 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-              />
-              <span className="text-sm text-gray-500">hours before the meeting time</span>
+          {/* Booking reminders — list of N pre-booking nudges */}
+          <div className="border border-gray-100 rounded-lg p-4 bg-gray-50/40 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                Booking Reminders
+              </label>
+              <p className="text-xs text-gray-500">
+                Sent to the customer BEFORE their booking start time so they don't miss the session.
+                Add as many reminders as you need (e.g. a 24h heads-up + a 3h nudge).
+              </p>
             </div>
+            <div className="space-y-2">
+              {followupConfig.booking_reminders.map((reminder, idx) => (
+                <div
+                  key={idx}
+                  className="flex flex-wrap items-end gap-2 p-3 bg-white rounded-md border border-gray-200"
+                >
+                  <div className="flex flex-col min-w-[140px]">
+                    <label className="text-[11px] font-medium text-gray-600 mb-1">
+                      Reminder #{idx + 1}
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        max={168}
+                        value={reminder.delay_hours}
+                        onChange={(e) =>
+                          setFollowupConfig((prev) => ({
+                            ...prev,
+                            booking_reminders: prev.booking_reminders.map((r, i) =>
+                              i === idx ? { ...r, delay_hours: parseInt(e.target.value) || 1 } : r
+                            ),
+                          }))
+                        }
+                        className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                      />
+                      <span className="text-xs text-gray-500">h before</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-[11px] font-medium text-gray-600 mb-1 block">
+                      WhatsApp Template
+                    </label>
+                    <select
+                      value={reminder.template_name || ''}
+                      disabled={loadingTemplates}
+                      onChange={(e) =>
+                        setFollowupConfig((prev) => ({
+                          ...prev,
+                          booking_reminders: prev.booking_reminders.map((r, i) =>
+                            i === idx ? { ...r, template_name: e.target.value } : r
+                          ),
+                        }))
+                      }
+                      className={`w-full px-2 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 ${
+                        !reminder.template_name ? 'border-red-300' : 'border-gray-200'
+                      }`}
+                    >
+                      <option value="">
+                        {loadingTemplates
+                          ? 'Loading templates…'
+                          : '— Pick a template (required) —'}
+                      </option>
+                      {approvedTemplates.map((t) => (
+                        <option key={t.name} value={t.name}>
+                          {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFollowupConfig((prev) => ({
+                        ...prev,
+                        booking_reminders: prev.booking_reminders.filter((_, i) => i !== idx),
+                      }))
+                    }
+                    disabled={followupConfig.booking_reminders.length <= 1}
+                    title={
+                      followupConfig.booking_reminders.length <= 1
+                        ? 'At least one reminder is required'
+                        : 'Remove this reminder'
+                    }
+                    className="px-2 py-1.5 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFollowupConfig((prev) => ({
+                  ...prev,
+                  booking_reminders: [
+                    ...prev.booking_reminders,
+                    // New entries default to 1h before so the user is forced to
+                    // choose a meaningful delay before saving.
+                    { delay_hours: 1, template_name: '' },
+                  ],
+                }))
+              }
+              disabled={followupConfig.booking_reminders.length >= 10}
+              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="text-lg leading-none">＋</span> Add another reminder
+            </button>
+
+            <p className="text-xs text-gray-500">
+              All reminders need an APPROVED WhatsApp template — Meta blocks free-text replies outside the 24-hour conversation window.
+              {followupConfig.booking_reminders.length >= 10 && (
+                <span className="block mt-1 text-amber-600">Maximum 10 reminders per booking.</span>
+              )}
+            </p>
           </div>
 
           {/* Reliability indicator */}
