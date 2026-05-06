@@ -23,8 +23,18 @@ function getBackendUrl(): string {
 
 function forwardHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  // Bearer token (set explicitly by some callers)
   const auth = req.headers.get('Authorization') || req.headers.get('authorization');
   if (auth) headers['Authorization'] = auth;
+
+  // Cookie-based auth (used by EmailTemplateEditor and other server-side callers
+  // that use credentials:'include' instead of explicit Bearer tokens).
+  // The backend's jwtAuth middleware accepts the token from either the
+  // Authorization header OR a cookie named 'token'.
+  const cookie = req.headers.get('cookie');
+  if (cookie) headers['cookie'] = cookie;
+
   const tenant = req.headers.get('X-Tenant-ID');
   if (tenant) headers['X-Tenant-ID'] = tenant;
   return headers;

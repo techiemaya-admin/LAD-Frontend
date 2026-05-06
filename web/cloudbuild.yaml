@@ -23,9 +23,15 @@ steps:
         echo "=== End Debug ==="
 
   # Build the Docker image with buildkit for better caching
+  # --no-cache: forces npm run build to re-run on every deploy so any
+  # NEXT_PUBLIC_* changes are actually baked into the client bundle.
+  # Without this, Docker reuses the prior `npm run build` layer and ships
+  # stale env values (e.g. empty NEXT_PUBLIC_PLAYGROUND_WORKER_URL → the
+  # "Voice Playground not available" error in Settings → Knowledge Base).
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
+      '--no-cache',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$COMMIT_SHA',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$SHORT_SHA',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend:$BRANCH_NAME',
