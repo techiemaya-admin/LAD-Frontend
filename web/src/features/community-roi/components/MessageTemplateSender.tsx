@@ -464,9 +464,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           )}
 
           <div className="flex gap-3 justify-end">
-            <button onClick={onClose} className="px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition">
-              Cancel
-            </button>
+
             <button
               onClick={() => {
                 if (!selectedTemplate) return;

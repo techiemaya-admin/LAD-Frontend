@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server } from 'lucide-react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
-import { CustomEmailIntegration } from './CustomEmailIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
@@ -86,14 +85,6 @@ const INTEGRATIONS: IntegrationCard[] = [
       </svg>
     ),
     iconBg: 'bg-blue-50',
-    category: 'Email & Calendar',
-  },
-  {
-    id: 'custom-email',
-    name: 'Custom Email (SMTP)',
-    description: 'Connect Roundcube, cPanel mail, Zoho, Yandex, Fastmail, or any self-hosted webmail.',
-    icon: <Server className="h-6 w-6 text-emerald-600" />,
-    iconBg: 'bg-emerald-50',
     category: 'Email & Calendar',
   },
   {
@@ -376,17 +367,6 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('microsoft', 'disconnected'); }
     };
 
-    // Custom SMTP — checks whether a self-hosted webmail account is connected
-    const checkCustomEmail = async () => {
-      setStatus('custom-email', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/email/custom/status', { method: 'POST' });
-        if (!res.ok) { setStatus('custom-email', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('custom-email', data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('custom-email', 'disconnected'); }
-    };
-
     // LinkedIn
     const checkLinkedIn = async () => {
       setStatus('linkedin', 'loading');
@@ -436,7 +416,6 @@ export const IntegrationsSettings: React.FC = () => {
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
-    checkCustomEmail();
     checkLinkedIn();
     checkGHL();
     checkMindBody();
@@ -590,13 +569,6 @@ export const IntegrationsSettings: React.FC = () => {
         )}
         {activeView === 'google' && <GoogleAuthIntegration />}
         {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
-        {activeView === 'custom-email' && (
-          <CustomEmailIntegration
-            onStatusChange={(connected) =>
-              setStatus('custom-email', connected ? 'connected' : 'disconnected')
-            }
-          />
-        )}
         {activeView === 'linkedin' && <LinkedInIntegration />}
         {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
         {activeView === 'slack' && (
@@ -686,7 +658,7 @@ export const IntegrationsSettings: React.FC = () => {
                         }}
                         className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        ✕ Cancel
+                        <span className="text-lg leading-none">✕</span>
                       </button>
                     </div>
 
@@ -1131,19 +1103,9 @@ export const IntegrationsSettings: React.FC = () => {
                 <button
                   type="submit"
                   disabled={mindBodyConnecting}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {mindBodyConnecting ? 'Connecting...' : 'Connect'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMindBodyModal(false);
-                    mindBodyFormReset();
-                  }}
-                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
-                >
-                  Cancel
                 </button>
               </div>
             </form>

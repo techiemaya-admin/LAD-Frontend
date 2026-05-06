@@ -3,13 +3,13 @@ import { DndContext, closestCorners, DragOverlay, useSensor, useSensors, Pointer
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import { Target, Phone, UserPlus, Goal } from 'lucide-react';
+import { Target, Phone, UserPlus, Goal, Calendar } from 'lucide-react';
 import type { AppDispatch } from '@/store/store';
 import { store } from '@/store/store';
 import { getPipelinePreferences, savePipelinePreferences, autoSavePipelinePreferences } from '@/services/userService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogActions } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Lead } from '@/features/deals-pipeline/types';
 import { logger } from '@/lib/logger';
@@ -1656,43 +1656,52 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
       />
       {/* Custom Export Date Range Dialog */}
       <Dialog open={customExportDialogOpen} onOpenChange={setCustomExportDialogOpen}>
-        <DialogContent className="max-w-md mx-auto p-6 bg-[#f8fafc] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Select Date Range</DialogTitle>
-          <div className="flex gap-4 mb-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-              <Input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="w-full"
-              />
+        <DialogContent className="p-0 overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+                <Calendar className="h-5 w-5 stroke-[2.5px]" />
+              </div>
+              <DialogTitle>Select Date Range</DialogTitle>
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
-              <Input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="w-full"
-              />
+          </DialogHeader>
+
+          <div className="px-8 py-6 space-y-4">
+            <div className="flex gap-6">
+              <div className="flex-1 space-y-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Start Date</label>
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="h-11 rounded-xl border-gray-100 bg-gray-50/50"
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">End Date</label>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="h-11 rounded-xl border-gray-100 bg-gray-50/50"
+                />
+              </div>
             </div>
+
+            {(() => {
+              const isValid = !customStartDate || !customEndDate || new Date(customEndDate) >= new Date(customStartDate);
+              if (!isValid) {
+                return (
+                  <div className="text-xs font-semibold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
+                    End date must be on or after start date
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
-          {(() => {
-            const isValid = !customStartDate || !customEndDate || new Date(customEndDate) >= new Date(customStartDate);
-            if (!isValid) {
-              return (
-                <div className="text-sm text-red-600 mb-4">
-                  End date must be on or after start date
-                </div>
-              );
-            }
-            return null;
-          })()}
-          <div className="flex justify-end gap-3 mt-2">
-            <Button variant="outline" onClick={() => setCustomExportDialogOpen(false)}>
-              Cancel
-            </Button>
+
+          <DialogActions>
             <Button
               onClick={handleCustomExport}
               disabled={
@@ -1700,10 +1709,11 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
                 !customEndDate ||
                 new Date(customEndDate) < new Date(customStartDate)
               }
+              className="rounded-xl px-8 py-2.5 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all disabled:opacity-50"
             >
-              Export
+              Export Leads
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
     </div>

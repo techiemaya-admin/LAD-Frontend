@@ -487,20 +487,14 @@ export function TenantOnboarding() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-5">
+          <div className="pt-2">
             <button
               onClick={handleCreate}
               disabled={creating || !form.display_name.trim() || !form.slug.trim() || !form.database_url.trim()}
-              className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Create Account
-            </button>
-            <button
-              onClick={() => { setShowForm(false); setForm({ ...INITIAL_FORM }); }}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
-            >
-              Cancel
             </button>
           </div>
         </div>

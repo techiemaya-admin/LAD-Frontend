@@ -497,7 +497,7 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
         <AnimatePresence mode="wait">
           {open && (
             <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="fixed inset-0 z-50">
-              <DialogContent showCloseButton={false} className="sm:max-w-xl overflow-hidden p-0 gap-0 border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <DialogContent showCloseButton={false} className="overflow-hidden p-0 gap-0 border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <AnimatePresence mode="wait">
                   {step === "create" ? (
                     <motion.div key="create" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full">
@@ -511,9 +511,10 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                           type="button"
                           aria-label="Close"
                           onClick={requestClose}
-                          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/40"
+                          className="absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 z-50 border-0 bg-transparent p-0 focus:outline-none"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-6 w-6" />
+                          <span className="sr-only">Close</span>
                         </button>
                         <motion.h2 className="text-center text-2xl font-semibold" initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15, duration: 0.4 }}>
                           Add Phone Number
@@ -618,9 +619,10 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                           type="button"
                           aria-label="Close"
                           onClick={requestClose}
-                          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/40"
+                          className="absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 z-50 border-0 bg-transparent p-0 focus:outline-none"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-6 w-6" />
+                          <span className="sr-only">Close</span>
                         </button>
                         <motion.h2 className="text-center text-2xl font-semibold" initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15, duration: 0.4 }}>
                           Assign Agent
@@ -686,7 +688,7 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
         <AnimatePresence>
           {confirmType && (
             <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="fixed inset-0 z-50">
-              <DialogContent className="sm:max-w-md overflow-hidden p-0 gap-0 border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <DialogContent className="overflow-hidden p-0 gap-0 border-none shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <div className="px-6 py-6 space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">

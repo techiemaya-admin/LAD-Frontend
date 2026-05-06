@@ -1,6 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff, X } from 'lucide-react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { apiGet, apiPost } from '@/lib/api';
 import { safeStorage } from '@lad/shared/storage';  
@@ -799,386 +801,348 @@ export const LinkedInIntegration: React.FC = () => {
         </div>
       </div>
       {/* Connection Modal */}
-      {showConnectionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="border-b border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded">
-                  {/* Official LinkedIn Icon */}
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </div>
-                <h2 className="text-xl font-semibold text-gray-900">Sign in to LinkedIn</h2>
-              </div>
-            </div>
-            {/* Content */}
-            <div className="p-6">
-              {/* Choose Method */}
-              <div className="mb-6">
-                <h3 className="text-center text-2xl font-semibold text-gray-700 mb-4">Choose a method</h3>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setAuthMethod('credentials')}
-                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      authMethod === 'credentials'
-                        ? 'bg-gray-100 text-gray-900 border-2 border-gray-300'
-                        : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
-                    Credentials
-                  </button>
-                  <button
-                    onClick={() => setAuthMethod('cookies')}
-                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      authMethod === 'cookies'
-                        ? 'bg-white text-gray-900 border-2 border-gray-300'
-                        : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
-                    Cookies
-                  </button>
-                </div>
-              </div>
-              {/* Credentials Form */}
-              {authMethod === 'credentials' && (
-                <div className="space-y-4">
-                  <div>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* Cookies Form */}
-              {authMethod === 'cookies' && (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-700 mb-1">
-                      Copy your LinkedIn cookies.{' '}
-                      <button
-                        onClick={() => setShowCookieHelp(!showCookieHelp)}
-                        className="text-blue-600 hover:text-blue-700 underline"
-                      >
-                        How to find them?
-                      </button>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Your cookies need to be collected in the same browser as this page.
-                    </p>
-                  </div>
-                  {showCookieHelp && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold text-gray-900 mb-3">How to find my cookies?</h4>
-                      <div className="text-sm text-gray-700 space-y-2">
-                        <p className="font-medium">Follow the steps to find your linkedin cookies (not available on mobile)</p>
-                        <ol className="list-decimal list-inside space-y-1 ml-2">
-                          <li>Open linkedin in a new tab (or click here: <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">linkedin</a>).</li>
-                          <li>Log in to your account.</li>
-                          <li>Open your browser&apos;s developer console (F12 for Chrome and Firefox, option + command + I for Safari) then go to the &quot;application&quot; or &quot;storage&quot; tab.</li>
-                          <li>Open the cookies folder and click on the one called &quot;https://www.linkedin.com&quot;.</li>
-                          <li>Copy the values for &quot;li_at&quot; into the field below, then click on the connect button</li>
-                        </ol>
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Enter your li_at value"
-                      value={liAtCookie}
-                      onChange={(e) => setLiAtCookie(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-gray-700 mb-2">
-                      If your account has Recruiter or Sales Navigator subscription, copy the li_a too.
-                    </p>
-                    <input
-                      type="text"
-                      placeholder="Enter your li_a value (optional)"
-                      value={liACookie}
-                      onChange={(e) => setLiACookie(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              )}
-              {/* Optional Settings */}
-              <div className="mt-6">
-                <button
-                  onClick={() => setShowOptionalSettings(!showOptionalSettings)}
-                  className="flex items-center text-gray-700 hover:text-gray-900 font-medium"
-                >
-                  {showOptionalSettings ? (
-                    <ChevronUp className="h-5 w-5 mr-1" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 mr-1" />
-                  )}
-                  Optional settings
-                </button>
-                {showOptionalSettings && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600">
-                      Additional configuration options will be available here for advanced users.
-                    </p>
-                  </div>
-                )}
-              </div>
-              {/* Error Message */}
-              {connectionError && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-red-800">Connection Failed</p>
-                      <p className="text-sm text-red-700 mt-1">{connectionError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Success Message */}
-              {connectionSuccess && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-start">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-800">Connection Successful!</p>
-                      <p className="text-sm text-green-700 mt-1">Your LinkedIn account has been connected successfully.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-8">
-                <button
-                  onClick={() => {
-                    setShowConnectionModal(false);
-                    setEmail('');
-                    setPassword('');
-                    setLiAtCookie('');
-                    setLiACookie('');
-                    setConnectionError(null);
-                    setConnectionSuccess(false);
-                  }}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConnect}
-                  disabled={connecting || (authMethod === 'credentials' ? !email || !password : !liAtCookie)}
-                  className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
-                    connectionSuccess
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : connectionError
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-slate-800 text-white hover:bg-slate-900 disabled:bg-gray-300 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  {connecting ? (
-                    <span className="flex items-center justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Connecting...
-                    </span>
-                  ) : connectionSuccess ? (
-                    <span className="flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Connected!
-                    </span>
-                  ) : connectionError ? (
-                    'Retry'
-                  ) : (
-                    'Login'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Checkpoint Verification Modal (OTP or Yes/No) — LinkedIn-style UI */}
-      {showOtpModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
-
-            {/* ── Header ── */}
-            <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
-              <div className="flex justify-center mb-4">
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="#0A66C2">
+      <Dialog open={showConnectionModal} onOpenChange={setShowConnectionModal}>
+        <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0">
+          <DialogHeader>
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-100 p-2 rounded">
+                {/* Official LinkedIn Icon */}
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
-                {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {currentCheckpointAccount?.checkpoint?.is_yes_no
-                  ? 'Approve the sign-in request on your mobile device'
-                  : 'We sent a code to complete your sign-in'}
-              </p>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Sign in to LinkedIn</DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="px-8 py-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Choose Method */}
+            <div className="mb-6">
+              <h3 className="text-center text-2xl font-semibold text-gray-700 mb-4">Choose a method</h3>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setAuthMethod('credentials')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    authMethod === 'credentials'
+                      ? 'bg-gray-100 text-gray-900 border-2 border-gray-300'
+                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  Credentials
+                </button>
+                <button
+                  onClick={() => setAuthMethod('cookies')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    authMethod === 'cookies'
+                      ? 'bg-white text-gray-900 border-2 border-gray-300'
+                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  Cookies
+                </button>
+              </div>
             </div>
 
-            {/* ── Body ── */}
-            <div className="px-8 py-6">
-              {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
-                <div className="space-y-5">
+            {/* Credentials Form */}
+            {authMethod === 'credentials' && (
+              <div className="space-y-4">
+                <div>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
-                  {/* Phone icon + prompt */}
-                  <div className="flex flex-col items-center text-center gap-3">
-                    <div className="w-14 h-14 rounded-full bg-[#EEF3FB] flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#0A66C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 20.25h3" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      We sent a notification to the <span className="font-semibold text-gray-800">LinkedIn app</span> on your phone.
-                      Tap <span className="font-bold text-[#057642]">Yes</span> to approve this sign-in.
-                    </p>
-                  </div>
-
-                  {/* Steps */}
-                  <ol className="space-y-3">
-                    {[
-                      'Open the LinkedIn app on your phone',
-                      'Find the sign-in approval notification',
-                      <>Tap <strong className="text-[#057642]">Yes</strong> to approve this login</>,
-                    ].map((step, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#0A66C2] text-white text-xs font-semibold flex items-center justify-center mt-0.5">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm text-gray-700">{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-
-                  {/* Waiting status */}
-                  {yesNoPolling && !autoResolving && (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] rounded-lg">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] flex-shrink-0" />
-                      <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval…</p>
-                    </div>
-                  )}
-
-                  {/* Approved status */}
-                  {autoResolving && (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] rounded-lg">
-                      <CheckCircle2 className="h-4 w-4 text-[#057642] flex-shrink-0" />
-                      <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account…</p>
-                    </div>
-                  )}
-
-                  {/* Hint */}
-                  <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
+            {/* Cookies Form */}
+            {authMethod === 'cookies' && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-gray-700 mb-1">
+                    Copy your LinkedIn cookies.{' '}
+                    <button
+                      onClick={() => setShowCookieHelp(!showCookieHelp)}
+                      className="text-blue-600 hover:text-blue-700 underline"
+                    >
+                      How to find them?
+                    </button>
+                  </p>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Your cookies need to be collected in the same browser as this page.
                   </p>
                 </div>
-              ) : (
-                /* ── OTP Checkpoint ── */
+                {showCookieHelp && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">How to find my cookies?</h4>
+                    <div className="text-sm text-gray-700 space-y-2">
+                      <p className="font-medium">Follow the steps to find your linkedin cookies (not available on mobile)</p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Open linkedin in a new tab (or click here: <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">linkedin</a>).</li>
+                        <li>Log in to your account.</li>
+                        <li>Open your browser&apos;s developer console (F12 for Chrome and Firefox, option + command + I for Safari) then go to the &quot;application&quot; or &quot;storage&quot; tab.</li>
+                        <li>Open the cookies folder and click on the one called &quot;https://www.linkedin.com&quot;.</li>
+                        <li>Copy the values for &quot;li_at&quot; into the field below, then click on the connect button</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {currentCheckpointAccount?.checkpoint?.message || 'Enter the verification code sent to your email or phone.'}
+                  <input
+                    type="text"
+                    placeholder="Enter your li_at value"
+                    value={liAtCookie}
+                    onChange={(e) => setLiAtCookie(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <p className="text-gray-700 mb-2">
+                    If your account has Recruiter or Sales Navigator subscription, copy the li_a too.
                   </p>
                   <input
                     type="text"
-                    placeholder="_ _ _ _ _ _"
-                    value={otp}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                      setOtp(value);
-                      setOtpError(null);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono"
-                    maxLength={6}
-                    autoFocus
+                    placeholder="Enter your li_a value (optional)"
+                    value={liACookie}
+                    onChange={(e) => setLiACookie(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    Enter the 6-digit code sent to your email or phone
+                </div>
+              </div>
+            )}
+
+            {/* Optional Settings */}
+            <div className="mt-6">
+              <button
+                onClick={() => setShowOptionalSettings(!showOptionalSettings)}
+                className="flex items-center text-gray-700 hover:text-gray-900 font-medium"
+              >
+                {showOptionalSettings ? (
+                  <ChevronUp className="h-5 w-5 mr-1" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 mr-1" />
+                )}
+                Optional settings
+              </button>
+              {showOptionalSettings && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    Additional configuration options will be available here for advanced users.
                   </p>
                 </div>
               )}
+            </div>
 
-              {/* Error */}
-              {otpError && (
-                <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-700">{otpError}</p>
+            {/* Error Message */}
+            {connectionError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800">Connection Failed</p>
+                    <p className="text-sm text-red-700 mt-1">{connectionError}</p>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* ── Footer ── */}
-            <div className="px-8 pb-7 space-y-2">
-              {/* Verify button — OTP only */}
-              {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
-                <button
-                  onClick={handleVerifyOtp}
-                  disabled={verifyingOtp || otp.length !== 6}
-                  className={`w-full py-3 rounded-full text-sm font-semibold transition-colors ${
-                    verifyingOtp || otp.length !== 6
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#0A66C2] text-white hover:bg-[#004182]'
-                  }`}
-                >
-                  {verifyingOtp ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Verifying…
-                    </span>
-                  ) : 'Continue'}
-                </button>
-              )}
-
-              {/* Cancel */}
-              <button
-                onClick={() => {
-                  setShowOtpModal(false);
-                  setOtp('');
-                  setOtpError(null);
-                  setShowConnectionModal(false);
-                  if (currentCheckpointAccount?.checkpoint?.is_yes_no && yesNoPolling) {
-                    clearInterval(yesNoPolling);
-                    setYesNoPolling(null);
-                  }
-                }}
-                className="w-full py-3 rounded-full text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-
+            {/* Success Message */}
+            {connectionSuccess && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800">Connection Successful!</p>
+                    <p className="text-sm text-green-700 mt-1">Your LinkedIn account has been connected successfully.</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+
+          <DialogActions>
+            <Button
+              onClick={handleConnect}
+              disabled={connecting || (authMethod === 'credentials' ? !email || !password : !liAtCookie)}
+              className={`px-8 h-11 rounded-full font-semibold transition-colors ${
+                connectionSuccess
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : connectionError
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-[#0B1957] hover:bg-[#0B1957]/90 text-white'
+              }`}
+            >
+              {connecting ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Connecting...
+                </span>
+              ) : connectionSuccess ? (
+                <span className="flex items-center justify-center">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Connected!
+                </span>
+              ) : connectionError ? (
+                'Retry'
+              ) : (
+                'Login'
+              )}
+            </Button>
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
+      {/* Checkpoint Verification Modal (OTP or Yes/No) — LinkedIn-style UI */}
+      <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
+        <DialogContent className="max-w-sm p-0">
+          <DialogHeader className="text-center justify-center pt-8">
+            <div className="flex justify-center mb-4">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="#0A66C2">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </div>
+            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">
+              {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
+            </DialogTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              {currentCheckpointAccount?.checkpoint?.is_yes_no
+                ? 'Approve the sign-in request on your mobile device'
+                : 'We sent a code to complete your sign-in'}
+            </p>
+          </DialogHeader>
+
+          <div className="px-8 py-6">
+            {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
+              <div className="space-y-5">
+                {/* Phone icon + prompt */}
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="w-14 h-14 rounded-full bg-[#EEF3FB] flex items-center justify-center">
+                    <svg className="w-7 h-7 text-[#0A66C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 20.25h3" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    We sent a notification to the <span className="font-semibold text-gray-800">LinkedIn app</span> on your phone.
+                    Tap <span className="font-bold text-[#057642]">Yes</span> to approve this sign-in.
+                  </p>
+                </div>
+
+                {/* Steps */}
+                <ol className="space-y-3">
+                  {[
+                    'Open the LinkedIn app on your phone',
+                    'Find the sign-in approval notification',
+                    <>Tap <strong className="text-[#057642]">Yes</strong> to approve this login</>,
+                  ].map((step, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#0A66C2] text-white text-xs font-semibold flex items-center justify-center mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-gray-700">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                {/* Waiting status */}
+                {yesNoPolling && !autoResolving && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] flex-shrink-0" />
+                    <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval…</p>
+                  </div>
+                )}
+
+                {/* Approved status */}
+                {autoResolving && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-[#057642] flex-shrink-0" />
+                    <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account…</p>
+                  </div>
+                )}
+
+                {/* Hint */}
+                <p className="text-xs text-gray-400 text-center leading-relaxed">
+                  Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
+                </p>
+              </div>
+            ) : (
+              /* ── OTP Checkpoint ── */
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  {currentCheckpointAccount?.checkpoint?.message || 'Enter the verification code sent to your email or phone.'}
+                </p>
+                <input
+                  type="text"
+                  placeholder="_ _ _ _ _ _"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setOtp(value);
+                    setOtpError(null);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono"
+                  maxLength={6}
+                  autoFocus
+                />
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Enter the 6-digit code sent to your email or phone
+                </p>
+              </div>
+            )}
+
+            {/* Error */}
+            {otpError && (
+              <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">{otpError}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogActions className="px-8 pb-7">
+            {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
+              <Button
+                onClick={handleVerifyOtp}
+                disabled={verifyingOtp || otp.length !== 6}
+                className={`w-full py-3 rounded-full text-sm font-semibold transition-colors ${
+                  verifyingOtp || otp.length !== 6
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#0A66C2] text-white hover:bg-[#004182]'
+                }`}
+              >
+                {verifyingOtp ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verifying…
+                  </span>
+                ) : 'Continue'}
+              </Button>
+            )}
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
