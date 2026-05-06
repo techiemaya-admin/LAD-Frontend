@@ -19,7 +19,7 @@ export default function PipelinePage(): JSX.Element {
   const [stage, setStage] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(100);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 

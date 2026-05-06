@@ -978,25 +978,11 @@ export const LinkedInIntegration: React.FC = () => {
                 </div>
               )}
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-8">
-                <button
-                  onClick={() => {
-                    setShowConnectionModal(false);
-                    setEmail('');
-                    setPassword('');
-                    setLiAtCookie('');
-                    setLiACookie('');
-                    setConnectionError(null);
-                    setConnectionSuccess(false);
-                  }}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
+              <div className="mt-8">
                 <button
                   onClick={handleConnect}
                   disabled={connecting || (authMethod === 'credentials' ? !email || !password : !liAtCookie)}
-                  className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
                     connectionSuccess
                       ? 'bg-green-600 text-white hover:bg-green-700'
                       : connectionError
@@ -1158,22 +1144,7 @@ export const LinkedInIntegration: React.FC = () => {
                 </button>
               )}
 
-              {/* Cancel */}
-              <button
-                onClick={() => {
-                  setShowOtpModal(false);
-                  setOtp('');
-                  setOtpError(null);
-                  setShowConnectionModal(false);
-                  if (currentCheckpointAccount?.checkpoint?.is_yes_no && yesNoPolling) {
-                    clearInterval(yesNoPolling);
-                    setYesNoPolling(null);
-                  }
-                }}
-                className="w-full py-3 rounded-full text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
+              {/* Continue button or OTP info only */}
             </div>
 
           </div>

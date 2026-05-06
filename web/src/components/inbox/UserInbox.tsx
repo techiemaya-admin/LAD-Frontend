@@ -267,7 +267,7 @@ export const UserInbox = memo(function UserInbox() {
             }
           }}
         >
-          <AlertDialogContent className="max-w-md">
+          <AlertDialogContent>
             <AlertDialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               {selectedMessage.contact_name}
