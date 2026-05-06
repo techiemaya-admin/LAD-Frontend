@@ -579,7 +579,7 @@ export default function CampaignAnalyticsPage() {
         <LiveActivityTable
           campaignId={campaignId}
           maxHeight={500}
-          pageSize={50}
+          pageSize={20}
           campaignSteps={analytics?.step_analytics}
         />
       </div>

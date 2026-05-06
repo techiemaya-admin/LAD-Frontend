@@ -910,9 +910,7 @@ export const WhatsAppIntegration: React.FC = () => {
             This means the AI will not respond to messages from your saved contacts. A human agent must handle those conversations manually.
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancel
-            </Button>
+
             <Button onClick={confirmAutoAssign} disabled={autoAssignSaving}>
               {autoAssignSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
               Yes, enable auto-assign
@@ -950,9 +948,7 @@ export const WhatsAppIntegration: React.FC = () => {
               : 'Assigned team members will receive a copy of incoming messages on their own WhatsApp so they can reply directly.'}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowBulkAssignDialog(false)} disabled={bulkAssigning}>
-              Cancel
-            </Button>
+
             <Button
               onClick={handleBulkAssign}
               disabled={bulkAssigning}

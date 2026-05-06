@@ -7,12 +7,37 @@ import {
   CheckCircle,
   XCircle,
   ChevronDown,
-  Eye, EyeOff 
+  Eye, EyeOff,
+  X,
+  Phone,
+  Mail,
+  User,
+  Shield,
+  Eye as EyeIcon
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogActions,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 import { safeStorage } from '@lad/shared/storage';  
 import { TeamManagementSkeleton } from '../skeletons';
 import { getApiBaseUrl } from '@/lib/api-utils';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
 interface User {
   id: string;
   name: string;
@@ -26,6 +51,7 @@ interface User {
   maskPhoneNumber?: boolean;
   metadata?: { mask_phone_number?: boolean; [key: string]: unknown };
 }
+
 const PAGE_CAPABILITIES = [
   { key: 'view_overview', label: 'View Overview' },
   { key: 'view_conversations', label: 'View Conversations' },
@@ -38,20 +64,20 @@ const PAGE_CAPABILITIES = [
   { key: 'view_pricing', label: 'View Pricing' },
   { key: 'view_settings', label: 'View Settings' },
 ];
-// Valid tenant_role enum values in database: owner, admin, member, viewer
+
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
   { value: 'member', label: 'Manager / Sales Rep' },
   { value: 'viewer', label: 'Viewer' },
 ];
 
-// Maps UI labels back to valid DB enum values (for display)
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
   admin: 'Admin',
   member: 'Member',
   viewer: 'Viewer',
 };
+
 export const TeamManagement: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -64,14 +90,16 @@ export const TeamManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'sales_rep',
+    role: 'member',
     phoneNumber: '',
     capabilities: [] as string[],
     maskPhoneNumber: false,
   });
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -84,15 +112,13 @@ export const TeamManagement: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showCapabilitiesDropdown]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError('');
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
-      console.debug('[TeamManagement] Token source:', safeStorage.getItem('token') ? 'token' : safeStorage.getItem('token') ? 'token' : 'none');
+      const token = safeStorage.getItem('token');
       if (!token) {
-        // Redirect to login instead of showing error
-        console.warn('[TeamManagement] No token found, redirecting to login');
         const redirect = encodeURIComponent('/settings?tab=team');
         router.push(`/login?redirect_url=${redirect}`);
         return;
@@ -104,15 +130,13 @@ export const TeamManagement: React.FC = () => {
         },
       });
       if (!response.ok) {
-        // If 401, redirect to login
         if (response.status === 401) {
           const redirect = encodeURIComponent('/settings?tab=team');
           router.push(`/login?redirect_url=${redirect}`);
           return;
         }
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMsg = errorData.details ? `${errorData.error}: ${errorData.details}` : (errorData.error || `HTTP ${response.status}`);
-        throw new Error(errorMsg);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
       const rawData: any[] = await response.json();
       const mapped = (Array.isArray(rawData) ? rawData : []).map((u: any) => ({
@@ -128,9 +152,11 @@ export const TeamManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
   const handleAddUser = async () => {
     try {
-      const token = safeStorage.getItem('token')
+      setLoading(true);
+      const token = safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users`, {
         method: 'POST',
         headers: {
@@ -141,7 +167,7 @@ export const TeamManagement: React.FC = () => {
       });
       if (response.ok) {
         setShowAddModal(false);
-        setNewUser({ name: '', email: '', password: '', role: 'sales_rep', phoneNumber: '', capabilities: [], maskPhoneNumber: false });
+        setNewUser({ name: '', email: '', password: '', role: 'member', phoneNumber: '', capabilities: [], maskPhoneNumber: false });
         fetchUsers();
       } else {
         const errorData = await response.json();
@@ -150,11 +176,14 @@ export const TeamManagement: React.FC = () => {
     } catch (error) {
       console.error('Error adding user:', error);
       alert('Failed to add user');
+    } finally {
+      setLoading(false);
     }
   };
+
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
+      const token = safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/role`, {
         method: 'PUT',
         headers: {
@@ -170,6 +199,7 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating role:', error);
     }
   };
+
   const toggleCapability = async (userId: string, capabilityKey: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
@@ -178,7 +208,7 @@ export const TeamManagement: React.FC = () => {
       ? currentCapabilities.filter(c => c !== capabilityKey)
       : [...currentCapabilities, capabilityKey];
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
+      const token = safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}/capabilities`, {
         method: 'PUT',
         headers: {
@@ -188,7 +218,6 @@ export const TeamManagement: React.FC = () => {
         body: JSON.stringify({ capabilities: newCapabilities }),
       });
       if (response.ok) {
-        // Update local state immediately for better UX
         setUsers(users.map(u => 
           u.id === userId ? { ...u, capabilities: newCapabilities } : u
         ));
@@ -197,6 +226,7 @@ export const TeamManagement: React.FC = () => {
       console.error('Error updating capabilities:', error);
     }
   };
+
   const toggleMaskPhone = async (userId: string, current: boolean) => {
     try {
       const token = safeStorage.getItem('token');
@@ -218,7 +248,7 @@ export const TeamManagement: React.FC = () => {
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      const token = safeStorage.getItem('token') || safeStorage.getItem('token');
+      const token = safeStorage.getItem('token');
       const response = await fetch(`${getApiBaseUrl()}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -232,153 +262,188 @@ export const TeamManagement: React.FC = () => {
       console.error('Error deleting user:', error);
     }
   };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'member': return 'bg-green-50 text-green-700 border border-green-200';
-      case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200';
-      default:       return 'bg-gray-50 text-gray-700 border border-gray-200';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border-purple-100';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'member': return 'bg-green-50 text-green-700 border-green-100';
+      case 'viewer': return 'bg-gray-50 text-gray-700 border-gray-100';
+      default:       return 'bg-gray-50 text-gray-700 border-gray-100';
     }
   };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Team Management</h2>
-          <p className="text-gray-600 mt-1">Manage team members and their page access permissions</p>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Team Management</h2>
+          <p className="text-gray-500 mt-1 font-medium">Manage team members and their granular page permissions</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md"
+          className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="w-5 h-5" />
           Add Team Member
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
-          <button 
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 flex items-center gap-4">
+          <div className="p-2 rounded-xl bg-red-100">
+            <XCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-red-700 font-bold">Error loading team</p>
+            <p className="text-red-600/80 text-sm mt-0.5">{error}</p>
+          </div>
+          <Button 
+            variant="outline"
+            size="sm"
             onClick={fetchUsers}
-            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            className="rounded-xl border-red-200 text-red-700 hover:bg-red-100/50"
           >
             Try Again
-          </button>
+          </Button>
         </div>
       )}
 
-      {loading ? (
+      {loading && users.length === 0 ? (
         <TeamManagementSkeleton />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Capabilities</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Phone Masking</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Team Member</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role & Status</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Privacy</th>
+                  <th className="px-8 py-5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {!Array.isArray(users) || users.length === 0 ? (
+              <tbody className="divide-y divide-gray-100">
+                {users.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                      {error ? 'Unable to load team members.' : 'No team members found. Add your first team member to get started.'}
+                    <td colSpan={5} className="px-8 py-16 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="p-4 rounded-full bg-gray-50 mb-4">
+                          <UserPlus className="h-8 w-8 text-gray-300" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">No team members</h3>
+                        <p className="text-gray-500 text-sm mt-1 max-w-xs">Start by adding your first team member to collaborate on conversations.</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="relative inline-block">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                            disabled={user.role === 'admin'}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium appearance-none pr-8 ${getRoleBadgeColor(user.role)} ${
-                              user.role === 'admin' ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
-                            }`}
-                          >
-                            {ROLE_OPTIONS.map(role => (
-                              <option key={role.value} value={role.value}>{role.label}</option>
-                            ))}
-                          </select>
-                          {user.role !== 'admin' && (
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-500" />
-                          )}
+                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full bg-[#0B1957] flex items-center justify-center text-white font-bold shadow-sm">
+                            {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900">{user.name || '—'}</span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                              <Mail className="h-3 w-3 opacity-60" />
+                              {user.email}
+                            </span>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {user.status === 'active' ? 'active' : 'inactive'}
-                        </span>
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col gap-3">
+                          {user.role === 'owner' ? (
+                            <Badge className={cn("w-fit px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider", getRoleBadgeColor(user.role))}>
+                              Owner
+                            </Badge>
+                          ) : (
+                            <Select
+                              value={user.role}
+                              onValueChange={(val) => handleUpdateRole(user.id, val)}
+                            >
+                              <SelectTrigger className={cn("h-8 w-fit min-w-[160px] border-none shadow-none text-xs font-bold rounded-lg px-3", getRoleBadgeColor(user.role))}>
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ROLE_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-green-600 pl-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                            {user.status || 'Active'}
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <ul className="text-sm text-gray-700 space-y-1">
-                          {PAGE_CAPABILITIES.map(cap => {
-                            const hasCapability = (user.capabilities || []).includes(cap.key);
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+                          {PAGE_CAPABILITIES.map(page => {
+                            const isChecked = user.capabilities?.includes(page.key);
                             return (
-                              <li key={cap.key} className="flex items-start gap-2">
-                                <button
-                                  onClick={() => user.role !== 'admin' && toggleCapability(user.id, cap.key)}
-                                  disabled={user.role === 'admin'}
-                                  className={`flex items-start gap-2 text-sm ${
-                                    user.role === 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:text-blue-600'
-                                  }`}
-                                >
-                                  <span className="mt-0.5 w-4 h-4 flex items-center justify-center">
-                                    {hasCapability ? '•' : '○'}
-                                  </span>
-                                  <span>{cap.label}</span>
-                                </button>
-                              </li>
+                              <label key={page.key} className="flex items-center gap-2 cursor-pointer group w-fit">
+                                <div className={cn(
+                                  "w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors",
+                                  isChecked ? "bg-[#0B1957] border-[#0B1957]" : "border-gray-300 group-hover:border-[#0B1957]"
+                                )}>
+                                  {isChecked && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                </div>
+                                <span className="text-xs text-gray-600 group-hover:text-gray-900 transition-colors">
+                                  {page.label}
+                                </span>
+                                <input 
+                                  type="checkbox" 
+                                  className="hidden" 
+                                  checked={isChecked || false} 
+                                  onChange={() => toggleCapability(user.id, page.key)} 
+                                />
+                              </label>
                             );
                           })}
-                        </ul>
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
-                          title={user.maskPhoneNumber ? 'Phone numbers are masked — click to unmask' : 'Phone numbers are visible — click to mask'}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                            user.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                              user.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">{user.maskPhoneNumber ? 'Masked' : 'Visible'}</p>
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
+                            className={cn(
+                              "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                              user.maskPhoneNumber ? "bg-orange-500" : "bg-gray-200"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                user.maskPhoneNumber ? "translate-x-5" : "translate-x-0"
+                              )}
+                            />
+                          </button>
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                            {user.maskPhoneNumber ? 'Phone Masked' : 'Phone Visible'}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {user.role !== 'admin' && (
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors text-gray-600 hover:text-red-600"
-                              title="Delete user"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="h-9 w-9 p-0 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -390,230 +455,162 @@ export const TeamManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Conversation Assignments Section */}
-      <div className="space-y-4 mt-8">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Conversation Assignments</h3>
-          <p className="text-sm text-gray-600 mt-1">View team member workload and active assignments</p>
-        </div>
-
-        {loading ? (
-          <div className="bg-white rounded-lg p-8 text-center">
-            <p className="text-gray-500">Loading workload data...</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Team Member</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Active Assignments</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Total Assignments</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {Array.isArray(users) && users.length > 0 ? (
-                    users
-                      .filter(user => user.role !== 'viewer')
-                      .map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-semibold text-blue-600">0</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600">0</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
-                              Available
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                        No team members to display. Add a team member first.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Add User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Add Team Member</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                <input
-                  type="text"
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Add Team Member</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Name</label>
+                <Input
+                  placeholder="John Doe"
+                  className="h-11 rounded-xl bg-gray-50/50"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="John Doe"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <Input
                   type="email"
+                  placeholder="admin@techiemaya.com"
+                  className="h-11 rounded-xl bg-gray-50/50"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="john@example.com"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+
+              <div className="space-y-1 relative">
+                <label className="text-sm font-medium text-gray-700">Password</label>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••••••"
+                    className="h-11 rounded-xl bg-gray-50/50 pr-10"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
+                <Input
                   type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  className="h-11 rounded-xl bg-gray-50/50"
                   value={newUser.phoneNumber}
                   onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="+1 (555) 123-4567"
-                  required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                <select
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Role</label>
+                <Select
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onValueChange={(val) => setNewUser({ ...newUser, role: val })}
                 >
-                  {ROLE_OPTIONS.map(role => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 rounded-xl bg-gray-50/50">
+                    <SelectValue placeholder="Select role..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {/* Phone Number Masking */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Mask Phone Numbers</label>
-                  <p className="text-xs text-gray-500 mt-0.5">When enabled, this user will see contact phone numbers masked (e.g. ••••3456)</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                    newUser.maskPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      newUser.maskPhoneNumber ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="relative capabilities-dropdown">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Page Access</label>
+
+              <div className="space-y-1 relative">
+                <label className="text-sm font-medium text-gray-700">Page Access</label>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
-                    className={`w-full px-4 py-2 border rounded-lg flex items-center justify-between bg-white transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      showCapabilitiesDropdown ? 'border-blue-500' : 'border-gray-300'
-                    }`}
+                    className="w-full h-11 px-4 rounded-xl border border-input bg-gray-50/50 flex items-center justify-between text-sm transition-colors hover:bg-gray-100/50"
                   >
-                    <span className="text-sm text-gray-700">
-                      {newUser.capabilities.length === 0
-                        ? 'Select pages...'
-                        : `${newUser.capabilities.length} page${newUser.capabilities.length !== 1 ? 's' : ''} selected`}
+                    <span className={newUser.capabilities.length ? 'text-foreground' : 'text-muted-foreground'}>
+                      {newUser.capabilities.length 
+                        ? `${newUser.capabilities.length} pages selected`
+                        : 'Select pages...'}
                     </span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-gray-500 transition-transform ${
-                        showCapabilitiesDropdown ? 'rotate-180' : ''
-                      }`}
-                    />
+                    <ChevronDown className={cn("w-4 h-4 opacity-50", showCapabilitiesDropdown && "rotate-180")} />
                   </button>
+
                   {showCapabilitiesDropdown && (
-                    <div className="absolute bottom-full mb-1 z-20 w-full bg-white border border-blue-500 rounded-lg shadow-lg max-h-56 overflow-y-auto">
-                      <div className="py-2">
-                        {PAGE_CAPABILITIES.map(cap => (
-                          <label
-                            key={cap.key}
-                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={newUser.capabilities.includes(cap.key)}
-                              onChange={(e) => {
-                                setNewUser({
-                                  ...newUser,
-                                  capabilities: e.target.checked
-                                    ? [...newUser.capabilities, cap.key]
-                                    : newUser.capabilities.filter(c => c !== cap.key),
-                                });
-                              }}
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">{cap.label}</span>
-                          </label>
-                        ))}
-                      </div>
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-[60] max-h-60 overflow-y-auto p-2">
+                      {PAGE_CAPABILITIES.map(page => (
+                        <label key={page.key} className="flex items-center px-3 py-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors group">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-gray-300 text-[#0B1957] focus:ring-[#0B1957]"
+                            checked={newUser.capabilities.includes(page.key)}
+                            onChange={() => {
+                              const current = [...newUser.capabilities];
+                              if (current.includes(page.key)) {
+                                setNewUser({ ...newUser, capabilities: current.filter(id => id !== page.key) });
+                              } else {
+                                setNewUser({ ...newUser, capabilities: [...current, page.key] });
+                              }
+                            }}
+                          />
+                          <span className="ml-3 text-sm text-gray-700 font-medium group-hover:text-gray-900">{page.label}</span>
+                        </label>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+
+            <div className="flex items-center justify-between p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-bold text-gray-900">Mask Phone Numbers</label>
+                <span className="text-xs text-gray-500">Hide lead phone numbers from this team member for privacy (e.g. ••••3456)</span>
+              </div>
               <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                type="button"
+                onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                  newUser.maskPhoneNumber ? "bg-[#0B1957]" : "bg-gray-200"
+                )}
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddUser}
-                disabled={!newUser.name || !newUser.email || !newUser.password || !newUser.phoneNumber}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add Member
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    newUser.maskPhoneNumber ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
               </button>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogActions>
+            <Button
+              onClick={handleAddUser}
+              disabled={loading || !newUser.name || !newUser.email || !newUser.password}
+              className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl h-11 px-8 font-bold shadow-sm transition-all"
+            >
+              {loading ? 'Adding...' : 'Add Member'}
+            </Button>
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+export default TeamManagement;

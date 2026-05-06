@@ -325,20 +325,21 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
         )}
         {/* Selected Date Events Popup Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-lg max-h-[600px] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
+          <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
+            <DialogHeader className="px-8 py-6 border-b border-gray-100 bg-white">
+              <DialogTitle className="text-2xl font-bold">
                 {format(selectedDate, 'EEEE, MMMM d, yyyy')}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+              <div className="space-y-4">
+              <div className="text-sm text-gray-500 font-medium">
                 {getEventsForDate(selectedDate).length} booking{getEventsForDate(selectedDate).length !== 1 ? 's' : ''} scheduled
               </div>
 
               {getEventsForDate(selectedDate).length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">
+                <div className="py-12 text-center text-sm text-gray-400 font-medium bg-gray-50/50 rounded-2xl border border-gray-100">
                   No bookings scheduled for this date
                 </div>
               ) : (
@@ -396,6 +397,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                   })}
                 </div>
               )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
