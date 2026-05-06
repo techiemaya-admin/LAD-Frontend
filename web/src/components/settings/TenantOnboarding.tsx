@@ -49,6 +49,7 @@ interface CreateAccountForm {
   ai_api_key: string;
   timezone: string;
   conversation_flow_template: string;
+  escalation_phone: string;  // Tenant's human agent number (E.164) for AI hand-offs
 }
 
 // ── API helpers ──────────────────────────────────────────────────
@@ -70,7 +71,7 @@ async function fetchAccounts(): Promise<WhatsAppAccount[]> {
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {
   const body: Record<string, any> = { ...form };
   // Remove empty optional fields (including tenant_id — blank = auto-create new tenant)
-  for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'app_id', 'app_secret', 'ai_api_key']) {
+  for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'app_id', 'app_secret', 'ai_api_key', 'escalation_phone']) {
     if (!body[key]) delete body[key];
   }
 
@@ -135,6 +136,7 @@ const INITIAL_FORM: CreateAccountForm = {
   ai_api_key: '',
   timezone: 'UTC',
   conversation_flow_template: 'generic',
+  escalation_phone: '',
 };
 
 // ── Toast (inline) ──────────────────────────────────────────────
@@ -463,6 +465,26 @@ export function TenantOnboarding() {
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
               />
             </div>
+
+            {/* Human-Escalation Phone — tenant's own agent number for AI hand-offs */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Human Escalation Phone
+                <span className="text-gray-400 font-normal"> (WhatsApp number to notify when the AI hands off a customer to a human)</span>
+              </label>
+              <input
+                type="tel"
+                value={form.escalation_phone}
+                onChange={(e) => setForm((prev) => ({ ...prev, escalation_phone: e.target.value.trim() }))}
+                placeholder="+971501234567"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Used when Aria says "someone from my team will contact you". E.164 format
+                (e.g. <code className="bg-gray-100 px-1 rounded">+971501234567</code>). If empty,
+                escalations fall back to the platform support number.
+              </p>
+            </div>
           </div>
 
           <div className="pt-2">
@@ -575,6 +597,12 @@ export function TenantOnboarding() {
                         <span className="text-xs text-gray-400">Flow Template</span>
                         <p className="text-xs text-gray-600">
                           {FLOW_TEMPLATES.find((f) => f.id === account.conversation_flow_template)?.label || account.conversation_flow_template}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-400">Human Escalation Phone</span>
+                        <p className="font-mono text-xs text-gray-600">
+                          {((account as any).metadata?.escalation_phone as string) || '—'}
                         </p>
                       </div>
                     </div>

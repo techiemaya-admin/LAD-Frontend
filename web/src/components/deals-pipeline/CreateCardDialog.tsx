@@ -18,6 +18,7 @@ import {
   setNewLead,
   resetNewLead
 } from '@/store/slices/uiSlice';
+
 interface CreateCardDialogProps {
   open: boolean;
   onClose: () => void;
@@ -25,17 +26,19 @@ interface CreateCardDialogProps {
   stages?: Stage[];
   leads?: Lead[];
 }
+
 const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   open,
   onClose,
   onCreate,
   stages = [],
-  leads = []
 }) => {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
+
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
+
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -43,16 +46,21 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     createTitle: isEducation ? 'Create New Student' : 'Create New Lead',
     createButton: isEducation ? 'Create Student' : 'Create Lead'
   };
+
   // Get master data from Redux
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
+
   // Get team members from Redux for assignee dropdown
   const teamMembers = useSelector(selectUsers);
+
   // Get form data from Redux global state
   const newLead = useSelector(selectNewLead);
+
   // Local state for creation loading
   const [isCreatingCard, setIsCreatingCard] = React.useState(false);
+
   // Get default values from master data
   const getDefaultStatus = (): string => {
     return statusOptions.length > 0 ? (statusOptions[0].key || '') : '';
@@ -65,6 +73,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     const mediumPriority = priorityOptions.find(p => p.key === 'medium');
     return mediumPriority ? mediumPriority.key : (priorityOptions[0]?.key || '');
   };
+
   // Set default values when master data loads or component opens
   useEffect(() => {
     if (open && (!newLead.status || !newLead.source || !newLead.priority)) {
@@ -76,19 +85,12 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       }));
     }
   }, [open, statusOptions, sourceOptions, priorityOptions, dispatch]);
-  const handleCancel = () => {
-    // Reset form data explicitly
-    dispatch(resetNewLead());
-    // Close dialog
-    onClose();
-  };
+
   const handleCreateCard = async () => {
-    if (!newLead.name.trim()) {
+    if (!newLead.name.trim() || !newLead.stage) {
       return;
     }
-    if (!newLead.stage) {
-      return;
-    }
+
     setIsCreatingCard(true);
     try {
       // Only send fields that have values - filter out empty strings and undefined
@@ -107,9 +109,10 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       setIsCreatingCard(false);
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-md overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
@@ -204,6 +207,71 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, gpa: e.target.value }))}
                       className="h-11 rounded-xl border-gray-200"
                     />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="previous-education" className="text-sm font-medium text-gray-700">Previous Education</Label>
+                  <Input
+                    id="previous-education"
+                    type="text"
+                    placeholder="e.g., Bachelor's in Engineering"
+                    value={newLead.previousEducation || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, previousEducation: e.target.value }))}
+                    className="h-11 rounded-xl border-gray-200"
+                  />
+                </div>
+                
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Counselling Session</h3>
+                    <div className="h-px flex-1 bg-gray-100" />
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred-counsellor" className="text-sm font-medium text-gray-700">Preferred Counsellor</Label>
+                      <Select
+                        value={newLead.preferredCounsellor || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredCounsellor: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select counsellor" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {teamMembers.filter(member => member.role === 'counsellor' || member.role === 'admin' || member.role === 'owner').map(member => (
+                            <SelectItem key={member.id} value={member.id || ''}>
+                              {member.name || `${member.firstName} ${member.lastName}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred-time" className="text-sm font-medium text-gray-700">Preferred Session Time</Label>
+                      <Select
+                        value={newLead.preferredTime || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredTime: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select time slot" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="morning">Morning (9:00 - 12:00)</SelectItem>
+                          <SelectItem value="afternoon">Afternoon (12:00 - 17:00)</SelectItem>
+                          <SelectItem value="evening">Evening (17:00 - 20:00)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="session-notes" className="text-sm font-medium text-gray-700">Session Notes</Label>
+                      <Textarea
+                        id="session-notes"
+                        placeholder="Any specific topics or concerns to discuss..."
+                        value={newLead.sessionNotes || ''}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, sessionNotes: e.target.value }))}
+                        rows={3}
+                        className="rounded-xl border-gray-200 resize-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

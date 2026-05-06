@@ -106,8 +106,9 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         minWidth: "800px",
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-6 py-4 lg:flex dark:bg-transparent",
-        visible && "bg-white/80 dark:bg-neutral-950/80",
+        "relative z-[60] mx-auto hidden w-full flex-row items-center justify-between self-start px-6 py-4 lg:flex dark:bg-[#000724]",
+        "bg-white/50 rounded-full max-w-7xl",
+        visible && "bg-white/90 dark:bg-[#000724] backdrop-blur-md dark:rounded-none dark:w-full",
         className,
       )}
     >
@@ -123,31 +124,37 @@ export const NavItems = ({ items, className, onItemClick, activePath }: NavItems
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 transition duration-200 hover:text-zinc-800 dark:hover:text-white lg:flex lg:space-x-2 pointer-events-none",
         className,
       )}
     >
       {items.map((item, idx) => {
         const isActive = activePath === item.link;
         return (
-          <Link
+          <motion.div
             key={`link-${idx}`}
-            href={item.link}
-            onMouseEnter={() => setHovered(idx)}
-            onClick={onItemClick}
-            className={cn(
-              "relative px-4 py-2 text-neutral-600 dark:text-neutral-300",
-              isActive && "font-bold text-[#0b1957] dark:text-[#0b1957]"
-            )}
+            className="pointer-events-auto"
+            whileTap={{ scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
-            {hovered === idx && (
-              <motion.div
-                layoutId="hovered"
-                className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
-              />
-            )}
-            <span className="relative z-20 text-lg">{item.name}</span>
-          </Link>
+            <Link
+              href={item.link}
+              onMouseEnter={() => setHovered(idx)}
+              onClick={onItemClick}
+              className={cn(
+                "relative px-4 py-2 text-neutral-600 dark:text-gray-300 block",
+                isActive && "font-bold text-[#0b1957] dark:text-white"
+              )}
+            >
+              {hovered === idx && (
+                <motion.div
+                  layoutId="hovered"
+                  className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
+                />
+              )}
+              <span className="relative z-20 text-lg">{item.name}</span>
+            </Link>
+          </motion.div>
         );
       })}
     </motion.div>
@@ -174,8 +181,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-4 lg:hidden",
-        visible && "bg-white/80 dark:bg-neutral-950/80",
+        "relative z-50 mx-auto flex w-full flex-col items-center justify-between px-0 py-4 lg:hidden dark:bg-[#000724]",
+        "bg-white/50 max-w-[calc(100vw-2rem)]",
+        visible && "bg-white/90 dark:bg-[#000724] backdrop-blur-md",
         className,
       )}
     >
@@ -243,9 +251,10 @@ export const NavbarLogo = () => {
   return (
     <Link
       href="/"
-      className="relative z-20 mr-4 flex h-12 w-32 items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-4 flex h-12 w-32 items-center space-x-2 px-2 py-1 text-sm font-normal text-black dark:text-white"
     >
-      <Image className="absolute" src="/MrLAD-logo.svg" alt="LAD hero" fill />
+      <Image className="absolute hidden dark:block" src="/MrLAD-logo-white.svg" alt="LAD hero" fill />
+      <Image className="absolute block dark:hidden" src="/MrLAD-logo.svg" alt="LAD hero" fill />
     </Link>
   );
 };
@@ -268,12 +277,12 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"button">
 )) => {
   const baseStyles =
-    "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center text-lg";
+    "px-4 py-2 rounded-md button text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition duration-200 inline-block text-center text-lg select-none";
 
   const variantStyles = {
     primary:
-      "shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
-    secondary: "bg-transparent shadow-none dark:text-white",
+      "bg-white dark:bg-[#000724] text-black dark:text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset] dark:border dark:border-gray-700",
+    secondary: "bg-transparent shadow-none text-gray-700 dark:text-white hover:text-black dark:hover:text-gray-200",
     dark: "bg-black text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
     gradient:
       "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",

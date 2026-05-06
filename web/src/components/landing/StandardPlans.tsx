@@ -91,7 +91,7 @@ export default function StandardPlans() {
 
   return (
     <motion.div 
-      className="bg-white"
+      className="py-20 relative bg-gradient-to-b from-background via-background to-background"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}

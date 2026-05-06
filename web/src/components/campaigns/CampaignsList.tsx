@@ -126,14 +126,14 @@ export default function CampaignsList() {
     [campaigns, searchQuery]
   );
   return (
-    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
+          <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white mb-1">
             Campaigns
           </h1>
-          <p className="text-sm text-[#64748B] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
             Manage your multi-channel outreach campaigns
           </p>
         </div>

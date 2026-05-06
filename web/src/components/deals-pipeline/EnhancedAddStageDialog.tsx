@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { X, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Stage } from '../store/slices/pipelineSlice';
+
 interface EnhancedAddStageDialogProps {
   open: boolean;
   onClose: () => void;
@@ -21,6 +22,7 @@ interface EnhancedAddStageDialogProps {
   setPositionType: (type: 'before' | 'after') => void;
   getPositionPreview?: () => React.ReactNode;
 }
+
 const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
   open,
   onClose,
@@ -37,11 +39,13 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
   getPositionPreview
 }) => {
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (open) {
       setLocalErrors({});
     }
   }, [open]);
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!newStageName.trim()) {
@@ -54,35 +58,41 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
     setLocalErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
   const handleSubmit = () => {
     if (validateForm()) {
       onAdd();
     }
   };
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewStageName(e.target.value);
     if (localErrors.name) {
       setLocalErrors({ ...localErrors, name: '' });
     }
   };
+
   const handlePositionChange = (value: string) => {
     setPositionStageId(value);
     if (localErrors.position) {
       setLocalErrors({ ...localErrors, position: '' });
     }
   };
+
   const handlePositionTypeChange = (value: string) => {
     setPositionType(value as 'before' | 'after');
   };
+
   const getPositionText = (stage: Stage, type: 'before' | 'after'): string => {
     const stageName = stage.label || '';
     return type === 'before' ? `Before "${stageName}"` : `After "${stageName}"`;
   };
+
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="p-0 sm:w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-md overflow-hidden flex flex-col p-0 max-h-[90vh]">
         <DialogHeader>
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Plus className="h-6 w-6 stroke-[3px]" />
             </div>
@@ -191,4 +201,5 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
     </Dialog>
   );
 };
+
 export default EnhancedAddStageDialog;

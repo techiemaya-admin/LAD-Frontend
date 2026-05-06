@@ -624,7 +624,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             ) : (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {parsedLeads.map((lead, index) => (
-                  <div
+                  <div 
                     key={index}
                     className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors"
                   >
@@ -731,12 +731,29 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           </div>
         )}
       </div>
+<<<<<<< HEAD
       <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 flex justify-end">
+=======
+      {/* Footer Actions */}
+      <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex gap-3 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
+        >
+          Cancel
+        </button>
+>>>>>>> fdc6efb1f0a908971b728659fceae7168eb0a878
         {step === 'preview' && parsedLeads.length > 0 && (
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
+<<<<<<< HEAD
             className="px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-100"
+=======
+            className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+>>>>>>> fdc6efb1f0a908971b728659fceae7168eb0a878
           >
             {isSubmitting ? (
               <>
@@ -754,4 +771,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> fdc6efb1f0a908971b728659fceae7168eb0a878

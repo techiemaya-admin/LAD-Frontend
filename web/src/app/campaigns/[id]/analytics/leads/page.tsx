@@ -427,16 +427,16 @@ export default function CampaignLeadsPage() {
   }, [leads, searchQuery, filterParams]);
   if (loading && leads.length === 0) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-[#000724]">
         <div className="flex flex-col gap-4 items-center">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <p>Loading leads...</p>
+          <Loader2 className="w-8 h-8 animate-spin dark:text-white" />
+          <p className="dark:text-white">Loading leads...</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="w-full h-screen overflow-auto bg-slate-50">
+    <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
       <div className="p-6 pb-12">
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
@@ -450,10 +450,10 @@ export default function CampaignLeadsPage() {
               Back to Analytics
             </Button>
             <div>
-              <h4 className="text-2xl font-bold text-slate-800 mb-1">
+              <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
                 {campaign?.name || 'Campaign Leads'}
               </h4>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-[#7a8ba3]">
                 {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
               </p>
             </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Dialog, DialogTitle, DialogContent, DialogHeader, DialogActions } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Settings, RotateCcw, Save } from 'lucide-react';
+import { Settings, Save } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +26,7 @@ interface VisibleColumns {
   updatedAt: boolean;
   lastActivity: boolean;
 }
+
 interface PipelineSettings {
   viewMode: 'list' | 'kanban';
   visibleColumns: VisibleColumns;
@@ -39,11 +40,13 @@ interface PipelineSettings {
   businessHoursEnd: string;
   timezone: string;
 }
+
 interface PipelineBoardSettingsProps {
   open: boolean;
   onClose: () => void;
   onSettingsChange: (settings: PipelineSettings) => void;
 }
+
 const DEFAULT_VISIBLE_COLUMNS: VisibleColumns = {
   name: true,
   stage: true,
@@ -59,21 +62,7 @@ const DEFAULT_VISIBLE_COLUMNS: VisibleColumns = {
   updatedAt: false,
   lastActivity: false
 };
-const COLUMN_LABELS: Record<keyof VisibleColumns, string> = {
-  name: 'Lead Name',
-  stage: 'Stage',
-  status: 'Status',
-  priority: 'Priority',
-  amount: 'Amount',
-  closeDate: 'Close Date',
-  dueDate: 'Due Date',
-  expectedCloseDate: 'Expected Close Date',
-  source: 'Source',
-  assignee: 'Assignee',
-  createdAt: 'Created Date',
-  updatedAt: 'Last Updated',
-  lastActivity: 'Last Activity'
-};
+
 const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   open,
   onClose,
@@ -81,6 +70,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
 }) => {
   const dispatch = useDispatch();
   const settings = useSelector(selectPipelineSettings);
+  
   // Local state for settings - only save to Redux when Save is clicked
   const [localSettings, setLocalSettings] = useState<PipelineSettings>({
     ...settings,
@@ -88,6 +78,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     businessHoursEnd: settings.businessHoursEnd || '18:00',
     timezone: settings.timezone || 'GST'
   });
+
   // Update local settings when dialog opens or settings change
   useEffect(() => {
     if (open) {
@@ -99,25 +90,18 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       });
     }
   }, [open, settings]);
+
   const handleSettingChange = (key: keyof PipelineSettings, value: unknown): void => {
     setLocalSettings({ ...localSettings, [key]: value });
   };
+
   const handleSave = (): void => {
     // Only now update Redux store
     dispatch(setPipelineSettings(localSettings));
     onSettingsChange(localSettings);
     onClose();
   };
-  const handleCancel = (): void => {
-    // Reset local settings to original values
-    setLocalSettings({
-      ...settings,
-      businessHoursStart: settings.businessHoursStart || '09:00',
-      businessHoursEnd: settings.businessHoursEnd || '18:00',
-      timezone: settings.timezone || 'GST'
-    });
-    onClose();
-  };
+
   const handleReset = (): void => {
     const defaultSettings: PipelineSettings = {
       viewMode: 'list',
@@ -134,9 +118,10 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     };
     setLocalSettings(defaultSettings);
   };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:w-[90vw] h-auto max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="sm:max-w-md overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
@@ -147,10 +132,9 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-          {/* Business Hours Settings */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                 Business Hours
               </h3>
               <div className="h-px flex-1 bg-gray-100" />
@@ -233,4 +217,5 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
     </Dialog>
   );
 };
+
 export default PipelineBoardSettings;
