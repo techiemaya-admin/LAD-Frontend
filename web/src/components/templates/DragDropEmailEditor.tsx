@@ -690,6 +690,25 @@ function ImageBlockEditor({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
+  /** Convert Google Drive share links to direct-embed URLs.
+   *  Handles:
+   *   - https://drive.google.com/file/d/FILE_ID/view?...
+   *   - https://drive.google.com/open?id=FILE_ID
+   *  Returns the URL unchanged if it's not a Drive link. */
+  function toDirectImageUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      if (u.hostname !== 'drive.google.com') return url;
+      // /file/d/FILE_ID/...
+      const fileMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+      if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+      // ?id=FILE_ID
+      const idParam = u.searchParams.get('id');
+      if (idParam) return `https://drive.google.com/uc?export=view&id=${idParam}`;
+    } catch { /* not a valid URL yet — leave as-is */ }
+    return url;
+  }
+
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -742,16 +761,19 @@ function ImageBlockEditor({
         {/* Divider */}
         <div className="flex items-center gap-2 my-2">
           <div className="flex-1 border-t border-gray-200" />
-          <span className="text-[11px] text-gray-400 font-medium">or paste URL</span>
+          <span className="text-[11px] text-gray-400 font-medium">or paste URL / Google Drive link</span>
           <div className="flex-1 border-t border-gray-200" />
         </div>
 
-        {/* URL input */}
+        {/* URL input — auto-converts Google Drive share links to direct embed URLs */}
         <input
           type="text"
-          placeholder="https://example.com/image.png"
+          placeholder="https://example.com/image.png  or Google Drive share link"
           value={local.src || ''}
-          onChange={(e) => set('src', e.target.value)}
+          onChange={(e) => {
+            const converted = toDirectImageUrl(e.target.value.trim());
+            set('src', converted);
+          }}
           className={inputCls}
         />
 
