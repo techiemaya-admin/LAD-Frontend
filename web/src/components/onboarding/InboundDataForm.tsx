@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useRef } from 'react';
 import { InboundLeadData } from '@/store/onboardingStore';
-import {
-  Download,
+import { 
+  Download, 
   Upload,
   FileSpreadsheet,
   CheckCircle2,
@@ -15,6 +15,7 @@ import {
   FileUp
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
+
 interface ParsedLead {
   firstName: string;
   lastName: string;
@@ -26,11 +27,13 @@ interface ParsedLead {
   website: string;
   notes: string;
 }
+
 interface InboundDataFormProps {
   onSubmit: (data: InboundLeadData) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
+
 type UploadStep = 'download' | 'upload' | 'mapping' | 'preview';
 
 interface ColumnMapping {
@@ -65,12 +68,14 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Generate and download CSV template
   const downloadTemplate = () => {
     const headers = ['First Name', 'Last Name', 'Company Name', 'LinkedIn Profile URL', 'Email', 'WhatsApp Number', 'Phone Number', 'Website', 'Notes'];
     const exampleRow = ['John', 'Doe', 'DELETE THIS ROW - Example Corp', 'https://linkedin.com/in/johndoe', 'example@example.com', "'+1234567890", "'+1234567890", 'https://example.com', 'DELETE THIS ROW - Remove before uploading'];
     const instructionRow = ['Lead first name', 'Lead last name', 'INSTRUCTIONS: Format phone as TEXT in Excel', '', '', "Start with ' (apostrophe)", "Example: '+919087654321", '', 'Delete example rows before upload'];
     const emptyRows = Array(10).fill(headers.map(() => ''));
+
     // Create CSV content
     const csvContent = [
       headers.join(','),
@@ -78,6 +83,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       instructionRow.map(cell => `"${cell}"`).join(','),
       ...emptyRows.map(row => row.join(','))
     ].join('\n');
+
     // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -89,14 +95,17 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     logger.debug('CSV Template downloaded');
+
     // Move to upload step after short delay
     setTimeout(() => setStep('upload'), 800);
   };
+
   // Handle file drag over
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
+
   // Handle file drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -106,6 +115,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       processFile(files[0]);
     }
   };
+
   // Handle file selection via input
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,15 +123,18 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       processFile(file);
     }
   };
+
   // Parse CSV string into rows
   const parseCSV = (text: string): string[][] => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentCell = '';
     let insideQuotes = false;
+
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
       const nextChar = text[i + 1];
+
       if (char === '"') {
         if (insideQuotes && nextChar === '"') {
           currentCell += '"';
@@ -144,6 +157,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         currentCell += char;
       }
     }
+
     // Add last cell and row
     if (currentCell || currentRow.length > 0) {
       currentRow.push(currentCell.trim());
@@ -151,8 +165,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         rows.push(currentRow);
       }
     }
+
     return rows;
   };
+
   // Process uploaded file
   const processFile = async (file: File) => {
     setError(null);
@@ -162,17 +178,22 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       if (!file.name.match(/\.csv$/i)) {
         throw new Error('Please upload a CSV file (.csv)');
       }
+
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         throw new Error('File size must be less than 5MB');
       }
+
       setUploadedFile(file);
+
       // Read file content
       const text = await file.text();
       const rows = parseCSV(text);
+
       if (rows.length <= 1) {
         throw new Error('The uploaded file is empty or only contains headers. Please add your lead data.');
       }
+
       // First row is headers
       const headers = rows[0];
       const dataRows = rows.slice(1);
@@ -286,6 +307,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       resetUpload();
     }
   };
+
   // Reset upload state
   const resetUpload = () => {
     setUploadedFile(null);
@@ -297,12 +319,14 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       fileInputRef.current.value = '';
     }
   };
+
   // Submit the parsed leads
   const handleSubmit = () => {
     if (parsedLeads.length === 0) {
       setError('No leads to submit');
       return;
     }
+
     // Aggregate data from all leads into the format expected by the store
     const aggregatedData: InboundLeadData = {
       companyName: parsedLeads.length === 1
@@ -324,12 +348,14 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       phoneNumbers: parsedLeads.map(l => l.phone).filter(Boolean),
       notes: `Uploaded ${parsedLeads.length} lead(s). ${parsedLeads.map(l => l.notes).filter(Boolean).join(' | ')}`,
     };
+
     logger.debug('Submitting aggregated inbound data', {
       leadCount: parsedLeads.length,
       platforms: aggregatedData.platforms
     });
     onSubmit(aggregatedData);
   };
+
   // Get platform counts for summary
   const getPlatformCounts = () => {
     return {
@@ -340,6 +366,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       website: parsedLeads.filter(l => l.website).length,
     };
   };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-w-2xl w-full max-h-[80vh] flex flex-col">
       {/* Header */}
@@ -361,6 +388,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           </button>
         </div>
       </div>
+
       {/* Steps Progress Indicator */}
       <div className="px-6 py-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -376,29 +404,34 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               (s.key === 'download' && (step === 'upload' || step === 'mapping' || step === 'preview')) ||
               (s.key === 'upload' && (step === 'mapping' || step === 'preview')) ||
               (s.key === 'mapping' && step === 'preview');
+
             return (
               <React.Fragment key={s.key}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isComplete ? 'bg-green-500 text-white' :
-                      isActive ? 'bg-green-100 text-green-600 ring-2 ring-green-500' :
-                        'bg-gray-100 text-gray-400'
-                    }`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                    isComplete ? 'bg-green-500 text-white' :
+                    isActive ? 'bg-green-100 text-green-600 ring-2 ring-green-500' :
+                    'bg-gray-100 text-gray-400'
+                  }`}>
                     {isComplete ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                   </div>
-                  <span className={`text-sm font-medium hidden sm:block ${isActive || isComplete ? 'text-gray-900' : 'text-gray-400'
-                    }`}>
+                  <span className={`text-sm font-medium hidden sm:block ${
+                    isActive || isComplete ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
                     {s.label}
                   </span>
                 </div>
                 {index < 3 && (
-                  <div className={`flex-1 h-0.5 mx-3 rounded ${isComplete ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
+                  <div className={`flex-1 h-0.5 mx-3 rounded ${
+                    isComplete ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
                 )}
               </React.Fragment>
             );
           })}
         </div>
       </div>
+
       {/* Content Area */}
       <div className="p-5 overflow-y-auto flex-1 min-h-0">
         {/* Step 1: Download Template */}
@@ -411,7 +444,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               Step 1: Download Template
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
-              Download our Excel template, fill in your inbound leads data with contact information,
+              Download our Excel template, fill in your inbound leads data with contact information, 
               then upload it back. We'll analyze and set up your campaign automatically.
             </p>
             <button
@@ -424,8 +457,8 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <div className="mt-6 pt-6 border-t border-gray-100">
               <p className="text-sm text-gray-500">
                 Already have leads in a spreadsheet?{' '}
-                <button
-                  onClick={() => setStep('upload')}
+                <button 
+                  onClick={() => setStep('upload')} 
                   className="text-green-600 hover:text-green-700 font-medium hover:underline"
                 >
                   Skip to upload →
@@ -434,6 +467,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
+
         {/* Step 2: Upload File */}
         {step === 'upload' && (
           <div className="py-6">
@@ -448,10 +482,11 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer ${isProcessing
-                  ? 'border-gray-300 bg-gray-50'
+              className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer ${
+                isProcessing 
+                  ? 'border-gray-300 bg-gray-50' 
                   : 'border-gray-300 hover:border-green-500 hover:bg-green-50/50'
-                }`}
+              }`}
               onClick={() => !isProcessing && fileInputRef.current?.click()}
             >
               {isProcessing ? (
@@ -477,6 +512,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 </>
               )}
             </div>
+
             {/* Error Display */}
             {error && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
@@ -487,9 +523,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 </div>
               </div>
             )}
+
             <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
-              <button
-                onClick={() => setStep('download')}
+              <button 
+                onClick={() => setStep('download')} 
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -498,6 +535,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
+
         {/* Step 3: Map Columns */}
         {step === 'mapping' && (
           <div className="py-6">
@@ -561,7 +599,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               </div>
             )}
 
-            <div className="flex items-center justify-end pt-4 border-t border-gray-100 gap-4">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <button
                 onClick={() => { setStep('upload'); resetUpload(); }}
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
@@ -589,6 +627,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
+
         {/* Step 4: Preview & Review */}
         {step === 'preview' && (
           <div>
@@ -615,6 +654,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 Upload Different File
               </button>
             </div>
+
             {/* Leads List */}
             {parsedLeads.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
@@ -624,7 +664,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             ) : (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {parsedLeads.map((lead, index) => (
-                  <div
+                  <div 
                     key={index}
                     className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors"
                   >
@@ -683,6 +723,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 ))}
               </div>
             )}
+
             {/* Platform Summary */}
             {parsedLeads.length > 0 && (
               <div className="mt-5 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
@@ -731,6 +772,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           </div>
         )}
       </div>
+
       <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 flex justify-end">
         {step === 'preview' && parsedLeads.length > 0 && (
           <button

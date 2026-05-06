@@ -25,15 +25,15 @@ const useCountUp = (end: number, duration: number = 2000) => {
 
 const SkeletonCard = () => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-[#253456] rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -58,9 +58,9 @@ interface StatCardProps {
 const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: StatCardProps) => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div
-      className={`bg-white rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
+      className={`bg-white dark:bg-[#000724] rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98]' : ''}
-        ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200'}`}
+        ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200 dark:border-[#262831]'}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -77,10 +77,10 @@ const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: St
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-[10px] sm:text-sm text-slate-500 mb-1">
+            <p className="text-[10px] sm:text-sm text-slate-500 dark:text-[#7a8ba3] mb-1">
               {title}
             </p>
-            <h5 className="text-2xl font-bold text-slate-800">{renderValue()}</h5>
+            <h5 className="text-2xl font-bold text-slate-800 dark:text-white">{renderValue()}</h5>
           </div>
         </div>
       </div>

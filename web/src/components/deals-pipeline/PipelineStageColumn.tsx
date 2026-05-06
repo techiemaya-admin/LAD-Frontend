@@ -172,7 +172,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       <div
         ref={setNodeRef}
         className={`p-3 w-full min-w-0 rounded-xl transition-all duration-200 flex flex-col h-fit ${
-          isOver ? 'bg-blue-100' : 'bg-gray-50'
+          isOver ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-50 dark:bg-[#1a2a43]'
         }`}
         style={{
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -180,22 +180,22 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
       >
         <div
           className={`sticky top-0 z-10 flex justify-between items-center mb-2 min-h-[32px] rounded-[5px] px-2 py-1 -mx-2 ${
-            isOver ? 'bg-blue-100' : 'bg-gray-50'
+            isOver ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-50 dark:bg-[#1a2a43]'
           }`}
         >
           <div className="flex flex-col gap-1 flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-[#172560] whitespace-nowrap overflow-hidden text-ellipsis">
+              <h3 className="text-lg font-semibold text-[#172560] dark:text-white whitespace-nowrap overflow-hidden text-ellipsis">
                 {stage.name || stage.label}
               </h3>
               {showCardCount && (
-                <Badge variant="secondary" className="bg-[#e8ebf7] text-[#172560] text-xs">
+                <Badge variant="secondary" className="bg-[#e8ebf7] dark:bg-[#253456] text-[#172560] dark:text-white text-xs">
                   {leads.length}
                 </Badge>
               )}
             </div>
             {showTotalValue && totalValue > 0 && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-600 dark:text-[#7a8ba3]">
                 {formatCurrency(totalValue)}
               </p>
             )}

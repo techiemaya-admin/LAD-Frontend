@@ -865,9 +865,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Header with Search and Controls */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
 
           {/* Row 1: View mode toggle */}
@@ -875,8 +875,11 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             <button
               type="button"
               onClick={() => onViewModeChange?.('kanban')}
-              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${viewMode === 'kanban'
-                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
             >
@@ -886,8 +889,11 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             <button
               type="button"
               onClick={() => onViewModeChange?.('list')}
-              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+              className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
             >
@@ -926,7 +932,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
           {/* Row 3: Search box */}
           <div className="w-full lg:w-60 lg:ml-auto">
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
+            <div className="relative bg-white dark:bg-[#1a2f6b] rounded-xl flex items-center px-4 border border-gray-300 dark:border-gray-600 h-10 w-full">
               <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"
@@ -994,15 +1000,15 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         </div>
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full relative">
           <Table containerClassName="overflow-visible" className={`${compactMode ? 'text-sm' : ''} border-separate border-spacing-0`}>
-            <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] shadow-sm">
-              <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
+            <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-sm">
+              <TableRow className="border-b border-[#E2E8F0] dark:border-[#262831] hover:bg-transparent">
                 {visibleColumnKeys.map((column) => (
                   <TableHead
                     key={column}
-                    className={`font-semibold text-[#1E293B] whitespace-nowrap capitalize bg-[#F8FAFC] sticky top-0 z-40 ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                    className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap capitalize bg-[#F8FAFC] dark:bg-[#1a2a43] sticky top-0 z-40 ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
                       }`}
                     onClick={() => handleSort(column)}
                   >
@@ -1020,7 +1026,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                   <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
                     {visibleColumnKeys.map((column) => (
                       <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
-                        <div className="h-4 bg-gray-200 rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1035,7 +1041,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                       }
                       handleRowClick(lead);
                     }}
-                    className="cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0]"
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831]"
                   >
                     {visibleColumnKeys.map((column) => (
                       <TableCell
@@ -1055,7 +1061,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                   >
                     <div className="flex flex-col items-center gap-4">
                       <UserPlus className="w-8 h-8" />
-                      <div className="text-lg font-semibold text-[#1E293B] mb-2">
+                      <div className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                         No leads found
                       </div>
 
@@ -1069,9 +1075,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       </div>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page and total count info */}
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B]">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select
@@ -1079,7 +1085,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 onChange={(e) => {
                   handlePageSizeChange(Number(e.target.value));
                 }}
-                className="border border-[#E2E8F0] rounded px-2 py-1 text-xs sm:text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-primary"
+                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-xs sm:text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>
@@ -1096,7 +1102,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
 
           {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
 

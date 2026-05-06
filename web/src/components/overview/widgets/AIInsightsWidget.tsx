@@ -38,9 +38,9 @@ const insightIcons = {
   warning: AlertCircle,
 };
 const insightStyles = {
-  tip: 'bg-blue-50 border-blue-200 text-blue-700',
-  trend: 'bg-green-50 border-green-200 text-green-700',
-  warning: 'bg-amber-50 border-amber-200 text-amber-700',
+  tip: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-[#2B7CFF]/15 dark:border-[#2B7CFF]/40 dark:text-white',
+  trend: 'bg-green-50 border-green-200 text-green-700 dark:bg-[#2EE6A6]/15 dark:border-[#2EE6A6]/40 dark:text-white',
+  warning: 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-[#FF6B6B]/15 dark:border-[#FF6B6B]/40 dark:text-white',
 };
 export const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ id }) => {
   return (

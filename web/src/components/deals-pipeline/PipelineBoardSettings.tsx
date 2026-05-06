@@ -136,13 +136,24 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:w-[90vw] h-auto max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="sm:max-w-xl h-auto max-h-[90vh] overflow-hidden flex flex-col p-0 bg-white dark:bg-[#000724]">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
+          <div className="flex items-center gap-3 px-8 pt-6">
+            <div className="p-2.5 rounded-full bg-blue-50 dark:bg-[#253456] text-blue-600 dark:text-[#60a5fa] border border-blue-100 dark:border-[#262831] shadow-sm">
               <Settings className="h-5 w-5" />
             </div>
-            <DialogTitle>Pipeline Board Settings</DialogTitle>
+            <div className="flex-1">
+              <DialogTitle className="dark:text-white">Pipeline Board Settings</DialogTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-gray-500 hover:text-gray-700 dark:text-[#7a8ba3] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#253456] rounded-xl flex items-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Defaults
+            </Button>
           </div>
         </DialogHeader>
 
@@ -150,15 +161,15 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
           {/* Business Hours Settings */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">
                 Business Hours
               </h3>
-              <div className="h-px flex-1 bg-gray-100" />
+              <div className="h-px flex-1 bg-gray-100 dark:bg-[#262831]" />
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="business-start" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="business-start" className="text-sm font-medium text-gray-700 dark:text-[#7a8ba3]">
                   Start Time
                 </Label>
                 <div className="relative">
@@ -167,12 +178,12 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                     type="time"
                     value={localSettings.businessHoursStart || '09:00'}
                     onChange={(e) => handleSettingChange('businessHoursStart', e.target.value)}
-                    className="w-full h-11 rounded-xl"
+                    className="w-full h-11 rounded-xl bg-white dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="business-end" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="business-end" className="text-sm font-medium text-gray-700 dark:text-[#7a8ba3]">
                   End Time
                 </Label>
                 <div className="relative">
@@ -181,24 +192,24 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
                     type="time"
                     value={localSettings.businessHoursEnd || '18:00'}
                     onChange={(e) => handleSettingChange('businessHoursEnd', e.target.value)}
-                    className="w-full h-11 rounded-xl"
+                    className="w-full h-11 rounded-xl bg-white dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="timezone" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="timezone" className="text-sm font-medium text-gray-700 dark:text-[#7a8ba3]">
                 Timezone
               </Label>
               <Select
                 value={localSettings.timezone || 'GST'}
                 onValueChange={(value) => handleSettingChange('timezone', value)}
               >
-                <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                <SelectTrigger className="h-11 rounded-xl border-gray-200 dark:border-[#262831] bg-white dark:bg-[#1a2a43] text-gray-900 dark:text-white">
                   <SelectValue placeholder="Select timezone" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl bg-white dark:bg-[#000724] border-gray-200 dark:border-[#262831] text-gray-900 dark:text-white">
                   <SelectItem value="GST">GST (Gulf Standard Time - UTC+4)</SelectItem>
                   <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
                   <SelectItem value="EST">EST (Eastern Standard Time - UTC-5)</SelectItem>
@@ -212,18 +223,10 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
           </div>
         </div>
 
-        <DialogActions className="gap-3">
-          <div className="flex-1" />
-          <Button
-            variant="ghost"
-            onClick={handleReset}
-            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl"
-          >
-            Reset Defaults
-          </Button>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             onClick={handleSave}
-            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+            className="w-full rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >
             <Save className="mr-2 h-4 w-4" />
             Save Settings
@@ -232,5 +235,8 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
       </DialogContent>
     </Dialog>
   );
+};
+
+export default PipelineBoardSettings;
 };
 export default PipelineBoardSettings;

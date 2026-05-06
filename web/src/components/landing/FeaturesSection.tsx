@@ -143,11 +143,11 @@ export default function FeaturesSection() {
           variants={itemVariants}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
+          <h2 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
             Powerful Features for{" "}
-            <span className="text-[#1A3F7F]">Automated Success</span>
+            <span className="text-primary">Automated Success</span>
           </h2>
-          <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Experience the future of sales automation with our comprehensive
             suite of AI-powered tools
           </p>
@@ -175,13 +175,13 @@ export default function FeaturesSection() {
                   initial={{ opacity: 0, y: 10 }}
                   whileHover={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="mt-4 p-4 bg-gradient-to-br from-background to-background rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <div className="space-y-3">
                     {/* Before */}
                     <div className="flex gap-2 items-start">
-                      <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase mt-0.5">Before</span>
-                      <p className="text-sm text-[#8F9BB3] dark:text-gray-400 line-through">
+                      <span className="text-xs font-semibold text-destructive uppercase mt-0.5">Before</span>
+                      <p className="text-sm text-muted-foreground line-through">
                         {feature.beforeText}
                       </p>
                     </div>
@@ -207,9 +207,9 @@ export default function FeaturesSection() {
                     <motion.div
                       initial={{ opacity: 0 }}
                       whileHover={{ opacity: 1 }}
-                      className="pt-2 border-t border-gray-300 dark:border-gray-700"
+                      className="pt-2 border-t border-border"
                     >
-                      <p className="text-xs font-bold text-[#1A3F7F] dark:text-blue-400">
+                      <p className="text-xs font-bold text-primary">
                         ✨ {feature.improvement}
                       </p>
                     </motion.div>

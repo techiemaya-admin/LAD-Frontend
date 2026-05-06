@@ -18,6 +18,7 @@ import {
   setNewLead,
   resetNewLead
 } from '@/store/slices/uiSlice';
+
 interface CreateCardDialogProps {
   open: boolean;
   onClose: () => void;
@@ -25,6 +26,7 @@ interface CreateCardDialogProps {
   stages?: Stage[];
   leads?: Lead[];
 }
+
 const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   open,
   onClose,
@@ -36,6 +38,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   const { hasFeature } = useAuth();
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
+
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -43,6 +46,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     createTitle: isEducation ? 'Create New Student' : 'Create New Lead',
     createButton: isEducation ? 'Create Student' : 'Create Lead'
   };
+
   // Get master data from Redux
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
@@ -53,6 +57,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   const newLead = useSelector(selectNewLead);
   // Local state for creation loading
   const [isCreatingCard, setIsCreatingCard] = React.useState(false);
+
   // Get default values from master data
   const getDefaultStatus = (): string => {
     return statusOptions.length > 0 ? (statusOptions[0].key || '') : '';
@@ -65,6 +70,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     const mediumPriority = priorityOptions.find(p => p.key === 'medium');
     return mediumPriority ? mediumPriority.key : (priorityOptions[0]?.key || '');
   };
+
   // Set default values when master data loads or component opens
   useEffect(() => {
     if (open && (!newLead.status || !newLead.source || !newLead.priority)) {
@@ -76,12 +82,14 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       }));
     }
   }, [open, statusOptions, sourceOptions, priorityOptions, dispatch]);
+
   const handleCancel = () => {
     // Reset form data explicitly
     dispatch(resetNewLead());
     // Close dialog
     onClose();
   };
+
   const handleCreateCard = async () => {
     if (!newLead.name.trim()) {
       return;
@@ -107,11 +115,12 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       setIsCreatingCard(false);
     }
   };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-xl overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
         <DialogHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 px-8 pt-6">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Plus className="h-6 w-6 stroke-[3px]" />
             </div>
@@ -203,6 +212,67 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                       value={newLead.gpa || ''}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, gpa: e.target.value }))}
                       className="h-11 rounded-xl border-gray-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="previous-education" className="text-sm font-medium text-gray-700">Previous Education</Label>
+                  <Input
+                    id="previous-education"
+                    placeholder="e.g., Bachelor's in Engineering"
+                    value={newLead.previousEducation || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, previousEducation: e.target.value }))}
+                    className="h-11 rounded-xl border-gray-200"
+                  />
+                </div>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">Counselling Session</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred-counsellor" className="text-sm font-medium text-gray-700">Preferred Counsellor</Label>
+                      <Select
+                        value={newLead.preferredCounsellor || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredCounsellor: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select counsellor" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {teamMembers.filter(member => member.role === 'counsellor' || member.role === 'admin' || member.role === 'owner').map(member => (
+                            <SelectItem key={member.id} value={member.id || ''}>
+                              {member.name || `${member.firstName} ${member.lastName}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred-time" className="text-sm font-medium text-gray-700">Preferred Session Time</Label>
+                      <Select
+                        value={newLead.preferredTime || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredTime: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select time slot" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="morning">Morning (9:00 - 12:00)</SelectItem>
+                          <SelectItem value="afternoon">Afternoon (12:00 - 17:00)</SelectItem>
+                          <SelectItem value="evening">Evening (17:00 - 20:00)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="session-notes" className="text-sm font-medium text-gray-700">Session Notes</Label>
+                    <Textarea
+                      id="session-notes"
+                      placeholder="Any specific topics or concerns to discuss..."
+                      value={newLead.sessionNotes || ''}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, sessionNotes: e.target.value }))}
+                      className="rounded-xl border-gray-200 resize-none min-h-[80px]"
                     />
                   </div>
                 </div>
@@ -343,11 +413,11 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
           </div>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             onClick={handleCreateCard}
             disabled={!newLead.name || !newLead.stage || isCreatingCard}
-            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+            className="w-full rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >
             {isCreatingCard ? 'Creating...' : labels.createButton}
           </Button>

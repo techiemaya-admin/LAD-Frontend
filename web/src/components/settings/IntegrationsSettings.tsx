@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock } from 'lucide-react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
+import { CustomEmailIntegration } from './CustomEmailIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
@@ -88,6 +89,14 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Email & Calendar',
   },
   {
+    id: 'custom-email',
+    name: 'Custom Email (SMTP)',
+    description: 'Connect Roundcube, cPanel mail, Zoho, Yandex, Fastmail, or any self-hosted webmail.',
+    icon: <Server className="h-6 w-6 text-emerald-600" />,
+    iconBg: 'bg-emerald-50',
+    category: 'Email & Calendar',
+  },
+  {
     id: 'linkedin',
     name: 'LinkedIn',
     description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
@@ -101,15 +110,12 @@ const INTEGRATIONS: IntegrationCard[] = [
     description: 'Connect GoHighLevel CRM to sync contacts, deals, and automate workflows.',
     icon: (
       <svg viewBox="0 0 120 120" className="h-6 w-6">
-        {/* Yellow arrow (left) - shortest */}
         <polygon points="15,100 27,100 27,60 15,60" fill="#FFB902"/>
         <polygon points="7,60 35,60 21,30" fill="#FFB902"/>
         <polygon points="21,30 35,60 28,60 28,42" fill="#E0A300"/>
-        {/* Blue arrow (center) */}
         <polygon points="40,100 52,100 52,55 40,55" fill="#0B81FF"/>
         <polygon points="32,55 60,55 46,22" fill="#0B81FF"/>
         <polygon points="46,22 60,55 53,55 53,36" fill="#0066CC"/>
-        {/* Green arrow (right) - tallest */}
         <polygon points="65,100 77,100 77,48 65,48" fill="#00C853"/>
         <polygon points="57,48 85,48 71,12" fill="#00C853"/>
         <polygon points="71,12 85,48 78,48 78,28" fill="#009624"/>
@@ -145,7 +151,6 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Social',
     comingSoon: true,
   },
-  // Coming Soon integrations
   {
     id: 'instagram',
     name: 'Instagram',
@@ -235,7 +240,6 @@ const INTEGRATIONS: IntegrationCard[] = [
   },
 ];
 
-// Connection status for integrations that support it
 type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
@@ -248,7 +252,6 @@ export const IntegrationsSettings: React.FC = () => {
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
 
-  // MindBody modal state
   const [showMindBodyModal, setShowMindBodyModal] = useState(false);
   const [mindBodyForm, setMindBodyForm] = useState({
     site_id: '',
@@ -257,7 +260,6 @@ export const IntegrationsSettings: React.FC = () => {
     api_key: '',
     password: '',
   });
-  // Target class selection
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [fetchingClasses, setFetchingClasses] = useState(false);
@@ -302,7 +304,6 @@ export const IntegrationsSettings: React.FC = () => {
     target_classes: string[];
   } | null>(null);
 
-  // Edit target classes on the connected account (no re-entry of credentials needed)
   const [editingClasses, setEditingClasses] = useState(false);
   const [connectedAvailableClasses, setConnectedAvailableClasses] = useState<string[]>([]);
   const [connectedSelectedClasses, setConnectedSelectedClasses] = useState<string[]>([]);
@@ -310,14 +311,11 @@ export const IntegrationsSettings: React.FC = () => {
   const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
   const [updatingClasses, setUpdatingClasses] = useState(false);
 
-  // Helper to update a single integration's status
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
   }, []);
 
-  // Check all integration statuses on mount
   useEffect(() => {
-    // WhatsApp Personal
     const checkWaPersonal = async () => {
       setStatus('whatsapp-personal', 'loading');
       try {
@@ -327,11 +325,9 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
         const connected = accounts.some((a: { status: string }) => a.status === 'connected');
         setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
-        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
       } catch { setStatus('whatsapp-personal', 'disconnected'); }
     };
 
-    // WhatsApp AI (Business API)
     const checkWaAI = async () => {
       setStatus('whatsapp-ai', 'loading');
       try {
@@ -341,11 +337,9 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
         const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
         setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
-        if (active) try { localStorage.setItem('whatsappChannel', 'waba'); } catch {}
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
     };
 
-    // Google — checks email OAuth status (same flow as Connect with Google button)
     const checkGoogle = async () => {
       setStatus('google', 'loading');
       try {
@@ -356,7 +350,6 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('google', 'disconnected'); }
     };
 
-    // Microsoft — checks email OAuth status (same flow as Connect with Microsoft button)
     const checkMicrosoft = async () => {
       setStatus('microsoft', 'loading');
       try {
@@ -367,7 +360,16 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('microsoft', 'disconnected'); }
     };
 
-    // LinkedIn
+    const checkCustomEmail = async () => {
+      setStatus('custom-email', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/email/custom/status', { method: 'POST' });
+        if (!res.ok) { setStatus('custom-email', 'disconnected'); return; }
+        const data = await res.json();
+        setStatus('custom-email', data?.connected ? 'connected' : 'disconnected');
+      } catch { setStatus('custom-email', 'disconnected'); }
+    };
+
     const checkLinkedIn = async () => {
       setStatus('linkedin', 'loading');
       try {
@@ -382,7 +384,6 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('linkedin', 'disconnected'); }
     };
 
-    // GoHighLevel
     const checkGHL = async () => {
       setStatus('gohighlevel', 'loading');
       try {
@@ -393,7 +394,6 @@ export const IntegrationsSettings: React.FC = () => {
       } catch { setStatus('gohighlevel', 'disconnected'); }
     };
 
-    // MindBody
     const checkMindBody = async () => {
       try {
         setStatus('mindbody', 'loading');
@@ -416,22 +416,18 @@ export const IntegrationsSettings: React.FC = () => {
     checkWaAI();
     checkGoogle();
     checkMicrosoft();
+    checkCustomEmail();
     checkLinkedIn();
     checkGHL();
     checkMindBody();
   }, [tenantId, setStatus]);
 
-  // Detect OAuth redirect-back (?google=connected or ?microsoft=connected)
-  // When the OAuth flow completes, the backend redirects to /settings?google=connected.
-  // At that point activeView is reset to 'grid' so GoogleAuthIntegration is not mounted —
-  // we must refresh the grid status here instead.
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const googleDone = urlParams.get('google');
     const microsoftDone = urlParams.get('microsoft');
 
     if (googleDone === 'connected' || googleDone === 'error') {
-      // Re-check Google status and clean up URL
       fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' })
         .then(r => r.json())
         .then(data => setStatus('google', data?.connected ? 'connected' : 'disconnected'))
@@ -448,11 +444,8 @@ export const IntegrationsSettings: React.FC = () => {
     }
   }, [setStatus]);
 
-  // Re-check all statuses
   const refreshStatuses = useCallback(() => {
-    // Trigger re-check by re-running the effect
     const checkAll = async () => {
-      // WhatsApp Personal
       setStatus('whatsapp-personal', 'loading');
       try {
         const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
@@ -461,10 +454,8 @@ export const IntegrationsSettings: React.FC = () => {
         const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
         const connected = accounts.some((a: { status: string }) => a.status === 'connected');
         setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
-        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
       } catch { setStatus('whatsapp-personal', 'disconnected'); }
 
-      // WhatsApp AI
       setStatus('whatsapp-ai', 'loading');
       try {
         const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
@@ -475,7 +466,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
 
-      // Google
       setStatus('google', 'loading');
       try {
         const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
@@ -484,7 +474,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('google', data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('google', 'disconnected'); }
 
-      // Microsoft
       setStatus('microsoft', 'loading');
       try {
         const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
@@ -493,7 +482,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('microsoft', 'disconnected'); }
 
-      // LinkedIn
       setStatus('linkedin', 'loading');
       try {
         const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
@@ -506,7 +494,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('linkedin', connected ? 'connected' : 'disconnected');
       } catch { setStatus('linkedin', 'disconnected'); }
 
-      // GoHighLevel
       setStatus('gohighlevel', 'loading');
       try {
         const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
@@ -515,7 +502,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
       } catch { setStatus('gohighlevel', 'disconnected'); }
 
-      // MindBody
       try {
         setStatus('mindbody', 'loading');
         const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
@@ -543,7 +529,6 @@ export const IntegrationsSettings: React.FC = () => {
     );
   }, [searchQuery]);
 
-  // Single return — modal must be accessible from both detail and grid views
   return (
     <>
     {activeView !== 'grid' ? (
@@ -569,6 +554,13 @@ export const IntegrationsSettings: React.FC = () => {
         )}
         {activeView === 'google' && <GoogleAuthIntegration />}
         {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
+        {activeView === 'custom-email' && (
+          <CustomEmailIntegration
+            onStatusChange={(connected) =>
+              setStatus('custom-email', connected ? 'connected' : 'disconnected')
+            }
+          />
+        )}
         {activeView === 'linkedin' && <LinkedInIntegration />}
         {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
         {activeView === 'slack' && (
@@ -590,7 +582,6 @@ export const IntegrationsSettings: React.FC = () => {
 
             {statusMap['mindbody'] === 'connected' ? (
               <div className="space-y-4">
-                {/* Account info */}
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
                   {mindBodyStatusData?.display_name && (
                     <div className="flex justify-between">
@@ -604,7 +595,6 @@ export const IntegrationsSettings: React.FC = () => {
                       <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
                     </div>
                   )}
-                  {/* Target Classes row — always visible with Edit button */}
                   <div className="flex justify-between items-start gap-4">
                     <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
                     <div className="flex items-start gap-2 min-w-0">
@@ -644,7 +634,6 @@ export const IntegrationsSettings: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Inline class editor */}
                 {editingClasses && (
                   <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -658,7 +647,7 @@ export const IntegrationsSettings: React.FC = () => {
                         }}
                         className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        <span className="text-lg leading-none">✕</span>
+                        ✕ Cancel
                       </button>
                     </div>
 
@@ -746,9 +735,7 @@ export const IntegrationsSettings: React.FC = () => {
                       setMindBodyStatusData(null);
                       setEditingClasses(false);
                       setConnectedAvailableClasses([]);
-                    } catch {
-                      // silently ignore; user can retry
-                    }
+                    } catch {}
                   }}
                   className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
                 >
@@ -777,7 +764,6 @@ export const IntegrationsSettings: React.FC = () => {
       </div>
     ) : (
       <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-foreground">Integrations</h2>
@@ -796,12 +782,10 @@ export const IntegrationsSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Card Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((integration) => {
           const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
           const isAlreadyConnected = statusMap[integration.id] === 'connected';
-          // Lock the card only when credit-gated, credits are confirmed 0, and not already connected
           const isLocked = isCreditGated && !hasCredits && !isAlreadyConnected;
 
           return (
@@ -1103,9 +1087,19 @@ export const IntegrationsSettings: React.FC = () => {
                 <button
                   type="submit"
                   disabled={mindBodyConnecting}
-                  className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {mindBodyConnecting ? 'Connecting...' : 'Connect'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMindBodyModal(false);
+                    mindBodyFormReset();
+                  }}
+                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </form>
@@ -1115,3 +1109,4 @@ export const IntegrationsSettings: React.FC = () => {
     </>
   );
 };
+>>>>>>> origin/develop

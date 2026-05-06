@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   Mail, Plus, Send, Loader2, X, Check, AlertCircle,
-  FileText, Trash2, ChevronLeft, Sparkles,
+  FileText, Trash2, ChevronLeft, Sparkles, Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,8 @@ interface EmailTemplate {
   category: string;
   is_active: boolean;
   created_at: string;
+  // Document attachments stored in template metadata
+  attachments?: { filename: string; url: string; contentType: string; size: number }[];
 }
 
 interface EmailContact {
@@ -44,7 +46,13 @@ interface EmailGroupDetail {
   members: EmailContact[];
 }
 
-type EmailProvider = 'gmail' | 'outlook';
+type EmailProvider = 'gmail' | 'outlook' | 'custom';
+
+/** Map UI provider key onto the backend's provider string. */
+const toBackendProvider = (p: EmailProvider): string =>
+  p === 'outlook' ? 'microsoft'
+  : p === 'custom' ? 'custom_smtp'
+  : 'google';
 
 interface EmailTemplatePickerProps {
   open: boolean;
@@ -110,6 +118,15 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
   const [sending, setSending]         = useState(false);
   const [sendResult, setSendResult]   = useState<SendResult | null>(null);
 
+  // Attachments
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
+
+  // Test email
+  const [testEmailAddr, setTestEmailAddr] = useState('');
+  const [sendingTest, setSendingTest]     = useState(false);
+  const [testResult, setTestResult]       = useState<{ ok: boolean; message: string } | null>(null);
+
   // Delete
   const [deletingId, setDeletingId]   = useState<string | null>(null);
 
@@ -136,6 +153,9 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
       setView('list');
       setSelected(null);
       setSendResult(null);
+      setAttachments([]);
+      setTestEmailAddr('');
+      setTestResult(null);
       setFormName(''); setFormSubject(''); setFormBody(''); setFormError('');
     }
   }, [open, loadTemplates]);
@@ -147,6 +167,27 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
     setSendSubject(tpl.subject);
     setSendBody(tpl.body_html ?? tpl.body ?? '');
     setSendError('');
+    // Pre-load any document attachments stored with the template.
+    // These are fetched from their URL and converted to File objects so the
+    // existing base64 serialisation path in handleSend works unchanged.
+    setAttachments([]);
+    if (tpl.attachments && tpl.attachments.length > 0) {
+      Promise.all(
+        tpl.attachments.map(async (att) => {
+          try {
+            const res = await fetch(att.url);
+            if (!res.ok) return null;
+            const blob = await res.blob();
+            return new File([blob], att.filename, { type: att.contentType || blob.type });
+          } catch {
+            return null;
+          }
+        })
+      ).then(files => {
+        const valid = files.filter((f): f is File => f !== null);
+        if (valid.length > 0) setAttachments(valid);
+      });
+    }
     setView('preview');
   }, []);
 
@@ -227,12 +268,33 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
         return;
       }
 
-      // Backend expects 'google' | 'microsoft' (not 'gmail' | 'outlook')
-      const backendProvider = provider === 'outlook' ? 'microsoft' : 'google';
+      // Serialize attachments to base64
+      const attachmentPayloads = await Promise.all(
+        attachments.map(file => new Promise<{ filename: string; contentType: string; content: string }>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            // dataUrl = "data:<mime>;base64,<data>"
+            const base64 = dataUrl.split(',')[1];
+            resolve({ filename: file.name, contentType: file.type || 'application/octet-stream', content: base64 });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        }))
+      );
+
+      // Map UI provider → backend provider key.
+      const backendProvider = toBackendProvider(provider);
       const res = await fetch(`${EMAIL_API}/send-bulk`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ provider: backendProvider, recipients, subject, body_html: body }),
+        body: JSON.stringify({
+          provider: backendProvider,
+          recipients,
+          subject,
+          body_html: body,
+          ...(attachmentPayloads.length > 0 ? { attachments: attachmentPayloads } : {}),
+        }),
       });
       const data = await res.json();
 
@@ -254,7 +316,57 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
     } finally {
       setSending(false);
     }
-  }, [sendSubject, sendBody, group.members, provider]);
+  }, [sendSubject, sendBody, group.members, provider, attachments]);
+
+  const handleSendTest = useCallback(async () => {
+    const addr = testEmailAddr.trim();
+    if (!addr || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return;
+    const subject = sendSubject.trim();
+    const body    = sendBody.trim();
+    if (!subject || !body) {
+      setTestResult({ ok: false, message: 'Fill in the subject and body first.' });
+      return;
+    }
+    setSendingTest(true);
+    setTestResult(null);
+    try {
+      // Serialize attachments (same as handleSend)
+      const attachmentPayloads = await Promise.all(
+        attachments.map(file => new Promise<{ filename: string; contentType: string; content: string }>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve({ filename: file.name, contentType: file.type || 'application/octet-stream', content: base64 });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        }))
+      );
+      const backendProvider = toBackendProvider(provider);
+      const res = await fetch(`${EMAIL_API}/send-bulk`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          provider:    backendProvider,
+          recipients:  [{ email: addr, name: 'Test Recipient', company: '' }],
+          subject:     `[TEST] ${subject}`,
+          body_html:   body,
+          ...(attachmentPayloads.length > 0 ? { attachments: attachmentPayloads } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (data.success && (data.sent ?? 0) > 0) {
+        setTestResult({ ok: true, message: `Test email sent to ${addr}` });
+      } else {
+        const errMsg = data.errors?.[0]?.error || data.error || data.detail || 'Send failed.';
+        setTestResult({ ok: false, message: errMsg });
+      }
+    } catch (e) {
+      setTestResult({ ok: false, message: String(e) });
+    } finally {
+      setSendingTest(false);
+    }
+  }, [testEmailAddr, sendSubject, sendBody, attachments, provider]);
 
   const insertVar = useCallback((varLabel: string, field: 'subject' | 'body') => {
     if (field === 'subject') setSendSubject(prev => prev + varLabel);
@@ -263,7 +375,10 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
-  const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook';
+  const providerLabel =
+    provider === 'gmail'   ? 'Gmail'
+    : provider === 'outlook' ? 'Outlook'
+    : 'Custom SMTP';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -274,7 +389,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
             {(view === 'compose' || view === 'preview') && (
               <button
                 onClick={() => {
-                  if (view === 'preview') { setView('list'); setSelected(null); }
+                  if (view === 'preview') { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }
                   else setView('list');
                 }}
                 className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1"
@@ -453,6 +568,98 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
               {/* Personalization hints */}
               <PersonalizationHints onInsert={(v) => setSendBody(prev => prev + v)} />
 
+              {/* Attachments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attachments</label>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Attach file
+                  </button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length) setAttachments(prev => [...prev, ...files]);
+                    // reset so same file can be re-attached after removal
+                    e.target.value = '';
+                  }}
+                />
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attachments.map((file, idx) => (
+                      <span
+                        key={idx}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted border border-border text-xs max-w-[200px]"
+                      >
+                        <Paperclip className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Send test email ──────────────────────────────── */}
+              <div className="rounded-lg border border-border bg-amber-50/60 p-3 space-y-2">
+                <p className="text-xs font-medium flex items-center gap-1.5 text-amber-700">
+                  <Send className="h-3.5 w-3.5" />
+                  Send a test email before bulk send
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={testEmailAddr}
+                    onChange={e => { setTestEmailAddr(e.target.value); setTestResult(null); }}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs px-3 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                    disabled={
+                      sendingTest ||
+                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmailAddr.trim()) ||
+                      !sendSubject.trim() ||
+                      !sendBody.trim()
+                    }
+                    onClick={handleSendTest}
+                  >
+                    {sendingTest
+                      ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending…</>
+                      : 'Send Test'}
+                  </Button>
+                </div>
+                {testResult && (
+                  <div className={`flex items-start gap-1.5 text-xs rounded px-2 py-1.5 ${
+                    testResult.ok
+                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                      : 'text-red-700 bg-red-50 border border-red-200'
+                  }`}>
+                    {testResult.ok
+                      ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                    <span>{testResult.message}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Recipients preview */}
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
@@ -565,7 +772,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
           {view === 'preview' && (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => { setView('list'); setSelected(null); }}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }}>
                 Back
               </Button>
               <Button

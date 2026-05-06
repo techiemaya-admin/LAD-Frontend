@@ -579,17 +579,17 @@ export default function MakeCallContent() {
   }, [selectedCountryCode, filteredNumbers]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 md:p-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#000724] p-3 md:p-3">
       <div className="space-y-6">
         {/* Header */}
         <div className="mb-5 mt-10">
           <div className="flex items-center gap-2 mb-1">
-            <Speech className="w-8 h-8 text-[#1E293B]" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+            <Speech className="w-8 h-8 text-[#1E293B] dark:text-white" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white">
               AI Caller
             </h1>
           </div>
-          <p className="text-sm text-[#64748B] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
             Make single or bulk calls with voice agents
           </p>
         </div>
