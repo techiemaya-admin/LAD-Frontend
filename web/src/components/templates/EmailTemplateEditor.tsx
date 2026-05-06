@@ -7,7 +7,7 @@ import {
   ArrowLeft, Pencil, Check, Eye, ChevronDown,
   LayoutTemplate, Code, AlignLeft, Loader2,
   Smartphone, Monitor, Tablet, Upload, X,
-  GalleryHorizontalEnd, Info, Paperclip,
+  GalleryHorizontalEnd, Info, Paperclip, Send, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import ReadyToUseTemplates from './ReadyToUseTemplates';
 import HtmlEmailEditor from './HtmlEmailEditor';
@@ -137,6 +137,13 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
   const [uploading, setUploading]     = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
+
+  // Test email send (in preview modal)
+  const [testEmailAddr, setTestEmailAddr]     = useState('');
+  const [testProvider, setTestProvider]       = useState<'google' | 'microsoft' | 'custom_smtp'>('google');
+  const [sendingTest, setSendingTest]         = useState(false);
+  const [testResult, setTestResult]           = useState<{ ok: boolean; message: string } | null>(null);
+
   const fileInputRef           = useRef<HTMLInputElement>(null);
   const attachmentInputRef     = useRef<HTMLInputElement>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
@@ -337,6 +344,45 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
     ? (template.body_html || '')
     : `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:1.7;color:#374151;">${(template.body || '').replace(/\n/g, '<br/>')}</p>`;
 
+  // ── Send test email ───────────────────────────────────────────────────────
+
+  const handleSendTest = useCallback(async () => {
+    const addr = testEmailAddr.trim();
+    if (!addr || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return;
+    const subject = template.subject?.trim();
+    const body    = previewHtml?.trim();
+    if (!subject || !body) {
+      setTestResult({ ok: false, message: 'Add a subject line and email body before sending a test.' });
+      return;
+    }
+    setSendingTest(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/email-conversations/send-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          provider:   testProvider,
+          recipients: [{ email: addr, name: 'Test Recipient', company: '' }],
+          subject:    `[TEST] ${subject}`,
+          body_html:  body,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && (data.sent ?? 0) > 0) {
+        setTestResult({ ok: true, message: `Test email sent to ${addr}` });
+      } else {
+        const errMsg = data.errors?.[0]?.error || data.error || data.detail || 'Send failed — check your email account is connected in Settings → Integrations.';
+        setTestResult({ ok: false, message: errMsg });
+      }
+    } catch (e) {
+      setTestResult({ ok: false, message: String(e) });
+    } finally {
+      setSendingTest(false);
+    }
+  }, [testEmailAddr, testProvider, template.subject, previewHtml]);
+
   // ── Input / label class helpers ───────────────────────────────────────────
 
   const inputCls  = 'w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder-gray-400 transition';
@@ -368,7 +414,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
         <div className="ml-auto flex items-center gap-2">
           {/* Preview & test */}
           <button
-            onClick={() => setShowPreview(true)}
+            onClick={() => { setShowPreview(true); setTestResult(null); setTestEmailAddr(''); setTestProvider('google'); }}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
           >
             <Eye className="w-4 h-4" />
@@ -852,6 +898,78 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                 </button>
               </div>
             </div>
+            {/* ── Test email send bar ── */}
+            <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 bg-amber-50/70 space-y-2">
+              <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5" />
+                Send a test email to verify before using this template
+              </p>
+
+              {/* Provider selector */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-amber-600 font-medium shrink-0">Send via:</span>
+                {(
+                  [
+                    { value: 'google',     label: 'Gmail' },
+                    { value: 'microsoft',  label: 'Outlook' },
+                    { value: 'custom_smtp', label: 'Custom SMTP' },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => { setTestProvider(value); setTestResult(null); }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                      testProvider === value
+                        ? 'bg-amber-500 text-white border-amber-500'
+                        : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Email input + send */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  placeholder="Enter email address…"
+                  value={testEmailAddr}
+                  onChange={(e) => { setTestEmailAddr(e.target.value); setTestResult(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSendTest(); }}
+                  className="flex-1 h-8 px-3 text-sm border border-amber-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 placeholder-gray-400"
+                />
+                <button
+                  onClick={handleSendTest}
+                  disabled={
+                    sendingTest ||
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmailAddr.trim()) ||
+                    !template.subject?.trim() ||
+                    !previewHtml?.trim()
+                  }
+                  className="flex items-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                >
+                  {sendingTest
+                    ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending…</>
+                    : <><Send className="w-3 h-3" /> Send Test</>}
+                </button>
+              </div>
+
+              {testResult && (
+                <div className={`flex items-start gap-1.5 text-xs rounded-lg px-3 py-2 ${
+                  testResult.ok
+                    ? 'bg-green-50 border border-green-200 text-green-700'
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                }`}>
+                  {testResult.ok
+                    ? <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    : <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+            </div>
+
             <div className="flex-1 overflow-auto p-6 bg-gray-50">
               <div className={`mx-auto bg-white rounded-xl shadow-sm transition-all duration-300 ${device === 'mobile' ? 'max-w-[375px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-full'}`}>
                 <EmailPreview htmlContent={previewHtml} subject={template.subject} showDeviceSelector={false} />
