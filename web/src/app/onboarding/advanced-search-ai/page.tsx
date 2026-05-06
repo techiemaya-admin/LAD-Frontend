@@ -8999,33 +8999,35 @@ const css = `
                 .adv-gemini-logo {width: 50px; }
                 .adv-gemini-chips { flex-wrap: wrap; justify-content: center; padding: 10px 20px 40px !important; overflow-x: visible; gap: 10px; width: 100%; margin: 0 auto; }
                 .adv-gemini-chip { padding: 10px 16px; font-size: 12.5px; flex: 0 0 auto; border-radius: 12px; }
-                html, body { background: #FFFFFF !important; }
+                html, body, .adv-landing, .adv-chat-root, main { background: #FFFFFF !important; }
                 .adv-chat-input-box { width: 100% !important; max-width: 100% !important; border-radius: 20px; padding: 16px 18px 12px; border: none !important; box-shadow: none !important; outline: none !important; background: #FFFFFF !important; }
                 .adv-chat-ta { text-align: center; font-size: 15px !important; outline: none !important; border: none !important; background: #FFFFFF !important; }
-                .adv-chat-back { width: 36px; height: 36px; top: 75px; left: 12px; z-index: 2000 !important; }
+                .adv-chat-back { width: 36px; height: 36px; top: 82px; left: 12px; z-index: 2000 !important; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
-                main { overflow: hidden !important; height: calc(100vh - 110px) !important; padding-top: 0 !important; background: #FFFFFF !important; }
-                .adv-chat-root { height: calc(100vh - 110px) !important; overflow: hidden !important; background: #FFFFFF !important; }
+                main { overflow: hidden !important; height: calc(100vh - 64px) !important; padding-top: 0 !important; background: #FFFFFF !important; }
+                .adv-chat-root { height: calc(100vh - 64px) !important; overflow: hidden !important; background: #FFFFFF !important; }
                 .adv-chat-main { background: #FFFFFF !important; }
-                .adv-chat-left { width: 100% !important; max-width: 100vw !important; overflow: hidden !important; display: flex; flex-direction: column; align-items: stretch !important; height: calc(100vh - 110px) !important; position: relative; background: #FFFFFF !important; }
+                .adv-chat-left { width: 100% !important; max-width: 100vw !important; overflow: hidden !important; display: flex; flex-direction: column; align-items: stretch !important; height: calc(100vh - 64px) !important; position: relative; background: #FFFFFF !important; }
                 .adv-chat-left-empty { justify-content: center !important; padding-bottom: 40px !important; gap: 20px; }
                 .adv-chat-left-empty .adv-chat-msgs { flex: 0 0 auto !important; display: flex; flex-direction: column; justify-content: center; padding: 0 !important; height: auto !important; margin-bottom: 0 !important; }
                 .adv-chat-left-empty .adv-msgs-inner { display: none !important; }
                 .adv-chat-left-empty .adv-chat-input-wrap { padding-bottom: 0 !important; flex: 0 0 auto !important; }
                 .adv-chat-left-empty .adv-chat-input-box { padding: 24px 30px !important; max-width: 90% !important; margin: 0 auto !important; }
                 .adv-chat-left-empty .adv-chat-ta { font-size: 20px !important; }
-                .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 80px !important; }
+                .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 82px !important; }
                 /* Decrease width for a more contained look on mobile */
-                .adv-chat-msgs { flex: 1 !important; overflow-y: auto !important; padding: 70px 0 20px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; background: #FFFFFF !important; }
+                .adv-chat-msgs { flex: 1 !important; overflow-y: auto !important; padding: 72px 0 10px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; background: #FFFFFF !important; }
                 .adv-msgs-inner { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 20px !important; box-sizing: border-box !important; }
-                .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 6px 16px 45px !important; box-sizing: border-box !important; background: #FFFFFF !important; border-top: none !important; flex: 0 0 auto !important; position: relative; z-index: 10; }
+                .adv-chat-input-wrap { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 1px 16px 20px !important; box-sizing: border-box !important; background: #FFFFFF !important; border-top: none !important; flex: 0 0 auto !important; position: relative; z-index: 10; }
                 .adv-mobile-footer { background: #FFFFFF !important; }
-                .adv-chat-input-box { width: 100% !important; max-width: 90% !important; margin: 0 auto !important; border-radius: 20px; padding: 4px 12px 2px; background: #FFFFFF !important; }
+                .adv-chat-input-box { width: 100% !important; max-width: 80% !important; margin: 0 auto !important; border-radius: 16px; padding: 0px 8px 0px; background: #FFFFFF !important; }
                 .adv-input-central-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-                .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 14px !important; text-align: center !important; padding: 4px 0 !important; min-height: 24px !important; }
-                .adv-chat-input-foot { padding: 0 !important; border: none !important; background: none !important; justify-content: center !important; gap: 8px !important; }
-                .adv-premium-btn { width: 60% !important; justify-content: center !important; padding: 6px 12px !important; margin: 4px auto !important; }
-                .adv-msg-counter { font-size: 9px !important; color: #9ca3af !important; margin: 0 !important; }
+                 .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 12px !important; text-align: center !important; padding: 1px 0 !important; min-height: 18px !important; }
+                .adv-chat-input-foot { padding: 0 !important; margin-top: 1px !important; border: none !important; background: none !important; justify-content: center !important; gap: 2px !important; }
+                .adv-premium-btn { width: auto !important; min-width: 100px !important; justify-content: center !important; padding: 2px 8px !important; margin: 0 !important; font-size: 10px !important; }
+                .adv-chat-attach-btn, .adv-send-sm { width: 28px !important; height: 28px !important; }
+                .adv-chat-attach-btn svg, .adv-send-sm svg { width: 12px !important; height: 12px !important; }
+                .adv-msg-counter { font-size: 9px !important; color: #9ca3af !important; margin: 0 !important; padding: 1px 0 !important; }
                 
                 .adv-mobile-add-btn, .adv-mobile-send-btn {
                     width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e7eb;
@@ -9111,7 +9113,7 @@ const css = `
                 
                 /* MOBILE FOOTER */
                 .adv-mobile-footer {
-                    display: flex; position: fixed; bottom: 20px; left: 5%; right: 5%;
+                    display: flex; position: fixed; bottom: 10px; left: 10%; right: 10%;
                     height: 60px; background: #FFFFFF !important; border-radius: 40px; z-index: 1000;
                     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
                     justify-content: space-around; align-items: center;
