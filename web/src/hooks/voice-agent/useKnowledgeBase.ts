@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
 const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "";
-const isWorkerConfigured = workerUrl.startsWith("https://");
+const isWorkerConfigured = workerUrl.startsWith("http");
 
 export interface PlaygroundStore {
   id: string;
@@ -34,7 +34,11 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   const sessionId = useRef("");
 
   useEffect(() => {
-    if (!isWorkerConfigured) return;
+    if (!isWorkerConfigured) {
+      setWakeError("Playground Worker URL is not configured. Features are disabled.");
+      setIsAwake(false);
+      return;
+    }
 
     if (!sessionId.current) {
       sessionId.current = crypto.randomUUID();
