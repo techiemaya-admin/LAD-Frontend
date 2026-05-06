@@ -27,16 +27,10 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
     onSortConfigChange({ ...sortConfig, direction });
   };
   return (
-    <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent showCloseButton={true} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogTitle className="flex justify-between items-center">
           <span className="text-lg font-semibold text-primary">Sort Leads</span>
-          <button
-            onClick={onClose}
-            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </DialogTitle>
         <div className="flex flex-col gap-6 mt-2">
           <div>
@@ -77,7 +71,7 @@ const PipelineSortDialog: React.FC<PipelineSortDialogProps> = ({
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
-          <Button 
+          <Button
             onClick={onClose}
             className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
           >

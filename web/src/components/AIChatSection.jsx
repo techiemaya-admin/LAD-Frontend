@@ -4,15 +4,15 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Paperclip, 
-  Mic, 
-  Search, 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles, 
-  Code, 
+import {
+  Paperclip,
+  Mic,
+  Search,
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  Code,
   Building2,
   Loader2
 } from 'lucide-react';
@@ -43,27 +43,27 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
     }
   };
   const suggestedActions = [
-    { 
-      icon: <Building2 className="w-5 h-5" />, 
-      text: 'Find companies', 
+    {
+      icon: <Building2 className="w-5 h-5" />,
+      text: 'Find companies',
       color: '#FFE082',
       prompt: 'What type of companies are you looking for? Please specify the company type or industry and location.'
     },
-    { 
-      icon: <Sparkles className="w-5 h-5" />, 
-      text: 'Industry search', 
+    {
+      icon: <Sparkles className="w-5 h-5" />,
+      text: 'Industry search',
       color: '#B3E5FC',
       prompt: 'What industry would you like to search? Please tell me the industry name and location you\'re interested in.'
     },
-    { 
-      icon: <User className="w-5 h-5" />, 
-      text: 'Employee search', 
+    {
+      icon: <User className="w-5 h-5" />,
+      text: 'Employee search',
       color: '#C8E6C9',
       prompt: 'Find executives in healthcare sector'
     },
-    { 
-      icon: <Code className="w-5 h-5" />, 
-      text: 'Custom query', 
+    {
+      icon: <Code className="w-5 h-5" />,
+      text: 'Custom query',
       color: '#F8BBD0',
       prompt: 'Search for SaaS companies with more than 50 employees'
     },
@@ -74,19 +74,19 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
   const showWelcome = chatHistory.length === 0 && !loading;
 
   return (
-    <div 
+    <div
       id="ai-chat-section"
       className="h-full flex flex-col max-w-[1200px] mx-auto px-4 relative bg-transparent"
     >
       {/* Welcome Screen */}
       {showWelcome && (
         <div className="flex-1 flex flex-col justify-center items-center mb-8 mt-8">
-          <h1 
+          <h1
             className="text-5xl font-bold mb-4 bg-gradient-to-r from-[#1a2d7a] via-[#0b1957] to-[#0a1445] bg-clip-text text-transparent text-center"
           >
             Let Agent Deal
           </h1>
-          <p 
+          <p
             className="mb-8 text-[oklch(0.145_0_0)] text-center max-w-[600px]"
           >
             Get started by typing a task and LAD can do the rest. Not sure where to start?
@@ -107,7 +107,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                     {action.text}
                   </span>
                 </div>
-                <Button 
+                <Button
                   size="icon"
                   variant="ghost"
                   className="ml-2 text-[#0b1957] h-8 w-8 hover:bg-[oklch(0.97_0_0)]"
@@ -150,7 +150,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                       </div>
                       <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto p-2 bg-[oklch(0.985_0_0)] rounded-lg [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#7C3AED] [&::-webkit-scrollbar-thumb]:rounded">
                         {message.expandedKeywords.map((keyword, idx) => (
-                          <Badge 
+                          <Badge
                             key={idx}
                             variant="outline"
                             className="bg-white text-[#7C3AED] border-[#E9D5FF] text-xs h-6 hover:bg-[#F3E8FF]"
@@ -168,7 +168,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                       </span>
                       <div className="flex flex-wrap gap-1 mb-3">
                         {message.suggestedParams.keywords && (
-                          <Badge 
+                          <Badge
                             variant="outline"
                             className="bg-[oklch(0.97_0_0)] text-[#0b1957] border-[oklch(0.922_0_0)]"
                           >
@@ -176,7 +176,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                           </Badge>
                         )}
                         {message.suggestedParams.location && (
-                          <Badge 
+                          <Badge
                             variant="outline"
                             className="bg-[oklch(0.97_0_0)] text-[#0b1957] border-[oklch(0.922_0_0)]"
                           >
@@ -184,7 +184,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
                           </Badge>
                         )}
                       </div>
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => handleApplyParams(message.suggestedParams)}
                         className="mt-2 bg-[#0b1957] text-white border border-[#0b1957] rounded-[20px] hover:bg-[#0d1f6f]"
@@ -218,7 +218,7 @@ export default function AIChatSection({ onSendPrompt, onApplyParams, loading, ch
         </div>
       )}
       {/* Input Area - Fixed at bottom */}
-      <div className="sticky bottom-0 pt-4 pb-2">
+      <div className="sticky bottom-0 pt-2 sm:pt-4 pb-1">
         <div className="relative">
           <Textarea
             ref={inputRef}

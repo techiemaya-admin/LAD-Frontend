@@ -1222,11 +1222,8 @@ function BlockEditor({
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-          <Check className="w-3.5 h-3.5" /> Apply
-        </button>
-        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-          Cancel
+        <button onClick={handleSave} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+          <Check className="w-3.5 h-3.5" /> Apply Changes
         </button>
       </div>
     </div>
@@ -1468,9 +1465,7 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowPalette(false)} className="mt-3 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 mx-auto">
-              <X className="w-3 h-3" /> Cancel
-            </button>
+            {/* Palette closed by clicking outside or re-clicking Add Block */}
           </div>
         )}
       </div>

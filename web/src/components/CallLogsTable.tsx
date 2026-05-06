@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { useState } from "react";
 import {
   Table,
@@ -865,7 +865,7 @@ export function CallLogsTable({
   return (
     <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1004,10 +1004,10 @@ export function CallLogsTable({
                           {header.column.getCanSort() && (
                             <span>
                               {{
-                                asc: <ArrowUp className="w-4 h-4 text-primary" />,
-                                desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                                asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                                desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
                               }[header.column.getIsSorted() as string] ?? (
-                                  <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                                 )}
                             </span>
                           )}
@@ -1320,21 +1320,30 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar rounded-3xl">
-          <DialogTitle className="text-lg font-semibold mb-4">
-            Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
-          </DialogTitle>
-          {selectedLead && (
-            <BookingSlot
-              leadId={selectedLead.id}
-              tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
-              studentId={String(selectedLead.id)}
-              assignedUserId={currentUser?.id || undefined}
-              createdBy={currentUser?.id || undefined}
-              users={bookingUsers}
-              isEditMode={true}
-            />
-          )}
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+                <CalendarRange className="h-5 w-5" />
+              </div>
+              <DialogTitle>
+                Schedule Appointment {selectedLead?.name ? `— ${selectedLead.name}` : ''}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            {selectedLead && (
+              <BookingSlot
+                leadId={selectedLead.id}
+                tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
+                studentId={String(selectedLead.id)}
+                assignedUserId={currentUser?.id || undefined}
+                createdBy={currentUser?.id || undefined}
+                users={bookingUsers}
+                isEditMode={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

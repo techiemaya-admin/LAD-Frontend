@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Coins } from 'lucide-react';
+import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Coins, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { formatDateTimeUnified } from '@/utils/dateTime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,7 +49,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({
     name: 300,
@@ -130,8 +131,16 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       (row) => row.created_at as string,
       {
         id: 'created_at',
-        header: 'Created',
-        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
+        header: 'Created Date',
+        cell: ({ getValue }) => formatDateTimeUnified(getValue() as string),
+      }
+    ),
+    columnHelper.accessor(
+      (row) => (row as any).updated_at || (row as any).last_activity || row.created_at as string,
+      {
+        id: 'last_activity',
+        header: 'Last Activity',
+        cell: ({ getValue }) => formatDateTimeUnified(getValue() as string),
       }
     ),
     columnHelper.display({
@@ -213,7 +222,8 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Status</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Actions</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Leads</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] dark:text-white">Created</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white">Created Date</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white">Last Activity</TableHead>
                   <TableHead className="font-semibold text-[#1E293B] dark:text-white text-right"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -237,6 +247,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-20"></div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="h-6 w-6 bg-gray-200 dark:bg-[#253456] rounded animate-pulse ml-auto"></div>
@@ -279,9 +292,10 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table className="w-full table-fixed">
-              <TableHeader>
+          <>
+            <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] relative">
+              <Table containerClassName="overflow-visible" className="w-full table-fixed border-separate border-spacing-0">
+              <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-sm">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-white dark:bg-[#000724]">
                     {headerGroup.headers.map((header) => (
@@ -298,20 +312,14 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                             : flexRender(header.column.columnDef.header, header.getContext())
                           }
                           {header.column.getCanSort() && (
-                            <div className="flex flex-col">
-                              {header.column.getIsSorted() === 'asc' && (
-                                <ChevronUp className="h-3 w-3" />
+                            <span className="ml-1">
+                              {{
+                                asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                                desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
+                              }[header.column.getIsSorted() as string] ?? (
+                                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                               )}
-                              {header.column.getIsSorted() === 'desc' && (
-                                <ChevronDown className="h-3 w-3" />
-                              )}
-                              {!header.column.getIsSorted() && (
-                                <div className="h-3 w-3 opacity-50">
-                                  <ChevronUp className="h-1.5 w-3 absolute" />
-                                  <ChevronDown className="h-1.5 w-3 absolute mt-1.5" />
-                                </div>
-                              )}
-                            </div>
+                            </span>
                           )}
                         </div>
                       </TableHead>
@@ -343,6 +351,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 )}
               </TableBody>
             </Table>
+          </div>
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
@@ -356,11 +365,11 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                     }}
                     className="border border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724] dark:text-white rounded px-2 py-1 text-sm"
                   >
-                    {[5, 10, 20, 50].map((pageSize) => (
-                      <option key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </option>
-                    ))}
+                  {[10, 20, 50, 100].map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </option>
+                  ))}
                   </select>
                   <span>
                     of {table.getFilteredRowModel().rows.length} campaigns
@@ -414,7 +423,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 </div>
               </div>
             )}
-          </div>
+          </>
         )}
     </div>
   );

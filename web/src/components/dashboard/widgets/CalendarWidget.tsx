@@ -315,7 +315,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
         )}
         {/* Selected Date Events Popup Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-lg max-h-[600px] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {format(selectedDate, 'EEEE, MMMM d, yyyy')}
