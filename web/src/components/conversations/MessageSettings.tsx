@@ -72,11 +72,17 @@ export function MessageSettings() {
       </DialogTrigger>
       <DialogContent className="">
         <DialogHeader>
-          <DialogTitle>Message Settings</DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+              <Settings className="h-5 w-5" />
+            </div>
+            <DialogTitle>Message Settings</DialogTitle>
+          </div>
         </DialogHeader>
-        <div className="space-y-5 py-2">
+
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
           <div className="flex items-center justify-between">
-            <Label htmlFor="mark-read" className="text-sm cursor-pointer">
+            <Label htmlFor="mark-read" className="text-sm font-medium cursor-pointer">
               Mark as read on open
             </Label>
             <Switch
@@ -87,7 +93,7 @@ export function MessageSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="confirm-send" className="text-sm cursor-pointer">
+            <Label htmlFor="confirm-send" className="text-sm font-medium cursor-pointer">
               Confirm before send
             </Label>
             <Switch
@@ -97,8 +103,8 @@ export function MessageSettings() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="msg-delay" className="text-sm">
+          <div className="space-y-3">
+            <Label htmlFor="msg-delay" className="text-sm font-medium">
               Message delay: {settings.messageDelay}s
             </Label>
             <input
@@ -109,9 +115,9 @@ export function MessageSettings() {
               step={1}
               value={settings.messageDelay}
               onChange={(e) => updateSetting('messageDelay', Number(e.target.value))}
-              className="w-full h-1.5 accent-primary"
+              className="w-full h-1.5 accent-primary cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <span>0s (instant)</span>
               <span>5s</span>
             </div>

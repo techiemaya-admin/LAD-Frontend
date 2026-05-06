@@ -121,7 +121,7 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md overflow-hidden flex flex-col">
+      <DialogContent className="overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
