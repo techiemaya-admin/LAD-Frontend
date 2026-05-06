@@ -7,7 +7,7 @@ import {
   ArrowLeft, Pencil, Check, Eye, ChevronDown,
   LayoutTemplate, Code, AlignLeft, Loader2,
   Smartphone, Monitor, Tablet, Upload, X,
-  GalleryHorizontalEnd, Info,
+  GalleryHorizontalEnd, Info, Paperclip,
 } from 'lucide-react';
 import ReadyToUseTemplates from './ReadyToUseTemplates';
 import HtmlEmailEditor from './HtmlEmailEditor';
@@ -18,6 +18,13 @@ import EmailPreview from './EmailPreview';
 
 type EditorMode = 'dragdrop' | 'simple' | 'html';
 type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+interface TemplateAttachment {
+  filename: string;
+  url: string;
+  contentType: string;
+  size: number; // bytes
+}
 
 interface Template {
   id?: string;
@@ -31,6 +38,7 @@ interface Template {
   is_active?: boolean;
   media_url?: string;
   media_alt_text?: string;
+  attachments?: TemplateAttachment[];
 }
 
 interface EmailTemplateEditorProps {
@@ -129,7 +137,9 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
   const [uploading, setUploading]     = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef           = useRef<HTMLInputElement>(null);
+  const attachmentInputRef     = useRef<HTMLInputElement>(null);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
 
   const [template, setTemplate] = useState<Template>(
     initialTemplate ?? {
@@ -143,6 +153,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
       is_active: true,
       media_url: '',
       media_alt_text: '',
+      attachments: [],
     }
   );
 
@@ -198,6 +209,61 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
     }
   };
 
+  // ── Attachment upload ──────────────────────────────────────────────────────
+
+  const handleAttachmentUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    setAttachmentUploading(true);
+    setError('');
+
+    try {
+      for (const file of files) {
+        if (file.size > 20 * 1024 * 1024) {
+          setError(`"${file.name}" exceeds the 20 MB limit.`);
+          continue;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/campaigns/email-templates/upload-attachment', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setError(err.error || `Failed to upload "${file.name}"`);
+          continue;
+        }
+        const data = await res.json();
+        const url = data.url || data.data?.url;
+        if (url) {
+          const attachment: TemplateAttachment = {
+            filename: file.name,
+            url,
+            contentType: file.type || 'application/octet-stream',
+            size: file.size,
+          };
+          setTemplate(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments ?? []), attachment],
+          }));
+        }
+      }
+    } finally {
+      setAttachmentUploading(false);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (url: string) => {
+    setTemplate(prev => ({
+      ...prev,
+      attachments: (prev.attachments ?? []).filter(a => a.url !== url),
+    }));
+  };
+
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = async (andRedirect = true) => {
@@ -238,6 +304,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
           is_active:      template.is_active,
           media_url:      template.media_url || null,
           media_alt_text: template.media_alt_text || null,
+          attachments:    template.attachments ?? [],
         }),
       });
 
@@ -586,6 +653,82 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                     </button>
                   )}
                   <p className="text-[11px] text-gray-400">Format: JPG, PNG, GIF · Max 5 MB</p>
+                </div>
+
+                {/* Attachments */}
+                <div className={fieldCls}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelCls + ' mb-0'}>
+                      <Paperclip className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+                      Attachments
+                      <span className="normal-case font-normal tracking-normal text-gray-400 ml-1">(optional)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => attachmentInputRef.current?.click()}
+                      disabled={attachmentUploading}
+                      className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {attachmentUploading
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Upload className="w-3.5 h-3.5" />}
+                      {attachmentUploading ? 'Uploading…' : 'Add file'}
+                    </button>
+                  </div>
+
+                  {/* Hidden file input — allows any doc type */}
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,.png,.jpg,.jpeg,.gif,.webp"
+                    onChange={handleAttachmentUpload}
+                    className="hidden"
+                  />
+
+                  {(template.attachments ?? []).length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => attachmentInputRef.current?.click()}
+                      disabled={attachmentUploading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all disabled:opacity-50"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      Attach PDF, DOCX, XLSX or other files
+                    </button>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {(template.attachments ?? []).map((att) => (
+                        <div key={att.url} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 group">
+                          <Paperclip className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="flex-1 text-xs text-gray-700 truncate">{att.filename}</span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">
+                            {att.size < 1024 * 1024
+                              ? `${Math.round(att.size / 1024)} KB`
+                              : `${(att.size / (1024 * 1024)).toFixed(1)} MB`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(att.url)}
+                            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 transition-all flex-shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {/* Add more button */}
+                      <button
+                        type="button"
+                        onClick={() => attachmentInputRef.current?.click()}
+                        disabled={attachmentUploading}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-200 rounded-lg text-xs text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                      >
+                        <Upload className="w-3 h-3" />
+                        Add another file
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-gray-400">PDF, DOCX, XLSX, etc. · Max 20 MB per file · Sent with every email using this template</p>
                 </div>
 
                 {/* Divider */}

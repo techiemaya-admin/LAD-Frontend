@@ -123,14 +123,14 @@ export default function PipelinePage(): JSX.Element {
   const contactedCount = Number(stats?.contacted ?? 0);
 
   return (
-    <div className="p-4 sm:p-6 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-4 sm:p-6 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
       <div className="mb-6 mt-10">
         <div className="flex items-center gap-3 mb-5">
-          <labels.icon className="w-8 h-8 text-[#1e293b]" />
+          <labels.icon className="w-8 h-8 text-[#1e293b] dark:text-white" />
           <div>
-            <h1 className="text-3xl font-bold text-[#1e293b]">{labels.title}</h1>
-            <p className="text-[#6b7280]">{labels.subtitle}</p>
+            <h1 className="text-3xl font-bold text-[#1e293b] dark:text-white">{labels.title}</h1>
+            <p className="text-[#6b7280] dark:text-[#7a8ba3]">{labels.subtitle}</p>
           </div>
         </div>
 

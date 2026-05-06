@@ -236,12 +236,12 @@ export function CallConfiguration({
   const [isRephrasing, setIsRephrasing] = useState(false);
 
   return (
-    <Card className="rounded-2xl transition-all p-2 bg-white border border-gray-100">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-white/5 rounded-3xl px-5 py-1 border border-white/30 dark:border-white/10 mb-1 -mx-2 mt-2">
-        <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
+    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#000724] border border-gray-100 dark:border-[#262831]">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#000724] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#000724] mb-1 -mx-2 mt-2">
+        <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
           <Phone className="w-5 h-5 inline mr-2" /> Call Configuration
         </CardTitle>
-        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+        <CardDescription className="text-sm text-gray-600 dark:text-[#7a8ba3]">
           Select number and voice agent
         </CardDescription>
       </CardHeader>
@@ -284,18 +284,18 @@ export function CallConfiguration({
 
           return (
             <div className="w-full mx-0">
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
                 Phone Number
               </label>
               {/* Unified container — same height/border as CallOptions */}
-              <div className="flex rounded-[10px] border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 min-h-[48px] bg-white">
+              <div className="flex rounded-[10px] border border-gray-200 dark:border-[#262831] overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 min-h-[48px] bg-white dark:bg-[#1a2a43]">
 
                 {/* Left: flag + country code selector — styled like CallOptions button */}
                 <Select
                   value={activeCode}
                   onValueChange={onSelectedCountryCodeChange}
                 >
-                  <SelectTrigger className="flex items-center gap-2 px-3 bg-gray-50 border-0 border-r border-gray-200 hover:bg-gray-100 rounded-none focus:ring-0 shadow-none h-auto min-w-[96px] max-w-[116px] min-h-[48px]">
+                  <SelectTrigger className="flex items-center gap-2 px-3 bg-gray-50 dark:bg-[#253456] border-0 border-r border-gray-200 dark:border-[#262831] hover:bg-gray-100 dark:hover:bg-[#2d3e5a] rounded-none focus:ring-0 shadow-none h-auto min-w-[96px] max-w-[116px] min-h-[48px]">
                     <div className="flex items-center gap-2">
                       {activeCountry ? (
                         <Image
@@ -308,7 +308,7 @@ export function CallConfiguration({
                       ) : (
                         <Phone className="w-4 h-4 text-gray-500" />
                       )}
-                      <span className="text-sm font-medium text-gray-700">{activeCode}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-white">{activeCode}</span>
                     </div>
                   </SelectTrigger>
                   <SelectContent>
@@ -328,10 +328,10 @@ export function CallConfiguration({
                             ) : (
                               <Phone className="w-4 h-4 text-gray-400" />
                             )}
-                            <span className="text-sm text-gray-700">
+                            <span className="text-sm text-gray-700 dark:text-white">
                               {country?.name ?? code}
                             </span>
-                            <span className="text-sm font-medium text-gray-500 ml-auto">
+                            <span className="text-sm font-medium text-gray-500 dark:text-[#7a8ba3] ml-auto">
                               {code}
                             </span>
                           </div>
@@ -375,7 +375,7 @@ export function CallConfiguration({
         {/* Fallback phone select when no country codes */}
         {countryCodes.length === 0 && (
           <div className="w-full mx-0">
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
+            <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
               Phone Number
             </label>
             <Select value={selectedNumberId} onValueChange={onSelectedNumberChange}>
@@ -398,7 +398,7 @@ export function CallConfiguration({
 
         {/* Voice Agent + inline round play button */}
         <div className="w-full mx-0">
-          <label className="text-sm font-medium text-gray-700 mb-1 block">
+          <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
             Voice Agent
           </label>
 
@@ -486,7 +486,7 @@ export function CallConfiguration({
         {/* Language / Accent */}
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
+            <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
               Language
             </label>
             <Select
@@ -538,7 +538,7 @@ export function CallConfiguration({
           </div>
 
           <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
+            <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
               Accent
             </label>
             <Select
@@ -591,7 +591,7 @@ export function CallConfiguration({
 
         {/* Additional Instructions + Rephrase */}
         <div className="w-full mx-0 mt-4">
-          <label className="text-sm font-medium text-gray-700 mb-1 block">
+          <label className="text-sm font-medium text-gray-700 dark:text-white mb-1 block">
             Additional Instructions
           </label>
 
@@ -599,7 +599,7 @@ export function CallConfiguration({
             <textarea
               value={additionalInstructions}
               onChange={(e) => onAdditionalInstructionsChange(e.target.value)}
-              className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-[#262831] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-[#1a2a43] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
               placeholder="Enter any additional instructions for the call..."
             />
 
@@ -641,13 +641,13 @@ export function CallConfiguration({
                 }
               }}
               className="
-                absolute top-2 right-2 
-                h-8 px-3 rounded-md 
-                bg-gray-100 hover:bg-gray-200 
-                flex items-center gap-1 
-                border border-gray-300
+                absolute top-2 right-2
+                h-8 px-3 rounded-md
+                bg-gray-100 dark:bg-[#253456] hover:bg-gray-200 dark:hover:bg-[#2d3e5a]
+                flex items-center gap-1
+                border border-gray-300 dark:border-[#262831]
                 shadow-sm
-                text-xs font-medium text-gray-700
+                text-xs font-medium text-gray-700 dark:text-white
               "
             >
               {isRephrasing ? (
@@ -658,7 +658,7 @@ export function CallConfiguration({
             </button>
           </div>
 
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-[#7a8ba3]">
             These instructions will be provided as context for the voice agent.
           </p>
         </div>

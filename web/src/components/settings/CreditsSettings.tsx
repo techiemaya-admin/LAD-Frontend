@@ -4,6 +4,7 @@ import { Wallet, Plus, X, Loader2 } from 'lucide-react';
 import { useCreditsBalance, useStripeCheckout } from '@lad/frontend-features/billing';
 import { logger } from '@/lib/logger';
 import { safeStorage } from '@lad/shared/storage';  
+
 export const CreditsSettings: React.FC = () => {
   const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
@@ -23,6 +24,7 @@ export const CreditsSettings: React.FC = () => {
   // Extract balance from SDK response  
   const balance = creditsData?.availableBalance ?? creditsData?.currentBalance ?? 0;
   const lastUpdated = 'Just now';
+
   const handleProceedToPayment = async () => {
     const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
     if (!amount || amount <= 0) {
@@ -51,10 +53,12 @@ export const CreditsSettings: React.FC = () => {
       alert(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
+
   const handleSelectAmount = (amount: number) => {
     setSelectedAmount(amount);
     setCustomAmount(''); // Clear custom amount when preset is selected
   };
+
   const handleCustomAmountChange = (value: string) => {
     setCustomAmount(value);
     setSelectedAmount(null); // Clear preset selection when custom amount is entered
@@ -71,6 +75,7 @@ export const CreditsSettings: React.FC = () => {
       }
     }
   }, []);
+
   return (
     <div className="space-y-6">
       {/* Wallet Balance Card */}
@@ -105,6 +110,7 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       </div>
+
       {/* Add Credits Modal */}
       {showAddCreditsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddCreditsModal(false)}>
@@ -164,11 +170,22 @@ export const CreditsSettings: React.FC = () => {
                   </p>
                 </div>
               )}
-              <div className="pt-4">
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddCreditsModal(false);
+                    setSelectedAmount(null);
+                    setCustomAmount('');
+                  }}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleProceedToPayment}
                   disabled={(!selectedAmount && !customAmount) || isProcessing}
-                  className={`w-full px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center font-medium ${
+                  className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
                     (selectedAmount || customAmount) && !isProcessing
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -188,6 +205,7 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* Credits Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">How Credits Work</h3>
@@ -227,6 +245,7 @@ export const CreditsSettings: React.FC = () => {
           </div>
         </div>
       </div>
+
       {/* Credit Pricing Guide */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Credit Pricing</h3>

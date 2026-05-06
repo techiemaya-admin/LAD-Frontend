@@ -456,7 +456,7 @@ function ChannelConversationView({
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook';
+type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -472,6 +472,8 @@ interface ChannelConnectionStatus {
   gmailEmail: string | null;
   outlook: boolean;
   outlookEmail: string | null;
+  custom: boolean;
+  customEmail: string | null;
 }
 
 async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
@@ -508,24 +510,31 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
       })
       .catch(() => false),
 
-    // Gmail + Outlook (single status endpoint)
+    // Gmail + Outlook + Custom SMTP (single status endpoint)
     fetchWithTenant('/api/email-conversations/status')
       .then(async (res) => {
-        if (!res.ok) return { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null };
+        const empty = { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null };
+        if (!res.ok) return empty;
         const data = await res.json();
         return {
-          gmail:       !!data?.gmail?.connected,
-          gmailEmail:  data?.gmail?.email || null,
-          outlook:     !!data?.outlook?.connected,
+          gmail:        !!data?.gmail?.connected,
+          gmailEmail:   data?.gmail?.email   || null,
+          outlook:      !!data?.outlook?.connected,
           outlookEmail: data?.outlook?.email || null,
+          custom:       !!data?.custom?.connected,
+          customEmail:  data?.custom?.email  || null,
         };
       })
-      .catch(() => ({ gmail: false, gmailEmail: null, outlook: false, outlookEmail: null })),
+      .catch(() => ({ gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null })),
   ]);
 
   const emailStatus = emailResult.status === 'fulfilled'
-    ? emailResult.value as { gmail: boolean; gmailEmail: string | null; outlook: boolean; outlookEmail: string | null }
-    : { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null };
+    ? emailResult.value as {
+        gmail: boolean; gmailEmail: string | null;
+        outlook: boolean; outlookEmail: string | null;
+        custom: boolean; customEmail: string | null;
+      }
+    : { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null };
 
   return {
     personal:     personalResult.status === 'fulfilled' ? (personalResult.value as boolean) : false,
@@ -535,6 +544,8 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
     gmailEmail:   emailStatus.gmailEmail,
     outlook:      emailStatus.outlook,
     outlookEmail: emailStatus.outlookEmail,
+    custom:       emailStatus.custom,
+    customEmail:  emailStatus.customEmail,
   };
 }
 
@@ -548,6 +559,7 @@ function getDefaultTab(status: ChannelConnectionStatus): WaTab {
   if (status.linkedin) return 'linkedin';
   if (status.gmail)    return 'gmail';
   if (status.outlook)  return 'outlook';
+  if (status.custom)   return 'custom';
   return 'personal'; // fallback (nothing connected)
 }
 
@@ -558,6 +570,7 @@ const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
   { id: 'gmail',    label: 'Gmail',         sublabel: 'gmail' },
   { id: 'outlook',  label: 'Outlook',       sublabel: 'outlook' },
+  { id: 'custom',   label: 'Custom Email',  sublabel: 'custom_email' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -570,6 +583,7 @@ function getTabColor(tabId: WaTab): string {
     case 'linkedin':  return '#0077B5'; // LinkedIn blue
     case 'gmail':     return '#EA4335'; // Gmail red
     case 'outlook':   return '#0078D4'; // Outlook blue
+    case 'custom':    return '#059669'; // Emerald — matches integration tile
   }
 }
 
@@ -599,13 +613,21 @@ export function ConversationsPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // Show only tabs whose channel is actively connected.
   // While loading (null) render nothing so there's no flash of wrong tabs.
   const visibleTabs = channelStatus
     ? ALL_TABS.filter((t) => {
-        // Gmail and Outlook use separate boolean fields
+        // Email tabs use separate boolean fields on the status object
         if (t.id === 'gmail')   return channelStatus.gmail;
         if (t.id === 'outlook') return channelStatus.outlook;
+        if (t.id === 'custom')  return channelStatus.custom;
         return channelStatus[t.id as keyof ChannelConnectionStatus] === true;
       })
     : [];
@@ -691,6 +713,7 @@ export function ConversationsPage() {
         {activeTab === 'linkedin'  && <LinkedInConversationView />}
         {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
         {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
+        {activeTab === 'custom'    && <EmailChannelView provider="custom"  connectedEmail={channelStatus?.customEmail  ?? undefined} />}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}

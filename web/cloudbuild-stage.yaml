@@ -26,6 +26,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
+      '--no-cache',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend-stage:$COMMIT_SHA',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend-stage:$SHORT_SHA',
       '-t', 'gcr.io/$PROJECT_ID/lad-frontend-stage:$BRANCH_NAME',

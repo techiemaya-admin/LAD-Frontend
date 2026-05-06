@@ -70,7 +70,7 @@ export default function SocialProofSection() {
 
   return (
     <motion.section
-      className="py-20 relative bg-gradient-to-b from-white via-blue-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
+      className="py-20 relative bg-gradient-to-b from-background via-background to-background"
       id="social-proof"
       initial="hidden"
       whileInView="visible"
@@ -83,10 +83,10 @@ export default function SocialProofSection() {
           variants={itemVariants}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white mb-4">
-            Trusted by <span className="text-[#1A3F7F]">Hundreds of Businesses</span>
+          <h2 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            Trusted by <span className="text-primary">Hundreds of Businesses</span>
           </h2>
-          <p className="text-xl text-[#8F9BB3] dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Join successful companies that have already transformed their sales process
           </p>
         </motion.div>
@@ -105,7 +105,7 @@ export default function SocialProofSection() {
             >
               <div className={`relative p-6 rounded-xl bg-gradient-to-br ${testimonial.color} opacity-10 group-hover:opacity-20 blur-xl absolute inset-0 transition-opacity`} />
 
-              <div className="relative p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all h-full flex flex-col">
+              <div className="relative p-6 rounded-xl bg-background border border-border group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all h-full flex flex-col">
                 {/* Stars */}
                 <div className="flex gap-1 mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
@@ -131,15 +131,15 @@ export default function SocialProofSection() {
                   whileInView={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 0.6 }}
                 >
-                  <p className="text-sm font-bold text-[#1A3F7F] dark:text-blue-400">
+                  <p className="text-sm font-bold text-primary dark:text-blue-400">
                     📊 {testimonial.metric}
                   </p>
                 </motion.div>
 
                 {/* Author */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <p className="font-bold text-[#222B45] dark:text-white text-sm">{testimonial.name}</p>
-                  <p className="text-xs text-[#8F9BB3] dark:text-gray-400">
+                  <p className="font-bold text-foreground text-sm">{testimonial.name}</p>
+                  <p className="text-xs text-muted-foreground">
                     {testimonial.title} @ {testimonial.company}
                   </p>
                 </div>
@@ -163,12 +163,12 @@ export default function SocialProofSection() {
               key={index}
               whileInView={{ scale: [1, 1.05, 1] }}
               transition={{ delay: index * 0.1 }}
-              className="text-center p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900"
+              className="text-center p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-[#1a2f6b] dark:to-gray-900"
             >
-              <h4 className="text-4xl lg:text-5xl font-bold text-[#1A3F7F] dark:text-blue-400 mb-2">
+              <h4 className="text-4xl lg:text-5xl font-bold text-primary dark:text-blue-400 mb-2">
                 {stat.number}
               </h4>
-              <p className="text-[#8F9BB3] dark:text-gray-400 font-medium">{stat.label}</p>
+              <p className="text-muted-foreground font-medium">{stat.label}</p>
             </motion.div>
           ))}
         </motion.div>
