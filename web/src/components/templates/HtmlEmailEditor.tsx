@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import EmailPreview from './EmailPreview';
 import MediaInsertionModal from './MediaInsertionModal';
-import { Button } from '@/components/ui/button';
+import EmailMediaLibrary from './EmailMediaLibrary';
 
 interface HtmlEmailEditorProps {
   htmlContent: string;
@@ -19,159 +18,136 @@ export default function HtmlEmailEditor({
   onSubjectChange,
 }: HtmlEmailEditorProps) {
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [isDragOver, setIsDragOver]         = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [error, setError] = useState('');
 
   const wordCount = htmlContent.replace(/<[^>]*>/g, '').trim().split(/\s+/).filter(w => w.length > 0).length;
   const charCount = htmlContent.length;
 
-  const handleInsertMedia = (htmlTag: string) => {
-    if (!textareaRef.current) return;
+  // ── Cursor insert helper ──────────────────────────────────────────────────
 
+  const insertAtCursor = (htmlTag: string) => {
     const textarea = textareaRef.current;
+    if (!textarea) { onContentChange(htmlContent + '\n' + htmlTag); return; }
     const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-
-    const newContent = htmlContent.substring(0, start) + htmlTag + htmlContent.substring(end);
-    onContentChange(newContent);
-
-    // Move cursor after inserted content
+    const end   = textarea.selectionEnd;
+    onContentChange(htmlContent.substring(0, start) + htmlTag + htmlContent.substring(end));
     setTimeout(() => {
       if (textarea) {
-        textarea.selectionStart = textarea.selectionEnd = start + htmlTag.length;
+        const pos = start + htmlTag.length;
+        textarea.selectionStart = textarea.selectionEnd = pos;
         textarea.focus();
       }
     }, 0);
-
-    setShowMediaModal(false);
   };
 
-  const insertPlaceholder = (placeholder: string) => {
-    if (!textareaRef.current) return;
+  // ── Drag-and-drop ─────────────────────────────────────────────────────────
 
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    if (e.dataTransfer.types.includes('application/json') || e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragOver(true);
+    }
+  };
 
-    const newContent = htmlContent.substring(0, start) + placeholder + htmlContent.substring(end);
-    onContentChange(newContent);
-
-    // Move cursor after inserted placeholder
-    setTimeout(() => {
-      if (textarea) {
-        textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
-        textarea.focus();
-      }
-    }, 0);
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const raw = e.dataTransfer.getData('application/json');
+    if (raw) {
+      try { const { html } = JSON.parse(raw) as { html: string }; if (html) { insertAtCursor('\n' + html + '\n'); return; } } catch { /* ignore */ }
+    }
+    const url = e.dataTransfer.getData('text/plain');
+    if (url?.startsWith('http')) insertAtCursor(`\n<img src="${url}" alt="image" style="max-width:100%;height:auto;" />\n`);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
-      )}
+    <div className="flex gap-0 h-full -m-6">
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="text-sm text-gray-600 font-semibold">Formatting Tools:</div>
-
-        <button
-          onClick={() => insertPlaceholder('{{first_name}}')}
-          className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 font-mono text-blue-600"
-          title="Insert first name placeholder"
-        >
-          First Name
-        </button>
-
-        <button
-          onClick={() => insertPlaceholder('{{last_name}}')}
-          className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 font-mono text-blue-600"
-          title="Insert last name placeholder"
-        >
-          Last Name
-        </button>
-
-        <button
-          onClick={() => insertPlaceholder('{{company}}')}
-          className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 font-mono text-blue-600"
-          title="Insert company placeholder"
-        >
-          Company
-        </button>
-
-        <button
-          onClick={() => insertPlaceholder('{{title}}')}
-          className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 font-mono text-blue-600"
-          title="Insert title placeholder"
-        >
-          Title
-        </button>
-
-        <div className="flex-1"></div>
-
-        <button
-          onClick={() => setShowMediaModal(true)}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2"
-        >
-          📸 Insert Media
-        </button>
+      {/* ── Left: Media Library ── */}
+      <div className="w-52 flex-shrink-0 border-r border-gray-200 bg-gray-50 overflow-y-auto p-4">
+        <EmailMediaLibrary onInsert={insertAtCursor} />
       </div>
 
-      {/* Main Editor Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Pane: Editor */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              HTML Content
-            </label>
-            <textarea
-              ref={textareaRef}
-              value={htmlContent}
-              onChange={(e) => onContentChange(e.target.value)}
-              placeholder="Write your HTML email content here. You can use {{first_name}}, {{company}}, etc. for dynamic content."
-              rows={15}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white"
-            />
-          </div>
+      {/* ── Right: HTML Editor ── */}
+      <div className="flex-1 min-w-0 flex flex-col p-5 gap-3 overflow-hidden">
 
-          {/* Stats */}
-          <div className="flex justify-between text-xs text-gray-500 px-1">
-            <span>📝 Words: {wordCount}</span>
-            <span>🔤 Characters: {charCount}</span>
-            <span>{charCount > 500000 ? '❌' : charCount > 400000 ? '⚠️' : '✅'} Size: {(charCount / 1000).toFixed(1)}KB / 500KB</span>
-          </div>
-
-          {/* Helper Tips */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-semibold text-blue-900">💡 HTML Tips:</p>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Use <code className="bg-blue-100 px-1 rounded">&lt;p&gt;</code> tags for paragraphs</li>
-              <li>• Use <code className="bg-blue-100 px-1 rounded">&lt;br /&gt;</code> for line breaks</li>
-              <li>• Use <code className="bg-blue-100 px-1 rounded">&lt;strong&gt;</code> or <code className="bg-blue-100 px-1 rounded">&lt;em&gt;</code> for emphasis</li>
-              <li>• Click "Insert Media" to add images</li>
-              <li>• Max size: 500KB (most email clients support this)</li>
-            </ul>
-          </div>
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 bg-white rounded-xl border border-gray-200 flex-shrink-0">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Insert:</span>
+          {[
+            { label: 'First Name', val: '{{first_name}}' },
+            { label: 'Last Name',  val: '{{last_name}}'  },
+            { label: 'Company',    val: '{{company}}'    },
+            { label: 'Title',      val: '{{title}}'      },
+          ].map(({ label, val }) => (
+            <button
+              key={val}
+              onClick={() => insertAtCursor(val)}
+              className="px-2.5 py-1 text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+          <div className="flex-1" />
+          <button
+            onClick={() => setShowMediaModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+          >
+            📸 Insert Media
+          </button>
         </div>
 
-        {/* Right Pane: Preview */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Email Preview
-            </label>
-            <div className="border border-gray-200 rounded-lg p-3 bg-white max-h-[600px] overflow-y-auto">
-              <EmailPreview
-                htmlContent={htmlContent}
-                subject={subject}
-                showDeviceSelector={true}
-              />
-            </div>
+        {/* HTML textarea */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {isDragOver && (
+            <p className="text-xs text-blue-600 font-medium animate-pulse mb-1">Drop image here →</p>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={htmlContent}
+            onChange={(e) => onContentChange(e.target.value)}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleDrop}
+            placeholder={`<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">\n  <h1>Hello {{first_name}},</h1>\n  <p>Write your email here...</p>\n</div>`}
+            className={`flex-1 w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 font-mono text-sm bg-white resize-none transition-colors ${
+              isDragOver
+                ? 'border-blue-400 ring-2 ring-blue-300 bg-blue-50'
+                : 'border-gray-200 focus:ring-blue-500 focus:border-blue-400'
+            }`}
+            style={{ minHeight: '340px' }}
+          />
+        </div>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-4 text-xs text-gray-400 flex-shrink-0">
+          <span>📝 {wordCount} words</span>
+          <span>🔤 {charCount} chars</span>
+          <span className={charCount > 400000 ? 'text-amber-500 font-medium' : ''}>
+            {charCount > 500000 ? '❌' : charCount > 400000 ? '⚠️' : '✅'}{' '}
+            {(charCount / 1000).toFixed(1)} KB / 500 KB
+          </span>
+          <div className="flex-1" />
+          <span className="text-gray-300">Drag images from the Media Library · Use placeholders for personalisation</span>
+        </div>
+
+        {/* Placeholders hint */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex-shrink-0">
+          <p className="text-xs font-semibold text-blue-700 mb-1.5">💡 Supported Placeholders:</p>
+          <div className="flex flex-wrap gap-2">
+            {['{{first_name}}', '{{last_name}}', '{{company}}', '{{title}}', '{{email}}'].map(p => (
+              <button
+                key={p}
+                onClick={() => insertAtCursor(p)}
+                className="px-2 py-0.5 font-mono text-[11px] bg-white border border-blue-200 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
+              >
+                {p}
+              </button>
+            ))}
           </div>
+          <p className="text-[11px] text-blue-500 mt-1.5">These will be replaced with actual values when emails are sent.</p>
         </div>
       </div>
 
@@ -179,7 +155,7 @@ export default function HtmlEmailEditor({
       <MediaInsertionModal
         isOpen={showMediaModal}
         onClose={() => setShowMediaModal(false)}
-        onInsert={handleInsertMedia}
+        onInsert={(html) => { insertAtCursor(html); setShowMediaModal(false); }}
       />
     </div>
   );

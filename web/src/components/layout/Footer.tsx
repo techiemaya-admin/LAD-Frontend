@@ -5,7 +5,7 @@ import { memo } from 'react';
 
 const Footer = memo(function Footer() {
   return (
-    <footer className="bg-[#0b1957] text-white py-16">
+    <footer className=" text-white bg-[#000724] text-white py-16">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           {/* Company Info */}

@@ -22,6 +22,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  Info,
+  Edit3,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -64,7 +66,12 @@ interface ConversationSidebarProps {
   onGroupSelect?: (group: ChatGroup) => void;
   onOpenGroupInfo?: (group: ChatGroup) => void;
   onShowBroadcastModal?: () => void;
+  onShowCreateGroupModal?: (selectedIds: string[]) => void;
   groupRefreshKey?: number;
+  // ── Pagination ────────────────────────────────────────────────────────
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
 }
 
 // LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
@@ -134,7 +141,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onGroupSelect,
   onOpenGroupInfo,
   onShowBroadcastModal,
+  onShowCreateGroupModal,
   groupRefreshKey,
+  onLoadMore,
+  isLoadingMore = false,
+  hasMore = false,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -142,6 +153,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [templateSending, setTemplateSending] = useState(false);
+  const [templateSendProgress, setTemplateSendProgress] = useState<{ sent: number; total: number; running: boolean } | null>(null);
+  const [sendSummary, setSendSummary] = useState<{ sent: number; queued: number; scheduledDays: number } | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
@@ -261,10 +274,11 @@ export const ConversationSidebar = memo(function ConversationSidebar({
     const ch = backendChannel || 'waba';
 
     // Helper: map raw contact/conversation record → { id, contact: { name, phone } }
+    // Handles both personal WA contacts (name/phone) and WABA conversations (lead_name/lead_phone)
     const mapContact = (raw: any): Conversation =>
       raw.contact
         ? raw // already shaped as Conversation
-        : { id: raw.id, contact: { name: raw.name || raw.contact_name || '', phone: raw.phone || '' } } as unknown as Conversation;
+        : { id: raw.id, contact: { name: raw.lead_name || raw.name || raw.contact_name || '', phone: raw.lead_phone || raw.phone || '' } } as unknown as Conversation;
 
     if (ch === 'personal') {
       // Personal WA: load from /contacts endpoint (wa_contacts table)
@@ -307,13 +321,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
       loadPage(0, []).finally(() => setNewChatContactsLoading(false));
     } else {
-      // WABA: load from conversations endpoint
+      // WABA: load from conversations endpoint — map through mapContact so
+      // lead_name/lead_phone are normalised into { contact: { name, phone } }
       fetchWithTenant(`/api/whatsapp-conversations/conversations?channel=waba&limit=500`)
         .then((r) => r.json())
         .then((data) => {
-          const list: Conversation[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+          const raw: any[] = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+          const list: Conversation[] = raw.map(mapContact);
           setNewChatContacts(list);
-          setNewChatContactsTotal(list.length);
+          setNewChatContactsTotal(data.total || list.length);
         })
         .catch(() => {})
         .finally(() => setNewChatContactsLoading(false));
@@ -449,15 +465,18 @@ export const ConversationSidebar = memo(function ConversationSidebar({
 
   // Template send for bulk selected conversations
   const handleTemplateSend = useCallback(
-    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30 }) => {
+    async (templateName: string, languageCode: string, parameters: string[], nameFormat: 'first' | 'full' = 'first', batch = { batchSize: 5, delayMin: 120, delayRandom: 30, dailyLimit: 250 }, headerParamCount = 0, headerType = '', headerUrl = '') => {
       setTemplateSending(true);
+      const totalCount = groupTemplateSendTarget?.count ?? selectedIds.size;
+      setTemplateSendProgress({ sent: 0, total: totalCount, running: true });
       try {
         // If sending to one or more groups (via group manager), call each group's send-template endpoint
         if (groupTemplateSendTarget) {
           const channelParam = backendChannel === 'personal' ? '?channel=personal' : '';
           const groupIds = groupTemplateSendTarget.groupIds;
-          const { batchSize, delayMin, delayRandom } = batch;
+          const { batchSize, delayMin, delayRandom, dailyLimit } = batch;
           const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+          let sentTotal = 0;
 
           for (let i = 0; i < groupIds.length; i++) {
             const groupId = groupIds[i];
@@ -472,11 +491,31 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     language_code: languageCode,
                     parameters,
                     name_format: nameFormat,
+                    batch_size: batchSize,
+                    delay_min: delayMin,
+                    delay_random: delayRandom,
+                    daily_limit: dailyLimit,
+                    header_param_count: headerParamCount,
+                    header_type: headerType,
+                    header_url: headerUrl,
                   }),
                 }
               );
               const data = await res.json();
-              if (!data.success) console.error(`Group template send failed for ${groupId}:`, data.error);
+              if (!data.success) {
+                console.error(`Group template send failed for ${groupId}:`, data.error);
+              } else {
+                sentTotal += data.sent || 0;
+                // Update progress
+                setTemplateSendProgress(prev => prev ? { ...prev, sent: sentTotal } : null);
+                if (data.queued > 0) {
+                  setSendSummary(prev => ({
+                    sent: (prev?.sent ?? 0) + (data.sent ?? 0),
+                    queued: (prev?.queued ?? 0) + (data.queued ?? 0),
+                    scheduledDays: Math.max(prev?.scheduledDays ?? 0, data.scheduled_days ?? 0),
+                  }));
+                }
+              }
             } catch (err) {
               console.error(`Group template send error for ${groupId}:`, err);
             }
@@ -510,13 +549,24 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               batch_size: batch.batchSize,
               delay_min: batch.delayMin,
               delay_random: batch.delayRandom,
+              daily_limit: batch.dailyLimit ?? 250,
+              header_param_count: headerParamCount,
+              header_type: headerType,
+              header_url: headerUrl,
             }),
           });
           const data = await res.json();
-          if (!data.success) console.error('Bulk template send failed:', data.error);
+          if (!data.success) {
+            console.error('Bulk template send failed:', data.error);
+          } else {
+            // Update progress after response
+            const sent = data.sent || 0;
+            setTemplateSendProgress(prev => prev ? { ...prev, sent, running: false } : null);
+          }
         }
       } catch (err) {
         console.error('Template send error:', err);
+        setTemplateSendProgress(null);
       } finally {
         setTemplateSending(false);
         setIsTemplatePickerOpen(false);
@@ -822,8 +872,8 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         </TooltipProvider>
       )}
 
-      {/* Conversation List - Virtualized */}
-      <div className="flex-1 overflow-hidden">
+      {/* Conversation List - Virtualized with Infinite Scroll */}
+      <div className="flex-1 overflow-hidden flex flex-col">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
             <MessageSquare className="h-12 w-12 mb-3 opacity-40" />
@@ -836,6 +886,18 @@ export const ConversationSidebar = memo(function ConversationSidebar({
             totalCount={filteredConversations.length}
             itemContent={itemContent}
             className="custom-scrollbar"
+            endReached={hasMore ? onLoadMore : undefined}
+            increaseViewportBy={{ top: 100, bottom: 500 }}
+            components={{
+              Footer: isLoadingMore
+                ? () => (
+                    <div className="flex justify-center items-center py-3 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-xs">Loading more conversations...</span>
+                    </div>
+                  )
+                : undefined,
+            }}
           />
         )}
       </div>
@@ -980,50 +1042,139 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                       {groupsSectionExpanded && filteredGroups.map((group) => {
                         const isChecked = selectedNewChatGroupIds.has(group.id);
                         return (
-                          <button
+                          <div
                             key={group.id}
-                            onClick={() => {
-                              setSelectedNewChatGroupIds((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(group.id)) next.delete(group.id);
-                                else next.add(group.id);
-                                return next;
-                              });
-                            }}
-                            className={cn(
-                              'flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted transition-colors',
-                              isChecked && 'bg-emerald-50 dark:bg-emerald-950/20'
-                            )}
+                            className="group/item relative px-4 py-3 hover:bg-muted/60 transition-colors rounded-lg mx-2 my-1"
                           >
-                            {/* Checkbox */}
-                            <div className={cn(
-                              'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                              isChecked
-                                ? 'bg-emerald-500 border-emerald-500'
-                                : 'border-slate-300 dark:border-slate-600'
-                            )}>
-                              {isChecked && (
-                                <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
-                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
+                            <div className="flex items-center gap-3 w-full">
+                              {/* Checkbox */}
+                              <button
+                                onClick={() => {
+                                  setSelectedNewChatGroupIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(group.id)) next.delete(group.id);
+                                    else next.add(group.id);
+                                    return next;
+                                  });
+                                }}
+                                className={cn(
+                                  'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                                  isChecked
+                                    ? 'bg-emerald-500 border-emerald-500'
+                                    : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
+                                )}
+                              >
+                                {isChecked && (
+                                  <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </button>
+
+                              {/* Group avatar */}
+                              <div
+                                className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
+                                style={{ backgroundColor: group.color || '#64748b' }}
+                              >
+                                <Users className="h-6 w-6 text-white" />
+                              </div>
+
+                              {/* Group info */}
+                              <div className="flex flex-col items-start overflow-hidden flex-1 min-w-0">
+                                <span className="text-sm font-semibold truncate w-full text-left">
+                                  {group.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {group.conversation_count} member{group.conversation_count !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+
+                              {/* Action Buttons - Show on hover */}
+                              <TooltipProvider>
+                                <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0">
+                                  {/* Info */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => onOpenGroupInfo?.(group)}
+                                        className="p-1.5 hover:bg-background rounded-md transition-all hover:shadow-sm"
+                                      >
+                                        <Info className="h-4 w-4 text-slate-500" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">View info</TooltipContent>
+                                  </Tooltip>
+
+                                  {/* Send Template */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => {
+                                          handleGroupTemplateSend(group.id, group.conversation_count);
+                                          setIsNewChatOpen(false);
+                                          setNewChatSearch('');
+                                          setSelectedNewChatIds(new Set());
+                                          setSelectedNewChatGroupIds(new Set());
+                                        }}
+                                        className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-md transition-all hover:shadow-sm"
+                                      >
+                                        <Send className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">Send template</TooltipContent>
+                                  </Tooltip>
+
+                                  {/* Edit */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => onOpenGroupInfo?.(group)}
+                                        className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-md transition-all hover:shadow-sm"
+                                      >
+                                        <Edit3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">Edit group</TooltipContent>
+                                  </Tooltip>
+
+                                  {/* Delete */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={async () => {
+                                          if (!confirm(`Delete "${group.name}"?`)) return;
+                                          try {
+                                            const channelParam = backendChannel === 'personal' ? '?channel=personal' : '';
+                                            const res = await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}${channelParam}`, {
+                                              method: 'DELETE',
+                                            });
+                                            if (res.ok) {
+                                              // Refresh groups by clearing the selection and reloading
+                                              setNewChatGroupsLoading(true);
+                                              const groupsChannel = backendChannel || 'waba';
+                                              fetchWithTenant(`/api/whatsapp-conversations/chat-groups?channel=${groupsChannel}`)
+                                                .then((r) => r.json())
+                                                .then((data) => {
+                                                  if (Array.isArray(data.data)) setNewChatGroups(data.data);
+                                                })
+                                                .catch(() => {})
+                                                .finally(() => setNewChatGroupsLoading(false));
+                                            }
+                                          } catch (err) {
+                                            console.error('Error deleting group:', err);
+                                          }
+                                        }}
+                                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-all hover:shadow-sm"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">Delete group</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TooltipProvider>
                             </div>
-                            {/* Group avatar */}
-                            <div
-                              className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: group.color || '#64748b' }}
-                            >
-                              <Users className="h-5 w-5 text-white" />
-                            </div>
-                            <div className="flex flex-col items-start overflow-hidden">
-                              <span className="text-sm font-medium truncate w-full text-left">
-                                {group.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {group.conversation_count} member{group.conversation_count !== 1 ? 's' : ''}
-                              </span>
-                            </div>
-                          </button>
+                          </div>
                         );
                       })}
                     </>
@@ -1173,15 +1324,15 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                     onSelectConversation(id);
                     return;
                   }
-                  // Multiple contacts → broadcast
-                  setIsNewChatOpen(false);
-                  setNewChatSearch('');
+                  // Multiple contacts → create a broadcast group
+                  // Keep the New Chat panel open so user can continue selecting
+                  const selectedIds = Array.from(selectedNewChatIds);
                   setSelectedNewChatIds(new Set());
                   setSelectedNewChatGroupIds(new Set());
-                  onShowBroadcastModal?.();
+                  onShowCreateGroupModal?.(selectedIds);
                 }}
               >
-                {selectedNewChatGroupIds.size > 0 || selectedNewChatIds.size > 1 ? 'Send Broadcast' : 'Open Chat'}
+                {selectedNewChatGroupIds.size > 0 ? 'Send Broadcast' : selectedNewChatIds.size > 1 ? 'Create Group' : 'Open Chat'}
               </Button>
               <Button
                 variant="outline"
@@ -1210,6 +1361,25 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         channel={backendChannel}
       />
 
+      {/* Broadcast schedule summary toast */}
+      {sendSummary && sendSummary.queued > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-start gap-3 bg-card border border-border shadow-xl rounded-xl px-4 py-3 max-w-sm w-full">
+          <div className="text-green-500 mt-0.5">✓</div>
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">Broadcast started</p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Sent <strong>{sendSummary.sent}</strong> today.{' '}
+              <strong>{sendSummary.queued}</strong> remaining scheduled across{' '}
+              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} — continues at 9:00 AM daily.
+            </p>
+          </div>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xs mt-0.5"
+            onClick={() => setSendSummary(null)}
+          >✕</button>
+        </div>
+      )}
+
       {/* Template Picker Dialog */}
       <TemplatePicker
         open={isTemplatePickerOpen}
@@ -1220,7 +1390,9 @@ export const ConversationSidebar = memo(function ConversationSidebar({
         selectedCount={templatePickerCount}
         onSend={handleTemplateSend}
         sending={templateSending}
+        sendProgress={templateSendProgress}
         channel={backendChannel ?? 'waba'}
+        isBulkSend={!!groupTemplateSendTarget || selectedIds.size > 1}
       />
 
       {/* Import Leads Dialog */}

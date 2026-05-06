@@ -30,7 +30,7 @@ export const Menu = ({
     <MenuContext.Provider value={{ active, setActive: setActiveState }}>
       <nav
         onMouseLeave={() => setActiveState(null)} // resets the state
-        className="relative rounded-full border border-transparent dark:bg-black dark:border-white/[0.2] bg-white shadow-input flex justify-center space-x-4 px-8 py-6"
+        className="relative rounded-full border border-transparent dark:bg-[#0B1957] dark:border-white/[0.2] bg-white shadow-input flex justify-center space-x-4 px-8 py-6"
       >
         {children}
       </nav>
@@ -83,7 +83,7 @@ export const MenuItem = ({
                   restSpeed: 0.001,
                 }}
                 layoutId="active" // layoutId ensures smooth animation
-                className="bg-white dark:bg-black backdrop-blur-sm rounded-2xl overflow-hidden border border-black/[0.2] dark:border-white/[0.2] shadow-xl"
+                className="bg-white dark:bg-[#0B1957] backdrop-blur-sm rounded-2xl overflow-hidden border border-black/[0.2] dark:border-white/[0.2] shadow-xl"
               >
                 <motion.div
                   layout // layout ensures smooth animation
