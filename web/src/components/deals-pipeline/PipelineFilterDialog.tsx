@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogHeader, DialogActions } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Chip } from '@/components/ui/chip';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
+import { X, Filter } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { selectStatuses, selectPriorities, selectSources, selectMasterDataLoading } from '@/store/slices/masterDataSlice';
 import { selectUsers, selectUsersLoading } from '@/store/slices/usersSlice';
@@ -124,23 +125,48 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const masterDataLoading = useSelector(selectMasterDataLoading);
-  // Get team members from Redux for assignee filter
   const teamMembers = useSelector(selectUsers);
   const usersLoading = useSelector(selectUsersLoading);
+
+  const effectiveSourceOptions = React.useMemo(() => {
+    // Only show the requested standard types as per requirements
+    return [
+      { key: 'linkedin', label: 'Linkedin' },
+      { key: 'voice_agent', label: 'Voice Agent' },
+      { key: 'website', label: 'Website' },
+    ];
+  }, []);
+
+  // Map expanded sources from store back to UI categories for the checkboxes
+  const uiSelectedSources = React.useMemo(() => {
+    const sources = filters?.sources || [];
+    const uiSources = new Set<string>();
+    const linkedinKeys = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'];
+    
+    sources.forEach(s => {
+      const lowerS = String(s).toLowerCase();
+      if (linkedinKeys.includes(lowerS)) {
+        uiSources.add('linkedin');
+      } else if (lowerS === 'voice_agent') {
+        uiSources.add('voice_agent');
+      } else if (lowerS === 'website') {
+        uiSources.add('website');
+      } else if (s && s !== 'unknown') {
+        uiSources.add(s);
+      }
+    });
+    
+    return Array.from(uiSources);
+  }, [filters?.sources]);
+
   // If master data is still loading or empty, show loading state
   const hasNoMasterData = statusOptions.length === 0 && priorityOptions.length === 0 && sourceOptions.length === 0;
   if (masterDataLoading || hasNoMasterData) {
     return (
       <Dialog open={open}>
-        <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto rounded-3xl">
+        <DialogContent showCloseButton={true} className="p-6 pt-2 overflow-y-auto rounded-3xl">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-primary">Filter Leads</span>
-            <button
-              onClick={onClose}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </DialogTitle>
           <div className="flex justify-center p-6">
             <p>Loading filter options...</p>
@@ -150,7 +176,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     );
   }
   // Ensure filters has safe defaults
-  const safeFilters: PipelineActiveFilters = {
+  const safeFiltersWithDefaults: PipelineActiveFilters = {
     ...{
       stages: [],
       statuses: [],
@@ -173,13 +199,35 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   ] : safeStages;
   const handleFilterChange = (field: keyof PipelineActiveFilters, value: string[] | { start: string | null; end: string | null }): void => {
     if (typeof onFiltersChange === 'function') {
-      onFiltersChange({ ...safeFilters, [field]: value });
+      let finalValue = value;
+      
+      // If we're filtering by source, expand the UI categories to include all DB keys
+      if (field === 'sources' && Array.isArray(value)) {
+        const expandedSources = new Set<string>();
+        const linkedinKeys = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'];
+        
+        value.forEach(v => {
+          if (v === 'linkedin') {
+            linkedinKeys.forEach(k => expandedSources.add(k));
+          } else if (v === 'voice_agent') {
+            expandedSources.add('voice_agent');
+          } else if (v === 'website') {
+            expandedSources.add('website');
+          } else {
+            expandedSources.add(v);
+          }
+        });
+        
+        finalValue = Array.from(expandedSources);
+      }
+      
+      onFiltersChange({ ...safeFiltersWithDefaults, [field]: finalValue });
     } else {
       logger.warn('[PipelineFilterDialog] onFiltersChange is not a function');
     }
   };
   const handleDateRangeChange = (field: 'start' | 'end', value: string): void => {
-    const currentRange = safeFilters.dateRange || { start: null, end: null };
+    const currentRange = safeFiltersWithDefaults.dateRange || { start: null, end: null };
     const nextRange = { ...currentRange, [field]: value || null };
 
     const start = nextRange.start;
@@ -190,126 +238,117 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     }
 
     onFiltersChange({
-      ...safeFilters,
+      ...safeFiltersWithDefaults,
       dateRange: nextRange
     });
   };
   return (
-    <Dialog open={open}>
-      <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] p-6 pt-2 max-h-[90vh] overflow-y-auto sm:max-w-[640px] rounded-3xl">
-        <DialogTitle className="flex justify-between items-center pb-1 mt-4">
-          <span className="text-lg font-semibold text-primary">Filter Leads</span>
-          <button
-            onClick={onClose}
-            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </DialogTitle>
-        <div className="mt-2 rounded-xl border border-gray-200 p-4 bg-[#f9fafb]">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 max-h-[90vh]">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+              <Filter className="h-5 w-5 stroke-[2.5px]" />
+            </div>
+            <DialogTitle>Filter Leads</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <MultiSelect
-            label="Stages"
-            options={testStages.map(stage => ({
-              key: stage.key || String(stage.id),
-              label: stage.label || stage.name || String(stage.id)
-            }))}
-            value={safeFilters.stages}
-            onChange={(value) => handleFilterChange('stages', value)}
-            renderChip={(key) => {
-              const stage = testStages.find(s => (s.key || s.id) === key);
-              return stage?.label || stage?.name || key;
-            }}
-          />
-          <MultiSelect
-            label="Statuses"
-            options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
-            value={safeFilters.statuses}
-            onChange={(value) => handleFilterChange('statuses', value)}
-            renderChip={(key) => {
-              const statusOption = statusOptions.find(s => s.key === key);
-              return statusOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Priorities"
-            options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
-            value={safeFilters.priorities}
-            onChange={(value) => handleFilterChange('priorities', value)}
-            renderChip={(key) => {
-              const priorityOption = priorityOptions.find(p => p.key === key);
-              return priorityOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Sources"
-            options={Array.isArray(sourceOptions) ? sourceOptions.map(s => ({ key: s.key, label: s.label })) : []}
-            value={safeFilters.sources}
-            onChange={(value) => handleFilterChange('sources', value)}
-            renderChip={(key) => {
-              const sourceOption = sourceOptions.find(s => s.key === key);
-              return sourceOption?.label || key;
-            }}
-          />
-          <MultiSelect
-            label="Assignees"
-            options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
-            value={Array.isArray(safeFilters.assignees) ? safeFilters.assignees : []}
-            onChange={(value) => handleFilterChange('assignees', value)}
-            disabled={usersLoading}
-            renderChip={(key) => {
-              const user = teamMembers.find(u => String(u.id) === key);
-              return user?.name || key;
-            }}
-          />
-          <div className="sm:col-span-2">
-            <Label className="text-sm font-medium mb-2 block">Date Range</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="start-date" className="text-xs text-gray-500 mb-1 block">Start Date</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={safeFilters.dateRange?.start || ''}
-                  max={safeFilters.dateRange?.end || undefined}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  className="w-full h-11 rounded-lg"
-                />
-              </div>
-              <div>
-                <Label htmlFor="end-date" className="text-xs text-gray-500 mb-1 block">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={safeFilters.dateRange?.end || ''}
-                  min={safeFilters.dateRange?.start || undefined}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  className="w-full h-11 rounded-lg"
-                />
+            <MultiSelect
+              label="Stages"
+              options={testStages.map(stage => ({
+                key: stage.key || String(stage.id),
+                label: stage.label || stage.name || String(stage.id)
+              }))}
+              value={safeFiltersWithDefaults.stages}
+              onChange={(value) => handleFilterChange('stages', value)}
+              renderChip={(key) => {
+                const stage = testStages.find(s => (s.key || s.id) === key);
+                return stage?.label || stage?.name || key;
+              }}
+            />
+            <MultiSelect
+              label="Statuses"
+              options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
+              value={safeFiltersWithDefaults.statuses}
+              onChange={(value) => handleFilterChange('statuses', value)}
+              renderChip={(key) => {
+                const statusOption = statusOptions.find(s => s.key === key);
+                return statusOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Priorities"
+              options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
+              value={safeFiltersWithDefaults.priorities}
+              onChange={(value) => handleFilterChange('priorities', value)}
+              renderChip={(key) => {
+                const priorityOption = priorityOptions.find(p => p.key === key);
+                return priorityOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Sources"
+              options={effectiveSourceOptions}
+              value={uiSelectedSources}
+              onChange={(value) => handleFilterChange('sources', value)}
+              renderChip={(key) => {
+                const sourceOption = effectiveSourceOptions.find(s => s.key === key);
+                return sourceOption?.label || key;
+              }}
+            />
+            <MultiSelect
+              label="Assignees"
+              options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
+              value={Array.isArray(safeFiltersWithDefaults.assignees) ? safeFiltersWithDefaults.assignees : []}
+              onChange={(value) => handleFilterChange('assignees', value)}
+              disabled={usersLoading}
+              renderChip={(key) => {
+                const user = teamMembers.find(u => String(u.id) === key);
+                return user?.name || key;
+              }}
+            />
+            <div className="sm:col-span-2">
+              <Label className="text-sm font-medium mb-3 block text-gray-700">Date Range</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-date" className="text-xs text-gray-500 font-semibold uppercase tracking-wider pl-1">Start Date</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={safeFiltersWithDefaults.dateRange?.start || ''}
+                    max={safeFiltersWithDefaults.dateRange?.end || undefined}
+                    onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                    className="w-full h-11 rounded-xl border-gray-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date" className="text-xs text-gray-500 font-semibold uppercase tracking-wider pl-1">End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={safeFiltersWithDefaults.dateRange?.end || ''}
+                    min={safeFiltersWithDefaults.dateRange?.start || undefined}
+                    onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                    className="w-full h-11 rounded-xl border-gray-200"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-        </div>
-        {/* Action Buttons */}
-        <div className="flex flex-row items-center justify-between gap-2 pt-4 border-t mt-6">
-          <Button 
-            onClick={onClearFilters}
-            variant="outline"
-            className="rounded-lg font-semibold bg-white text-gray-500 border-[1.5px] border-gray-200 hover:bg-gray-50"
+
+        <DialogActions className="gap-3">
+          <div className="flex-1" />
+          <Button
+            onClick={onClose}
+            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >
-            <X className="mr-2 h-4 w-4" />
-            Clear All
+            Apply Filters
           </Button>
-          <div className="flex items-center justify-end gap-2">
-            <Button 
-              onClick={onClose}
-              className="rounded-lg font-semibold bg-primary hover:bg-primary/80 text-white"
-            >
-              Apply Filters
-            </Button>
-          </div>
-        </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );
