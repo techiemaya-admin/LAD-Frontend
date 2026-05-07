@@ -238,5 +238,4 @@ const PipelineBoardSettings: React.FC<PipelineBoardSettingsProps> = ({
 };
 
 export default PipelineBoardSettings;
-};
-export default PipelineBoardSettings;
+
