@@ -61,10 +61,10 @@ export const DashboardHeader: React.FC = () => {
     <div className="flex flex-wrap items-center justify-between gap-3 mb-5 mt-6 sm:mt-10">
 
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <TvMinimalPlay className="w-6 h-6 sm:w-8 sm:h-8 text-[#1E293B] shrink-0" color="#0b1957" />
+        <TvMinimalPlay className="w-6 h-6 sm:w-8 sm:h-8 text-[#1E293B] dark:text-[#2B7CFF] shrink-0" color="#0b1957" />
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-4xl font-bold text-[#1E293B] truncate">Smart Overview</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-4xl font-bold text-[#1E293B] dark:text-white truncate">Smart Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground dark:text-[#a0a9c9] mt-0.5">
             {currentLayout ? currentLayout.name : 'Default Layout'}
             {isEditMode && (
               <span className="ml-2 text-accent">• Editing</span>
@@ -79,7 +79,7 @@ export const DashboardHeader: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 dark:text-[#E0E0E0] dark:hover:text-white dark:border-[#2B7CFF]/30 dark:hover:border-[#2B7CFF]/60 dark:hover:bg-[#2B7CFF]/10"
               onClick={() => setWidgetLibraryOpen(true)}
             >
               <Plus className="h-4 w-4" />
@@ -88,7 +88,7 @@ export const DashboardHeader: React.FC = () => {
             {/* Layout Management Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 dark:text-[#E0E0E0] dark:hover:text-white dark:border-[#2B7CFF]/30 dark:hover:border-[#2B7CFF]/60 dark:hover:bg-[#2B7CFF]/10">
                   <Layout className="h-4 w-4" />
                   Layouts
                   <ChevronDown className="h-3 w-3" />
@@ -144,7 +144,7 @@ export const DashboardHeader: React.FC = () => {
             {/* Done Button */}
             <Button
               size="sm"
-              className="gap-2"
+              className="gap-2 dark:text-white dark:hover:text-white dark:bg-[#2B7CFF] dark:hover:bg-[#2B7CFF]/90"
               onClick={handleExitEditMode}
             >
               <Check className="h-4 w-4" />
@@ -155,7 +155,7 @@ export const DashboardHeader: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 dark:text-[#E0E0E0] dark:hover:text-white dark:border-[#2B7CFF]/30 dark:hover:border-[#2B7CFF]/60 dark:hover:bg-[#2B7CFF]/10"
             onClick={toggleEditMode}
           >
             <Pencil className="h-4 w-4" />

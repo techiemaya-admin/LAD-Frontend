@@ -83,7 +83,7 @@ export default function AIGeneratePage() {
           <div className="text-center py-12">
             <div className="inline-block">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-600 font-medium">Generating your email with Claude AI...</p>
+              <p className="text-gray-600 font-medium">Generating your email with AI...</p>
               <p className="text-gray-500 text-sm mt-2">This may take a moment</p>
             </div>
           </div>

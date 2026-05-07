@@ -1,8 +1,11 @@
 "use client";
-import HeroSection from "@/components/landing/HeroSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
+import NewHeroSection from "@/components/landing/NewHeroSection";
+import MRLadsSection from "@/components/landing/MRLadsSection";
+import HeroParallaxSection from "@/components/landing/HeroParallaxSection";
+import CloneYourselfSection from "@/components/landing/CloneYourselfSection";
+import MeetOurAgentSection from "@/components/landing/MeetOurAgentSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
-import ValuePropositionSection from "@/components/landing/ValuePropositionSection";
+import ParallaxFeaturesSection from "@/components/landing/ParallaxFeaturesSection";
 import SocialProofSection from "@/components/landing/SocialProofSection";
 import PricingHero from "@/components/landing/PricingHero";
 import StandardPlans from "@/components/landing/StandardPlans";
@@ -12,33 +15,38 @@ import InteractivePricingCalculator from "@/components/landing/InteractivePricin
 import PricingCTA from "@/components/landing/PricingCTA";
 import CTASection from "@/components/landing/CTASection";
 import AgentGuide from "@/components/landing/AgentGuide";
-import FourStepsSection from "@/components/landing/FourStepsSection";
 
 export default function LAD3DShowcase() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <AgentGuide />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* <AgentGuide /> */}
 
       {/* Hero Section */}
-      <HeroSection />
+      <NewHeroSection />
 
-      {/* Features Section */}
-      <FeaturesSection />
+      {/* MR LADS Section */}
+      <MRLadsSection />
+
+      {/* 24/7 AI Sales Automation Section */}
+      <HeroParallaxSection />
+
+      {/* Clone Yourself Section */}
+      <CloneYourselfSection />
 
       {/* How It Works Section */}
       <HowItWorksSection />
 
-      {/* 4 Steps Section */}
-      <FourStepsSection />
-
-      {/* Value Proposition Section */}
-      <ValuePropositionSection />
+      {/* Meet Our Agent Section */}
+      <MeetOurAgentSection />
+      
+      {/* Parallax Features Section */}
+      <ParallaxFeaturesSection />
 
       {/* Social Proof Section */}
       <SocialProofSection />
 
       {/* Pricing Section */}
-      <section>
+      <section className="py-20 relative bg-gradient-to-b from-background via-background to-background">
         {/* Pricing Hero */}
         <PricingHero />
 
@@ -54,7 +62,7 @@ export default function LAD3DShowcase() {
         <PricingBreakdown />
 
         {/* Pricing CTA */}
-        <PricingCTA />
+        {/* <PricingCTA /> */}
       </section>
 
       {/* CTA Section */}

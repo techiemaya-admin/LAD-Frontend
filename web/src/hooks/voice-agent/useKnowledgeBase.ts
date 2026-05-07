@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 
-const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "";
+const isWorkerConfigured = workerUrl.startsWith("https://");
 
 export interface PlaygroundStore {
   id: string;
@@ -33,16 +34,18 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   const sessionId = useRef("");
 
   useEffect(() => {
+    if (!isWorkerConfigured) return;
+
     if (!sessionId.current) {
       sessionId.current = crypto.randomUUID();
     }
     let active = true;
-    
+
     const wakeWorker = async () => {
       try {
         const res = await fetch(`${workerUrl}/worker-status`);
         if (!res.ok) throw new Error("Worker not reachable");
-        
+
         // Start hold
         fetch(`${workerUrl}/hold-for-call`, {
           method: "POST",
@@ -51,13 +54,13 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
         }).catch(e => {
             // Ignore abort or network errors from the long-polling hold
         });
-        
+
         if (active) setIsAwake(true);
       } catch (e: any) {
         if (active) setWakeError(e.message || "Failed to wake worker.");
       }
     };
-    
+
     wakeWorker();
 
     return () => {
@@ -76,7 +79,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   }, []);
 
   const fetchStores = useCallback(async () => {
-    if (!tenantId) return;
+    if (!isWorkerConfigured || !tenantId) return;
     setLoadingStores(true);
     setError("");
     try {
@@ -87,7 +90,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       });
       if (!res.ok) throw new Error("Failed to fetch stores");
       const data = await res.json();
-      setStores(data);
+      setStores(Array.isArray(data) ? data : (data?.stores ?? data?.items ?? []));
     } catch (err: any) {
       setError(err.message || "An error occurred fetching stores.");
     } finally {
@@ -97,6 +100,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
 
   const createStore = async (displayName: string, description?: string) => {
     try {
+      if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
       if (!tenantId) {
         throw new Error("You must select an active organization/tenant to create a knowledge base.");
       }
@@ -121,6 +125,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const deleteStore = async (storeName: string) => {
+    if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
     if (!tenantId) throw new Error("Missing tenantId");
     try {
       const geminiId = storeName.replace("fileSearchStores/", "");
@@ -137,6 +142,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const updateStoreSettings = async (storeName: string, isDefault: boolean) => {
+    if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
     if (!tenantId) throw new Error("Missing tenantId");
     try {
       const geminiId = storeName.replace("fileSearchStores/", "");
@@ -159,6 +165,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const uploadDocument = async (storeName: string, file: File, displayName?: string) => {
+    if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
     if (!tenantId) throw new Error("Missing tenantId");
     try {
       const geminiId = storeName.replace("fileSearchStores/", "");
@@ -182,7 +189,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const fetchDocuments = async (storeName: string): Promise<PlaygroundDocument[]> => {
-    if (!tenantId) return [];
+    if (!isWorkerConfigured || !tenantId) return [];
     try {
       const geminiId = storeName.replace("fileSearchStores/", "");
       const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}/documents?tenant_id=${tenantId}`);
@@ -195,6 +202,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const deleteDocument = async (storeName: string, documentId: string) => {
+    if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
     if (!tenantId) throw new Error("Missing tenantId");
     try {
       const storeGeminiId = storeName.replace("fileSearchStores/", "");
@@ -212,6 +220,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   };
 
   const testChat = async (storeName: string, question: string) => {
+    if (!isWorkerConfigured) throw new Error("Voice playground is not available in this environment.");
     if (!tenantId) throw new Error("Missing tenantId");
     const storeGeminiId = storeName.replace("fileSearchStores/", "");
     const res = await fetch(`${workerUrl}/playground-rag/stores/${storeGeminiId}/chat`, {
@@ -236,6 +245,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
     setError,
     isAwake,
     wakeError,
+    isConfigured: isWorkerConfigured,
     fetchStores,
     createStore,
     deleteStore,

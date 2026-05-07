@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
+import { cn } from "@/lib/utils";
 import {
   PhoneIncoming,
   PhoneOutgoing,
@@ -397,6 +398,7 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
+      meta: { sticky: 'left-0', zIndex: 'z-40' },
       header: ({ table }) => {
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
@@ -442,6 +444,7 @@ export function CallLogsTable({
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
+      meta: { sticky: 'left-[44px]', zIndex: 'z-30' },
       header: 'S/No',
       size: 60,
       maxSize: 80,
@@ -455,6 +458,7 @@ export function CallLogsTable({
     {
       id: 'assistant',
       accessorKey: 'assistant',
+      meta: { sticky: 'left-[104px]', zIndex: 'z-20' },
       header: 'Agent',
       size: 120,
       maxSize: 150,
@@ -463,6 +467,7 @@ export function CallLogsTable({
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
+      meta: { sticky: 'left-[224px]', zIndex: 'z-10' },
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
@@ -480,7 +485,7 @@ export function CallLogsTable({
                     description: `Lead name "${leadName}" copied to clipboard`,
                   });
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100 dark:hover:bg-[#253456]"
                 title="Copy lead name"
               >
                 <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
@@ -718,7 +723,7 @@ export function CallLogsTable({
       <TableRow
         key={`batch-${batchId}`}
         onClick={() => onToggleBatch?.(batchId)}
-        className="bg-[#F8FAFC] hover:bg-[#F1F5F9] cursor-pointer border-b-2 border-[#E2E8F0] transition-colors"
+        className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-[#F1F5F9] dark:hover:bg-[#253456] cursor-pointer border-b-2 border-[#E2E8F0] dark:border-[#262831] transition-colors"
       >
         <TableCell colSpan={columns.length} className="py-4">
           <div className="flex items-center gap-3">
@@ -791,8 +796,8 @@ export function CallLogsTable({
         <TableRow
           key={callId}
           onClick={() => onRowClick(callId)}
-          className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-            } ${indent ? "bg-[#F8FAFC]" : ""}`}
+          className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+            } ${indent ? "bg-[#F8FAFC] dark:bg-[#253456]" : ""}`}
         >
           {columns.map((column, cellIndex) => {
             // Build proper cell context that matches tanstack table's expected format
@@ -809,17 +814,20 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-              <TableCell
-                key={`${callId}-${column.id}`}
-                onClick={(e) => {
-                  if (column.id === 'select' || column.id === 'actions') {
-                    e.stopPropagation();
-                  }
-                }}
-                className={cellIndex === 0 && indent ? "pl-8" : ""}
-              >
-                {flexRender(column.cell, cellContext as any)}
-              </TableCell>
+                <TableCell
+                  key={`${callId}-${column.id}`}
+                  onClick={(e) => {
+                    if (column.id === 'select' || column.id === 'actions') {
+                      e.stopPropagation();
+                    }
+                  }}
+                  className={cn(
+                    cellIndex === 0 && indent ? "pl-8" : "",
+                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
+                  )}
+                >
+                  {flexRender(column.cell, cellContext as any)}
+                </TableCell>
             );
           })}
         </TableRow>
@@ -842,7 +850,10 @@ export function CallLogsTable({
                 e.stopPropagation();
               }
             }}
-            className={cellIndex === 0 && indent ? "pl-8" : ""}
+            className={cn(
+              cellIndex === 0 && indent ? "pl-8" : "",
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
+            )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
@@ -852,9 +863,9 @@ export function CallLogsTable({
   };
 
   return (
-    <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -944,7 +955,7 @@ export function CallLogsTable({
                 value={fromDate || ""}
                 max={toDate || undefined}
                 onChange={(e) => onFromDateChange?.(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -971,17 +982,20 @@ export function CallLogsTable({
           </div>
         )}
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full">
-          <Table>
-            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] border-b border-[#E2E8F0] hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className={`font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                        }`}
+                      className={cn(
+                        "font-semibold text-[#1E293B] dark:text-white whitespace-nowrap bg-[#F8FAFC] dark:bg-[#1a2a43] sticky top-0 z-30",
+                        header.column.getCanSort() ? 'cursor-pointer select-none' : '',
+                        (header.column.columnDef.meta as any)?.sticky ? `sticky ${(header.column.columnDef.meta as any)?.sticky} z-50` : ''
+                      )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {header.isPlaceholder ? null : (
@@ -1011,7 +1025,7 @@ export function CallLogsTable({
                   <TableRow key={`skeleton-${i}`} className="animate-pulse">
                     {columns.map((col, j) => (
                       <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
-                        <div className="h-4 bg-gray-200 rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1070,10 +1084,10 @@ export function CallLogsTable({
                                 <Phone className="w-8 h-8 text-primary" />
                               </div>
                               <div>
-                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                <h3 className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                                   No calls in current batch
                                 </h3>
-                                <p className="text-sm text-[#64748B] mb-4">
+                                <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-4">
                                   Start making calls to see them appear here
                                 </p>
                               </div>
@@ -1091,10 +1105,10 @@ export function CallLogsTable({
                                 <Phone className="w-8 h-8 text-primary" />
                               </div>
                               <div>
-                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                <h3 className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                                   Trigger a call
                                 </h3>
-                                <p className="text-sm text-[#64748B] mb-4">
+                                <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-4">
                                   Start making calls to see them appear here
                                 </p>
                               </div>
@@ -1196,7 +1210,7 @@ export function CallLogsTable({
                   <TableRow
                     key={row.id}
                     onClick={() => onRowClick(row.original.id)}
-                    className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
                       }`}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -1221,9 +1235,9 @@ export function CallLogsTable({
       </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724]">
           {/* Left Side: Records per page */}
-          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select
@@ -1233,7 +1247,7 @@ export function CallLogsTable({
                   onPageSizeChange?.(newSize);
                   onPageChange?.(1);
                 }}
-                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
+                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>{size}</option>
@@ -1245,7 +1259,7 @@ export function CallLogsTable({
               <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
             )}
             {callFilter === 'batch' && batchStats && (
-              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0]">
+              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0] dark:border-[#262831]">
                 <span className="text-[10px] xs:text-xs">
                   <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> comp
                 </span>
@@ -1258,7 +1272,7 @@ export function CallLogsTable({
 
           {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
             <div className="flex items-center gap-1">

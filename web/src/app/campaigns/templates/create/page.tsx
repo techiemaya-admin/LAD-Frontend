@@ -16,7 +16,7 @@ export default function CreateTemplatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE]">
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-6">
         <div className="flex items-center gap-4">
@@ -77,7 +77,7 @@ export default function CreateTemplatePage() {
               <div className="text-3xl">✨</div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Generate with AI</h2>
-                <p className="text-gray-600">Answer a few questions about your campaign and let Claude AI generate professional email content for you.</p>
+                <p className="text-gray-600">Answer a few questions about your campaign and let AI generate professional email content for you.</p>
                 <ul className="mt-4 space-y-1 text-sm text-gray-600">
                   <li>✓ AI-powered content generation</li>
                   <li>✓ Based on your campaign details</li>

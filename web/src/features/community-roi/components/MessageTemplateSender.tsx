@@ -35,19 +35,67 @@ type ParamMapping = Array<{ field: string; customValue: string }>;
 
 // ── Field options available for parameter mapping ──────────────────────────
 const FIELD_OPTIONS = [
-  { value: 'name',       label: 'Full Name' },
-  { value: 'first_name', label: 'First Name' },
-  { value: 'company',    label: 'Company' },
-  { value: 'phone',      label: 'Phone Number' },
-  { value: 'email',      label: 'Email' },
-  { value: 'custom',     label: 'Custom text...' },
+  { value: 'name',          label: 'Full Name',          group: 'contact' },
+  { value: 'first_name',    label: 'First Name',         group: 'contact' },
+  { value: 'company',       label: 'Company',            group: 'contact' },
+  { value: 'phone',         label: 'Phone Number',       group: 'contact' },
+  { value: 'email',         label: 'Email',              group: 'contact' },
+  { value: 'week_date_1',   label: 'Week 1 Date (Mon)', group: 'date' },
+  { value: 'week_date_2',   label: 'Week 2 Date (Mon)', group: 'date' },
+  { value: 'rec_week1_1',   label: 'Week 1 · Rec #1',   group: 'rec' },
+  { value: 'rec_week1_2',   label: 'Week 1 · Rec #2',   group: 'rec' },
+  { value: 'rec_week1_3',   label: 'Week 1 · Rec #3',   group: 'rec' },
+  { value: 'rec_week2_1',   label: 'Week 2 · Rec #1',   group: 'rec' },
+  { value: 'rec_week2_2',   label: 'Week 2 · Rec #2',   group: 'rec' },
+  { value: 'rec_week2_3',   label: 'Week 2 · Rec #3',   group: 'rec' },
+  { value: 'custom',        label: 'Custom text...',     group: 'other' },
 ];
 
+type MemberRecData = Record<string, { week1: string[]; week2: string[] }>;
+
+/** Returns the date of the upcoming Monday for weekNumber=1 or +7 days for weekNumber=2. */
+function getWeekMonday(weekNumber: number): string {
+  const date = new Date();
+  const day = date.getDay(); // 0=Sun … 6=Sat
+  const daysToNextMonday = (8 - day) % 7; // 0 if today IS Monday
+  date.setDate(date.getDate() + daysToNextMonday + (weekNumber - 1) * 7);
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }); // e.g. "28 April"
+}
+
 /**
- * Inspect the body text around {{N}} to intelligently suggest a default field.
- * E.g. "Hi {{1}}, your company {{2}} is..." → 'name', 'company'
+ * Template-aware field suggestion. Known multi-param community-ROI templates
+ * are auto-mapped; everything else falls back to body-context heuristics.
  */
-function suggestField(body: string, paramNumber: number): string {
+function suggestField(body: string, paramNumber: number, templateName?: string): string {
+  // bni_member_followup_1 — 4 params: name, week1 rec ×3
+  if (templateName === 'bni_member_followup_1') {
+    if (paramNumber === 1) return 'name';
+    if (paramNumber === 2) return 'rec_week1_1';
+    if (paramNumber === 3) return 'rec_week1_2';
+    if (paramNumber === 4) return 'rec_week1_3';
+  }
+  // member_friday_followup — 7 params: name, week1 rec ×3, week2 rec ×3
+  if (templateName === 'member_friday_followup') {
+    if (paramNumber === 1) return 'name';
+    if (paramNumber === 2) return 'rec_week1_1';
+    if (paramNumber === 3) return 'rec_week1_2';
+    if (paramNumber === 4) return 'rec_week1_3';
+    if (paramNumber === 5) return 'rec_week2_1';
+    if (paramNumber === 6) return 'rec_week2_2';
+    if (paramNumber === 7) return 'rec_week2_3';
+  }
+  // member_121_recommendations — 8 params: week1_date, week1 rec ×3, week2_date, week2 rec ×3
+  if (templateName === 'member_121_recommendations') {
+    if (paramNumber === 1) return 'week_date_1';
+    if (paramNumber === 2) return 'rec_week1_1';
+    if (paramNumber === 3) return 'rec_week1_2';
+    if (paramNumber === 4) return 'rec_week1_3';
+    if (paramNumber === 5) return 'week_date_2';
+    if (paramNumber === 6) return 'rec_week2_1';
+    if (paramNumber === 7) return 'rec_week2_2';
+    if (paramNumber === 8) return 'rec_week2_3';
+  }
+  // body-context heuristics for unknown templates
   const regex = new RegExp(`\\{\\{${paramNumber}\\}\\}`);
   const match = regex.exec(body);
   if (!match) return 'name';
@@ -58,9 +106,26 @@ function suggestField(body: string, paramNumber: number): string {
   return 'name';
 }
 
-function resolveParam(member: any, field: string, customValue: string): string {
+function resolveParam(
+  member: any,
+  field: string,
+  customValue: string,
+  recData?: MemberRecData,
+): string {
   if (field === 'custom') return customValue;
   if (field === 'first_name') return ((member?.name || '').split(' ')[0]) || '';
+  // Computed week dates — same for every member
+  if (field === 'week_date_1') return getWeekMonday(1);
+  if (field === 'week_date_2') return getWeekMonday(2);
+  if (field.startsWith('rec_')) {
+    // field format: rec_week1_1, rec_week2_3, etc.
+    const parts = field.split('_'); // ['rec', 'week1', '1'] or ['rec', 'week2', '3']
+    const weekKey = parts[1] as 'week1' | 'week2';
+    const rankIdx = parseInt(parts[2]) - 1;
+    const memberRecs = recData?.[member?.id];
+    const weekRecs = memberRecs?.[weekKey] ?? [];
+    return weekRecs[rankIdx] || '—';
+  }
   return String(member?.[field] ?? '');
 }
 
@@ -114,6 +179,15 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   const [paramMapping, setParamMapping] = useState<ParamMapping>([]);
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [resolvingMedia, setResolvingMedia] = useState(false);
+  const [memberRecData, setMemberRecData] = useState<MemberRecData>({});
+
+  // Fetch per-member recommendation data for parameter mapping
+  useEffect(() => {
+    fetch('/api/community-roi/recommendations/member-data')
+      .then(r => r.json())
+      .then(json => { if (json?.success && json.data) setMemberRecData(json.data); })
+      .catch(() => {}); // silent — recs just won't be available in preview
+  }, []);
 
   // Fetch Meta-approved templates on mount
   useEffect(() => {
@@ -157,7 +231,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   // Also attempts to resolve a Meta upload handle to a real image URL.
   const initParamMapping = useCallback(async (template: MetaTemplate) => {
     const mapping: ParamMapping = Array.from({ length: template.parameter_count }, (_, i) => ({
-      field:       suggestField(template.body, i + 1),
+      field:       suggestField(template.body, i + 1, template.name),
       customValue: '',
     }));
     setParamMapping(mapping);
@@ -187,7 +261,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
   // Member helpers
   const handleSelectAllChange = (checked: boolean) => {
     setSelectAll(checked);
-    setSelectedMembers(checked ? allMembers.map((m: any) => m.id) : []);
+    setSelectedMembers(checked ? membersWithPhone.map((m: any) => m.id) : []);
   };
 
   const handleMemberToggle = (memberId: string) => {
@@ -195,25 +269,33 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
       const updated = prev.includes(memberId)
         ? prev.filter(id => id !== memberId)
         : [...prev, memberId];
-      setSelectAll(updated.length === allMembers.length && allMembers.length > 0);
+      setSelectAll(updated.length === membersWithPhone.length && membersWithPhone.length > 0);
       return updated;
     });
   };
 
-  const recipientCount = selectAll ? allMembers.length : selectedMembers.length;
-  const previewMember  = allMembers[0] ?? null;
+  const membersWithPhone = useMemo(
+    () => allMembers.filter((m: any) => (m.whatsapp_phone || m.phone || '').trim()),
+    [allMembers]
+  );
+  const recipientCount = selectAll ? membersWithPhone.length : selectedMembers.filter(id => {
+    const m = allMembers.find((x: any) => x.id === id);
+    return m && (m.whatsapp_phone || m.phone || '').trim();
+  }).length;
+  const noPhoneCount = allMembers.length - membersWithPhone.length;
+  const previewMember = membersWithPhone[0] ?? null;
 
   const buildPreviewBody = useCallback(() => {
     if (!selectedTemplate) return '';
     let body = selectedTemplate.body;
     paramMapping.forEach((m, i) => {
       const value = previewMember
-        ? (resolveParam(previewMember, m.field, m.customValue) || '…')
+        ? (resolveParam(previewMember, m.field, m.customValue, memberRecData) || '…')
         : (m.field === 'custom' ? m.customValue || '…' : `[${FIELD_OPTIONS.find(f => f.value === m.field)?.label ?? m.field}]`);
       body = body.replace(new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'), `[${value}]`);
     });
     return body;
-  }, [selectedTemplate, paramMapping, previewMember]);
+  }, [selectedTemplate, paramMapping, previewMember, memberRecData]);
 
   const handleSend = async () => {
     if (!selectedTemplate) return;
@@ -229,14 +311,17 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
       onSuccess({ broadcasting: true, total: memberCount });
       onClose();
 
-      // Build per-member parameters from the mapping
-      const membersPayload = targetMembers.map((m: any) => ({
-        phone: m.phone,
-        name:  m.name,
-        parameters: paramMapping.length > 0
-          ? paramMapping.map(mp => resolveParam(m, mp.field, mp.customValue))
-          : (m.name ? [m.name] : []),
-      }));
+      // Build per-member parameters from the mapping (rec fields resolved per-member)
+      // Normalize phone: try whatsapp_phone first, then phone (both field names exist across data sources)
+      const membersPayload = targetMembers
+        .map((m: any) => ({
+          phone: (m.whatsapp_phone || m.phone || '').trim(),
+          name:  m.name,
+          parameters: paramMapping.length > 0
+            ? paramMapping.map(mp => resolveParam(m, mp.field, mp.customValue, memberRecData))
+            : (m.name ? [m.name] : []),
+        }))
+        .filter(m => m.phone); // skip members with no phone — WABA will reject them anyway
 
       fetchWithTenant('/api/whatsapp-conversations/conversations/send-template-to-members', {
         method:  'POST',
@@ -468,7 +553,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
               const paramNum = i + 1;
               const mapping  = paramMapping[i] ?? { field: 'name', customValue: '' };
               const resolved = previewMember
-                ? resolveParam(previewMember, mapping.field, mapping.customValue)
+                ? resolveParam(previewMember, mapping.field, mapping.customValue, memberRecData)
                 : null;
 
               return (
@@ -494,9 +579,36 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     }}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   >
-                    {FIELD_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
+                    <optgroup label="Contact Fields">
+                      {FIELD_OPTIONS.filter(o => o.group === 'contact').map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Week Dates">
+                      {FIELD_OPTIONS.filter(o => o.group === 'date').map(opt => {
+                        const date = resolveParam(null, opt.value, '');
+                        return (
+                          <option key={opt.value} value={opt.value}>{opt.label} — {date}</option>
+                        );
+                      })}
+                    </optgroup>
+                    <optgroup label="1-2-1 Recommendations">
+                      {FIELD_OPTIONS.filter(o => o.group === 'rec').map(opt => {
+                        // Show the actual recommended name for the preview member if available
+                        const previewName = previewMember
+                          ? resolveParam(previewMember, opt.value, '', memberRecData)
+                          : null;
+                        const suffix = previewName && previewName !== '—' ? ` (${previewName})` : '';
+                        return (
+                          <option key={opt.value} value={opt.value}>{opt.label}{suffix}</option>
+                        );
+                      })}
+                    </optgroup>
+                    <optgroup label="Other">
+                      {FIELD_OPTIONS.filter(o => o.group === 'other').map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </optgroup>
                   </select>
 
                   {mapping.field === 'custom' && (
@@ -569,31 +681,44 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
 
           {!selectAll && (
             <div className="space-y-1 mb-5 max-h-64 overflow-y-auto">
-              {allMembers.map((member: any) => (
-                <label key={member.id} className="flex items-center p-3 hover:bg-slate-50 rounded-lg cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedMembers.includes(member.id)}
-                    onChange={() => handleMemberToggle(member.id)}
-                    className="w-4 h-4 mr-3 cursor-pointer accent-indigo-600"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-slate-900 text-sm">{member.name}</p>
-                    {member.phone && <p className="text-xs text-slate-400">{member.phone}</p>}
-                  </div>
-                  {/* Show resolved param preview per member */}
-                  {paramMapping.length > 0 && (
-                    <p className="text-[10px] text-slate-400 ml-2 max-w-[120px] truncate">
-                      {paramMapping.map(m => resolveParam(member, m.field, m.customValue) || '—').join(' · ')}
-                    </p>
-                  )}
-                </label>
-              ))}
+              {allMembers.map((member: any) => {
+                const phone = (member.whatsapp_phone || member.phone || '').trim();
+                const hasPhone = !!phone;
+                return (
+                  <label key={member.id} className={`flex items-center p-3 rounded-lg cursor-pointer ${hasPhone ? 'hover:bg-slate-50' : 'opacity-50 cursor-not-allowed'}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedMembers.includes(member.id)}
+                      onChange={() => hasPhone && handleMemberToggle(member.id)}
+                      disabled={!hasPhone}
+                      className="w-4 h-4 mr-3 cursor-pointer accent-indigo-600 disabled:cursor-not-allowed"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-900 text-sm">{member.name}</p>
+                      {hasPhone
+                        ? <p className="text-xs text-slate-400">{phone}</p>
+                        : <p className="text-xs text-red-400">⚠ No phone number</p>
+                      }
+                    </div>
+                    {/* Show resolved param preview per member */}
+                    {paramMapping.length > 0 && hasPhone && (
+                      <p className="text-[10px] text-slate-400 ml-2 max-w-[120px] truncate">
+                        {paramMapping.map(m => resolveParam(member, m.field, m.customValue, memberRecData) || '—').join(' · ')}
+                      </p>
+                    )}
+                  </label>
+                );
+              })}
             </div>
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-sm text-blue-900">
             📱 Will send to <strong>{recipientCount}</strong> {recipientCount === 1 ? 'member' : 'members'}
+            {noPhoneCount > 0 && (
+              <span className="block mt-1 text-xs text-amber-700">
+                ⚠ {noPhoneCount} member{noPhoneCount > 1 ? 's' : ''} skipped — no phone number on file
+              </span>
+            )}
           </div>
 
           <div className="flex gap-3 justify-end">
@@ -661,7 +786,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     </span>
                     {previewMember && (
                       <span className="text-slate-400 ml-1">
-                        e.g. &quot;{resolveParam(previewMember, m.field, m.customValue)}&quot;
+                        e.g. &quot;{resolveParam(previewMember, m.field, m.customValue, memberRecData)}&quot;
                       </span>
                     )}
                   </p>

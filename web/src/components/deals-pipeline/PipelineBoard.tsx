@@ -1442,7 +1442,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
     <div 
       className={
         pipelineSettings.viewMode === 'kanban'
-          ? 'w-full flex flex-col bg-[#f8f9fe] p-1 border border-gray-200 rounded-lg'
+          ? 'w-full flex flex-col bg-[#f8f9fe] dark:bg-[#000724] p-1 border border-gray-200 dark:border-[#262831] rounded-lg'
           : 'w-full flex flex-col'
       }
       style={{ height: `calc(93vh - ${HEADER_HEIGHT}px)` }}

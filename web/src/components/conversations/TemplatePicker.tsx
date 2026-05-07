@@ -22,6 +22,7 @@ interface FieldOption { label: string; value: string; hint: string; }
 const FIELD_OPTIONS: FieldOption[] = [
   { label: 'Contact name (full)',  value: '{member_name}',       hint: 'e.g. Naveen Reddy'         },
   { label: 'Contact first name',  value: '{member_first_name}', hint: 'e.g. Naveen'               },
+  { label: 'Company',             value: '{member_company}',    hint: 'e.g. Acme Corp'            },
   { label: 'Phone number',        value: '{member_phone}',      hint: 'e.g. +971501234567'        },
   { label: 'Email address',       value: '{member_email}',      hint: 'e.g. naveen@example.com'   },
   { label: 'Custom value…',       value: '__custom__',          hint: 'Same text sent to everyone' },
@@ -48,6 +49,7 @@ interface BatchOptions {
   batchSize: number;      // how many messages per batch
   delayMin: number;       // minimum delay between batches (seconds)
   delayRandom: number;    // additional random 0–N seconds added to delay
+  dailyLimit: number;     // maximum messages to send in a single day
 }
 
 interface TemplatePickerProps {
@@ -56,8 +58,12 @@ interface TemplatePickerProps {
   selectedCount: number;
   onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
   sending?: boolean;
+  /** Track progress: { sent: number; total: number; running: boolean } */
+  sendProgress?: { sent: number; total: number; running: boolean } | null;
   /** Which backend channel to fetch templates from. Defaults to 'waba'. */
   channel?: 'personal' | 'waba';
+  /** Force batch settings to always be shown (e.g. group sends where count may be 0). */
+  isBulkSend?: boolean;
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
@@ -87,7 +93,9 @@ export function TemplatePicker({
   selectedCount,
   onSend,
   sending = false,
+  sendProgress = null,
   channel = 'waba',
+  isBulkSend = false,
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,8 +108,9 @@ export function TemplatePicker({
   const [refreshKey, setRefreshKey] = useState(0);
   const [nameFormat, setNameFormat] = useState<NameFormat>('first');
   const [batchSize, setBatchSize] = useState(5);
-  const [delayMin, setDelayMin] = useState(120);    // seconds
+  const [delayMin, setDelayMin] = useState(120);      // seconds — min 120 enforced
   const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
+  const [dailyLimit, setDailyLimit] = useState(250);  // max messages to send per day
 
   // Fetch templates when dialog opens (re-fetch if channel changes)
   useEffect(() => {
@@ -162,18 +171,34 @@ export function TemplatePicker({
 
   const handleSelectTemplate = useCallback(async (template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
-    // Auto-fill known contact fields with sentinels so the backend can personalize per-contact
+    // Auto-fill known contact fields with sentinels so the backend can personalize per-contact.
+    // Priority: exact FIELD_OPTIONS match → CONTACT_NAME_FIELDS → CONTACT_COMPANY_FIELDS
     const params = template.parameters || [];
     const defaults = params.map((p) => {
       const key = p.toLowerCase();
+      // Exact match against a FIELD_OPTIONS sentinel — e.g. param "member_first_name" → '{member_first_name}'
+      const exactMatch = FIELD_OPTIONS.find(
+        o => o.value !== '__custom__' && o.value.toLowerCase() === `{${key}}`
+      );
+      if (exactMatch) return exactMatch.value;
+      // Legacy CONTACT_NAME_FIELDS match → full name sentinel
       if (CONTACT_NAME_FIELDS.includes(key)) return '{member_name}';
+      // Company field
       if (CONTACT_COMPANY_FIELDS.includes(key)) return '{member_company}';
+      // Params containing "name" or "first" → first-name sentinel
+      if (key.includes('first') || (key.includes('name') && !key.includes('company'))) return '{member_first_name}';
+      // Params containing "phone" or "mobile"
+      if (key.includes('phone') || key.includes('mobile')) return '{member_phone}';
+      // Params containing "email"
+      if (key.includes('email')) return '{member_email}';
+      // Params containing "company"
+      if (key.includes('company') || key.includes('business')) return '{member_company}';
       return '';
     });
-    // For positional templates ({{1}}, {{2}}, …): default first param to name,
+    // For positional templates ({{1}}, {{2}}, …): default first param to first-name,
     // leave the rest as empty so user picks from the dropdown.
     if (defaults.length > 0 && defaults[0] === '' && !isNaN(Number(params[0]))) {
-      defaults[0] = '{member_name}';
+      defaults[0] = '{member_first_name}';
     }
     setParamValues(defaults);
 
@@ -214,23 +239,29 @@ export function TemplatePicker({
 
   const handleSend = useCallback(() => {
     if (!selectedTemplate) return;
+    // WABA handles rate-limiting server-side — pass zeroes so the backend sends
+    // without artificial throttling. Personal WA uses the user-configured schedule
+    // to avoid account restrictions from rapid bulk sends.
+    const scheduleParams = channel === 'personal'
+      ? { batchSize, delayMin, delayRandom, dailyLimit }
+      : { batchSize: 0, delayMin: 0, delayRandom: 0, dailyLimit: 0 };
     onSend(
       selectedTemplate.name,
       selectedTemplate.language,
       paramValues.length > 0 ? paramValues : [],
       nameFormat,
-      { batchSize, delayMin, delayRandom },
+      scheduleParams,
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
     );
-  }, [selectedTemplate, paramValues, nameFormat, batchSize, delayMin, delayRandom, onSend, headerMediaUrl]);
+  }, [selectedTemplate, paramValues, nameFormat, channel, batchSize, delayMin, delayRandom, dailyLimit, onSend, headerMediaUrl]);
 
   // Whether any parameter is a name-type field (controls name format picker visibility)
   const hasNameParam = useMemo(() => {
     return (selectedTemplate?.parameters || []).some(p =>
       CONTACT_NAME_FIELDS.includes(p.toLowerCase())
-    ) || paramValues.some(v => v === '{member_name}');
+    ) || paramValues.some(v => v === '{member_name}' || v === '{member_first_name}');
   }, [selectedTemplate, paramValues]);
 
   // Preview body with params filled in (lenient: handles {{name}}, {name}}, {name} etc.)
@@ -238,12 +269,19 @@ export function TemplatePicker({
     if (!selectedTemplate) return '';
     let body = selectedTemplate.body;
     const params = selectedTemplate.parameters || [];
+    const sampleFirst = 'Naveen';
+    const sampleFull  = 'Naveen Reddy';
+    // Sentinel → sample text mapping for all FIELD_OPTIONS
+    const sentinelSamples: Record<string, string> = {
+      '{member_name}':       nameFormat === 'first' ? sampleFirst : sampleFull,
+      '{member_first_name}': sampleFirst,
+      '{member_phone}':      '+971501234567',
+      '{member_email}':      'naveen@example.com',
+      '{member_company}':    '[Company]',
+    };
     paramValues.forEach((val, i) => {
       const placeholder = params[i] || String(i + 1);
-      const sampleName = nameFormat === 'first' ? 'Naveen' : 'Naveen Reddy';
-      const displayVal = val === '{member_name}' ? sampleName
-        : val === '{member_company}' ? '[Company]'
-        : (val || `{{${placeholder}}}`);
+      const displayVal = sentinelSamples[val] ?? (val || `{{${placeholder}}}`);
       // Lenient regex: match {+placeholder}+
       const re = new RegExp(`\\{+${placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}+`, 'gi');
       body = body.replace(re, displayVal);
@@ -253,7 +291,7 @@ export function TemplatePicker({
 
   const canSend = selectedTemplate && (
     selectedTemplate.parameter_count === 0 ||
-    paramValues.every((v) => v.trim().length > 0 && v !== '__custom__')
+    paramValues.every((v) => v.trim().length > 0 && v !== '__custom__' && v !== '')
   );
 
   return (
@@ -528,34 +566,37 @@ export function TemplatePicker({
               </div>
             </div>
 
-              {/* Batch & Delay settings */}
-              {selectedCount > 1 && (
+              {/* Batch & Delay settings — personal WhatsApp only (avoids ban from rapid bulk sends).
+                  WABA handles its own rate-limiting server-side; no schedule needed. */}
+              {channel === 'personal' && (isBulkSend || selectedCount > 1) && (
                 <div className="space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs font-semibold text-amber-800">Sending schedule ({selectedCount} contacts)</p>
+                  <p className="text-xs font-semibold text-amber-800">
+                    Sending schedule {selectedCount > 0 ? `(${selectedCount} contacts)` : ''}
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">Batch size</label>
                       <Input
                         type="number"
-                        min={1} max={50}
+                        min={1} max={10}
                         value={batchSize}
-                        onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={e => setBatchSize(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
                         onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
-                      <p className="text-[9px] text-amber-600 text-center">msgs / batch</p>
+                      <p className="text-[9px] text-amber-600 text-center">msgs / batch (max 10)</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">Min delay</label>
                       <Input
                         type="number"
-                        min={10} max={3600}
+                        min={120} max={3600}
                         value={delayMin}
-                        onChange={e => setDelayMin(Math.max(10, parseInt(e.target.value) || 10))}
+                        onChange={e => setDelayMin(Math.max(120, parseInt(e.target.value) || 120))}
                         onFocus={e => e.target.select()}
                         className="h-7 text-xs text-center"
                       />
-                      <p className="text-[9px] text-amber-600 text-center">seconds</p>
+                      <p className="text-[9px] text-amber-600 text-center">seconds (min 120)</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] text-amber-700 font-medium">+Random</label>
@@ -570,6 +611,25 @@ export function TemplatePicker({
                       <p className="text-[9px] text-amber-600 text-center">0–N secs</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 pt-1 border-t border-amber-200">
+                    <div className="flex items-center gap-2 flex-1">
+                      <label className="text-[10px] text-amber-700 font-medium whitespace-nowrap">Daily cap</label>
+                      <Input
+                        type="number"
+                        min={1} max={250}
+                        value={dailyLimit}
+                        onChange={e => setDailyLimit(Math.min(250, Math.max(1, parseInt(e.target.value) || 1)))}
+                        onFocus={e => e.target.select()}
+                        className="h-7 text-xs text-center w-24"
+                      />
+                      <p className="text-[9px] text-amber-600">msgs / day (max 250)</p>
+                    </div>
+                    {selectedCount > 0 && dailyLimit < selectedCount && (
+                      <p className="text-[9px] text-amber-700 font-medium">
+                        Will send {dailyLimit} today, {selectedCount - dailyLimit} queued for next day
+                      </p>
+                    )}
+                  </div>
                   <p className="text-[10px] text-amber-700">
                     ≈ {batchSize} messages, then wait {delayMin}s + random 0–{delayRandom}s before next batch
                   </p>
@@ -582,13 +642,29 @@ export function TemplatePicker({
                 onClick={() => onOpenChange(false)}
                 disabled={sending}
               >
-                Cancel
+                {sending ? 'Keep running' : 'Cancel'}
               </Button>
+              {/* Show "Run in Background" button while sending */}
+              {sending && sendProgress?.running && (
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="gap-2"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Run in background
+                </Button>
+              )}
               <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
               >
-                {sending ? (
+                {sending && sendProgress?.running ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending {sendProgress?.sent ?? 0}/{sendProgress?.total ?? 0}...
+                  </>
+                ) : sending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Sending...
