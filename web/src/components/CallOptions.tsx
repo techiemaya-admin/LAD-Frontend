@@ -395,14 +395,8 @@ export function CallOptions(props: CallOptionsProps) {
           title: "Bulk Calls Started",
           description: `${payload.entries.length} numbers queued.`,
         });
-        if (jobId) {
-          router.push(
-            `/call-logs?jobId=${encodeURIComponent(jobId)}&mode=current-batch`
-          );
-        } else {
-          // Fallback: go to generic call logs if no job_id was returned
-          router.push("/call-logs");
-        }
+        
+        router.push("/call-logs");
         return;
       }
       if (!dial) throw new Error("Please enter a phone number to call");
@@ -1176,9 +1170,13 @@ export function CallOptions(props: CallOptionsProps) {
             </div>
           </div>
           <DialogActions>
-            <div className="flex gap-2">
-              <Button onClick={saveEditor} disabled={savingSummary} className="w-full">{savingSummary ? 'Saving...' : 'Save & Send'}</Button>
-            </div>
+            <Button 
+              onClick={saveEditor} 
+              disabled={savingSummary} 
+              className="rounded-xl px-10 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-sm transition-all"
+            >
+              {savingSummary ? 'Saving...' : 'Save & Send'}
+            </Button>
           </DialogActions>
         </DialogContent>
       </Dialog>

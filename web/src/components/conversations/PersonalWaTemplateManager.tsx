@@ -518,22 +518,16 @@ export function PersonalWaTemplateManager() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div>
-          <h2 className="text-sm font-semibold">Personal WA Templates</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Saved messages — no Meta approval required
-          </p>
-        </div>
-        <Button size="sm" className="gap-1.5" onClick={openCreate}>
-          <Plus className="h-3.5 w-3.5" />
-          New Template
-        </Button>
+      <div className="px-4 py-3 border-b border-border shrink-0">
+        <h2 className="text-sm font-semibold">Personal WA Templates</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Saved messages — no Meta approval required
+        </p>
       </div>
 
-      {/* Search */}
-      <div className="px-4 py-2 border-b border-border shrink-0">
-        <div className="relative">
+      {/* Search & Action Row */}
+      <div className="px-4 py-2 border-b border-border shrink-0 flex items-center gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             className="pl-8 h-8 text-sm"
@@ -542,6 +536,10 @@ export function PersonalWaTemplateManager() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Button size="sm" className="h-8 gap-1.5 shrink-0 px-2 sm:px-3" onClick={openCreate}>
+          <Plus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">New Template</span>
+        </Button>
       </div>
 
       {/* List */}

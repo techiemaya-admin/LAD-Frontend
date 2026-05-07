@@ -793,19 +793,9 @@ export function FollowupSettings() {
                                 value={customTriggerMessage}
                                 onChange={(e) => setCustomTriggerMessage(e.target.value)}
                               />
-                              <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setTriggerDialogPhone(null);
-                                    setCustomTriggerMessage('');
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  size="sm"
+                                  className="w-full bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl"
                                   disabled={triggeringPhone === member.member_phone}
                                   onClick={() =>
                                     handleTrigger(

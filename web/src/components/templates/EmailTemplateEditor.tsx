@@ -839,7 +839,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
               </div>
 
               {/* Save actions */}
-              <div className="border-t border-gray-100 p-5 space-y-2 max-w-2xl mx-auto w-full">
+              <div className="border-t border-gray-100 p-5 max-w-2xl mx-auto w-full">
                 <button
                   onClick={() => handleSave(true)}
                   disabled={saving}
@@ -848,12 +848,6 @@ export default function EmailTemplateEditor({ mode, initialTemplate }: EmailTemp
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Saving…' : mode === 'create' ? 'Create template' : 'Save changes'}
                 </button>
-                <Link
-                  href="/campaigns/templates"
-                  className="block text-center py-2.5 border border-gray-200 text-sm text-gray-600 rounded-xl hover:bg-gray-50 transition-all"
-                >
-                  Cancel
-                </Link>
               </div>
             </aside>
           </>

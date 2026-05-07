@@ -742,17 +742,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               onValueChange={async (newTag) => {
                 const backendLabel = toBackendTagLabel(newTag as LeadTag);
                 if (!backendLabel) return;
-                
+
                 // Optimistically update UI immediately
                 setOptimisticTags(prev => ({ ...prev, [lead.id]: backendLabel }));
-                
+
                 // Call the SDK mutation to update tags
                 try {
                   await updateLeadTagsMutation.mutateAsync({
                     leadId: lead.id,
                     tags: [backendLabel]
                   });
-                  
+
                   // Notify parent component
                   if (onTagChange) {
                     onTagChange(lead.id, backendLabel);
@@ -809,13 +809,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       case 'source': {
         const sourceValue = (lead.source || 'unknown').toLowerCase();
         const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
-          linkedin:    { label: 'LinkedIn',    icon: <Linkedin       className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          email:       { label: 'Email',       icon: <Mail           className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
-          whatsapp:    { label: 'WhatsApp',    icon: <MessageCircle  className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
-          voice_agent: { label: 'Voice',       icon: <Phone          className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
-          apollo:      { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-          apollo_io:   { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-          website:     { label: 'Website',     icon: <Globe          className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
+          linkedin: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          linkedin_search: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          linkedin_campaign: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          inbound_upload: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          direct_contact: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          email: { label: 'Email', icon: <Mail className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
+          whatsapp: { label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
+          voice_agent: { label: 'Voice', icon: <Phone className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
+          apollo: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          apollo_io: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          website: { label: 'Website', icon: <Globe className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
         };
         const cfg = sourceConfig[sourceValue] ?? {
           label: lead.source ? lead.source.charAt(0).toUpperCase() + lead.source.slice(1) : 'Unknown',
@@ -865,7 +869,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       {/* Header with Search and Controls */}
       <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
-          
+
           {/* Row 1: View mode toggle */}
           <div className="w-full lg:w-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
             <button
@@ -875,7 +879,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 viewMode === 'kanban'
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <LayoutGrid className="h-4 w-4" />
               Kanban
@@ -887,7 +893,9 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 viewMode === 'list'
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <List className="h-4 w-4" />
               List
@@ -992,15 +1000,15 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         </div>
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-220px)] border-b border-[#E2E8F0] dark:border-[#262831]">
-        <div className="min-w-[800px] w-full relative">
-          <Table className={compactMode ? 'text-sm' : ''}>
-            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
+        <div className="min-w-[1000px] w-full relative">
+          <Table containerClassName="overflow-visible" className={`${compactMode ? 'text-sm' : ''} border-separate border-spacing-0`}>
+            <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-sm">
               <TableRow className="border-b border-[#E2E8F0] dark:border-[#262831] hover:bg-transparent">
                 {visibleColumnKeys.map((column) => (
                   <TableHead
                     key={column}
-                    className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap capitalize bg-[#F8FAFC] dark:bg-[#1a2a43] ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                    className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap capitalize bg-[#F8FAFC] dark:bg-[#1a2a43] sticky top-0 z-40 ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
                       }`}
                     onClick={() => handleSort(column)}
                   >
@@ -1056,7 +1064,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                       <div className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                         No leads found
                       </div>
-                      
+
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1067,7 +1075,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       </div>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page and total count info */}
           <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">

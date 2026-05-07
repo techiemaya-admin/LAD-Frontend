@@ -51,6 +51,12 @@ import { formatDateTimeUnified } from "@/utils/dateTime";
 // shadcn + recharts
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ChartConfig,
   ChartContainer,
   ChartStyle,
@@ -1057,68 +1063,26 @@ export function CallLogModal({
   const tagConfig = getTagConfig(leadCategory);
 
   return (
-    <>
-      <div
-        className={cn(
-          "fixed z-[9999] bg-white shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out rounded-2xl",
-          // Centered modal
-          "inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh]",
-          open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none invisible"
-        )}
-      >
-        {/* Close Button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-50/80 hover:bg-gray-100 border border-gray-200 text-gray-400 hover:text-gray-600 transition-all duration-200 z-[10000] group shadow-sm"
-          title="Close Modal"
-        >
-          <X className="h-5 w-5 group-hover:scale-110 transition-transform" />
-        </button>
-
-        {/* Header */}
-        {/* <div className="p-3 sm:p-4 border-b flex flex-row items-center justify-between gap-2 shadow-sm bg-white w-full min-h-[64px]">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <PhoneCall className="h-5 w-5 text-orange-500 shrink-0" />
-            <h1 className="text-sm xs:text-base sm:text-xl font-bold text-gray-800 leading-tight">
-              Call Details & Insights
-            </h1>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader>
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-full bg-orange-50 border border-orange-100 shadow-sm">
+              <PhoneCall className="h-6 w-6 text-orange-600" />
+            </div>
+            <DialogTitle>Call Logs</DialogTitle>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {hasAudio && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadRecording}
-                disabled={isDownloadingRecording}
-                className="hover:bg-orange-100 h-8 px-2 text-[10px] xs:text-xs border-orange-200"
-              >
-                <Download className="h-3 w-3 mr-1 text-orange-500" />
-                <span className="text-gray-700">
-                  {isDownloadingRecording ? "..." : "Recording"}
-                </span>
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="hover:bg-orange-100 h-8 w-8 p-0 text-gray-500">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div> */}
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="flex flex-col h-full pt-20 p-6 space-y-6 overflow-hidden">
-
+        <div className="flex flex-col flex-1 overflow-hidden px-8 py-6 space-y-6">
           {logLoading ? (
-            /* ── Skeleton while initial data loads ── */
             <div className="flex-1 flex flex-col space-y-4">
-              {/* Tab bar skeleton */}
               <div className="flex gap-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-9 flex-1 rounded-xl" />
                 ))}
               </div>
-              {/* Content skeleton */}
               <div className="flex-1 border border-gray-200 rounded-2xl p-6 space-y-4">
-                {/* Avatar + name row */}
                 <div className="flex items-center space-x-3">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <div className="space-y-2">
@@ -1126,7 +1090,6 @@ export function CallLogModal({
                     <Skeleton className="h-3 w-28" />
                   </div>
                 </div>
-                {/* Field grid */}
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2 p-4 rounded-xl border border-gray-100">
@@ -1145,8 +1108,7 @@ export function CallLogModal({
                 </div>
               )}
 
-
-              <Tabs key={defaultTab} defaultValue="lead" className="flex-1 flex flex-col overflow-hidden">
+              <Tabs defaultValue="lead" className="flex-1 flex flex-col overflow-hidden">
                 <TabsList className="flex items-center gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner overflow-x-auto no-scrollbar w-full justify-start sm:justify-center">
                   <TabsTrigger
                     value="lead"
@@ -1213,11 +1175,7 @@ export function CallLogModal({
             </>
           )}
         </div>
-      </div>
-
-      {open && (
-        <div className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
-      )}
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

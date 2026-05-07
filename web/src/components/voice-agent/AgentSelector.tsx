@@ -56,24 +56,9 @@ export function AgentSelector({
         <p className="text-sm text-muted-foreground ml-7">Select or create an agent</p>
       </div>
 
-      {/* Create New Button */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 md:py-3 lg:py-3 border-b border-border/30">
-        <Button
-          onClick={() => onSelectAgent(null)}
-          className={cn(
-            "w-full justify-start gap-3 h-11 transition-all duration-200 font-medium",
-            selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
-          )}
-          variant={selectedAgentId === null ? "default" : "outline"}
-        >
-          <Plus className="h-5 w-5" />
-          <span>Create New Agent</span>
-        </Button>
-      </div>
-
-      {/* Search Box */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30">
-        <div className="relative">
+      {/* Search & Action Row */}
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -81,7 +66,7 @@ export function AgentSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
-              "w-full pl-9 pr-9 py-2.5 rounded-lg bg-muted/30 border border-border/50",
+              "w-full pl-9 pr-9 py-2 rounded-lg bg-muted/30 border border-border/50",
               "text-sm placeholder:text-muted-foreground text-foreground",
               "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
               "transition-all duration-200"
@@ -96,6 +81,18 @@ export function AgentSelector({
             </button>
           )}
         </div>
+        <Button
+          onClick={() => onSelectAgent(null)}
+          className={cn(
+            "justify-start gap-2 h-10 transition-all duration-200 font-medium shrink-0 px-2 sm:px-3",
+            selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
+          )}
+          variant={selectedAgentId === null ? "default" : "outline"}
+          size="sm"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="whitespace-nowrap">New Agent</span>
+        </Button>
       </div>
 
       {/* Agent List */}

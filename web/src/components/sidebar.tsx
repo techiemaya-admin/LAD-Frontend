@@ -35,6 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
+
 type RootState = {
   auth: {
     user: {
@@ -50,6 +51,7 @@ type RootState = {
     companyLogo: string;
   };
 };
+
 type NavItem = {
   href: string;
   label: string;
@@ -59,6 +61,7 @@ type NavItem = {
   requiredFeature?: string; // For feature-flag based access
   children?: Omit<NavItem, 'children'>[];
 };
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -75,17 +78,21 @@ export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
+
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
+
   // Hydration check
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
   // Update display name when user data changes
   useEffect(() => {
     if (!isHydrated) return;
     setDisplayName(user?.name || "User");
   }, [user, isHydrated]);
+
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -99,6 +106,7 @@ export function Sidebar() {
     }
     setIsMobileMenuOpen(false);
   };
+
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
     {
@@ -180,6 +188,7 @@ export function Sidebar() {
     },
 
   ];
+
   // Filter navigation items based on user capabilities (only after hydration)
   const nav = isHydrated
     ? allNavItems.filter((item) => {
@@ -205,6 +214,7 @@ export function Sidebar() {
         return hasCapability;
       })
     : []; // Show empty nav during SSR to prevent hydration mismatch
+
   return (
     <>
       {/* Mobile Top Bar */}
@@ -231,6 +241,7 @@ export function Sidebar() {
         </div>
         <div className="w-10" />
       </div>
+
       {/* Mobile Drawer */}
       <div
         className={cn(
@@ -261,6 +272,7 @@ export function Sidebar() {
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
         </div>
+
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
           {nav.map((n) => {
             const Icon = n.icon;
@@ -316,6 +328,7 @@ export function Sidebar() {
             );
           })}
         </nav>
+
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
           {/* Tenant Selector */}
@@ -387,6 +400,7 @@ export function Sidebar() {
           </div>
         </div>
       </div>
+
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div
@@ -394,6 +408,7 @@ export function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
+
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
@@ -427,6 +442,7 @@ export function Sidebar() {
             }}
           />
         </div>
+
         {/* Navigation */}
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
           {nav.map((n) => {
@@ -495,6 +511,7 @@ export function Sidebar() {
                     </span>
                   )}
                 </NavLink>
+
                 {/* Flyout: collapsed → tooltip + children; expanded → children below */}
                 {!isExpanded ? (
                   <div
@@ -575,6 +592,7 @@ export function Sidebar() {
             );
           })}
         </nav>
+
         {/* User Profile Inline Section */}
         <div className="border-t border-sidebar-border mt-auto">
           {/* Avatar / profile row — click to toggle inline panel */}

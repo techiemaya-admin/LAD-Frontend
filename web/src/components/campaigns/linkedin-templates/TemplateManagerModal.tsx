@@ -127,30 +127,36 @@ export default function TemplateManagerModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+      <DialogContent className="max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5" />
-            Manage LinkedIn Message Templates
-          </DialogTitle>
-          <DialogDescription>
-            View, edit, and organize your saved message templates
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+              <Settings2 className="h-5 w-5 stroke-[2.5px]" />
+            </div>
+            <div className="flex flex-col">
+              <DialogTitle>Manage LinkedIn Message Templates</DialogTitle>
+              <DialogDescription>
+                View, edit, and organize your saved message templates
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search templates by name, category, or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        <div className="px-8 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search templates by name, category, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-11 rounded-xl border-gray-100 bg-gray-50/50"
+            />
+          </div>
         </div>
 
         {/* Templates List */}
-        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto px-8 py-2 space-y-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -159,35 +165,35 @@ export default function TemplateManagerModal({
             filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className={`border rounded-lg p-4 space-y-3 transition-all ${
+                className={`border rounded-xl p-4 space-y-3 transition-all ${
                   !template.is_active ? 'bg-gray-50 opacity-75' : 'bg-white'
-                }`}
+                } border-gray-100 hover:border-blue-200 hover:shadow-md`}
               >
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm truncate">
+                      <h3 className="font-bold text-sm text-gray-900 truncate">
                         {template.name}
                       </h3>
                       {template.is_default && (
-                        <Badge variant="default" className="text-xs">
+                        <Badge variant="default" className="text-[10px] font-bold bg-blue-600">
                           Default
                         </Badge>
                       )}
                       {template.category && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] font-bold text-gray-500 border-gray-200">
                           {template.category}
                         </Badge>
                       )}
                       {!template.is_active && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-[10px] font-bold">
                           Inactive
                         </Badge>
                       )}
                     </div>
                     {template.description && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         {template.description}
                       </p>
                     )}
@@ -198,6 +204,7 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="rounded-lg h-8 w-8 p-0"
                       onClick={() => toggleExpanded(template.id)}
                       title={expandedId === template.id ? 'Hide Messages' : 'View Messages'}
                     >
@@ -210,6 +217,7 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="rounded-lg h-8 w-8 p-0"
                       onClick={() => handleSetDefault(template)}
                       disabled={updateMutation.isPending}
                       title={template.is_default ? 'Remove as Default' : 'Set as Default'}
@@ -223,6 +231,7 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="rounded-lg h-8 w-8 p-0"
                       onClick={() => handleToggleActive(template)}
                       disabled={updateMutation.isPending}
                       title={template.is_active ? 'Deactivate' : 'Activate'}
@@ -237,6 +246,7 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="rounded-lg h-8 w-8 p-0"
                       onClick={() => handleDelete(template)}
                       disabled={deleteMutation.isPending}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -249,23 +259,23 @@ export default function TemplateManagerModal({
 
                 {/* Expandable Messages Preview */}
                 {expandedId === template.id && (
-                  <div className="space-y-2 pt-2 border-t">
+                  <div className="space-y-2 pt-2 border-t border-gray-50">
                     {template.connection_message && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700 mb-1">
-                          Connection Message ({template.connection_message.length}/300):
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          Connection Message ({template.connection_message.length}/300)
                         </p>
-                        <p className="text-xs text-gray-800 bg-gray-50 p-2 rounded border">
+                        <p className="text-xs text-gray-700 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                           {template.connection_message}
                         </p>
                       </div>
                     )}
                     {template.followup_message && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700 mb-1">
-                          Followup Message:
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          Followup Message
                         </p>
-                        <p className="text-xs text-gray-800 bg-gray-50 p-2 rounded border">
+                        <p className="text-xs text-gray-700 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                           {template.followup_message}
                         </p>
                       </div>
@@ -274,7 +284,7 @@ export default function TemplateManagerModal({
                 )}
 
                 {/* Footer Stats */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
+                <div className="flex items-center gap-4 text-[10px] font-medium text-gray-400 pt-2 border-t border-gray-50 uppercase tracking-wider">
                   <span>Used {template.usage_count} times</span>
                   {template.last_used_at && (
                     <span>
@@ -288,26 +298,29 @@ export default function TemplateManagerModal({
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? (
-                <>No templates found matching "{searchQuery}"</>
-              ) : (
-                <>No templates saved yet. Create your first template!</>
-              )}
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="p-4 rounded-full bg-gray-50 w-fit mx-auto mb-4">
+                <Search className="h-8 w-8 text-gray-200" />
+              </div>
+              <p className="font-bold text-gray-900">No templates found</p>
+              <p className="text-sm mt-1">
+                {searchQuery ? `No matches for "${searchQuery}"` : "Create your first template to get started!"}
+              </p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t">
-          <p className="text-sm text-muted-foreground">
+        <DialogActions>
+          <div className="flex-1 text-sm font-medium text-gray-500">
             {filteredTemplates?.length || 0} template(s)
-            {searchQuery && ` matching "${searchQuery}"`}
-          </p>
-          <Button variant="outline" onClick={onClose}>
+          </div>
+          <Button 
+            onClick={onClose}
+            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+          >
             Close
           </Button>
-        </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );
