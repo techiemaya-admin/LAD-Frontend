@@ -819,7 +819,6 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-<<<<<<< HEAD
               <TableCell
                 key={`${callId}-${column.id}`}
                 onClick={(e) => {
@@ -829,27 +828,11 @@ export function CallLogsTable({
                 }}
                 className={cn(
                   cellIndex === 0 && indent ? "pl-8" : "",
-                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} ${indent ? "bg-[#F8FAFC]" : "bg-white"} ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
                 )}
               >
                 {flexRender(column.cell, cellContext as any)}
               </TableCell>
-=======
-                <TableCell
-                  key={`${callId}-${column.id}`}
-                  onClick={(e) => {
-                    if (column.id === 'select' || column.id === 'actions') {
-                      e.stopPropagation();
-                    }
-                  }}
-                  className={cn(
-                    cellIndex === 0 && indent ? "pl-8" : "",
-                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
-                  )}
-                >
-                  {flexRender(column.cell, cellContext as any)}
-                </TableCell>
->>>>>>> origin/develop
             );
           })}
         </TableRow>
@@ -860,8 +843,8 @@ export function CallLogsTable({
       <TableRow
         key={callId}
         onClick={() => onRowClick(callId)}
-        className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-          } ${indent ? "bg-[#F8FAFC]" : ""}`}
+        className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+          } ${indent ? "bg-[#F8FAFC] dark:bg-[#253456]" : ""}`}
       >
         {tableRow.getVisibleCells().map((cell, cellIndex) => (
           <TableCell
@@ -874,11 +857,7 @@ export function CallLogsTable({
             }}
             className={cn(
               cellIndex === 0 && indent ? "pl-8" : "",
-<<<<<<< HEAD
-              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} ${indent ? "bg-[#F8FAFC]" : "bg-white"} ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
-=======
               (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
->>>>>>> origin/develop
             )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -891,11 +870,7 @@ export function CallLogsTable({
   return (
     <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-<<<<<<< HEAD
-      <div className="p-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-=======
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
->>>>>>> origin/develop
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#1a2a43]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

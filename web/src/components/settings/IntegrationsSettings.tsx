@@ -1109,4 +1109,3 @@ export const IntegrationsSettings: React.FC = () => {
     </>
   );
 };
->>>>>>> origin/develop
