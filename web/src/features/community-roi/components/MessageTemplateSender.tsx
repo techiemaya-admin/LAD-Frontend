@@ -42,18 +42,29 @@ const FIELD_OPTIONS = [
   { value: 'email',         label: 'Email',              group: 'contact' },
   { value: 'week_date_1',   label: 'Week 1 Date (Mon)', group: 'date' },
   { value: 'week_date_2',   label: 'Week 2 Date (Mon)', group: 'date' },
+  { value: 'week_date_3',   label: 'Week 3 Date (Mon)', group: 'date' },
+  { value: 'week_date_4',   label: 'Week 4 Date (Mon)', group: 'date' },
   { value: 'rec_week1_1',   label: 'Week 1 · Rec #1',   group: 'rec' },
   { value: 'rec_week1_2',   label: 'Week 1 · Rec #2',   group: 'rec' },
   { value: 'rec_week1_3',   label: 'Week 1 · Rec #3',   group: 'rec' },
   { value: 'rec_week2_1',   label: 'Week 2 · Rec #1',   group: 'rec' },
   { value: 'rec_week2_2',   label: 'Week 2 · Rec #2',   group: 'rec' },
   { value: 'rec_week2_3',   label: 'Week 2 · Rec #3',   group: 'rec' },
+  { value: 'rec_week3_1',   label: 'Week 3 · Rec #1',   group: 'rec' },
+  { value: 'rec_week3_2',   label: 'Week 3 · Rec #2',   group: 'rec' },
+  { value: 'rec_week3_3',   label: 'Week 3 · Rec #3',   group: 'rec' },
+  { value: 'rec_week4_1',   label: 'Week 4 · Rec #1',   group: 'rec' },
+  { value: 'rec_week4_2',   label: 'Week 4 · Rec #2',   group: 'rec' },
+  { value: 'rec_week4_3',   label: 'Week 4 · Rec #3',   group: 'rec' },
+  { value: 'no_interaction_count', label: 'No-Interaction Count (members not yet met)', group: 'metric' },
   { value: 'custom',        label: 'Custom text...',     group: 'other' },
 ];
 
-type MemberRecData = Record<string, { week1: string[]; week2: string[] }>;
+type WeekKey = 'week1' | 'week2' | 'week3' | 'week4';
+type MemberRecData = Record<string, Partial<Record<WeekKey, string[]>> & { no_interaction_count?: number }>;
 
-/** Returns the date of the upcoming Monday for weekNumber=1 or +7 days for weekNumber=2. */
+/** Returns the date of the upcoming Monday for weekNumber=1, +7 days for week=2,
+ *  +14 for week=3, +21 for week=4. Generic — works for any positive integer. */
 function getWeekMonday(weekNumber: number): string {
   const date = new Date();
   const day = date.getDay(); // 0=Sun … 6=Sat
@@ -95,6 +106,20 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
     if (paramNumber === 7) return 'rec_week2_2';
     if (paramNumber === 8) return 'rec_week2_3';
   }
+  // member_recommendations_4weeks — 16 params: 4 weeks × (1 date + 3 recs)
+  // Body shape: "Week of {{1}}: {{2}}, {{3}}, {{4}}; Week of {{5}}: {{6}}…{{16}}"
+  if (templateName === 'member_recommendations_4weeks') {
+    const weekIdx = Math.floor((paramNumber - 1) / 4) + 1;        // 1..4
+    const slot    = ((paramNumber - 1) % 4);                      // 0=date, 1..3=rec
+    if (slot === 0) return `week_date_${weekIdx}`;
+    return `rec_week${weekIdx}_${slot}`;
+  }
+  // cohesion_report_no_interaction — 2 params: name, count of un-met members
+  // Body: "Hi {{1}}, … you have not done 1-2-1s with {{2}} members …"
+  if (templateName === 'cohesion_report_no_interaction') {
+    if (paramNumber === 1) return 'name';
+    if (paramNumber === 2) return 'no_interaction_count';
+  }
   // body-context heuristics for unknown templates
   const regex = new RegExp(`\\{\\{${paramNumber}\\}\\}`);
   const match = regex.exec(body);
@@ -114,13 +139,17 @@ function resolveParam(
 ): string {
   if (field === 'custom') return customValue;
   if (field === 'first_name') return ((member?.name || '').split(' ')[0]) || '';
-  // Computed week dates — same for every member
-  if (field === 'week_date_1') return getWeekMonday(1);
-  if (field === 'week_date_2') return getWeekMonday(2);
+  // Computed week dates — same for every member (supports up to 4 weeks)
+  const weekDateMatch = field.match(/^week_date_([1-4])$/);
+  if (weekDateMatch) return getWeekMonday(parseInt(weekDateMatch[1], 10));
+  if (field === 'no_interaction_count') {
+    const memberRecs = recData?.[member?.id];
+    return String(memberRecs?.no_interaction_count ?? 0);
+  }
   if (field.startsWith('rec_')) {
-    // field format: rec_week1_1, rec_week2_3, etc.
-    const parts = field.split('_'); // ['rec', 'week1', '1'] or ['rec', 'week2', '3']
-    const weekKey = parts[1] as 'week1' | 'week2';
+    // field format: rec_week1_1, rec_week2_3, rec_week3_2, rec_week4_3 etc.
+    const parts = field.split('_'); // ['rec', 'weekN', 'M']
+    const weekKey = parts[1] as WeekKey;
     const rankIdx = parseInt(parts[2]) - 1;
     const memberRecs = recData?.[member?.id];
     const weekRecs = memberRecs?.[weekKey] ?? [];
@@ -599,6 +628,17 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                           ? resolveParam(previewMember, opt.value, '', memberRecData)
                           : null;
                         const suffix = previewName && previewName !== '—' ? ` (${previewName})` : '';
+                        return (
+                          <option key={opt.value} value={opt.value}>{opt.label}{suffix}</option>
+                        );
+                      })}
+                    </optgroup>
+                    <optgroup label="Member Metrics">
+                      {FIELD_OPTIONS.filter(o => o.group === 'metric').map(opt => {
+                        const previewVal = previewMember
+                          ? resolveParam(previewMember, opt.value, '', memberRecData)
+                          : null;
+                        const suffix = previewVal ? ` (${previewVal})` : '';
                         return (
                           <option key={opt.value} value={opt.value}>{opt.label}{suffix}</option>
                         );
