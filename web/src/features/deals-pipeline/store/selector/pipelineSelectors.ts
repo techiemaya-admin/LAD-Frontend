@@ -262,11 +262,23 @@ export const selectFilteredLeadsFromUI = createSelector(
       );
     }
     
-    // Source filter
+    // Source filter - handles grouping of multiple DB keys into UI types
     if (activeFilters.sources && activeFilters.sources.length > 0) {
-      filteredLeads = filteredLeads.filter(lead => 
-        (lead as any).source && activeFilters.sources!.includes((lead as any).source)
-      );
+      filteredLeads = filteredLeads.filter(lead => {
+        const rawSource = String((lead as any).source || 'unknown').toLowerCase();
+        
+        // Map raw database source to standardized group key
+        let mappedSource = rawSource;
+        if (
+          rawSource.includes('linkedin') || 
+          rawSource === 'inbound_upload' || 
+          rawSource === 'direct_contact'
+        ) {
+          mappedSource = 'linkedin';
+        }
+        
+        return activeFilters.sources!.includes(mappedSource);
+      });
     }
     
     // Assignees filter

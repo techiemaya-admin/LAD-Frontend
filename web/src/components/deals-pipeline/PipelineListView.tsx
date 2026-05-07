@@ -233,18 +233,26 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Get master data for inline editing
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
-  // Debug logging for dropdown data
-  // Ensure we have at least some fallback data for dropdowns
   const effectiveStatusOptions = useMemo(() => {
-    if (statusOptions.length > 0) return statusOptions;
-    return [
+    const baseOptions = statusOptions.length > 0 ? [...statusOptions] : [
       { key: 'active', label: 'Active' },
+      { key: 'new', label: 'New' },
+      { key: 'success', label: 'Success' },
       { key: 'on_hold', label: 'On Hold' },
       { key: 'closed_won', label: 'Closed Won' },
       { key: 'closed_lost', label: 'Closed Lost' },
       { key: 'archived', label: 'Archived' },
       { key: 'inactive', label: 'Inactive' }
     ];
+    
+    // Always ensure common technical statuses are available
+    ['scheduled', 'new', 'success'].forEach(key => {
+      if (!baseOptions.find(opt => String(opt.key).toLowerCase() === key)) {
+        baseOptions.push({ key, label: key.charAt(0).toUpperCase() + key.slice(1) });
+      }
+    });
+    
+    return baseOptions;
   }, [statusOptions]);
   const effectivePriorityOptions = useMemo(() => {
     if (priorityOptions.length > 0) return priorityOptions;
@@ -684,9 +692,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
-      case 'status':
-        // Validate that the lead's status exists in available options
-        const validStatusValue = effectiveStatusOptions.find(option => option.key === lead.status) ? lead.status : '';
+      case 'status': {
+        // Robust status matching including case-insensitivity and misspelled aliases
+        const rawStatus = String(lead.status || '').trim().toLowerCase();
+        const normalizedStatus = rawStatus === 'shedule' ? 'scheduled' : rawStatus;
+        
+        const matchingOption = effectiveStatusOptions.find(option => 
+          String(option.key).toLowerCase() === normalizedStatus
+        );
+        
+        const validStatusValue = matchingOption ? String(matchingOption.key) : '';
         // Log warning for invalid status values
         if (lead.status && !validStatusValue) {
           logger.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}.`);
@@ -712,6 +727,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
+      }
       case 'tags': {
         // Check for optimistic tag update first
         const optimisticTag = optimisticTags[lead.id];
@@ -742,17 +758,17 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               onValueChange={async (newTag) => {
                 const backendLabel = toBackendTagLabel(newTag as LeadTag);
                 if (!backendLabel) return;
-                
+
                 // Optimistically update UI immediately
                 setOptimisticTags(prev => ({ ...prev, [lead.id]: backendLabel }));
-                
+
                 // Call the SDK mutation to update tags
                 try {
                   await updateLeadTagsMutation.mutateAsync({
                     leadId: lead.id,
                     tags: [backendLabel]
                   });
-                  
+
                   // Notify parent component
                   if (onTagChange) {
                     onTagChange(lead.id, backendLabel);
@@ -807,17 +823,33 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         );
       }
       case 'source': {
-        const sourceValue = (lead.source || 'unknown').toLowerCase();
-        const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
-          linkedin:    { label: 'LinkedIn',    icon: <Linkedin       className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          email:       { label: 'Email',       icon: <Mail           className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
-          whatsapp:    { label: 'WhatsApp',    icon: <MessageCircle  className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
-          voice_agent: { label: 'Voice',       icon: <Phone          className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
-          apollo:      { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-          apollo_io:   { label: 'Apollo.io',   icon: <Globe          className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-          website:     { label: 'Website',     icon: <Globe          className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
+        const rawSource = (lead.source || 'unknown').toLowerCase();
+        
+        // Define display properties based on mapped source type
+        const getMappedSource = (source: string) => {
+          if (source === 'voice_agent') return 'voice_agent';
+          if (source === 'website') return 'website';
+          if (
+            source.includes('linkedin') || 
+            source === 'inbound_upload' || 
+            source === 'direct_contact'
+          ) return 'linkedin';
+          return source;
         };
-        const cfg = sourceConfig[sourceValue] ?? {
+
+        const mappedKey = getMappedSource(rawSource);
+        
+        const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
+          linkedin: { label: 'Linkedin', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
+          voice_agent: { label: 'Voice Agent', icon: <Phone className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
+          website: { label: 'Website', icon: <Globe className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
+          email: { label: 'Email', icon: <Mail className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
+          whatsapp: { label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
+          apollo: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+          apollo_io: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+        };
+
+        const cfg = sourceConfig[mappedKey] ?? {
           label: lead.source ? lead.source.charAt(0).toUpperCase() + lead.source.slice(1) : 'Unknown',
           icon: <span className="w-2 h-2 rounded-full bg-slate-400" />,
           classes: 'bg-slate-100 text-slate-500 border border-slate-200',
@@ -865,7 +897,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       {/* Header with Search and Controls */}
       <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
-          
+
           {/* Row 1: View mode toggle */}
           <div className="w-full lg:w-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
             <button
@@ -875,7 +907,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 viewMode === 'kanban'
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
             >
               <LayoutGrid className="h-4 w-4" />
               Kanban
@@ -887,7 +919,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                 viewMode === 'list'
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
             >
               <List className="h-4 w-4" />
               List
@@ -992,15 +1024,15 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         </div>
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-220px)] border-b border-[#E2E8F0] dark:border-[#262831]">
-        <div className="min-w-[800px] w-full relative">
-          <Table className={compactMode ? 'text-sm' : ''}>
-            <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
+        <div className="min-w-[1000px] w-full relative">
+          <Table containerClassName="overflow-visible" className={`${compactMode ? 'text-sm' : ''} border-separate border-spacing-0`}>
+            <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-sm">
               <TableRow className="border-b border-[#E2E8F0] dark:border-[#262831] hover:bg-transparent">
                 {visibleColumnKeys.map((column) => (
                   <TableHead
                     key={column}
-                    className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap capitalize bg-[#F8FAFC] dark:bg-[#1a2a43] ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
+                    className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap capitalize bg-[#F8FAFC] dark:bg-[#1a2a43] sticky top-0 z-40 ${['name', 'company', 'stage', 'status', 'value', 'createdAt', 'updatedAt', 'assignee'].includes(column) ? 'cursor-pointer select-none' : ''
                       }`}
                     onClick={() => handleSort(column)}
                   >
@@ -1056,7 +1088,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                       <div className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                         No leads found
                       </div>
-                      
+
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1067,7 +1099,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
       </div>
       {/* Pagination Controls */}
       {filteredAndSortedLeads.length > 0 && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page and total count info */}
           <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">
