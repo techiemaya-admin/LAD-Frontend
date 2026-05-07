@@ -880,8 +880,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
             >
               <LayoutGrid className="h-4 w-4" />
               Kanban
@@ -892,8 +890,6 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
               className={`h-8 flex-1 lg:flex-none px-3 rounded-lg text-xs font-medium flex items-center justify-center lg:justify-start gap-1.5 transition-colors ${
                 viewMode === 'list'
                   ? 'bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
             >
