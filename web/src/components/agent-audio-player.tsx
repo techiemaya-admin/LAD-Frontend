@@ -34,4 +34,4 @@ export function AgentAudioPlayer({ src }: { src?: string }) {
       <div className="mt-2 text-xs text-muted-foreground">{src ? "Preview the selected agent voice" : "Select an agent to preview audio"}</div>
     </div>
   );
-}
+}

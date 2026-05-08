@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND = () =>
   process.env.NEXT_PUBLIC_COMMUNITY_API_URL ||
-  'https://lad-backend-develop-160078175457.us-central1.run.app'
+  ''
 
 function getToken(req: NextRequest): string {
   const auth = req.headers.get('authorization')

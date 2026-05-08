@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 function getBackendBase() {
-  return (process.env.BACKEND_INTERNAL_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app').replace(/\/$/, '');
+  return (process.env.BACKEND_INTERNAL_URL || '').replace(/\/$/, '');
 }
 function getAuthHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

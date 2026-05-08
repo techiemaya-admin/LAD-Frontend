@@ -350,4 +350,4 @@ export default function Screen2OutboundQuestions() {
       </div>
     </div>
   );
-}
+}

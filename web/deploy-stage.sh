@@ -6,11 +6,11 @@
 set -e
 
 # Configuration
-PROJECT_ID="salesmaya-pluto"
+PROJECT_ID="REPLACE_ME"
 REGION="us-central1"
 SERVICE_NAME="lad-frontend-stage"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/lad-frontend-stage"
-BACKEND_URL="https://lad-backend-stage-741719885039.us-central1.run.app"
+BACKEND_URL="REPLACE_ME"
 
 # Colors
 RED='\033[0;31m'

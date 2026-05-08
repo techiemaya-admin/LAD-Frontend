@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://lad-backend-develop-160078175457.us-central1.run.app";
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
         const streamEndpoint = `${backendUrl}/api/voice-agent/recordings/stream?url=${encodeURIComponent(url)}`;
 
         // Forward Range header so the backend can handle partial content (audio seeking)

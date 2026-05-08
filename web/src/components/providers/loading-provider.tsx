@@ -16,4 +16,4 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
   return <LoadingContext.Provider value={state}>{children}</LoadingContext.Provider>;
-}
+}

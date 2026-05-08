@@ -40,4 +40,4 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({ id }) =>
       </div>
     </WidgetWrapper>
   );
-};
+};
