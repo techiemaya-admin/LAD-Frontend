@@ -1101,7 +1101,7 @@ export function CallOptions(props: CallOptionsProps) {
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-2">
+          <div className="grid gap-4">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
             <Input value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>

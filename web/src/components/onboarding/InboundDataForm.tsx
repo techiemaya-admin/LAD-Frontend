@@ -329,6 +329,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
 
     // Aggregate data from all leads into the format expected by the store
     const aggregatedData: InboundLeadData = {
+
       companyName: parsedLeads.length === 1
         ? parsedLeads[0].companyName
         : `${parsedLeads.length} Companies`,
@@ -348,6 +349,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       phoneNumbers: parsedLeads.map(l => l.phone).filter(Boolean),
       notes: `Uploaded ${parsedLeads.length} lead(s). ${parsedLeads.map(l => l.notes).filter(Boolean).join(' | ')}`,
     };
+
 
     logger.debug('Submitting aggregated inbound data', {
       leadCount: parsedLeads.length,
@@ -376,7 +378,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <FileSpreadsheet className="w-6 h-6 text-green-600" />
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Import Inbound Leads</h2>
-              <p className="text-sm text-gray-600">Download template → Add your leads → Upload</p>
+              <p className="text-sm text-gray-600">Download template â†’ Add your leads â†’ Upload</p>
             </div>
           </div>
           <button
@@ -445,6 +447,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
               Download our Excel template, fill in your inbound leads data with contact information, 
+
+
+
+
               then upload it back. We'll analyze and set up your campaign automatically.
             </p>
             <button
@@ -459,9 +465,13 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 Already have leads in a spreadsheet?{' '}
                 <button 
                   onClick={() => setStep('upload')} 
+
+
+
+
                   className="text-green-600 hover:text-green-700 font-medium hover:underline"
                 >
-                  Skip to upload →
+                  Skip to upload â†’
                 </button>
               </p>
             </div>
@@ -527,6 +537,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
               <button 
                 onClick={() => setStep('download')} 
+
+
+
+
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -675,39 +689,39 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                         </h4>
                         {lead.companyName && (
                           <p className="text-sm text-gray-600 mt-0.5">
-                            🏢 {lead.companyName}
+                            ðŸ¢ {lead.companyName}
                           </p>
                         )}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {lead.email && (
                             <span className="inline-flex items-center text-xs bg-red-100 text-red-700 px-2 py-1 rounded-md">
-                              ✉️ {lead.email}
+                              âœ‰ï¸ {lead.email}
                             </span>
                           )}
                           {lead.linkedinProfile && (
                             <span className="inline-flex items-center text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md">
-                              🔗 LinkedIn
+                              ðŸ”— LinkedIn
                             </span>
                           )}
                           {lead.whatsapp && (
                             <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md">
-                              💬 {lead.whatsapp}
+                              ðŸ’¬ {lead.whatsapp}
                             </span>
                           )}
                           {lead.phone && (
                             <span className="inline-flex items-center text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-md">
-                              📞 {lead.phone}
+                              ðŸ“ž {lead.phone}
                             </span>
                           )}
                           {lead.website && (
                             <span className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md">
-                              🌐 Website
+                              ðŸŒ Website
                             </span>
                           )}
                         </div>
                         {lead.notes && (
                           <p className="mt-2 text-xs text-gray-500 truncate">
-                            📝 {lead.notes}
+                            ðŸ“ {lead.notes}
                           </p>
                         )}
                       </div>
@@ -728,7 +742,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             {parsedLeads.length > 0 && (
               <div className="mt-5 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                 <h4 className="text-sm font-semibold text-green-800 mb-3">
-                  📊 Detected Contact Channels
+                  ðŸ“Š Detected Contact Channels
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
@@ -737,27 +751,27 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                       <>
                         {counts.linkedin > 0 && (
                           <span className="text-xs bg-white text-blue-700 px-3 py-1.5 rounded-full border border-blue-200 font-medium">
-                            🔗 LinkedIn ({counts.linkedin})
+                            ðŸ”— LinkedIn ({counts.linkedin})
                           </span>
                         )}
                         {counts.email > 0 && (
                           <span className="text-xs bg-white text-red-700 px-3 py-1.5 rounded-full border border-red-200 font-medium">
-                            ✉️ Email ({counts.email})
+                            âœ‰ï¸ Email ({counts.email})
                           </span>
                         )}
                         {counts.whatsapp > 0 && (
                           <span className="text-xs bg-white text-green-700 px-3 py-1.5 rounded-full border border-green-200 font-medium">
-                            💬 WhatsApp ({counts.whatsapp})
+                            ðŸ’¬ WhatsApp ({counts.whatsapp})
                           </span>
                         )}
                         {counts.phone > 0 && (
                           <span className="text-xs bg-white text-orange-700 px-3 py-1.5 rounded-full border border-orange-200 font-medium">
-                            📞 Phone ({counts.phone})
+                            ðŸ“ž Phone ({counts.phone})
                           </span>
                         )}
                         {counts.website > 0 && (
                           <span className="text-xs bg-white text-purple-700 px-3 py-1.5 rounded-full border border-purple-200 font-medium">
-                            🌐 Website ({counts.website})
+                            ðŸŒ Website ({counts.website})
                           </span>
                         )}
                       </>
@@ -765,7 +779,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                   })()}
                 </div>
                 <p className="text-xs text-green-700 mt-3">
-                  ✨ I'll ask relevant setup questions based on these channels
+                  âœ¨ I'll ask relevant setup questions based on these channels
                 </p>
               </div>
             )}
@@ -773,12 +787,24 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         )}
       </div>
 
-      <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 flex justify-end">
+
+
+
+      {/* Footer Actions */}
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
+        >
+          Cancel
+        </button>
         {step === 'preview' && parsedLeads.length > 0 && (
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-100"
+            className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-200"
           >
             {isSubmitting ? (
               <>

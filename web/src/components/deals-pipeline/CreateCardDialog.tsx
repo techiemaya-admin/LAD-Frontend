@@ -36,9 +36,9 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
 }) => {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
+
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
-
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -53,6 +53,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   const sourceOptions = useSelector(selectSources);
   // Get team members from Redux for assignee dropdown
   const teamMembers = useSelector(selectUsers);
+
   // Get form data from Redux global state
   const newLead = useSelector(selectNewLead);
   // Local state for creation loading
@@ -91,12 +92,13 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   };
 
   const handleCreateCard = async () => {
-    if (!newLead.name.trim()) {
+    if (!newLead.name?.trim()) {
       return;
     }
     if (!newLead.stage) {
       return;
     }
+
     setIsCreatingCard(true);
     try {
       // Only send fields that have values - filter out empty strings and undefined
@@ -118,7 +120,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-2xl bg-white dark:bg-[#000724]">
         <DialogHeader>
           <div className="flex items-center gap-3 px-8 pt-6">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
@@ -182,6 +184,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                     className="h-11 rounded-xl border-gray-200"
                   />
                 </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="intake-year" className="text-sm font-medium text-gray-700">Intake Year</Label>
@@ -220,15 +223,18 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                   <Label htmlFor="previous-education" className="text-sm font-medium text-gray-700">Previous Education</Label>
                   <Input
                     id="previous-education"
+                    type="text"
                     placeholder="e.g., Bachelor's in Engineering"
                     value={newLead.previousEducation || ''}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch(setNewLead({ ...newLead, previousEducation: e.target.value }))}
                     className="h-11 rounded-xl border-gray-200"
                   />
                 </div>
-
-                <div className="border-t border-gray-100 pt-4">
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">Counselling Session</h4>
+                <div className="space-y-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Counselling Session</h3>
+                    <div className="h-px flex-1 bg-gray-100" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="preferred-counsellor" className="text-sm font-medium text-gray-700">Preferred Counsellor</Label>
@@ -241,7 +247,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           {teamMembers.filter(member => member.role === 'counsellor' || member.role === 'admin' || member.role === 'owner').map(member => (
-                            <SelectItem key={member.id} value={member.id || ''}>
+                            <SelectItem key={member.id} value={String(member.id || '')}>
                               {member.name || `${member.firstName} ${member.lastName}`}
                             </SelectItem>
                           ))}
@@ -264,16 +270,17 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="session-notes" className="text-sm font-medium text-gray-700">Session Notes</Label>
-                    <Textarea
-                      id="session-notes"
-                      placeholder="Any specific topics or concerns to discuss..."
-                      value={newLead.sessionNotes || ''}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, sessionNotes: e.target.value }))}
-                      className="rounded-xl border-gray-200 resize-none min-h-[80px]"
-                    />
+                    <div className="col-span-2 space-y-2 mt-2">
+                      <Label htmlFor="session-notes" className="text-sm font-medium text-gray-700">Session Notes</Label>
+                      <Textarea
+                        id="session-notes"
+                        placeholder="Any specific topics or concerns to discuss..."
+                        value={newLead.sessionNotes || ''}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, sessionNotes: e.target.value }))}
+                        className="rounded-xl border-gray-200 resize-none min-h-[80px]"
+                        rows={3}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -414,6 +421,13 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
         </div>
 
         <DialogActions className="px-8 pb-8 pt-4">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            className="rounded-xl px-6 h-11 font-semibold border-gray-200 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleCreateCard}
             disabled={!newLead.name || !newLead.stage || isCreatingCard}

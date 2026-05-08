@@ -960,7 +960,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       case 'blocked': return '#EF4444';
       case 'inactive': return '#64748B';
       case 'new': return '#3B82F6';
-      case 'completed': return '#059669';
+      case 'completed': 
+      case 'success': return '#059669';
+      case 'scheduled': return '#3B82F6';
       default: return '#64748B';
     }
   };
@@ -977,7 +979,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       case 'pending': return <Flag className={iconClass} />;
       case 'inactive': return <Ban className={iconClass} />;
       case 'new': return <Sparkles className={iconClass} />;
-      case 'completed': return <CheckCheck className={iconClass} />;
+      case 'completed':
+      case 'success': return <CheckCheck className={iconClass} />;
+      case 'scheduled': return <Calendar className={iconClass} />;
       default: return <Flag className={iconClass} />;
     }
   };
@@ -1223,21 +1227,41 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" /> */}
                       {(() => {
                         const sourceKey = String((lead as any)?.source || '').toLowerCase();
-                        const sourceLabel = getOptionLabel(sourceOptions, String((lead as any)?.source) || undefined) || '';
-                        const displayLabel = sourceLabel || (sourceKey ? sourceKey : 'No source');
-                        const isLinkedin = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'].includes(sourceKey) || displayLabel.toLowerCase() === 'linkedin';
+                        
+                        // Map sources based on requirements
+                        const isVoiceAgent = sourceKey === 'voice_agent';
+                        const isWebsite = sourceKey === 'website';
+                        const isLinkedin = 
+                          sourceKey.includes('linkedin') || 
+                          sourceKey === 'inbound_upload' || 
+                          sourceKey === 'direct_contact' ||
+                          sourceKey === 'linkedin';
+                        
+                        let label = 'No source';
+                        let icon = null;
+                        let className = 'inline-flex items-center gap-2 rounded-full bg-gray-50 dark:bg-[#253456] text-gray-700 dark:text-white border border-gray-200 dark:border-[#262831] px-3 py-1 text-xs font-medium';
+                        
+                        if (isLinkedin) {
+                          label = 'Linkedin';
+                          icon = <Linkedin className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-medium';
+                        } else if (isVoiceAgent) {
+                          label = 'Voice Agent';
+                          icon = <Phone className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-violet-50 text-violet-700 border border-violet-200 px-3 py-1 text-xs font-medium';
+                        } else if (isWebsite) {
+                          label = 'Website';
+                          icon = <Globe className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 text-xs font-medium';
+                        } else if (sourceKey && sourceKey !== 'unknown') {
+                          label = sourceKey.charAt(0).toUpperCase() + sourceKey.slice(1);
+                        }
 
                         return (
                           <span className="text-gray-900 dark:text-white">
-                            <span
-                              className={
-                                isLinkedin
-                                  ? 'inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-medium'
-                                  : 'inline-flex items-center gap-2 rounded-full bg-gray-50 dark:bg-[#253456] text-gray-700 dark:text-white border border-gray-200 dark:border-[#262831] px-3 py-1 text-xs font-medium'
-                              }
-                            >
-                              {isLinkedin && <Linkedin className="h-4 w-4" />}
-                              {isLinkedin ? 'LinkedIn' : displayLabel}
+                            <span className={className}>
+                              {icon}
+                              {label}
                             </span>
                           </span>
                         );
@@ -1501,7 +1525,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleEditNote(note)}
                             className="h-7 w-7 text-gray-500 hover:text-blue-500"
                           >
-                            ✏️
+                            âœï¸
                           </Button>
                         )}
                         {canUserModify(note.user_id) && (
@@ -1511,7 +1535,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('note', note.id, note.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            🗑️
+                            ðŸ—‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1616,7 +1640,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleEditComment(comment)}
                             className="h-7 w-7 text-gray-500 hover:text-blue-500"
                           >
-                            ✏️
+                            âœï¸
                           </Button>
                         )}
                         {canUserModify(comment.user_id) && (
@@ -1626,7 +1650,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('comment', comment.id, comment.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            🗑️
+                            ðŸ—‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1762,6 +1786,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       open={isDetailsOpen} 
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
+
       <DialogContent className="flex flex-col p-0 overflow-hidden sm:h-[90vh] sm:max-w-5xl bg-white dark:bg-[#000724]">
         <DialogHeader className="p-6 pb-4 border-b border-gray-200 dark:border-[#262831] sticky top-0 bg-white dark:bg-[#000724] z-10">
           <div className="flex items-center justify-between">
@@ -1804,6 +1829,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             >
               <div className="border-b border-gray-200 dark:border-[#262831] px-6 sticky top-0 bg-white dark:bg-[#000724] z-10">
                 <TabsList className="flex w-full justify-around bg-gray-50/50 dark:bg-[#1a2a43] p-1 rounded-xl">
+
                   {tabs.map((tab) => (
                     <TabsTrigger 
                       key={tab.index}
@@ -1827,7 +1853,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </Tabs>
           </div>
         </div>
+
         <DialogActions className="px-8 pb-8 pt-4 bg-white dark:bg-[#000724]">
+
           {globalActiveTab === 0 && (
             globalEditingOverview ? (
               <>

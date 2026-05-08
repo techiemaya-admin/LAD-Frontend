@@ -90,9 +90,9 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="p-0 sm:max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Plus className="h-6 w-6 stroke-[3px]" />
             </div>
@@ -189,6 +189,14 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
         </div>
 
         <DialogActions className="px-8 pb-8 pt-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-xl px-6 h-11 font-semibold border-gray-200 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
