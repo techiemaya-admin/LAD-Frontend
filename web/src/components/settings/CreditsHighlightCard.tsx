@@ -284,4 +284,4 @@ export function CreditsHighlightCard({
       `}</style>
     </div>
   );
-}
+}

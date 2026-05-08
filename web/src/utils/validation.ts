@@ -12,4 +12,4 @@ export function validateConfirmPassword(password: string, confirmPassword: strin
   if (!confirmPassword) return 'Please confirm your password';
   if (password !== confirmPassword) return 'Passwords do not match';
   return '';
-}
+}

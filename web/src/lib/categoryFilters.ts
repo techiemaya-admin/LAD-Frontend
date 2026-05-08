@@ -132,4 +132,4 @@ export function isFeatureAllowed(
   const feature = { id: featureId, label: '', description: '' };
   const filtered = filterFeaturesByCategory([feature], category, platform);
   return filtered.length > 0;
-}
+}

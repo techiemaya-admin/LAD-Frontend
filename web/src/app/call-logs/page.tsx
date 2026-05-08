@@ -202,9 +202,10 @@ export default function CallLogsPage() {
         logger.debug("[Call Logs] Setting batchJobId", { jobId });
         setBatchJobId(jobId);
         setSelectedBatchId(null);
+        setExpandedBatches(new Set([jobId]));
         if (mode === "current-batch") {
-          logger.debug("[Call Logs] Setting timeFilter to batch");
-          setTimeFilter("batch");
+          logger.debug("[Call Logs] Setting timeFilter to current");
+          setTimeFilter("current");
         }
       } else {
         logger.warn("[Call Logs] Invalid batch ID format", { jobId });
@@ -213,40 +214,89 @@ export default function CallLogsPage() {
     }
   }, [searchParams, router]);
 
+  // Automatically switch between "Current Batch" and "Batch View" based on batch status
+  useEffect(() => {
+    if (!batchJobId || !batchStatusQuery.data) return;
+
+    const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result || batchStatusQuery.data.data || batchStatusQuery.data;
+    if (!batch || typeof batch !== 'object') return;
+
+    const status = (batch.status || "").toLowerCase();
+    const isOngoing = ["running", "pending", "queued", "queue", "in_queue", "ongoing", "calling", "in_progress", "started"].includes(status);
+    const isFinished = ["completed", "failed", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
+
+    // If the batch we are tracking has finished, and we are in the 'Current Batch' view,
+    // move to 'Batch View' so the user can see the final results.
+    if (!isOngoing && isFinished) {
+      if (timeFilter === "current") {
+        logger.debug("[Call Logs] Batch finished, auto-switching to batch view");
+        setTimeFilter("batch");
+      }
+    }
+  }, [batchJobId, batchStatusQuery.data, timeFilter]);
+
   // ----------------------
   // PROCESS SDK DATA
   // ----------------------
   useEffect(() => {
     // Handle batch view
-    if (timeFilter === "batch" && batchJobId && batchStatusQuery.data) {
+    if ((timeFilter === "batch" || timeFilter === "current") && batchJobId && batchStatusQuery.data) {
       logger.debug("[Call Logs] Processing batch data", { batchJobId });
 
-      const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result;
+      const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result || batchStatusQuery.data.data || batchStatusQuery.data;
 
-      if (!batch) {
+      if (!batch || typeof batch !== 'object') {
         setItems([]);
         setInitialLoading(false);
         return;
       }
 
       const batchStatus = batch.status || "";
-      const results = batch.results || [];
+      const results = batch.entries || batch.results || batch.call_logs || batch.logs || (Array.isArray(batch) ? batch : []);
 
-      const logs: CallLog[] = results.map((r, idx) => ({
-        id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
+      const logs: CallLog[] = results.map((r, idx) => {
+        const score = r.lead_score ?? r.score ?? 0;
+        let category = (r.lead_category || r.category || "WARM").toUpperCase();
+        
+        if (score >= 8) category = "HOT";
+        else if (score > 0 && score <= 3) category = "COLD";
+
+        return {
+          id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
+          assistant: r.agent_name || "",
+          lead_name: r.lead_name || "",
+          type: "Outbound",
+          status: r.call_status || r.status || "pending",
+          startedAt: r.started_at || r.created_at || "",
+          duration: r.call_duration || r.duration_seconds || 0,
+          cost: r.cost || 0,
+          batch_status: r.batch_status || batchStatus,
+          batch_id: r.batch_id || batchJobId,
+          lead_category: category,
+          lead_score: score,
+        };
+      });
+
+      // Add a virtual header row for this specific batch
+      const headerRow: CallLog = {
+        id: batchJobId,
         assistant: "",
-        lead_name: r.lead_name || "",
+        lead_name: `Batch (${batch.total_calls || results.length} calls)`,
         type: "Outbound",
-        status: r.status || "pending",
-        startedAt: "",
+        status: batch.status || "",
+        startedAt: batch.started_at || batch.created_at || (logs.length > 0 ? logs[0].startedAt : ""),
         duration: 0,
         cost: 0,
-        batch_status: r.batch_status || batchStatus,
         batch_id: batchJobId,
-      }));
+        batch_status: batch.status,
+        is_batch_header: true,
+        batch_total_calls: batch.total_calls || results.length,
+        batch_completed_calls: batch.completed_calls || logs.filter(l => l.status === "completed" || l.status === "ended").length,
+        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed").length,
+      } as any;
 
       logger.debug("[Call Logs] Setting batch items", { count: logs.length });
-      setItems(logs);
+      setItems([headerRow, ...logs]);
       setInitialLoading(false);
       return;
     }
@@ -370,11 +420,13 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs (including status / lead_tag filtering)
+    // Handle normal call logs (All Time, Today, Current system-wide, etc.)
     if (
-      timeFilter !== "batch" &&
-      !batchJobId &&
-      activeCallLogsQuery.isSuccess &&
+      (timeFilter === "all" ||
+        timeFilter === "today" ||
+        timeFilter === "month" ||
+        timeFilter === "custom" ||
+        (timeFilter === "current" && !batchJobId)) &&
       activeCallLogsQuery.data
     ) {
       logger.debug("[Call Logs] Processing normal call logs", {
@@ -630,15 +682,25 @@ export default function CallLogsPage() {
       if (timeFilter === "current") {
         // Current Batch: only show batch calls with running/pending/queued status
         if (i.batch_id) {
-          const status = i.status?.toLowerCase() || "";
-          matchTime = [
-            "running",
-            "pending",
-            "queued",
-            "ongoing",
-            "calling",
-            "in_progress",
-          ].includes(status);
+          // If a specific jobId is tracked, prioritize it
+          if (batchJobId) {
+            // Show all calls for the tracked batch, regardless of status,
+            // to ensure they don't "disappear" from the Current Batch view if they finish quickly.
+            matchTime = i.batch_id === batchJobId;
+          } else {
+            const status = i.status?.toLowerCase() || "";
+            matchTime = [
+              "running",
+              "pending",
+              "queued",
+              "queue",
+              "in_queue",
+              "ongoing",
+              "calling",
+              "in_progress",
+              "started",
+            ].includes(status);
+          }
         } else {
           matchTime = false; // Hide individual calls in Current Batch view
         }
@@ -661,9 +723,16 @@ export default function CallLogsPage() {
         }
       }
 
-      return matchProvider && matchTime;
+      const matchStatus = !statusFilter ||
+        i.status?.toLowerCase().includes(statusFilter.toLowerCase()) ||
+        (statusFilter === "ended" && i.status?.toLowerCase() === "completed") ||
+        (statusFilter === "completed" && i.status?.toLowerCase() === "ended");
+
+      const matchTag = !leadTagFilter || i.lead_category?.toLowerCase() === leadTagFilter.toLowerCase();
+
+      return matchProvider && matchTime && matchStatus && matchTag;
     });
-  }, [items, providerFilter, timeFilter, batchJobId]);
+  }, [items, providerFilter, timeFilter, batchJobId, statusFilter, leadTagFilter]);
 
   const uniqueProviders = useMemo(
     () => [...new Set(items.map((i) => i.type))],
@@ -725,10 +794,10 @@ export default function CallLogsPage() {
   }, [paginated]);
 
   const batchGroupsProp = useMemo(() => {
-    if (timeFilter !== "batch" || batchJobId) return undefined;
+    // Always enable batch grouping if there are items to group
     if (items.length === 0) return undefined;
     return batchGroups;
-  }, [timeFilter, batchJobId, items.length, batchGroups]);
+  }, [items.length, batchGroups]);
 
   // Toggle batch expansion
   const toggleBatch = (batchId: string) => {
@@ -988,6 +1057,10 @@ export default function CallLogsPage() {
         onToDateChange={setToDate}
         callFilter={timeFilter}
         onCallFilterChange={(f) => {
+          if (f === 'all') {
+            setBatchJobId(null);
+            router.replace('/call-logs');
+          }
           setTimeFilter(f as TimeFilter);
           setPage(1);
         }}

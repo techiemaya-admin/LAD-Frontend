@@ -731,6 +731,18 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                               <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
                             ) : null}
                             <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
+                            {slot.status && (
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase",
+                                slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                                slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
+                                slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
+                                slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
+                                "bg-gray-50 text-gray-600 border border-gray-100"
+                              )}>
+                                {slot.status}
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-700 mt-1">
                             {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
@@ -1167,6 +1179,18 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                   <span className="text-gray-600 text-sm">• {slot.bookingType}</span>
                 ) : null}
                 <span className="text-gray-600 text-sm">• Retry: {slot.retryCount ?? 0}</span>
+                {slot.status && (
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ml-1",
+                    slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                    slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
+                    slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
+                    slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
+                    "bg-gray-50 text-gray-600 border border-gray-100"
+                  )}>
+                    {slot.status}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 ml-6">
                 <Clock className="h-4 w-4 text-gray-500" />

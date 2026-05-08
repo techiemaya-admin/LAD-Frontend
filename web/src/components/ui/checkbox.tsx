@@ -25,4 +25,4 @@ function Checkbox({
     </CheckboxPrimitive.Root>
   )
 }
-export { Checkbox }
+export { Checkbox }

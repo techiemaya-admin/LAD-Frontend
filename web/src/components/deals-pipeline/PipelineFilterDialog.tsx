@@ -290,14 +290,6 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
         <DialogActions className="gap-3">
           <div className="flex-1" />
           <Button
-            onClick={onClearFilters}
-            variant="ghost"
-            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl px-4"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Clear All Filters
-          </Button>
-          <Button
             onClick={onClose}
             className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >

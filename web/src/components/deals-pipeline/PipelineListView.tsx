@@ -233,18 +233,26 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   // Get master data for inline editing
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
-  // Debug logging for dropdown data
-  // Ensure we have at least some fallback data for dropdowns
   const effectiveStatusOptions = useMemo(() => {
-    if (statusOptions.length > 0) return statusOptions;
-    return [
+    const baseOptions = statusOptions.length > 0 ? [...statusOptions] : [
       { key: 'active', label: 'Active' },
+      { key: 'new', label: 'New' },
+      { key: 'success', label: 'Success' },
       { key: 'on_hold', label: 'On Hold' },
       { key: 'closed_won', label: 'Closed Won' },
       { key: 'closed_lost', label: 'Closed Lost' },
       { key: 'archived', label: 'Archived' },
       { key: 'inactive', label: 'Inactive' }
     ];
+    
+    // Always ensure common technical statuses are available
+    ['scheduled', 'new', 'success'].forEach(key => {
+      if (!baseOptions.find(opt => String(opt.key).toLowerCase() === key)) {
+        baseOptions.push({ key, label: key.charAt(0).toUpperCase() + key.slice(1) });
+      }
+    });
+    
+    return baseOptions;
   }, [statusOptions]);
   const effectivePriorityOptions = useMemo(() => {
     if (priorityOptions.length > 0) return priorityOptions;
@@ -395,6 +403,32 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
     }
     if (currentFilters.stages?.length > 0) {
       filtered = filtered.filter(lead => lead.stage && currentFilters.stages.includes(lead.stage));
+    }
+    if (currentFilters.sources?.length > 0) {
+      filtered = filtered.filter(lead => lead.source && currentFilters.sources.includes(lead.source));
+    }
+    if (currentFilters.assignees?.length > 0) {
+      filtered = filtered.filter(lead => {
+        const assigneeId = String(lead.assigned_to_id || lead.assignee_id || lead.assignee || '');
+        return currentFilters.assignees.includes(assigneeId);
+      });
+    }
+    if (currentFilters.dateRange?.start || currentFilters.dateRange?.end) {
+      filtered = filtered.filter(lead => {
+        const leadDate = lead.created_at ? new Date(lead.created_at as string) : null;
+        if (!leadDate) return false;
+        
+        if (currentFilters.dateRange.start) {
+          const startDate = new Date(currentFilters.dateRange.start);
+          if (leadDate < startDate) return false;
+        }
+        if (currentFilters.dateRange.end) {
+          const endDate = new Date(currentFilters.dateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          if (leadDate > endDate) return false;
+        }
+        return true;
+      });
     }
     // Apply sorting
     if (globalSortConfig && globalSortConfig.field) {
@@ -684,9 +718,16 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
-      case 'status':
-        // Validate that the lead's status exists in available options
-        const validStatusValue = effectiveStatusOptions.find(option => option.key === lead.status) ? lead.status : '';
+      case 'status': {
+        // Robust status matching including case-insensitivity and misspelled aliases
+        const rawStatus = String(lead.status || '').trim().toLowerCase();
+        const normalizedStatus = rawStatus === 'shedule' ? 'scheduled' : rawStatus;
+        
+        const matchingOption = effectiveStatusOptions.find(option => 
+          String(option.key).toLowerCase() === normalizedStatus
+        );
+        
+        const validStatusValue = matchingOption ? String(matchingOption.key) : '';
         // Log warning for invalid status values
         if (lead.status && !validStatusValue) {
           logger.warn(`[PipelineListView] Invalid status value "${lead.status}" for lead ${lead.id}.`);
@@ -712,6 +753,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
             </Select>
           </div>
         );
+      }
       case 'tags': {
         // Check for optimistic tag update first
         const optimisticTag = optimisticTags[lead.id];
@@ -807,21 +849,33 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
         );
       }
       case 'source': {
-        const sourceValue = (lead.source || 'unknown').toLowerCase();
+        const rawSource = (lead.source || 'unknown').toLowerCase();
+        
+        // Define display properties based on mapped source type
+        const getMappedSource = (source: string) => {
+          if (source === 'voice_agent') return 'voice_agent';
+          if (source === 'website') return 'website';
+          if (
+            source.includes('linkedin') || 
+            source === 'inbound_upload' || 
+            source === 'direct_contact'
+          ) return 'linkedin';
+          return source;
+        };
+
+        const mappedKey = getMappedSource(rawSource);
+        
         const sourceConfig: Record<string, { label: string; icon: React.ReactNode; classes: string }> = {
           linkedin: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          linkedin_search: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          linkedin_campaign: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          inbound_upload: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
-          direct_contact: { label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, classes: 'bg-blue-50 text-blue-600 border border-blue-200' },
           email: { label: 'Email', icon: <Mail className="w-4 h-4" />, classes: 'bg-amber-50 text-amber-600 border border-amber-200' },
           whatsapp: { label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, classes: 'bg-green-50 text-green-600 border border-green-200' },
-          voice_agent: { label: 'Voice', icon: <Phone className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
+          voice_agent: { label: 'Voice Agent', icon: <Phone className="w-4 h-4" />, classes: 'bg-violet-50 text-violet-600 border border-violet-200' },
           apollo: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
           apollo_io: { label: 'Apollo.io', icon: <Globe className="w-4 h-4" />, classes: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
           website: { label: 'Website', icon: <Globe className="w-4 h-4" />, classes: 'bg-purple-50 text-purple-600 border border-purple-200' },
         };
-        const cfg = sourceConfig[sourceValue] ?? {
+
+        const cfg = sourceConfig[mappedKey] ?? {
           label: lead.source ? lead.source.charAt(0).toUpperCase() + lead.source.slice(1) : 'Unknown',
           icon: <span className="w-2 h-2 rounded-full bg-slate-400" />,
           classes: 'bg-slate-100 text-slate-500 border border-slate-200',
@@ -996,8 +1050,8 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           </div>
         </div>
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-220px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
-        <div className="min-w-[800px] w-full relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
+        <div className="min-w-[1000px] w-full relative">
           <Table containerClassName="overflow-visible" className={`${compactMode ? 'text-sm' : ''} border-separate border-spacing-0`}>
             <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-sm">
               <TableRow className="border-b border-[#E2E8F0] dark:border-[#262831] hover:bg-transparent">

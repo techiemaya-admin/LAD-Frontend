@@ -50,4 +50,4 @@ const PipelineBoardHeader: React.FC<PipelineBoardHeaderProps> = ({ onAddStage, o
     </div>
   </div>
 );
-export default PipelineBoardHeader;
+export default PipelineBoardHeader;

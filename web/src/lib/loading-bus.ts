@@ -41,4 +41,4 @@ class LoadingBus {
     this.emit();
   }
 }
-export const loadingBus = new LoadingBus();
+export const loadingBus = new LoadingBus();

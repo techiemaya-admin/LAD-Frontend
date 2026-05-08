@@ -13,9 +13,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/masterDataSlice';
 import { selectUsers } from '@/store/slices/usersSlice';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  selectNewLead, 
-  setNewLead, 
+import {
+  selectNewLead,
+  setNewLead,
   resetNewLead
 } from '@/store/slices/uiSlice';
 
@@ -27,19 +27,18 @@ interface CreateCardDialogProps {
   leads?: Lead[];
 }
 
-const CreateCardDialog: React.FC<CreateCardDialogProps> = ({ 
-  open, 
-  onClose, 
-  onCreate, 
-  stages = [], 
-  leads = [] 
+const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
+  open,
+  onClose,
+  onCreate,
+  stages = [],
+  leads = []
 }) => {
   const dispatch = useDispatch();
   const { hasFeature } = useAuth();
-  
+
   // Education vertical context
   const isEducation = hasFeature('education_vertical');
-  
   // Dynamic labels based on vertical
   const labels = {
     entity: isEducation ? 'Student' : 'Lead',
@@ -52,13 +51,11 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
   const statusOptions = useSelector(selectStatuses);
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
-  
   // Get team members from Redux for assignee dropdown
   const teamMembers = useSelector(selectUsers);
-  
+
   // Get form data from Redux global state
   const newLead = useSelector(selectNewLead);
-  
   // Local state for creation loading
   const [isCreatingCard, setIsCreatingCard] = React.useState(false);
 
@@ -101,6 +98,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
     if (!newLead.stage) {
       return;
     }
+
     setIsCreatingCard(true);
     try {
       // Only send fields that have values - filter out empty strings and undefined
@@ -113,7 +111,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
       await onCreate(leadData);
       dispatch(resetNewLead());
       onClose();
-    } catch (error) { 
+    } catch (error) {
       console.error('Failed to create lead:', error);
     } finally {
       setIsCreatingCard(false);
@@ -122,9 +120,9 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-2xl bg-white dark:bg-[#000724]">
         <DialogHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 px-8 pt-6">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Plus className="h-6 w-6 stroke-[3px]" />
             </div>
@@ -232,55 +230,55 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
                     className="h-11 rounded-xl border-gray-200"
                   />
                 </div>
-
-                <div className="border-t border-gray-100 pt-4">
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">Counselling Session</h4>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="preferred-counsellor" className="text-sm font-medium text-gray-700">Preferred Counsellor</Label>
-                        <Select
-                          value={newLead.preferredCounsellor || undefined}
-                          onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredCounsellor: value }))}
-                        >
-                          <SelectTrigger className="h-11 rounded-xl border-gray-200">
-                            <SelectValue placeholder="Select counsellor" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {teamMembers.filter(member => member.role === 'counsellor' || member.role === 'admin' || member.role === 'owner').map(member => (
-                              <SelectItem key={member.id} value={String(member.id || '')}>
-                                {member.name || `${member.firstName} ${member.lastName}`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="preferred-time" className="text-sm font-medium text-gray-700">Preferred Session Time</Label>
-                        <Select
-                          value={newLead.preferredTime || undefined}
-                          onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredTime: value }))}
-                        >
-                          <SelectTrigger className="h-11 rounded-xl border-gray-200">
-                            <SelectValue placeholder="Select time slot" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            <SelectItem value="morning">Morning (9:00 - 12:00)</SelectItem>
-                            <SelectItem value="afternoon">Afternoon (12:00 - 17:00)</SelectItem>
-                            <SelectItem value="evening">Evening (17:00 - 20:00)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                <div className="space-y-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Counselling Session</h3>
+                    <div className="h-px flex-1 bg-gray-100" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred-counsellor" className="text-sm font-medium text-gray-700">Preferred Counsellor</Label>
+                      <Select
+                        value={newLead.preferredCounsellor || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredCounsellor: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select counsellor" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {teamMembers.filter(member => member.role === 'counsellor' || member.role === 'admin' || member.role === 'owner').map(member => (
+                            <SelectItem key={member.id} value={String(member.id || '')}>
+                              {member.name || `${member.firstName} ${member.lastName}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="preferred-time" className="text-sm font-medium text-gray-700">Preferred Session Time</Label>
+                      <Select
+                        value={newLead.preferredTime || undefined}
+                        onValueChange={(value: string) => dispatch(setNewLead({ ...newLead, preferredTime: value }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200">
+                          <SelectValue placeholder="Select time slot" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="morning">Morning (9:00 - 12:00)</SelectItem>
+                          <SelectItem value="afternoon">Afternoon (12:00 - 17:00)</SelectItem>
+                          <SelectItem value="evening">Evening (17:00 - 20:00)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-2 mt-2">
                       <Label htmlFor="session-notes" className="text-sm font-medium text-gray-700">Session Notes</Label>
                       <Textarea
                         id="session-notes"
                         placeholder="Any specific topics or concerns to discuss..."
                         value={newLead.sessionNotes || ''}
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch(setNewLead({ ...newLead, sessionNotes: e.target.value }))}
+                        className="rounded-xl border-gray-200 resize-none min-h-[80px]"
                         rows={3}
-                        className="rounded-xl border-gray-200 resize-none"
                       />
                     </div>
                   </div>
@@ -422,7 +420,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
           </div>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             variant="outline"
             onClick={handleCancel}
@@ -433,7 +431,7 @@ const CreateCardDialog: React.FC<CreateCardDialogProps> = ({
           <Button
             onClick={handleCreateCard}
             disabled={!newLead.name || !newLead.stage || isCreatingCard}
-            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+            className="w-full rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >
             {isCreatingCard ? 'Creating...' : labels.createButton}
           </Button>

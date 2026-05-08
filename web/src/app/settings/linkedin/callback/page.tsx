@@ -122,4 +122,4 @@ export default function LinkedInCallbackPage() {
       <LinkedInCallbackContent />
     </Suspense>
   );
-}
+}
