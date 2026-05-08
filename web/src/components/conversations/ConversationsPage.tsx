@@ -14,7 +14,7 @@ import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
-import { PanelLeft, FlaskConical } from 'lucide-react';
+import { PanelLeft, FlaskConical, X } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { ChannelIcon } from './ChannelIcon';
 import { cn } from '@/lib/utils';
@@ -598,6 +598,12 @@ export function ConversationsPage() {
   const [isMobile, setIsMobile] = useState(false);
   // null = still loading; once resolved, only connected channels are shown
   const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Check which channels are connected on mount — all parallel requests
   useEffect(() => {
@@ -914,16 +920,17 @@ function BroadcastModal({ onClose, onSent, activeTab }: BroadcastModalProps) {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="fixed inset-x-4 top-1/2 z-50 transform -translate-y-1/2 max-w-md mx-auto bg-card rounded-lg shadow-xl border border-border md:inset-auto md:right-4 md:left-auto md:top-20 md:translate-y-0"
+        className="fixed inset-x-4 top-1/2 z-50 transform -translate-y-1/2 max-w-5xl w-full sm:w-[90vw] h-[90vh] mx-auto bg-card rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col"
       >
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Send Broadcast</h2>
             <button
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              title="Close"
+              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground opacity-70 transition-all hover:opacity-100 hover:bg-gray-100 focus:outline-hidden z-50"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
           </div>
 

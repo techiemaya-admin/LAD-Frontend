@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { safeStorage } from '@lad/shared/storage';  
-import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -1225,7 +1225,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         const sourceKey = String((lead as any)?.source || '').toLowerCase();
                         const sourceLabel = getOptionLabel(sourceOptions, String((lead as any)?.source) || undefined) || '';
                         const displayLabel = sourceLabel || (sourceKey ? sourceKey : 'No source');
-                        const isLinkedin = sourceKey === 'linkedin' || displayLabel.toLowerCase() === 'linkedin';
+                        const isLinkedin = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'].includes(sourceKey) || displayLabel.toLowerCase() === 'linkedin';
 
                         return (
                           <span className="text-gray-900 dark:text-white">
@@ -1371,6 +1371,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={true}
+                    fullWidthButton={true}
                   />
                 ) : (
                   <BookingSlot 
@@ -1381,6 +1382,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={false}
+                    fullWidthButton={true}
                   />
                 )}
               </div>
@@ -1760,39 +1762,24 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       open={isDetailsOpen} 
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
-      <DialogContent className="flex flex-col max-h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
-        <DialogTitle className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-[#262831]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ">
-                {lead.avatar ? (
-                  <img src={lead.avatar} alt={getLeadDisplayName(lead) || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
-                ) : (
-                  <span className="text-base font-semibold text-white bg-primary h-full w-full rounded-full flex items-center justify-center">
-                    {getLeadDisplayName(lead).charAt(0) || 'L'}
-                  </span>
-                )}
-              </Avatar>
-              <div>
-                <p className="text-base font-semibold text-gray-900 dark:text-white">{getLeadDisplayName(lead)}</p>
-                {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
-                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
-                )}
-              </div>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClose();
-              }}
-              className="text-gray-500 dark:text-[#7a8ba3] hover:text-gray-900 dark:hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+      <DialogContent className="flex flex-col p-0 overflow-hidden sm:h-[90vh] bg-white dark:bg-[#000724]">
+        <DialogHeader className="flex-row items-center gap-4 p-6 pb-4 border-b border-gray-200 dark:border-[#262831] sticky top-0 bg-white dark:bg-[#000724] z-10">
+          <Avatar className="h-10 w-10">
+            {lead.avatar ? (
+              <img src={lead.avatar} alt={getLeadDisplayName(lead) || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
+            ) : (
+              <span className="text-base font-semibold text-white bg-primary h-full w-full rounded-full flex items-center justify-center">
+                {getLeadDisplayName(lead).charAt(0) || 'L'}
+              </span>
+            )}
+          </Avatar>
+          <div className="flex-1">
+            <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">{getLeadDisplayName(lead)}</DialogTitle>
+            {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
+              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
+            )}
           </div>
-        </DialogTitle>
+        </DialogHeader>
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="w-full">
             <Tabs 
@@ -1801,12 +1788,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               className="flex flex-col"
             >
               <div className="border-b border-gray-200 dark:border-[#262831] px-6 sticky top-0 bg-white dark:bg-[#000724] z-10">
-                <TabsList className="flex gap-2">
+                <TabsList className="flex w-full justify-around bg-gray-50/50 dark:bg-[#1a2a43]/50 p-1 rounded-xl">
                   {tabs.map((tab) => (
                     <TabsTrigger 
                       key={tab.index}
                       value={String(tab.index)}
-                      className="px-3 py-1 text-sm"
+                      className="px-8 text-sm font-medium py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1825,18 +1812,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </Tabs>
           </div>
         </div>
-        <div className="border-t border-gray-200 dark:border-[#262831] px-6 py-4 flex-shrink-0 bg-white dark:bg-[#000724] mb-2">
+        <DialogActions className="border-t border-gray-200 dark:border-[#262831] bg-white dark:bg-[#000724]">
           {globalActiveTab === 0 && (
             globalEditingOverview ? (
-              <div className="flex gap-2 ml-auto">
-                <Button
-                  onClick={handleCancelEdit}
-                  disabled={isLoading}
-                  variant="outline"
-                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
+              <>
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
@@ -1848,21 +1827,21 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     handleSaveEdit();
                   }}
                   disabled={isLoading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
                 >
                   {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
-              </div>
+              </>
             ) : (
               <Button
                 onClick={handleStartEdit}
-                className="ml-auto bg-primary hover:bg-primary/80 text-white"
+                className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
               >
                 Edit Lead
               </Button>
             )
           )}
-        </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );
@@ -2121,21 +2100,22 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       </div>
       {renderDetailsDialog()}
       <Dialog open={deleteDialogOpen}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
-          <DialogTitle className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
-            <button
-              onClick={handleDeleteDialogClose}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </DialogTitle>
-          <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-              Cancel
-            </Button>
+        <DialogContent className="p-0 overflow-hidden flex flex-col justify-between">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-red-50 text-red-600 border border-red-100 shadow-sm">
+                <Trash2 className="h-5 w-5 stroke-[2.5px]" />
+              </div>
+              <DialogTitle>Delete Lead</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="py-8">
+            <p className="text-gray-600 text-base">
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{getLeadDisplayName(lead)}</span>? 
+              This action is permanent and cannot be undone.
+            </p>
+          </div>
+          <DialogActions>
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -2147,15 +2127,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 handleConfirmDelete();
               }}
               disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="px-8 bg-red-600 hover:bg-red-700 text-white h-11 rounded-xl font-bold shadow-lg transition-all"
             >
-              {isLoading ? 'Deleting...' : 'Delete'}
+              {isLoading ? 'Deleting...' : 'Delete Lead'}
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
       <Dialog open={deleteConfirmation.open}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
+        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh]">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-[#3A3A4F]">
               Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}
@@ -2168,10 +2148,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </button>
           </DialogTitle>
           <p className="mt-4">Are you sure you want to delete this {String(deleteConfirmation.type)}? This action cannot be undone.</p>
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleDeleteConfirmationClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-              Cancel
-            </Button>
+          <DialogActions>
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -2183,11 +2160,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 handleConfirmDelete();
               }}
               disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="rounded-xl px-8 h-11 font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg transition-all"
             >
               {isLoading ? 'Deleting...' : 'Delete'}
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
       {snackbar.open && (

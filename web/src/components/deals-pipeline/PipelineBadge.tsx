@@ -47,6 +47,10 @@ const getSourceIcon = (source: string) => {
       return Phone;
     case 'linkedin':
     case 'linked in':
+    case 'linkedin search':
+    case 'linkedin campaign':
+    case 'inbound upload':
+    case 'direct contact':
       return Linkedin;
     case 'referral':
     case 'referrals':
@@ -133,6 +137,10 @@ const getSourceColor = (source: string) => {
       return '#10b981';
     case 'linkedin':
     case 'linked in':
+    case 'linkedin search':
+    case 'linkedin campaign':
+    case 'inbound upload':
+    case 'direct contact':
       return '#0077b5';
     case 'referral':
     case 'referrals':

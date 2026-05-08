@@ -1,15 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Send, Loader2, AlertCircle, ChevronDown, Plus } from 'lucide-react';
+import { Search, Send, Loader2, AlertCircle, ChevronDown, Plus, MessageSquare } from 'lucide-react';
 import { CreateWabaTemplateModal } from './CreateWabaTemplateModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogActions,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
@@ -296,24 +303,28 @@ export function TemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Send Template Message
-            <Badge variant="secondary" className="text-xs">
-              {selectedCount} conversation{selectedCount !== 1 ? 's' : ''}
-            </Badge>
+          <div className="flex items-center justify-between w-full">
+            <DialogTitle className="flex items-center gap-3">
+              <MessageSquare className="h-6 w-6 text-orange-600" />
+              Send Template Message
+              <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-100 px-3">
+                {selectedCount} conversation{selectedCount !== 1 ? 's' : ''}
+              </Badge>
+            </DialogTitle>
+            
             {channel === 'waba' && (
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto h-6 text-[10px] px-2"
+                className="h-9 text-xs px-3 rounded-lg border-orange-200 text-orange-700 hover:bg-orange-50 transition-all"
                 onClick={() => setShowCreateModal(true)}
               >
-                <Plus className="w-3 h-3 mr-1" /> New template
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> New template
               </Button>
             )}
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <CreateWabaTemplateModal
@@ -325,360 +336,293 @@ export function TemplatePicker({
           }}
         />
 
-        {!selectedTemplate ? (
-          <>
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search templates..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {!selectedTemplate ? (
+            <>
+              {/* Search */}
+              <div className="px-8 pt-6 pb-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search templates..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-11 rounded-xl bg-gray-50 border-gray-100"
+                  />
+                </div>
+              </div>
 
-            {/* Template list */}
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-sm text-muted-foreground">Loading templates...</span>
+              {/* Template list */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading templates...</span>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm">
+                      {templates.length === 0
+                        ? 'No approved templates found'
+                        : 'No templates match your search'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {filtered.map((template) => (
+                      <div
+                        key={`${template.name}-${template.language}`}
+                        className="p-3 rounded-xl hover:bg-orange-50/50 cursor-pointer transition-all border border-transparent hover:border-orange-100 group"
+                        onClick={() => handleSelectTemplate(template)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-gray-900 group-hover:text-orange-700 transition-colors">{template.name}</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] px-1.5 h-4 font-bold',
+                              categoryColors[template.category] || 'bg-gray-50 text-gray-600 border-gray-200'
+                            )}
+                          >
+                            {template.category}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 font-medium">
+                            {template.language}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {template.body || 'No body text'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-8 py-6">
+              <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+                {/* Back button + template info */}
+                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 hover:bg-white shadow-sm"
+                    onClick={() => setSelectedTemplate(null)}
+                  >
+                    <ChevronDown className="h-4 w-4 rotate-90" />
+                  </Button>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-gray-900">{selectedTemplate.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{selectedTemplate.category}</span>
+                  </div>
                 </div>
-              ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <AlertCircle className="h-8 w-8 mb-2 opacity-40" />
-                  <p className="text-sm">
-                    {templates.length === 0
-                      ? 'No approved templates found'
-                      : 'No templates match your search'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filtered.map((template) => (
-                    <div
-                      key={`${template.name}-${template.language}`}
-                      className="p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border"
-                      onClick={() => handleSelectTemplate(template)}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">{template.name}</span>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'text-[10px] px-1.5 h-4',
-                            categoryColors[template.category] || 'bg-gray-50 text-gray-600 border-gray-200'
+
+                {/* Parameter inputs */}
+                {selectedTemplate.parameter_count > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Template Parameters</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {(selectedTemplate.parameters || []).map((paramName, i) => {
+                        const currentVal  = paramValues[i] || '';
+                        const isCustom    = !FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal);
+                        const selectedOpt = FIELD_OPTIONS.find(o => o.value === currentVal) ?? FIELD_OPTIONS[FIELD_OPTIONS.length - 1];
+                        const label       = isNaN(Number(paramName)) ? `{{${paramName}}}` : `Parameter {{${paramName}}}`;
+                        const ctx         = getParamContext(selectedTemplate.body, paramName);
+                        return (
+                          <div key={i} className="space-y-2 p-4 rounded-xl border border-gray-100 bg-white shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-gray-700 font-mono">{label}</span>
+                              {ctx && <span className="text-[10px] text-muted-foreground font-mono italic opacity-60">{ctx}</span>}
+                            </div>
+                            
+                            <Select
+                              value={FIELD_OPTIONS.find(o => o.value === currentVal) ? currentVal : '__custom__'}
+                              onValueChange={v => handleParamChange(i, v === '__custom__' ? '' : v)}
+                            >
+                              <SelectTrigger className="h-10 rounded-lg border-gray-100 bg-gray-50/50">
+                                <SelectValue placeholder="Select data field..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FIELD_OPTIONS.map(o => (
+                                  <SelectItem key={o.value} value={o.value}>
+                                    <div className="flex flex-col">
+                                      <span className="font-bold">{o.label}</span>
+                                      <span className="text-[10px] text-muted-foreground">{o.hint}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            {(isCustom || currentVal === '__custom__' || currentVal === '') && (
+                              <Input
+                                placeholder={`Enter fixed value...`}
+                                value={FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal) ? '' : currentVal}
+                                onChange={e => handleParamChange(i, e.target.value)}
+                                className="h-10 rounded-lg"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Media header */}
+                {['image', 'document', 'video'].includes(selectedTemplate.header_type) && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Header {selectedTemplate.header_type}</h4>
+                    <div className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm space-y-3">
+                      {resolvingMedia ? (
+                        <div className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                          Resolving media from Meta...
+                        </div>
+                      ) : (
+                        <>
+                          {selectedTemplate.header_type === 'image' && headerMediaUrl && (
+                            <div className="relative group">
+                              <img
+                                src={headerMediaUrl}
+                                alt="Header preview"
+                                className="w-full h-40 object-cover rounded-lg border border-gray-100 shadow-inner"
+                              />
+                            </div>
                           )}
-                        >
-                          {template.category}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] px-1.5 h-4">
-                          {template.language}
-                        </Badge>
-                        {template.quality_pending && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 bg-amber-50 text-amber-700 border-amber-200">
-                            ⏳ Quality Pending
-                          </Badge>
-                        )}
-                        {!template.quality_pending && template.quality_score && template.quality_score !== 'UNKNOWN' && (
-                          <Badge variant="outline" className={cn(
-                            'text-[10px] px-1.5 h-4',
-                            template.quality_score === 'HIGH'   ? 'bg-green-50 text-green-700 border-green-200' :
-                            template.quality_score === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-red-50 text-red-700 border-red-200'
-                          )}>
-                            {template.quality_score}
-                          </Badge>
-                        )}
-                        {template.parameter_count > 0 && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 h-4">
-                            {template.parameter_count} param{template.parameter_count > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {template.body || 'No body text'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Selected template detail */}
-            <div className="space-y-4">
-              {/* Back button + template info */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setSelectedTemplate(null)}
-                >
-                  <ChevronDown className="h-3 w-3 mr-1 rotate-90" />
-                  Back
-                </Button>
-                <span className="text-sm font-medium">{selectedTemplate.name}</span>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-[10px] px-1.5 h-4',
-                    categoryColors[selectedTemplate.category] || ''
-                  )}
-                >
-                  {selectedTemplate.category}
-                </Badge>
-              </div>
-
-              {/* Parameter inputs */}
-              {selectedTemplate.parameter_count > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Fill in template parameters:
-                  </p>
-                  {(selectedTemplate.parameters || []).map((paramName, i) => {
-                    const currentVal  = paramValues[i] || '';
-                    const isCustom    = !FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal);
-                    const selectedOpt = FIELD_OPTIONS.find(o => o.value === currentVal) ?? FIELD_OPTIONS[FIELD_OPTIONS.length - 1];
-                    const label       = isNaN(Number(paramName)) ? `{{${paramName}}}` : `Parameter {{${paramName}}}`;
-                    const ctx         = getParamContext(selectedTemplate.body, paramName);
-                    return (
-                      <div key={i} className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground font-mono">{label}</p>
-                        {ctx && (
-                          <p className="text-[10px] text-muted-foreground font-mono bg-muted/40 rounded px-2 py-1 truncate">
-                            {ctx}
-                          </p>
-                        )}
-                        {/* Field picker dropdown */}
-                        <select
-                          value={FIELD_OPTIONS.find(o => o.value === currentVal) ? currentVal : '__custom__'}
-                          onChange={e => {
-                            const v = e.target.value;
-                            handleParamChange(i, v === '__custom__' ? '' : v);
-                          }}
-                          className="w-full h-8 px-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          {FIELD_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>
-                          ))}
-                        </select>
-                        {/* Custom text input — shown only when Custom is selected */}
-                        {(isCustom || currentVal === '__custom__' || currentVal === '') && (
                           <Input
-                            placeholder={`Fixed value sent to everyone (e.g. "12")`}
-                            value={FIELD_OPTIONS.some(o => o.value !== '__custom__' && o.value === currentVal) ? '' : currentVal}
-                            onChange={e => handleParamChange(i, e.target.value)}
-                            className="h-8 text-sm"
+                            placeholder="Enter public URL for media..."
+                            value={headerMediaUrl}
+                            onChange={e => setHeaderMediaUrl(e.target.value)}
+                            className="h-10 rounded-lg"
                           />
-                        )}
-                        {/* Hint for auto-resolved fields */}
-                        {selectedOpt && selectedOpt.value !== '__custom__' && currentVal !== '' && currentVal !== '__custom__' && (
-                          <p className="text-[10px] text-green-600">
-                            ✓ Replaced automatically per contact — {selectedOpt.hint}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Media header — shown for image/document/video header templates */}
-              {['image', 'document', 'video'].includes(selectedTemplate.header_type) && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground capitalize">
-                    Header {selectedTemplate.header_type}
-                  </p>
-                  {resolvingMedia ? (
-                    <div className="flex items-center gap-2 h-8 text-xs text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Fetching image from Meta…
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      {selectedTemplate.header_type === 'image' && headerMediaUrl && (
-                        <img
-                          src={headerMediaUrl}
-                          alt="Template header"
-                          className="w-full max-h-32 object-cover rounded-md border border-border mb-1"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      )}
-                      <Input
-                        placeholder="https://example.com/image.jpg"
-                        value={headerMediaUrl}
-                        onChange={e => setHeaderMediaUrl(e.target.value)}
-                        className="h-8 text-sm"
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        {headerMediaUrl
-                          ? `✓ ${selectedTemplate.header_type} attached — edit URL to change`
-                          : `Paste a public URL for the ${selectedTemplate.header_type} to attach`}
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Name Format picker — only shown when template has a name variable */}
-              {hasNameParam && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">Name format for contacts:</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setNameFormat('first')}
-                      className={cn(
-                        'flex-1 h-8 rounded-md border text-xs font-medium transition-colors',
-                        nameFormat === 'first'
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background border-border text-muted-foreground hover:bg-muted'
-                      )}
-                    >
-                      First name only
-                      <span className="block text-[10px] font-normal opacity-70">e.g. &quot;Naveen&quot;</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNameFormat('full')}
-                      className={cn(
-                        'flex-1 h-8 rounded-md border text-xs font-medium transition-colors',
-                        nameFormat === 'full'
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background border-border text-muted-foreground hover:bg-muted'
-                      )}
-                    >
-                      Full name
-                      <span className="block text-[10px] font-normal opacity-70">e.g. &quot;Naveen Reddy&quot;</span>
-                    </button>
+                {/* Name Format */}
+                {hasNameParam && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Name Personalization</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setNameFormat('first')}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all text-left group",
+                          nameFormat === 'first' ? "border-orange-500 bg-orange-50/50 ring-1 ring-orange-200" : "border-gray-100 hover:border-orange-200"
+                        )}
+                      >
+                        <span className={cn("block text-sm font-bold", nameFormat === 'first' ? "text-orange-700" : "text-gray-900")}>First Name</span>
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">e.g. Naveen</span>
+                      </button>
+                      <button
+                        onClick={() => setNameFormat('full')}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all text-left group",
+                          nameFormat === 'full' ? "border-orange-500 bg-orange-50/50 ring-1 ring-orange-200" : "border-gray-100 hover:border-orange-200"
+                        )}
+                      >
+                        <span className={cn("block text-sm font-bold", nameFormat === 'full' ? "text-orange-700" : "text-gray-900")}>Full Name</span>
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">e.g. Naveen Reddy</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Message Preview</h4>
+                  <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-400" />
+                    <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap font-medium">
+                      {previewBody}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              {/* Preview */}
-              <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1.5">Preview</p>
-                <p className="text-sm whitespace-pre-wrap">{previewBody}</p>
+                {/* Batch Settings */}
+                {channel === 'personal' && (isBulkSend || selectedCount > 1) && (
+                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Delivery Schedule</h4>
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Batch Size</label>
+                          <Input
+                            type="number"
+                            value={batchSize}
+                            onChange={e => setBatchSize(parseInt(e.target.value))}
+                            className="h-10 rounded-lg border-amber-200 bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Delay (s)</label>
+                          <Input
+                            type="number"
+                            value={delayMin}
+                            onChange={e => setDelayMin(parseInt(e.target.value))}
+                            className="h-10 rounded-lg border-amber-200 bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Daily Cap</label>
+                          <Input
+                            type="number"
+                            value={dailyLimit}
+                            onChange={e => setDailyLimit(parseInt(e.target.value))}
+                            className="h-10 rounded-lg border-amber-200 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+          )}
+        </div>
 
-              {/* Batch & Delay settings — personal WhatsApp only (avoids ban from rapid bulk sends).
-                  WABA handles its own rate-limiting server-side; no schedule needed. */}
-              {channel === 'personal' && (isBulkSend || selectedCount > 1) && (
-                <div className="space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs font-semibold text-amber-800">
-                    Sending schedule {selectedCount > 0 ? `(${selectedCount} contacts)` : ''}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-amber-700 font-medium">Batch size</label>
-                      <Input
-                        type="number"
-                        min={1} max={10}
-                        value={batchSize}
-                        onChange={e => setBatchSize(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                        onFocus={e => e.target.select()}
-                        className="h-7 text-xs text-center"
-                      />
-                      <p className="text-[9px] text-amber-600 text-center">msgs / batch (max 10)</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-amber-700 font-medium">Min delay</label>
-                      <Input
-                        type="number"
-                        min={120} max={3600}
-                        value={delayMin}
-                        onChange={e => setDelayMin(Math.max(120, parseInt(e.target.value) || 120))}
-                        onFocus={e => e.target.select()}
-                        className="h-7 text-xs text-center"
-                      />
-                      <p className="text-[9px] text-amber-600 text-center">seconds (min 120)</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-amber-700 font-medium">+Random</label>
-                      <Input
-                        type="number"
-                        min={0} max={300}
-                        value={delayRandom}
-                        onChange={e => setDelayRandom(Math.max(0, parseInt(e.target.value) || 0))}
-                        onFocus={e => e.target.select()}
-                        className="h-7 text-xs text-center"
-                      />
-                      <p className="text-[9px] text-amber-600 text-center">0–N secs</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1 border-t border-amber-200">
-                    <div className="flex items-center gap-2 flex-1">
-                      <label className="text-[10px] text-amber-700 font-medium whitespace-nowrap">Daily cap</label>
-                      <Input
-                        type="number"
-                        min={1} max={250}
-                        value={dailyLimit}
-                        onChange={e => setDailyLimit(Math.min(250, Math.max(1, parseInt(e.target.value) || 1)))}
-                        onFocus={e => e.target.select()}
-                        className="h-7 text-xs text-center w-24"
-                      />
-                      <p className="text-[9px] text-amber-600">msgs / day (max 250)</p>
-                    </div>
-                    {selectedCount > 0 && dailyLimit < selectedCount && (
-                      <p className="text-[9px] text-amber-700 font-medium">
-                        Will send {dailyLimit} today, {selectedCount - dailyLimit} queued for next day
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-amber-700">
-                    ≈ {batchSize} messages, then wait {delayMin}s + random 0–{delayRandom}s before next batch
-                  </p>
-                </div>
+        <DialogActions>
+          <div className="flex items-center justify-between w-full">
+            <div className="text-sm font-medium text-muted-foreground">
+              {selectedTemplate ? (
+                <span>Ready to send to {selectedCount}</span>
+              ) : (
+                <span>Select a template to continue</span>
               )}
-
-            <DialogFooter>
+            </div>
+            <div className="flex gap-3">
               <Button
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={sending}
+                variant="outline"
+                onClick={() => (selectedTemplate ? setSelectedTemplate(null) : onOpenChange(false))}
+                className="rounded-xl px-6 py-2.5 font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
               >
-                {sending ? 'Keep running' : 'Cancel'}
+                {selectedTemplate ? 'Back' : 'Cancel'}
               </Button>
-              {/* Show "Run in Background" button while sending */}
-              {sending && sendProgress?.running && (
-                <Button
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="gap-2"
-                >
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Run in background
-                </Button>
-              )}
               <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
+                className="rounded-xl px-8 py-2.5 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all disabled:opacity-50"
               >
-                {sending && sendProgress?.running ? (
+                {sending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending {sendProgress?.sent ?? 0}/{sendProgress?.total ?? 0}...
-                  </>
-                ) : sending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Sending...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send to {selectedCount} conversation{selectedCount !== 1 ? 's' : ''}
+                    <Send className="mr-2 h-4 w-4" />
+                    Send to {selectedCount}
                   </>
                 )}
               </Button>
-            </DialogFooter>
-          </>
-        )}
+            </div>
+          </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );

@@ -260,7 +260,7 @@ export default function ProfileSummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] rounded-2xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[90vh] rounded-2xl overflow-y-auto p-0">
 
         {/* ── Header ── */}
         <DialogHeader className="flex-row items-center gap-4 p-6 pb-4 border-b sticky top-0 bg-white z-10">
