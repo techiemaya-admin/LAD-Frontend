@@ -34,6 +34,7 @@ interface EmployeeCardProps {
     phone?: string;
     linkedin_url?: string;
     enriched_email?: string | null;
+    enriched_official_email?: string | null;  // ← work email via Fullenrich
     enriched_linkedin_url?: string | null;
     photo_url?: string;
     profile_image?: string;
@@ -41,11 +42,13 @@ interface EmployeeCardProps {
     [key: string]: any;
   };
   employeeViewMode?: 'grid' | 'list';
-  revealedContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>;
-  revealingContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>;
+  revealedContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean; officialEmail?: boolean }>;
+  revealingContacts?: Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean; officialEmail?: boolean }>;
   handleRevealPhone?: (employee: any) => void;
   handleRevealEmail?: (employee: any) => void;
   handleRevealLinkedIn?: (employee: any) => void;
+  /** Reveal the work / corporate email via Fullenrich (separate from personal email) */
+  handleRevealOfficialEmail?: (employee: any) => void;
   onViewSummary?: (employee: any) => void;
   profileSummary?: string | null;
   hideUnlockFeatures?: boolean; // New prop to hide unlock buttons for inbound campaigns
@@ -58,6 +61,7 @@ export default function EmployeeCard({
   handleRevealPhone,
   handleRevealEmail,
   handleRevealLinkedIn,
+  handleRevealOfficialEmail,
   onViewSummary,
   profileSummary,
   hideUnlockFeatures = false, // Default to false
@@ -72,13 +76,42 @@ export default function EmployeeCard({
   const phoneRevealed = revealedContacts[idKey]?.phone || Boolean(employee.phone);
   const emailRevealed = revealedContacts[idKey]?.email || Boolean(employee.enriched_email) || Boolean(employee.email);
   const linkedinRevealed = revealedContacts[idKey]?.linkedin || Boolean(employee.enriched_linkedin_url || employee.linkedin_url);
+  const officialEmailRevealed = revealedContacts[idKey]?.officialEmail || Boolean(employee.enriched_official_email);
   const phoneLoading = revealingContacts[idKey]?.phone;
   const emailLoading = revealingContacts[idKey]?.email;
   const linkedinLoading = revealingContacts[idKey]?.linkedin;
+  const officialEmailLoading = revealingContacts[idKey]?.officialEmail;
 
   // Get actual values to display (prioritize enriched data)
   const displayEmail = employee.enriched_email || employee.email;
   const displayLinkedIn = employee.enriched_linkedin_url || employee.linkedin_url;
+  const displayOfficialEmail = employee.enriched_official_email;
+
+  // Detect free-mail (gmail/outlook/yahoo etc) to know whether the personal
+  // email is likely "personal-only" — in that case it makes sense to offer
+  // an unlock for the official corporate address. Cheap client check; real
+  // classification happens server-side via Fullenrich.
+  const FREE_MAIL_DOMAINS = new Set([
+    'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com',
+    'msn.com', 'yahoo.com', 'yahoo.co.uk', 'yahoo.co.in', 'ymail.com',
+    'icloud.com', 'me.com', 'mac.com', 'aol.com', 'proton.me', 'protonmail.com',
+    'pm.me', 'zoho.com', 'mail.com', 'gmx.com', 'fastmail.com', 'yandex.com',
+    'qq.com', '163.com',
+  ]);
+  const personalDomain = (displayEmail || '').split('@').pop()?.toLowerCase() || '';
+  const isPersonalEmailFreeMail = !!personalDomain && FREE_MAIL_DOMAINS.has(personalDomain);
+
+  // Show the "Unlock official email" CTA when:
+  //   • Unlock features are enabled,
+  //   • A handler is wired,
+  //   • An official email isn't already known, AND
+  //   • Either no email at all OR the existing email is from a free-mail provider
+  //     (so a separate corporate address is plausible)
+  const showOfficialEmailRow =
+    !hideUnlockFeatures &&
+    !!handleRevealOfficialEmail &&
+    !officialEmailRevealed &&
+    (!emailRevealed || isPersonalEmailFreeMail);
 
   // Determine if unlock features should be shown
   // Hide if: hideUnlockFeatures is true OR employee is marked as inbound
@@ -275,6 +308,72 @@ export default function EmployeeCard({
                 </TooltipProvider>
               )}
             </div>
+
+            {/* Official email — separate row, only when relevant.
+                Already-revealed: show the corporate address.
+                Not yet revealed but plausible: offer the unlock CTA. */}
+            {(officialEmailRevealed && displayOfficialEmail) ? (
+              <div className="flex items-center gap-2 w-full">
+                <div className="bg-emerald-600 rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-emerald-700 font-semibold select-text">
+                  {displayOfficialEmail}
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="bg-emerald-50 border border-emerald-200 p-1.5 h-7 w-7 flex items-center justify-center rounded-md flex-shrink-0">
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Official / work email revealed via Fullenrich</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            ) : showOfficialEmailRow ? (
+              <div className="flex items-center gap-2 w-full">
+                <div className="bg-emerald-600 rounded-full p-1.5 flex items-center justify-center flex-shrink-0 opacity-70">
+                  <Mail className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-xs flex-1 text-gray-500 italic">
+                  Official email locked
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRevealOfficialEmail?.(employee);
+                        }}
+                        disabled={officialEmailLoading}
+                        className="h-7 px-2 text-[11px] border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 flex-shrink-0"
+                      >
+                        {officialEmailLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                        ) : (
+                          <Lock className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        {officialEmailLoading ? 'Searching…' : 'Unlock'}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                      <p className="font-semibold mb-0.5">Find corporate email</p>
+                      <p className="text-xs text-slate-200">
+                        Searches Fullenrich for the lead's work address
+                        {personalDomain ? ` (the current ${personalDomain} address looks personal)` : ''}.
+                        Costs 2 credits on success.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            ) : null}
 
             {/* LinkedIn */}
             <div className="flex items-center gap-2 w-full">

@@ -173,6 +173,62 @@ export default function CampaignLeadsPage() {
     }
   };
 
+  /**
+   * Reveal the lead's WORK / OFFICIAL email via Fullenrich.
+   * Distinct from handleRevealEmail (which prefers any deliverable email).
+   * Cached server-side, so a second click is free.
+   */
+  const handleRevealOfficialEmail = async (employee: ExtendedCampaignLead) => {
+    const idKey = employee.id || employee.name || '';
+    setRevealingContactsSafe(prev => ({
+      ...prev,
+      [idKey]: { ...prev[idKey], officialEmail: true } as any,
+    }));
+    try {
+      const response = await apiPost<any>(
+        `/api/campaigns/${campaignId}/leads/${employee.id}/reveal-official-email`,
+        {}
+      );
+      const officialEmail = response?.official_email || response?.email;
+      if (response?.success && officialEmail) {
+        setRevealedValues(prev => ({
+          ...prev,
+          [idKey]: { ...prev[idKey], official_email: officialEmail } as any,
+        }));
+        setRevealedContactsSafe(prev => ({
+          ...prev,
+          [idKey]: { ...prev[idKey], officialEmail: true } as any,
+        }));
+        (employee as any).enriched_official_email = officialEmail;
+
+        push({
+          title: 'Official email revealed',
+          description: response.from_database
+            ? 'Retrieved from cache (no credits used)'
+            : `Found ${officialEmail} (${response.credits_used ?? 2} credits used)`,
+        });
+        refetch();
+      } else {
+        push({
+          variant: 'error',
+          title: 'No official email found',
+          description: response?.error || 'Fullenrich could not find a corporate email for this lead.',
+        });
+      }
+    } catch (error) {
+      push({
+        variant: 'error',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reveal official email',
+      });
+    } finally {
+      setRevealingContactsSafe(prev => ({
+        ...prev,
+        [idKey]: { ...prev[idKey], officialEmail: false } as any,
+      }));
+    }
+  };
+
   const handleRevealLinkedIn = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], linkedin: true } }));
@@ -533,6 +589,7 @@ export default function CampaignLeadsPage() {
                       revealingContacts={revealingContacts}
                       handleRevealPhone={handleRevealPhone}
                       handleRevealEmail={handleRevealEmail}
+                      handleRevealOfficialEmail={handleRevealOfficialEmail}
                       handleRevealLinkedIn={handleRevealLinkedIn}
                       onViewSummary={handleViewSummary}
                       profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}

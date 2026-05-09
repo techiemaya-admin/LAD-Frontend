@@ -59,6 +59,10 @@ function ChannelConversationView({
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    hideEmpty,
+    setHideEmpty,
+    sortBy,
+    setSortBy,
     unreadCounts,
     sendMessage,
     markAsResolved,
@@ -252,6 +256,10 @@ function ChannelConversationView({
               onLoadMore={loadMore}
               isLoadingMore={isLoadingMore}
               hasMore={hasMore}
+              hideEmpty={hideEmpty}
+              onHideEmptyChange={setHideEmpty}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
             />
           </motion.div>
         )}
@@ -356,6 +364,10 @@ function ChannelConversationView({
                     onLoadMore={loadMore}
                     isLoadingMore={isLoadingMore}
                     hasMore={hasMore}
+                    hideEmpty={hideEmpty}
+                    onHideEmptyChange={setHideEmpty}
+                    sortBy={sortBy}
+                    onSortByChange={setSortBy}
                   />
                 )}
               </div>

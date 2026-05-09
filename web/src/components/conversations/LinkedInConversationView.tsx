@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { LinkedInFollowupComposer } from './LinkedInFollowupComposer';
+import { LinkedInContextPanel } from './LinkedInContextPanel';
+import { LinkedInChatToolbar } from './LinkedInChatToolbar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +99,40 @@ const STATUS_CONFIG: Record<ConnectionStatus, {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
+/**
+ * Returns a same-origin URL for any external image so LinkedIn CDN
+ * cross-origin restrictions don't break avatar loading.
+ *
+ * - Already-relative URLs (starts with `/`) pass through untouched
+ * - LinkedIn CDN / Unipile / cross-origin URLs route through /api/proxy-image
+ * - Empty / null returns null
+ */
+function toProxiedAvatarUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  // Local / data URLs don't need proxying
+  if (raw.startsWith('/') || raw.startsWith('data:') || raw.startsWith('blob:')) {
+    return raw;
+  }
+  try {
+    const u = new URL(raw);
+    // LinkedIn CDN, Unipile, and any non-public host that needs server-side
+    // fetch — proxy through Next.js. Allowlist enforced server-side.
+    if (
+      /\.licdn\.com$/.test(u.hostname) ||
+      u.hostname === 'static.licdn.com' ||
+      /\.linkedin\.com$/.test(u.hostname) ||
+      /\.unipile\.com$/.test(u.hostname) ||
+      u.hostname === 'api.unipile.com'
+    ) {
+      return `/api/proxy-image?url=${encodeURIComponent(raw)}`;
+    }
+    // Other public CDNs (e.g. Gravatar) — load directly
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
 function ContactAvatar({
   contact,
   size = 'md',
@@ -112,18 +149,24 @@ function ContactAvatar({
     .join('')
     .toUpperCase();
 
-  // LinkedIn CDN images (media.licdn.com) are blocked cross-origin and return 403/404.
-  // Skip the <img> entirely for those URLs — show initials instead to avoid console errors.
-  const isLinkedInCdn = contact.avatar?.includes('media.licdn.com');
-  const showAvatar = contact.avatar && !isLinkedInCdn;
+  // If the upstream image fails (deleted, expired Unipile token, etc.)
+  // gracefully fall back to initials instead of a broken-image icon.
+  const [imgFailed, setImgFailed] = useState(false);
+  const proxiedSrc = toProxiedAvatarUrl(contact.avatar);
+  const showAvatar = !!proxiedSrc && !imgFailed;
+
+  // Reset failure state when the contact (or their avatar URL) changes
+  useEffect(() => { setImgFailed(false); }, [proxiedSrc]);
 
   if (showAvatar) {
     return (
       <img
-        src={contact.avatar!}
+        src={proxiedSrc!}
         alt={contact.name}
-        className={cn('rounded-full object-cover flex-shrink-0', sizeClass)}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        loading="lazy"
+        decoding="async"
+        className={cn('rounded-full object-cover flex-shrink-0 bg-blue-100', sizeClass)}
+        onError={() => setImgFailed(true)}
       />
     );
   }
@@ -306,6 +349,14 @@ export function LinkedInConversationView({
   const [selectedId, setSelectedId]       = useState<string | null>(null);
   const [messages, setMessages]           = useState<LinkedInMessage[]>([]);
   const [searchQuery, setSearchQuery]     = useState('');
+  // Sidebar status filter — null shows everything, otherwise narrows to that status.
+  // Toggled by the chips at the top of the conversation list.
+  const [statusFilter, setStatusFilter]   = useState<ConnectionStatus | null>(null);
+  // Right-side Contact Details panel — open by default on wide desktops.
+  const [contextPanelOpen, setContextPanelOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= 1280;
+  });
   const [messageText, setMessageText]     = useState('');
   const [loadingConvs, setLoadingConvs]   = useState(true);
   const [loadingMsgs, setLoadingMsgs]     = useState(false);
@@ -428,11 +479,17 @@ export function LinkedInConversationView({
   );
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const filteredConvs = conversations.filter(c =>
-    !searchQuery ||
-    c.contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.last_message || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConvs = conversations.filter(c => {
+    // Status filter (chip-driven). null = all.
+    if (statusFilter && c.connection_status !== statusFilter) return false;
+    // Search-string filter
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      c.contact.name.toLowerCase().includes(q) ||
+      (c.last_message || '').toLowerCase().includes(q)
+    );
+  });
 
   const selectedConv = conversations.find(c => c.id === selectedId) ?? null;
   const chatEnabled  = selectedConv?.chat_enabled ?? false;
@@ -473,23 +530,69 @@ export function LinkedInConversationView({
           </Button>
         </div>
 
-        {/* Status summary pills */}
+        {/* Status summary pills — clickable: tap to filter the list to that status,
+            tap the same chip again (or "All") to clear the filter. */}
         {conversations.length > 0 && (
           <div className="flex gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
+            {/* All */}
+            <button
+              type="button"
+              onClick={() => setStatusFilter(null)}
+              className={cn(
+                'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors',
+                statusFilter === null
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              )}
+              title="Show all conversations"
+            >
+              All ({conversations.length})
+            </button>
+
             {pendingCount > 0 && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">
+              <button
+                type="button"
+                onClick={() => setStatusFilter(prev => prev === 'pending' ? null : 'pending')}
+                className={cn(
+                  'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
+                  statusFilter === 'pending'
+                    ? 'bg-slate-600 text-white shadow-sm ring-2 ring-slate-300 ring-offset-1'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer'
+                )}
+                title={statusFilter === 'pending' ? 'Click to clear filter' : 'Show only pending requests'}
+              >
                 <Clock className="w-2.5 h-2.5" />{pendingCount} pending
-              </span>
+              </button>
             )}
             {acceptedCount > 0 && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
+              <button
+                type="button"
+                onClick={() => setStatusFilter(prev => prev === 'accepted' ? null : 'accepted')}
+                className={cn(
+                  'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
+                  statusFilter === 'accepted'
+                    ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-300 ring-offset-1'
+                    : 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer'
+                )}
+                title={statusFilter === 'accepted' ? 'Click to clear filter' : 'Show only connected (awaiting follow-up)'}
+              >
                 <CheckCircle className="w-2.5 h-2.5" />{acceptedCount} connected
-              </span>
+              </button>
             )}
             {activeCount > 0 && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-medium">
+              <button
+                type="button"
+                onClick={() => setStatusFilter(prev => prev === 'active' ? null : 'active')}
+                className={cn(
+                  'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
+                  statusFilter === 'active'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300 ring-offset-1'
+                    : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 cursor-pointer'
+                )}
+                title={statusFilter === 'active' ? 'Click to clear filter' : 'Show only active conversations'}
+              >
                 <Zap className="w-2.5 h-2.5" />{activeCount} active
-              </span>
+              </button>
             )}
           </div>
         )}
@@ -523,8 +626,19 @@ export function LinkedInConversationView({
               <p className="text-xs mt-1 text-slate-400">
                 {conversations.length === 0
                   ? 'LinkedIn campaign conversations will appear here once connection requests are sent.'
-                  : 'Try a different search.'}
+                  : statusFilter
+                    ? `No ${statusFilter === 'accepted' ? 'connected' : statusFilter} conversations${searchQuery ? ' match your search' : ''}.`
+                    : 'Try a different search.'}
               </p>
+              {statusFilter && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(null)}
+                  className="mt-3 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Clear filter
+                </button>
+              )}
             </div>
           ) : (
             filteredConvs.map(conv => (
@@ -539,11 +653,14 @@ export function LinkedInConversationView({
         </div>
       </div>
 
-      {/* ── Right panel ──────────────────────────────────────────────────── */}
+      {/* ── Right panel: chat + (optional) context details panel ──────────── */}
       <div className={cn(
-        "flex-1 flex flex-col overflow-hidden bg-background",
+        "flex-1 flex flex-row overflow-hidden bg-background",
         isMobile && !selectedId ? "hidden" : "flex"
       )}>
+        <div className={cn(
+          "flex-1 flex flex-col overflow-hidden",
+        )}>
         {!selectedConv ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
             <Linkedin className="w-12 h-12 mb-3 opacity-20" />
@@ -605,6 +722,26 @@ export function LinkedInConversationView({
             {/* Disabled banner (shown for pending/accepted) */}
             {!chatEnabled && <ChatDisabledBanner conv={selectedConv} />}
 
+            {/* Manual follow-up composer — only when the connection is accepted
+                and the conversation maps to a real campaign lead. Lets the user
+                send the follow-up themselves (AI or template) instead of waiting
+                for the automated cycle. Once sent, the chat unlocks. */}
+            {selectedConv.connection_status === 'accepted' &&
+              selectedConv.campaign_id &&
+              selectedConv.lead_id && (
+                <LinkedInFollowupComposer
+                  campaignId={selectedConv.campaign_id}
+                  leadId={selectedConv.lead_id}
+                  contactName={selectedConv.contact?.name}
+                  onSent={() => {
+                    // Reload conversations + messages so the chat-unlock state
+                    // and new outbound message both surface immediately.
+                    loadConversations();
+                    if (selectedId) loadMessages(selectedId);
+                  }}
+                />
+              )}
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {loadingMsgs ? (
@@ -638,6 +775,16 @@ export function LinkedInConversationView({
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Chat toolbar — AI toggle, attach, templates, assign, context-panel toggle */}
+            <LinkedInChatToolbar
+              contextPanelOpen={contextPanelOpen}
+              onToggleContextPanel={() => setContextPanelOpen(o => !o)}
+              onInsertTemplate={(text) => {
+                setMessageText(prev => prev ? `${prev}\n${text}` : text);
+              }}
+              chatEnabled={chatEnabled}
+            />
 
             {/* Message input */}
             <div className={cn(
@@ -691,6 +838,24 @@ export function LinkedInConversationView({
               </div>
             </div>
           </>
+        )}
+        </div>
+
+        {/* Right-side Contact Details panel — only when a conversation is open */}
+        {selectedConv && contextPanelOpen && !isMobile && (
+          <LinkedInContextPanel
+            conversation={{
+              id:                selectedConv.id,
+              connection_status: selectedConv.connection_status,
+              campaign_id:       selectedConv.campaign_id,
+              lead_id:           selectedConv.lead_id,
+              lead_linkedin:     selectedConv.lead_linkedin,
+              contact:           selectedConv.contact,
+              unread_count:      selectedConv.unread_count,
+              last_message_time: selectedConv.last_message_time,
+            }}
+            onClose={() => setContextPanelOpen(false)}
+          />
         )}
       </div>
     </div>

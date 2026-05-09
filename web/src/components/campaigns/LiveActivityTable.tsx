@@ -12,10 +12,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink } from 'lucide-react';
+import {
+  Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  ExternalLink, ChevronDown, ChevronUp, Sparkles, Globe, Newspaper, Mic, Award, FileText, Users, MessageSquare,
+  RotateCw, CheckCircle2, AlertCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { useCampaignActivityFeed } from '@lad/frontend-features/campaigns';
+import { useCampaignActivityFeed, retryConnection } from '@lad/frontend-features/campaigns';
 import { apiGet } from '@/lib/api';
 import { MiniStepper } from './MiniStepper';
 import { StatusStepper, type WorkflowStep } from './StatusStepper';
@@ -89,6 +93,203 @@ function buildWorkflowSteps(
     });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Agent Insights — per-lead source links the agent gathered during enrichment
+// (web_presence + LinkedIn posts). Renders inside an expandable row.
+// ─────────────────────────────────────────────────────────────────────────
+
+interface EnrichmentSource {
+  type: string;          // knowledge_graph | social | article | news | podcast | speaking | award | linkedin_post
+  title?: string;
+  url: string;
+  label?: string;
+  date?: string;
+}
+
+const SOURCE_TYPE_META: Record<string, { label: string; Icon: React.ComponentType<any>; color: string; bg: string }> = {
+  knowledge_graph: { label: 'Google KG',       Icon: Globe,         color: 'text-blue-700',    bg: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
+  social:          { label: 'Social',          Icon: Users,         color: 'text-purple-700',  bg: 'bg-purple-50 hover:bg-purple-100 border-purple-200' },
+  article:         { label: 'Article',         Icon: FileText,      color: 'text-emerald-700', bg: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
+  news:            { label: 'News',            Icon: Newspaper,     color: 'text-orange-700',  bg: 'bg-orange-50 hover:bg-orange-100 border-orange-200' },
+  podcast:         { label: 'Podcast',         Icon: Mic,           color: 'text-pink-700',    bg: 'bg-pink-50 hover:bg-pink-100 border-pink-200' },
+  speaking:        { label: 'Speaking',        Icon: Mic,           color: 'text-indigo-700',  bg: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200' },
+  award:           { label: 'Award',           Icon: Award,         color: 'text-amber-700',   bg: 'bg-amber-50 hover:bg-amber-100 border-amber-200' },
+  linkedin_post:   { label: 'LinkedIn Post',   Icon: MessageSquare, color: 'text-sky-700',     bg: 'bg-sky-50 hover:bg-sky-100 border-sky-200' },
+};
+
+const SOURCE_TYPE_ORDER = ['knowledge_graph', 'social', 'article', 'news', 'podcast', 'speaking', 'award', 'linkedin_post'];
+
+const LeadInsightsPanel: React.FC<{
+  sources: EnrichmentSource[];
+  counts?: Record<string, number>;
+  latestAt?: string;
+  /** The specific source the agent used to write the connection request — highlighted in the panel */
+  hookSource?: { type: string; url?: string | null; title?: string } | null;
+}> = ({ sources, counts, latestAt, hookSource }) => {
+  if (!sources || sources.length === 0) {
+    // Even with no broader enrichment, show the hook callout when present
+    if (hookSource && (hookSource.title || hookSource.url)) {
+      return (
+        <div className="px-4 py-3 bg-[#F8FAFC] border-l-4 border-amber-300">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wide mb-0.5">
+                Used in connection request · {hookSource.type.replace(/_/g, ' ')}
+              </p>
+              {hookSource.url ? (
+                <a
+                  href={hookSource.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-amber-800 hover:text-amber-900 hover:underline inline-flex items-center gap-1"
+                >
+                  <span className="truncate max-w-[600px]">{hookSource.title || hookSource.url}</span>
+                  <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60" />
+                </a>
+              ) : (
+                <p className="text-xs text-amber-800 truncate">{hookSource.title}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="text-xs text-[#64748B] px-4 py-3">
+        No enrichment sources collected yet for this lead.
+      </div>
+    );
+  }
+
+  // Match the hook source against entries by URL (preferred) or by exact (type, title) pair.
+  // Used to ring + label the chip in the panel that drove the connection message.
+  const isHookSource = (s: EnrichmentSource): boolean => {
+    if (!hookSource) return false;
+    if (hookSource.url && s.url && hookSource.url === s.url) return true;
+    // Fallback: match on type + title prefix (handles trailing ellipsis truncation)
+    if (
+      hookSource.type === s.type &&
+      hookSource.title && s.title &&
+      (hookSource.title.startsWith(s.title.replace(/…$/, '')) ||
+        s.title.startsWith(hookSource.title.replace(/…$/, '')))
+    ) return true;
+    return false;
+  };
+
+  // Group sources by type, preserving the order defined in SOURCE_TYPE_ORDER
+  const grouped = new Map<string, EnrichmentSource[]>();
+  for (const s of sources) {
+    const t = s.type || 'other';
+    if (!grouped.has(t)) grouped.set(t, []);
+    grouped.get(t)!.push(s);
+  }
+
+  return (
+    <div className="px-4 py-3 bg-[#F8FAFC] border-l-4 border-blue-300">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        <p className="text-xs font-semibold text-[#1E293B] uppercase tracking-wide">
+          Agent Insights — Sources Gathered
+        </p>
+        <span className="text-[10px] text-[#64748B] ml-auto">
+          {sources.length} link{sources.length === 1 ? '' : 's'}
+          {latestAt ? ` · ${format(new Date(latestAt), 'MMM dd, HH:mm')}` : ''}
+        </span>
+      </div>
+
+      {/* Highlighted callout: the exact source used to write the connection request */}
+      {hookSource && (hookSource.title || hookSource.url) && (
+        <div className="mb-3 px-3 py-2 rounded-md border-2 border-amber-300 bg-amber-50">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wide mb-0.5">
+                Used in connection request · {hookSource.type.replace(/_/g, ' ')}
+              </p>
+              {hookSource.url ? (
+                <a
+                  href={hookSource.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-amber-800 hover:text-amber-900 hover:underline inline-flex items-center gap-1"
+                  title={hookSource.title || hookSource.url}
+                >
+                  <span className="truncate max-w-[600px]">
+                    {hookSource.title || hookSource.url}
+                  </span>
+                  <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60" />
+                </a>
+              ) : (
+                <p className="text-xs text-amber-800 truncate">
+                  {hookSource.title}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {SOURCE_TYPE_ORDER
+          .filter((t) => grouped.has(t))
+          .map((t) => {
+            const items = grouped.get(t)!;
+            const meta = SOURCE_TYPE_META[t] || {
+              label: t, Icon: ExternalLink, color: 'text-slate-700', bg: 'bg-slate-50 hover:bg-slate-100 border-slate-200',
+            };
+            const Icon = meta.Icon;
+            return (
+              <div key={t} className="flex items-start gap-2">
+                <div className="flex items-center gap-1 min-w-[110px] mt-1">
+                  <Icon className={`w-3.5 h-3.5 ${meta.color}`} />
+                  <span className={`text-xs font-medium ${meta.color}`}>{meta.label}</span>
+                  <span className="text-[10px] text-[#94A3B8]">({items.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 flex-1">
+                  {items.map((s, idx) => {
+                    const isHook = isHookSource(s);
+                    return (
+                      <a
+                        key={`${s.url}-${idx}`}
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={
+                          isHook
+                            ? `★ Used in connection request — ${s.title || s.url}`
+                            : (s.title || s.url)
+                        }
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full border transition-colors ${meta.bg} ${meta.color} max-w-[280px] ${
+                          isHook ? 'ring-2 ring-amber-400 ring-offset-1 font-semibold' : ''
+                        }`}
+                      >
+                        {isHook && <Sparkles className="w-3 h-3 flex-shrink-0 text-amber-600" />}
+                        <span className="truncate">
+                          {s.title?.trim() || s.label || s.url}
+                        </span>
+                        <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+      </div>
+
+      {counts && (
+        <p className="text-[10px] text-[#94A3B8] mt-2">
+          Totals — KG: {counts.knowledge_graph || 0} · Social: {counts.social_profiles || 0} ·
+          Articles: {counts.articles || 0} · News: {counts.news_mentions || 0} ·
+          Podcasts: {counts.podcast_appearances || 0} · Speaking: {counts.speaking_engagements || 0} ·
+          Awards: {counts.awards || 0} · Posts: {counts.linkedin_posts || 0}
+        </p>
+      )}
+    </div>
+  );
+};
+
 interface LiveActivityTableProps {
   campaignId: string;
   maxHeight?: number;
@@ -122,6 +323,15 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentPageSize, setCurrentPageSize] = useState<number>(pageSize);
+  // Tracks which lead's "Agent Insights" panel is open (one at a time)
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+
+  // Retry-state per lead — leadId → { status, message? }
+  // Drives the small status pill that appears next to the Retry button.
+  const [retryState, setRetryState] = useState<Record<string, {
+    status: 'pending' | 'success' | 'failed';
+    message?: string;
+  }>>({});
 
   /** Resolved dynamic workflow steps for the stepper */
   const workflowSteps = useMemo<WorkflowStep[]>(
@@ -232,6 +442,43 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     }
   );
 
+  /**
+   * Re-attempt the linkedin_connect step for a single failed lead.
+   * The backend clears the weekly-limit cache before re-running so a stale
+   * "limit exceeded" cache entry doesn't immediately block the retry.
+   */
+  const handleRetry = async (leadId: string) => {
+    if (!leadId || retryState[leadId]?.status === 'pending') return;
+    setRetryState((prev) => ({ ...prev, [leadId]: { status: 'pending' } }));
+    try {
+      const result = await retryConnection(campaignId, leadId);
+      if (result.success) {
+        setRetryState((prev) => ({
+          ...prev,
+          [leadId]: { status: 'success', message: 'Connection request sent' },
+        }));
+        // Pull the freshly-inserted CONNECTION_SENT row into the feed
+        setTimeout(() => refresh(), 500);
+      } else {
+        setRetryState((prev) => ({
+          ...prev,
+          [leadId]: {
+            status: 'failed',
+            message: result.error || (result.isRateLimit ? 'Still rate-limited' : 'Retry failed'),
+          },
+        }));
+      }
+    } catch (err: any) {
+      setRetryState((prev) => ({
+        ...prev,
+        [leadId]: {
+          status: 'failed',
+          message: err?.message || 'Retry failed',
+        },
+      }));
+    }
+  };
+
   // Group activities by lead
   const groupedLeads = useMemo(() => {
     if (!activities || activities.length === 0) return [];
@@ -263,6 +510,27 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           errorMessage: undefined,
           latestStatus: activity.status,
           latestMessage: activity.message_content || activity.error_message,
+          // Insights: source URLs the agent gathered (from WEB_ENRICHMENT_COMPLETED rows)
+          enrichmentSources: [] as Array<{
+            type: string;
+            title?: string;
+            url: string;
+            label?: string;
+            date?: string;
+          }>,
+          enrichmentCounts: undefined as undefined | Record<string, number>,
+          enrichmentLatestAt: undefined as undefined | string,
+          // The single post/article/news item the agent used as the hook for
+          // the personalised connection request. Set when CONNECTION_SENT_WITH_MESSAGE
+          // arrives with response_data.personalization_source.
+          personalizationSource: undefined as undefined | null | {
+            type: string;
+            label?: string;
+            title?: string;
+            url?: string | null;
+            snippet?: string | null;
+            date?: string | null;
+          },
         });
       }
 
@@ -293,6 +561,20 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       }
 
       if (actionType.includes('CONNECTION')) {
+        // Capture the personalization source — which post/article URL the agent
+        // used as the hook. Only present on CONNECTION_SENT_WITH_MESSAGE rows.
+        if (
+          (actionType === 'CONNECTION_SENT_WITH_MESSAGE' || actionType.includes('SENT_WITH_MESSAGE')) &&
+          !lead.personalizationSource
+        ) {
+          const respData = activity.response_data;
+          const parsed = typeof respData === 'string'
+            ? (() => { try { return JSON.parse(respData); } catch { return null; } })()
+            : respData;
+          if (parsed?.personalization_source) {
+            lead.personalizationSource = parsed.personalization_source;
+          }
+        }
         // Check for rate limit in error message
         const isRateLimit = errorMsg.toLowerCase().includes('limit') ||
           errorMsg.toLowerCase().includes('rate');
@@ -358,6 +640,33 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         lead.leadReplied = true;
         lead.connectionAccepted = true;
         lead.contacted = true;
+      }
+
+      // Web/social enrichment events — collect source URLs to render per-lead.
+      // Multiple events can arrive over time (workflow run + manual summary
+      // generation); merge sources by URL so we don't show duplicates.
+      if (actionType === 'WEB_ENRICHMENT_COMPLETED') {
+        const respData = activity.response_data;
+        const parsed = typeof respData === 'string'
+          ? (() => { try { return JSON.parse(respData); } catch { return null; } })()
+          : respData;
+        const newSources = parsed?.sources;
+        if (Array.isArray(newSources) && newSources.length > 0) {
+          const existingUrls = new Set(lead.enrichmentSources.map((s: any) => s.url));
+          for (const s of newSources) {
+            if (s?.url && !existingUrls.has(s.url)) {
+              lead.enrichmentSources.push(s);
+              existingUrls.add(s.url);
+            }
+          }
+        }
+        if (parsed?.counts) {
+          lead.enrichmentCounts = parsed.counts;
+        }
+        if (!lead.enrichmentLatestAt ||
+            new Date(activity.created_at) > new Date(lead.enrichmentLatestAt)) {
+          lead.enrichmentLatestAt = activity.created_at;
+        }
       }
     });
 
@@ -566,7 +875,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[140px]">
                 Lead
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[80px]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px]">
                 State
               </TableHead>
               <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px]">
@@ -594,8 +903,8 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               </TableRow>
             ) : (
               paginatedLeads?.map((lead, index) => (
+                <React.Fragment key={lead.leadId || index}>
                 <TableRow
-                  key={lead.leadId || index}
                   className="hover:bg-gray-50"
                 >
                   <TableCell className="w-[110px]">
@@ -632,26 +941,158 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                           {lead.leadPhone}
                         </p>
                       )}
+                      {/* Hook used: the specific post/article the agent leveraged
+                          to write the personalised connection request. Highlighted
+                          here so the user can see exactly which signal drove the send. */}
+                      {lead.personalizationSource && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {lead.personalizationSource.url ? (
+                                <a
+                                  href={lead.personalizationSource.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[10px] rounded border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors max-w-[200px]"
+                                  title={lead.personalizationSource.title || lead.personalizationSource.url}
+                                >
+                                  <Sparkles className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate font-medium">
+                                    Hook: {lead.personalizationSource.label || lead.personalizationSource.type}
+                                  </span>
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60" />
+                                </a>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[10px] rounded border border-amber-300 bg-amber-50 text-amber-800 max-w-[200px]">
+                                  <Sparkles className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate font-medium">
+                                    Hook: {lead.personalizationSource.label || lead.personalizationSource.type}
+                                  </span>
+                                </span>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[320px]">
+                              <p className="font-semibold mb-1">
+                                Used to write connection request
+                              </p>
+                              {lead.personalizationSource.title && (
+                                <p className="text-xs text-slate-200">
+                                  {lead.personalizationSource.title}
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[80px]">
-                    <LiveActivityStatusBadge status={lead.latestStatus} currentStep={calculateCurrentStep(lead)} />
+                  <TableCell className="w-[150px]">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <LiveActivityStatusBadge status={lead.latestStatus} currentStep={calculateCurrentStep(lead)} />
+                      {/* Retry button — appears when this lead had a failed connection
+                          (rate-limited or errored) AND no successful send yet. Hidden
+                          once retry has succeeded. */}
+                      {(() => {
+                        const isConnectionFailed =
+                          (lead.latestStatus === 'failed' ||
+                           lead.connectionStatus === 'FAILED' ||
+                           lead.connectionStatus === 'PAUSED') &&
+                          lead.connectionStatus !== 'SENT';
+                        const rs = retryState[lead.leadId];
+                        if (!isConnectionFailed && rs?.status !== 'success') return null;
+
+                        const isPending = rs?.status === 'pending';
+                        const isSuccess = rs?.status === 'success';
+                        const isFailed  = rs?.status === 'failed';
+
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetry(lead.leadId);
+                              }}
+                              disabled={isPending || isSuccess}
+                              title={
+                                isSuccess
+                                  ? 'Connection request sent'
+                                  : isPending
+                                  ? 'Retrying…'
+                                  : 'Retry sending the connection request'
+                              }
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded border transition-colors ${
+                                isSuccess
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-default'
+                                  : isPending
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-wait'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                              }`}
+                            >
+                              {isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                              {isSuccess && <CheckCircle2 className="w-3 h-3" />}
+                              {!isPending && !isSuccess && <RotateCw className="w-3 h-3" />}
+                              {isSuccess ? 'Sent' : isPending ? 'Retrying…' : 'Retry'}
+                            </button>
+                            {isFailed && rs?.message && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-red-500">
+                                      <AlertCircle className="w-3 h-3" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="max-w-[260px]">
+                                    {rs.message}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </TableCell>
                   <TableCell className="w-[150px]">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p
-                            className="text-sm text-[#64748B] max-w-[170px] overflow-hidden text-ellipsis whitespace-nowrap"
-                          >
-                            {lead.latestMessage || '-'}
-                          </p>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {lead.latestMessage || ''}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex flex-col gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p
+                              className="text-sm text-[#64748B] max-w-[170px] overflow-hidden text-ellipsis whitespace-nowrap"
+                            >
+                              {lead.latestMessage || '-'}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {lead.latestMessage || ''}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {/* Agent Insights expand toggle — visible when sources exist OR
+                          when a personalization hook source is known. */}
+                      {((lead.enrichmentSources && lead.enrichmentSources.length > 0) ||
+                        lead.personalizationSource) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedLeadId(expandedLeadId === lead.leadId ? null : lead.leadId);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors w-fit"
+                          title="Show source links the agent gathered for this lead"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          {(lead.enrichmentSources?.length || 0) > 0
+                            ? `${lead.enrichmentSources.length} source${lead.enrichmentSources.length === 1 ? '' : 's'}`
+                            : 'Hook source'}
+                          {expandedLeadId === lead.leadId
+                            ? <ChevronUp className="w-3 h-3" />
+                            : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="w-[240px]">
                     {workflowSteps.length > 0 ? (
@@ -733,6 +1174,19 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                     )}
                   </TableCell>
                 </TableRow>
+                {expandedLeadId === lead.leadId && (
+                  <TableRow className="bg-[#F8FAFC]">
+                    <TableCell colSpan={5} className="p-0">
+                      <LeadInsightsPanel
+                        sources={lead.enrichmentSources || []}
+                        counts={lead.enrichmentCounts}
+                        latestAt={lead.enrichmentLatestAt}
+                        hookSource={lead.personalizationSource}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+                </React.Fragment>
               ))
             )}
           </TableBody>
