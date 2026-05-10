@@ -648,7 +648,7 @@ export const LinkedInIntegration: React.FC = () => {
               return (
                 <div className={`flex items-center px-3 py-1.5 rounded-full border-2 text-xs sm:text-sm ${
                   statusDisplay.color === 'text-green-600' ? 'bg-green-50 border-green-200' :
-                  statusDisplay.color === 'text-gray-400' ? 'bg-gray-50 border-gray-200' :
+                  statusDisplay.color === 'text-gray-400' ? 'bg-gray-50 dark:bg-slate-800 border-gray-200' :
                   statusDisplay.color === 'text-yellow-600' ? 'bg-yellow-50 border-yellow-200' :
                   statusDisplay.color === 'text-orange-600' ? 'bg-orange-50 border-orange-200' :
                   'bg-red-50 border-red-200'
@@ -683,7 +683,7 @@ export const LinkedInIntegration: React.FC = () => {
                         <p className="font-medium text-gray-900 truncate">{account.accountName || account.profileName || account.email || 'LinkedIn Account'}</p>
                         <div className={`flex items-center px-2 py-1 rounded-md text-xs font-medium w-fit flex-shrink-0 ${
                           accountStatusDisplay.color === 'text-green-600' ? 'bg-green-100 text-green-700' :
-                          accountStatusDisplay.color === 'text-gray-400' ? 'bg-gray-100 text-gray-600' :
+                          accountStatusDisplay.color === 'text-gray-400' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600' :
                           accountStatusDisplay.color === 'text-yellow-600' ? 'bg-yellow-100 text-yellow-700' :
                           accountStatusDisplay.color === 'text-orange-600' ? 'bg-orange-100 text-orange-700' :
                           'bg-red-100 text-red-700'

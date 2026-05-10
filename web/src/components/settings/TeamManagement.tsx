@@ -234,11 +234,11 @@ export const TeamManagement: React.FC = () => {
   };
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200';
-      case 'member': return 'bg-green-50 text-green-700 border border-green-200';
-      case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200';
-      default:       return 'bg-gray-50 text-gray-700 border border-gray-200';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400';
+      case 'member': return 'bg-green-50 text-green-700 border border-green-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400';
+      case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-slate-300';
+      default:       return 'bg-gray-50 text-gray-700 border border-gray-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-slate-300';
     }
   };
   return (
@@ -296,7 +296,7 @@ export const TeamManagement: React.FC = () => {
                   </tr>
                 ) : (
                   users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{user.name}</div>
                       </td>
@@ -323,8 +323,8 @@ export const TeamManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold ${
+                          user.status === 'active' ? 'bg-green-100 text-green-700 dark:!text-emerald-400' : 'bg-red-100 text-red-700 dark:!text-rose-400'
                         }`}>
                           {user.status === 'active' ? 'active' : 'inactive'}
                         </span>
@@ -418,7 +418,7 @@ export const TeamManagement: React.FC = () => {
                     users
                       .filter(user => user.role !== 'viewer')
                       .map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                        <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="font-medium text-gray-900">{user.name}</div>
                             <div className="text-sm text-gray-500">{user.email}</div>
@@ -430,7 +430,7 @@ export const TeamManagement: React.FC = () => {
                             <div className="text-sm text-gray-600">0</div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                            <span className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400">
                               Available
                             </span>
                           </td>

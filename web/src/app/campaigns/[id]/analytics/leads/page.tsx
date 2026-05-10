@@ -598,7 +598,7 @@ export default function CampaignLeadsPage() {
                     {/* Follow-up count pill — shows how many follow-ups have been sent */}
                     {(lead as any).manual_followup_count > 0 && (
                       <div className="flex justify-center mt-1.5">
-                        <span className="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                        <span className="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">
                           <Sparkles className="w-2.5 h-2.5" />
                           {(lead as any).manual_followup_count} follow-up{(lead as any).manual_followup_count !== 1 ? 's' : ''} sent
                         </span>
@@ -761,7 +761,7 @@ export default function CampaignLeadsPage() {
               </div>
 
               {followupPreviewing ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-2 text-[#0b1957]">
                     <Sparkles className="w-5 h-5 animate-pulse" />
                     <span className="text-sm font-medium">Generating personalised message…</span>
@@ -800,10 +800,10 @@ export default function CampaignLeadsPage() {
                     {followupContext.pastMessages.map((msg, i) => (
                       <div key={i} className="px-4 py-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            msg.channel === 'linkedin' ? 'bg-blue-50 text-blue-700'
-                            : msg.channel === 'email'  ? 'bg-amber-50 text-amber-700'
-                            : 'bg-green-50 text-green-700'
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold ${
+                            msg.channel === 'linkedin' ? 'bg-blue-50 text-blue-700 dark:!text-sky-400'
+                            : msg.channel === 'email'  ? 'bg-amber-50 text-amber-700 dark:!text-amber-300'
+                            : 'bg-green-50 text-green-700 dark:!text-emerald-400'
                           }`}>
                             {msg.channel}
                           </span>

@@ -55,7 +55,7 @@ export default function StepLayout({
                 key={stepNum}
                 onClick={() => isClickable && onStepClick(stepNum)}
                 className={`flex-1 h-[3px] rounded-sm transition-all duration-300 ${
-                  isActive || isCompleted ? 'bg-indigo-500' : 'bg-gray-200'
+                  isActive || isCompleted ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-slate-800'
                 } ${
                   isClickable ? 'cursor-pointer hover:h-1' : 'cursor-default'
                 } ${

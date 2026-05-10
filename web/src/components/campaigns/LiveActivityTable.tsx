@@ -777,11 +777,11 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     );
   }
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex justify-between items-center p-4 border-b border-[#E2E8F0] bg-[#F8FAFC] gap-4">
+      <div className="flex justify-between items-center p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724] gap-4">
         <div className="flex items-center gap-2">
-          <h6 className="text-lg font-semibold text-[#1E293B]">
+          <h6 className="text-lg font-semibold text-[#1E293B] dark:text-slate-100">
             Live Activity Feed
           </h6>
           <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-xs" />
@@ -849,9 +849,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Campaign Workflow Stepper - Display if steps are configured */}
       {workflowSteps.length > 0 && (
-        <div className="px-4 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-          <p className="text-xs font-semibold text-[#64748B] mb-3 uppercase tracking-wide">Campaign Workflow</p>
-          <div className="bg-white rounded-lg p-4 border border-[#E2E8F0]">
+        <div className="px-4 py-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+          <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400 mb-3 uppercase tracking-wide">Campaign Workflow</p>
+          <div className="bg-white dark:bg-[#000724] rounded-lg p-4 border border-[#E2E8F0] dark:border-[#262831]">
             <StatusStepper
               currentStep={
                 groupedLeads.length > 0
@@ -868,20 +868,20 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       <div>
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#F8FAFC]">
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[110px]">
+            <TableRow className="bg-[#F8FAFC] dark:!bg-[#000724]">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[110px]">
                 Timestamp
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[140px]">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[140px]">
                 Lead
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px]">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px]">
                 State
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px]">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px]">
                 Details
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[240px]">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[240px]">
                 Status
               </TableHead>
             </TableRow>
@@ -895,7 +895,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               </TableRow>
             ) : paginatedLeads?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[#64748B]">
+                <TableCell colSpan={5} className="text-center py-8 text-[#64748B] dark:text-slate-400">
                   <p>
                     No activity data available
                   </p>
@@ -905,7 +905,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               paginatedLeads?.map((lead, index) => (
                 <React.Fragment key={lead.leadId || index}>
                 <TableRow
-                  className="hover:bg-gray-50"
+                  className="hover:bg-gray-50 dark:hover:bg-[#253456] transition-colors"
                 >
                   <TableCell className="w-[110px]">
                     <p className="text-sm text-[#64748B]">
@@ -917,7 +917,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                       <div className="flex items-center gap-1">
                         <Link
                           href={`/campaigns/${campaignId}/analytics/leads`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                          className="text-sm font-medium text-cyan-700 hover:text-cyan-800 hover:underline transition-colors dark:text-cyan-400 dark:hover:text-cyan-300 dark:hover:underline"
                           title={`View ${lead.leadName}'s profile`}
                         >
                           {lead.leadName || 'Unknown'}
@@ -930,14 +930,18 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                             rel="noopener noreferrer"
                             title="Open LinkedIn profile"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[#0A66C2] hover:text-[#004182] flex-shrink-0"
+                            className="text-[#0A66C2] hover:text-[#004182] flex-shrink-0 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>
                       {lead.leadPhone && (
-                        <p className="text-xs text-[#64748B]">
+                        // Phone number sits under the lead name. Slate-grey in
+                        // light mode for low-emphasis context; emerald in dark
+                        // mode so it pops as a recognisable contact detail
+                        // alongside the bright cyan name link.
+                        <p className="text-xs text-[#64748B] dark:text-emerald-400">
                           {lead.leadPhone}
                         </p>
                       )}
@@ -1080,7 +1084,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                             e.stopPropagation();
                             setExpandedLeadId(expandedLeadId === lead.leadId ? null : lead.leadId);
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors w-fit"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors w-fit dark:text-white dark:hover:text-cyan-400"
                           title="Show source links the agent gathered for this lead"
                         >
                           <Sparkles className="w-3 h-3" />
@@ -1124,10 +1128,10 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                                 <TooltipTrigger asChild>
                                   <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all ${
                                     isDone
-                                      ? 'bg-green-100 text-green-700 border border-green-300'
+                                      ? 'bg-green-100 text-green-700 border border-green-300 dark:!bg-transparent dark:!border-emerald-400/40 dark:!text-emerald-400'
                                       : isActive
-                                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-400'
-                                      : 'bg-gray-100 text-gray-500 border border-gray-300'
+                                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-400 dark:!bg-transparent dark:!border-sky-400 dark:!text-white'
+                                      : 'bg-gray-100 text-gray-500 border border-gray-300 dark:!bg-transparent dark:!border-slate-700 dark:!text-slate-400'
                                   }`}>
                                     {isDone ? '✓' : step.id}
                                   </div>
@@ -1175,7 +1179,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                   </TableCell>
                 </TableRow>
                 {expandedLeadId === lead.leadId && (
-                  <TableRow className="bg-[#F8FAFC]">
+                  <TableRow className="bg-[#F8FAFC] dark:bg-[#000724]">
                     <TableCell colSpan={5} className="p-0">
                       <LeadInsightsPanel
                         sources={lead.enrichmentSources || []}
@@ -1195,7 +1199,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Pagination Controls */}
       {totalLeads > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
           <div className="flex items-center gap-2 text-sm text-[#64748B]">
             <span>Show</span>
             <select

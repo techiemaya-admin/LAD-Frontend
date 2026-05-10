@@ -21,7 +21,8 @@ import {
   GraduationCap,
   MessageSquare,
   Goal,
-  LayoutTemplate
+  LayoutTemplate,
+  Palette,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -374,7 +375,12 @@ export function Sidebar() {
               <span>Settings</span>
             </NavLink>
             <div className="w-full flex items-center justify-between rounded-xl px-4 py-2 text-sm text-sidebar-foreground">
-              <span>Theme</span>
+              {/* Left side mirrors the Settings/Logout rows: icon + label.
+                  ThemeToggle (right side) is the actual sun/moon control. */}
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                <span>Theme</span>
+              </div>
               <ThemeToggle />
             </div>
             <button
@@ -671,7 +677,17 @@ export function Sidebar() {
                   isExpanded ? "justify-between w-full" : "justify-center w-10 mx-auto",
                 )}
               >
-                {isExpanded && <span>Theme</span>}
+                {/* Group the leading icon + label together so the layout
+                    mirrors the Settings row above and the Logout row below.
+                    When the sidebar collapses, only the ThemeToggle remains
+                    visible (centered) — the leading Palette icon hides to
+                    avoid two icons in a 40px-wide column. */}
+                {isExpanded && (
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 flex-shrink-0" />
+                    <span>Theme</span>
+                  </div>
+                )}
                 <ThemeToggle />
               </div>
 
