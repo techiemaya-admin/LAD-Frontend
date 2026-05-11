@@ -61,8 +61,8 @@ export function AgentSelector({
       {/* Merged: develop's compact single search-and-action row, with HEAD's
           VOAG Playground button kept beside "New Agent" so the feature isn't
           lost when the create-row got collapsed into the search row. */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2">
-        <div className="relative flex-1">
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[150px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
