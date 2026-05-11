@@ -46,4 +46,4 @@ export const RequireCapability: React.FC<RequireCapabilityProps> = ({
       </p>
     </div>
   );
-};
+};

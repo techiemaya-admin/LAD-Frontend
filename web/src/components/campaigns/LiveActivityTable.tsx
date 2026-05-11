@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   Download, Filter, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   ExternalLink, ChevronDown, ChevronUp, Sparkles, Globe, Newspaper, Mic, Award, FileText, Users, MessageSquare,
-  RotateCw, CheckCircle2, AlertCircle,
+  RotateCw, CheckCircle2, AlertCircle, ArrowUpDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -27,24 +27,25 @@ import { LeadStepperRow } from './LeadStepperRow';
 import { LiveActivityStatusBadge } from './LiveActivityStatusBadge';
 import { LiveBadge } from '@/components/LiveBadge';
 import { exportCampaignLeads } from '../../../../sdk/features/campaigns/api';
+import { formatDateTimeUnified } from '@/utils/dateTime';
 
 /** Mapping from backend step_type to a short display label */
 const STEP_TYPE_LABEL: Record<string, string> = {
-  lead_generation:   'Lead Gen',
-  linkedin_visit:    'Visit',
-  linkedin_connect:  'Connect',
-  linkedin_message:  'Message',
-  linkedin_follow:   'Follow',
-  wait_for_condition:'Accepted',
-  delay:             'Delay',
-  voice_agent_call:  'Voice Call',
-  voice_call:        'Voice Call',
-  call:              'Call',
-  email_send:        'Email',
-  email:             'Email',
-  whatsapp_send:     'WhatsApp',
-  whatsapp:          'WhatsApp',
-  sms:               'SMS',
+  lead_generation: 'Lead Gen',
+  linkedin_visit: 'Visit',
+  linkedin_connect: 'Connect',
+  linkedin_message: 'Message',
+  linkedin_follow: 'Follow',
+  wait_for_condition: 'Accepted',
+  delay: 'Delay',
+  voice_agent_call: 'Voice Call',
+  voice_call: 'Voice Call',
+  call: 'Call',
+  email_send: 'Email',
+  email: 'Email',
+  whatsapp_send: 'WhatsApp',
+  whatsapp: 'WhatsApp',
+  sms: 'SMS',
 };
 
 /**
@@ -314,7 +315,7 @@ interface ActivityItem {
 export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   campaignId,
   maxHeight = 500,
-  pageSize = 50,
+  pageSize = 20,
   campaignSteps,
 }) => {
   // Build the dynamic workflow steps once (memoised below)
@@ -706,18 +707,18 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       // Walk backwards through the steps; the first one whose "done"
       // condition is satisfied tells us the NEXT step is the active one.
       const STEP_DONE: Record<string, (l: any) => boolean> = {
-        linkedin_visit:    (l) => l.profileVisited,
-        linkedin_connect:  (l) => l.connectionStatus === 'SENT',
-        linkedin_message:  (l) => l.contacted,
-        voice_agent_call:  (l) => l.callMade,
-        voice_call:        (l) => l.callMade,
-        call:              (l) => l.callMade,
-        email_send:        (l) => l.contacted,
-        email:             (l) => l.contacted,
-        whatsapp_send:     (l) => l.whatsappSent,
-        whatsapp:          (l) => l.whatsappSent,
-        sms:               (l) => l.contacted,
-        reply:             (l) => l.leadReplied,
+        linkedin_visit: (l) => l.profileVisited,
+        linkedin_connect: (l) => l.connectionStatus === 'SENT',
+        linkedin_message: (l) => l.contacted,
+        voice_agent_call: (l) => l.callMade,
+        voice_call: (l) => l.callMade,
+        call: (l) => l.callMade,
+        email_send: (l) => l.contacted,
+        email: (l) => l.contacted,
+        whatsapp_send: (l) => l.whatsappSent,
+        whatsapp: (l) => l.whatsappSent,
+        sms: (l) => l.contacted,
+        reply: (l) => l.leadReplied,
       };
 
       let lastDoneIdx = -1; // index (0-based) of the last completed step
@@ -726,10 +727,10 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         if (step.type === 'wait_for_condition') {
           // Resolve done-condition based on what we're waiting for
           const actionType: string = (step as any).config?.action_type || 'CONNECTION_ACCEPTED';
-          if (actionType === 'PROFILE_VISITED')        isDone = lead.profileVisited;
+          if (actionType === 'PROFILE_VISITED') isDone = lead.profileVisited;
           else if (actionType === 'CONNECTION_ACCEPTED') isDone = lead.connectionAccepted;
-          else if (actionType === 'REPLY_RECEIVED')      isDone = lead.leadReplied;
-          else                                           isDone = lead.connectionAccepted;
+          else if (actionType === 'REPLY_RECEIVED') isDone = lead.leadReplied;
+          else isDone = lead.connectionAccepted;
         } else {
           isDone = STEP_DONE[step.type]?.(lead) ?? false;
         }
@@ -746,7 +747,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
     // ── Static fallback (original 5-step LinkedIn logic) ──────────────────
     if (lead.leadReplied) return 6;
-    if (lead.contacted)   return 5;
+    if (lead.contacted) return 5;
     if (lead.connectionAccepted) return 4;
     if (lead.connectionStatus === 'SENT') return 3;
     if (lead.profileVisited) return 2;
@@ -779,16 +780,16 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
   return (
     <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex justify-between items-center p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724] gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724] gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
-          <h6 className="text-lg font-semibold text-[#1E293B] dark:text-slate-100">
+          <h6 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-slate-100">
             Live Activity Feed
           </h6>
-          <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-xs" />
+          <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-[10px] sm:text-xs" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 scrollbar-hide">
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px] flex-1 sm:flex-none h-9 text-sm">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -801,7 +802,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px] flex-1 sm:flex-none h-9 text-sm">
               <SelectValue placeholder="Action" />
             </SelectTrigger>
             <SelectContent>
@@ -818,7 +819,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               <TooltipTrigger asChild>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" disabled={isLoading}>
+                    <Button variant="outline" size="icon" disabled={isLoading} className="h-9 w-9 flex-shrink-0">
                       <Download className={`h-4 w-4 ${isLoading ? 'opacity-50' : ''}`} />
                     </Button>
                   </DropdownMenuTrigger>
@@ -865,24 +866,43 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       )}
 
       {/* Activity Table */}
-      <div>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-[#F8FAFC] dark:!bg-[#000724]">
-              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[110px]">
-                Timestamp
+      {/* Merged: develop's sortable-header / sticky / overflow scaffold
+          + HEAD's dark-mode classes + HEAD's wider State column (150px)
+          so the Retry button has room to render. */}
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
+        <div className="min-w-[1000px] w-full">
+          <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
+          <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724] shadow-sm">
+            <TableRow className="bg-[#F8FAFC] dark:!bg-[#000724] hover:bg-transparent">
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[110px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-1 cursor-pointer select-none">
+                  Timestamp
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+                </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[140px]">
-                Lead
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[140px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-1 cursor-pointer select-none">
+                  Lead
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+                </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px]">
-                State
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-1 cursor-pointer select-none">
+                  State
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+                </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px]">
-                Details
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[150px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-1 cursor-pointer select-none">
+                  Details
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+                </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[240px]">
-                Status
+              <TableHead className="font-semibold text-[#1E293B] dark:!text-white whitespace-nowrap w-[240px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-1 cursor-pointer select-none">
+                  Status
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
+                </div>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -909,7 +929,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 >
                   <TableCell className="w-[110px]">
                     <p className="text-sm text-[#64748B]">
-                      {format(new Date(lead.latestTimestamp), 'MMM dd, HH:mm:ss')}
+                      {formatDateTimeUnified(lead.latestTimestamp)}
                     </p>
                   </TableCell>
                   <TableCell className="w-[140px]">
@@ -1104,19 +1124,19 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                         {workflowSteps.map((step, stepIdx) => {
                           // Determine state for this step
                           const STEP_DONE: Record<string, (l: any) => boolean> = {
-                            linkedin_visit:    (l) => l.profileVisited,
-                            linkedin_connect:  (l) => l.connectionStatus === 'SENT',
-                            wait_for_condition:(l) => l.connectionAccepted,
-                            linkedin_message:  (l) => l.contacted,
-                            voice_agent_call:  (l) => l.callMade,
-                            voice_call:        (l) => l.callMade,
-                            call:              (l) => l.callMade,
-                            email_send:        (l) => l.contacted,
-                            email:             (l) => l.contacted,
-                            whatsapp_send:     (l) => l.whatsappSent,
-                            whatsapp:          (l) => l.whatsappSent,
-                            sms:               (l) => l.contacted,
-                            reply:             (l) => l.leadReplied,
+                            linkedin_visit: (l) => l.profileVisited,
+                            linkedin_connect: (l) => l.connectionStatus === 'SENT',
+                            wait_for_condition: (l) => l.connectionAccepted,
+                            linkedin_message: (l) => l.contacted,
+                            voice_agent_call: (l) => l.callMade,
+                            voice_call: (l) => l.callMade,
+                            call: (l) => l.callMade,
+                            email_send: (l) => l.contacted,
+                            email: (l) => l.contacted,
+                            whatsapp_send: (l) => l.whatsappSent,
+                            whatsapp: (l) => l.whatsappSent,
+                            sms: (l) => l.contacted,
+                            reply: (l) => l.leadReplied,
                           };
 
                           const isDone = STEP_DONE[step.type]?.(lead) ?? false;
@@ -1149,8 +1169,8 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                                         {lead.pauseReason === 'DAILY_LIMIT'
                                           ? 'Daily limit reached'
                                           : lead.pauseReason === 'WEEKLY_LIMIT'
-                                          ? 'Weekly limit reached'
-                                          : 'Rate limit reached'}
+                                            ? 'Weekly limit reached'
+                                            : 'Rate limit reached'}
                                       </p>
                                     ) : lead.connectionStatus === 'FAILED' ? (
                                       <p className="text-red-400">
@@ -1196,11 +1216,12 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           </TableBody>
         </Table>
       </div>
+    </div>
 
       {/* Pagination Controls */}
       {totalLeads > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
             <span>Show</span>
             <select
               value={currentPageSize}
@@ -1208,21 +1229,21 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 setCurrentPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+              className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
             >
-              {[10, 25, 50, 100].map((size) => (
+              {[10, 20, 50, 100].map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>
               ))}
             </select>
-            <span>
+            <span className="whitespace-nowrap">
               of {totalLeads} leads
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="text-sm text-[#64748B]">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
 

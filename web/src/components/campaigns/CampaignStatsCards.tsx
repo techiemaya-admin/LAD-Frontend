@@ -190,17 +190,19 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
               <div className="flex-1 flex flex-col p-4">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-start mb-2">
+                    {(today > 0 || yesterday > 0) ? (
+                      <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${trendBg} ${trendColor}`}>
+                        <TrendIcon className="w-3 h-3" />
+                        {diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0'} today
+                      </span>
+                    ) : (
+                      <div />
+                    )}
                     <Avatar className="bg-blue-100 dark:bg-[#253456] w-12 h-12 rounded-full">
                       <AvatarFallback className="bg-blue-100 dark:bg-[#253456]">
                         <Linkedin className="w-6 h-6 text-[#0077B5]" />
                       </AvatarFallback>
                     </Avatar>
-                    {(today > 0 || yesterday > 0) && (
-                      <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${trendBg} ${trendColor}`}>
-                        <TrendIcon className="w-3 h-3" />
-                        {diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0'} today
-                      </span>
-                    )}
                   </div>
                   <div className="flex-1 flex flex-col justify-end">
                     <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">

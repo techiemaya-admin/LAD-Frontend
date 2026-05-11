@@ -31,4 +31,4 @@ export function getLeadStageCounts(leads: Lead[]): LeadStageCounts {
     total: leads.length,
     ...counts
   } as LeadStageCounts;
-}
+}

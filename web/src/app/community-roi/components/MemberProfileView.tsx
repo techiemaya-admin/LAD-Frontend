@@ -111,7 +111,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
         const baseURL =
           typeof window !== 'undefined' && window.location.hostname === 'localhost'
             ? `${window.location.origin}/api/community-roi`
-            : `https://lad-backend-develop-160078175457.us-central1.run.app/api/community-roi`
+            : `/api/community-roi`
         const res = await fetch(`${baseURL}/members/${memberId}/stats`, {
           headers: {
             'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     const base = typeof window !== 'undefined' && window.location.hostname === 'localhost'
       ? window.location.origin
-      : 'https://lad-backend-develop-160078175457.us-central1.run.app'
+      : ''
     return { base, token }
   }, [])
 

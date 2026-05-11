@@ -97,4 +97,4 @@ export const getFieldValue = <T = unknown>(obj: Record<string, unknown> | null |
     return obj[snakeCaseField] as T;
   }
   return undefined;
-};
+};

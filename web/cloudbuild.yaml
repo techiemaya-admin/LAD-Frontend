@@ -123,7 +123,7 @@ substitutions:
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-REPLACE_PROJECT_NUMBER.us-central1.run.app'
   _WABA_SERVICE_URL: 'https://lad-waba-comms-REPLACE_PROJECT_NUMBER.us-central1.run.app'
   # Voice playground worker (Vapi/voice-agent — currently using dev environment)
-  _PLAYGROUND_WORKER_URL: 'https://voag-dev-playground-worker-160078175457.asia-south1.run.app'
+  _PLAYGROUND_WORKER_URL: ''
   _PLAYGROUND_TENANT_ID: '926070b5-189b-4682-9279-ea10ca090b84'
   _PLAYGROUND_USER_ID: 'fe9d6368-ff1b-4133-952a-525d60d06cbe'
   _PLAYGROUND_TO_NUMBER: '+15555555555'

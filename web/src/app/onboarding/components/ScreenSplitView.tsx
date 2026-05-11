@@ -21,4 +21,4 @@ export default function ScreenSplitView() {
       </div>
     </div>
   );
-}
+}

@@ -31,8 +31,8 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
           }
         }
       })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => { });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Parse delay values from step title/description if not set
   const parseDelayFromTitle = () => {
@@ -519,16 +519,10 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
           {renderFields()}
         </div>
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
-          >
-            Cancel
-          </button>
+        <div className="px-6 py-4 bg-gray-50 flex justify-end">
           <button
             onClick={handleSave}
-            className={`px-4 py-2 text-sm font-medium text-white ${getStepColor()} hover:opacity-90 rounded-lg transition-all flex items-center gap-2`}
+            className={`px-8 py-2.5 text-sm font-bold text-white ${getStepColor()} hover:opacity-90 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md`}
           >
             <Save className="w-4 h-4" />
             Save Changes
