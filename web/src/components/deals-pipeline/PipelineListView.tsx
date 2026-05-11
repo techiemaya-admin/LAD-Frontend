@@ -884,7 +884,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${cfg.classes}`}>
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full dark:!bg-transparent dark:!border-transparent ${cfg.classes}`}>
                   {cfg.icon}
                 </span>
               </TooltipTrigger>
@@ -1076,7 +1076,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
                   <TableRow key={`skeleton-${rowIndex}`} className="animate-pulse">
                     {visibleColumnKeys.map((column) => (
                       <TableCell key={`${column}-skeleton-${rowIndex}`} className="py-2">
-                        <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded w-full" />
                       </TableCell>
                     ))}
                   </TableRow>

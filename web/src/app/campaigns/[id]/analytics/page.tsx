@@ -184,18 +184,18 @@ export default function CampaignAnalyticsPage() {
         <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-10 w-64 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-8 w-8 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-10 w-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
             </div>
             <div className="flex items-center gap-3 ml-11 flex-wrap">
-              <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-20 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-6 w-16 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-4 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
             </div>
           </div>
           <div className="flex gap-3">
-            <div className="h-10 w-28 bg-gray-200 rounded-xl animate-pulse"></div>
-            <div className="h-10 w-32 bg-gray-200 rounded-xl animate-pulse"></div>
+            <div className="h-10 w-28 bg-gray-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
           </div>
         </div>
 
@@ -204,11 +204,11 @@ export default function CampaignAnalyticsPage() {
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
               <div className="flex justify-between items-start mb-4">
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-10 w-10 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
               </div>
-              <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-8 w-16 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-20 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
             </div>
           ))}
         </div>
@@ -217,20 +217,20 @@ export default function CampaignAnalyticsPage() {
         <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm mb-8">
           <div className="p-4 border-b border-[#E2E8F0]">
             <div className="flex justify-between items-center">
-              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
               <div className="flex gap-2">
-                <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-10 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-10 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
               </div>
             </div>
           </div>
           <div className="p-4">
             {Array.from({ length: 5 }).map((_, index) => (
               <div key={index} className="flex gap-4 py-3 border-b border-gray-100">
-                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-4 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-4 w-20 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
               </div>
             ))}
           </div>
@@ -238,10 +238,10 @@ export default function CampaignAnalyticsPage() {
 
         {/* Skeleton Charts */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-8">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+          <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
           </div>
         </div>
 
@@ -250,15 +250,15 @@ export default function CampaignAnalyticsPage() {
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
               <div className="flex items-center gap-3 mb-6">
-                <div className="h-9 w-9 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-9 w-9 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
                 <div className="flex-1">
-                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-1"></div>
-                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-5 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-1"></div>
+                  <div className="h-3 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 </div>
               </div>
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                  <div key={i} className="h-12 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 ))}
               </div>
             </div>
@@ -415,19 +415,18 @@ export default function CampaignAnalyticsPage() {
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
         <div className="flex-1">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8 text-[#1E293B] dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800">
             <ArrowLeft className="w-6 h-6" />
           </Button>
-          <div className="flex items-center gap-3 mb-3">
-
-            <RadioTower className="w-8 h-8 text-[#1E293B] dark:text-white" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white capitalize">
+          <div className="flex items-center gap-3 mb-3 mt-2">
+            <RadioTower className="w-8 h-8 flex-shrink-0 text-[#1E293B] dark:text-white" />
+            <h1 className="text-2xl sm:text-4xl font-bold leading-none text-[#1E293B] dark:text-white capitalize">
               {analytics.campaign.name}
             </h1>
           </div>
           <div className="flex items-center gap-3 ml-11 flex-wrap">
-            <Badge className="capitalize" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#dbfce7' : '#FEF3C7', color: analytics.campaign.status === 'running' ? 'green' : '#D97706' }}>
-              <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
+            <Badge className={`capitalize dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${analytics.campaign.status === 'running' ? 'dark:!text-emerald-400' : 'dark:!text-amber-300'}`} style={{ backgroundColor: analytics.campaign.status === 'running' ? '#dbfce7' : '#FEF3C7', color: analytics.campaign.status === 'running' ? 'green' : '#D97706' }}>
+              <div className="w-2 h-2 rounded-full mr-2 dark:!hidden" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
               {analytics.campaign.status}
             </Badge>
             <LiveBadge isConnected={isConnected} showOffline className="font-semibold" />
@@ -445,7 +444,7 @@ export default function CampaignAnalyticsPage() {
           <Button
             variant="outline"
             onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
-            className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl"
+            className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl dark:border-slate-500 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800 dark:hover:text-white dark:hover:border-slate-400"
           >
             <SquarePen />
             Edit Campaign
@@ -714,7 +713,7 @@ export default function CampaignAnalyticsPage() {
                     <div
                       key={lead.id}
                       onClick={() => toggleLead(lead.id)}
-                      className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedLeadIds.has(lead.id) ? 'bg-[#0b1957]/5' : ''}`}
+                      className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${selectedLeadIds.has(lead.id) ? 'bg-[#0b1957]/5' : ''}`}
                     >
                       <Checkbox
                         checked={selectedLeadIds.has(lead.id)}
@@ -736,13 +735,13 @@ export default function CampaignAnalyticsPage() {
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0 items-center">
                         {(lead.has_connected || lead.status?.includes('connect')) && (
-                          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">Connected</span>
+                          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">Connected</span>
                         )}
                         {(lead.has_replied || lead.status?.includes('repli')) && (
-                          <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium">Replied</span>
+                          <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-amber-300">Replied</span>
                         )}
                         {(lead.has_sent || lead.status?.includes('sent')) && !lead.has_connected && (
-                          <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium">Sent</span>
+                          <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400">Sent</span>
                         )}
                         {/* Follow-up count badge — increments in real-time via leadProgress */}
                         {(() => {
@@ -880,7 +879,7 @@ export default function CampaignAnalyticsPage() {
                           <p className="text-xs text-[#64748B]">Success Rate</p>
                           <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-slate-200">
+                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-800">
                           <div
                             className="absolute h-1.5 rounded-full"
                             style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}
@@ -956,7 +955,7 @@ export default function CampaignAnalyticsPage() {
                     <p className="text-[#64748B]">{rate.label}</p>
                     <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
-                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80">
+                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800/80">
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
                   </div>
                 </div>

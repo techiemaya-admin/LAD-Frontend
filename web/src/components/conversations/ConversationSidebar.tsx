@@ -24,6 +24,12 @@ import {
   ChevronRight,
   Info,
   Edit3,
+  ArrowDownUp,
+  EyeOff,
+  Eye,
+  Calendar,
+  Hash,
+  AArrowDown,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -42,6 +48,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface ContextStatusOption {
   value: string;
@@ -72,6 +86,13 @@ interface ConversationSidebarProps {
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
   hasMore?: boolean;
+  // ── List shaping (filter + sort) ──────────────────────────────────────
+  /** When true, conversations with no messages yet are hidden from the list. */
+  hideEmpty?: boolean;
+  onHideEmptyChange?: (hide: boolean) => void;
+  /** Active sort order for the conversation list. */
+  sortBy?: 'date' | 'message_count' | 'name';
+  onSortByChange?: (sortBy: 'date' | 'message_count' | 'name') => void;
 }
 
 // LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
@@ -146,6 +167,10 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onLoadMore,
   isLoadingMore = false,
   hasMore = false,
+  hideEmpty = false,
+  onHideEmptyChange,
+  sortBy = 'date',
+  onSortByChange,
 }: ConversationSidebarProps) {
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
@@ -678,6 +703,82 @@ export const ConversationSidebar = memo(function ConversationSidebar({
           </Button>
         </div>
       </div>
+
+      {/* ── Sort + filter toolbar ─────────────────────────────────────────
+           Lightweight controls sitting above the context-status chips so
+           they're always reachable without taking vertical space when not
+           in use. The dropdown closes on selection and the toggle is a
+           single button. Both are no-ops if the parent didn't supply
+           handlers (defensive — keeps the sidebar usable in stories /
+           older callers that haven't adopted the new props yet).
+      */}
+      {(onSortByChange || onHideEmptyChange) && (
+        <div className="px-2 pt-2 pb-1 flex items-center gap-2 border-b border-border">
+          {onSortByChange && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5 flex-shrink-0"
+                  title="Sort conversations"
+                >
+                  <ArrowDownUp className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Sort:</span>
+                  <span className="font-medium">
+                    {sortBy === 'message_count' ? 'Size'
+                      : sortBy === 'name'         ? 'Name'
+                      :                             'Date'}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onSortByChange('date')}
+                  className={cn('text-xs', sortBy === 'date' && 'bg-accent')}
+                >
+                  <Calendar className="h-3.5 w-3.5 mr-2" />
+                  Date (most recent)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onSortByChange('message_count')}
+                  className={cn('text-xs', sortBy === 'message_count' && 'bg-accent')}
+                >
+                  <Hash className="h-3.5 w-3.5 mr-2" />
+                  Size (most messages)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onSortByChange('name')}
+                  className={cn('text-xs', sortBy === 'name' && 'bg-accent')}
+                >
+                  <AArrowDown className="h-3.5 w-3.5 mr-2" />
+                  Name (A → Z)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {onHideEmptyChange && (
+            <Button
+              variant={hideEmpty ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 px-2 text-xs gap-1.5 flex-shrink-0"
+              onClick={() => onHideEmptyChange(!hideEmpty)}
+              title={hideEmpty
+                ? 'Showing only conversations with messages — click to show all'
+                : 'Hide contacts with no messages yet'}
+            >
+              {hideEmpty ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">
+                {hideEmpty ? 'Hiding empty' : 'Hide empty'}
+              </span>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Context Status Filters (tenant-specific) */}
       {contextStatuses.length > 0 && (

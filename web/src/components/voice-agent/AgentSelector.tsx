@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Bot, ChevronRight, Mic, User, Search, X } from 'lucide-react';
+import { Plus, Bot, ChevronRight, Mic, User, Search, X, Sparkles } from 'lucide-react';
 import { Agent, AgentStatus } from '@/types/agent';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ interface AgentSelectorProps {
   agents: Agent[];
   selectedAgentId: string | null;
   onSelectAgent: (agentId: string | null) => void;
+  onOpenPlayground: () => void;
   isLoading?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function AgentSelector({
   agents,
   selectedAgentId,
   onSelectAgent,
+  onOpenPlayground,
   isLoading = false,
 }: AgentSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,7 +58,9 @@ export function AgentSelector({
         <p className="text-sm text-muted-foreground ml-7">Select or create an agent</p>
       </div>
 
-      {/* Search & Action Row */}
+      {/* Merged: develop's compact single search-and-action row, with HEAD's
+          VOAG Playground button kept beside "New Agent" so the feature isn't
+          lost when the create-row got collapsed into the search row. */}
       <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -92,6 +96,15 @@ export function AgentSelector({
         >
           <Plus className="h-4 w-4" />
           <span className="whitespace-nowrap">New Agent</span>
+        </Button>
+        <Button
+          onClick={onOpenPlayground}
+          variant="outline"
+          size="sm"
+          className="justify-start gap-2 h-10 font-medium shrink-0 px-2 sm:px-3 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span className="whitespace-nowrap hidden md:inline">VOAG Playground</span>
         </Button>
       </div>
 

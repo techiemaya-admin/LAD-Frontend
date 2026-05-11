@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Home,
   Phone,
@@ -21,7 +21,8 @@ import {
   GraduationCap,
   MessageSquare,
   Goal,
-  LayoutTemplate
+  LayoutTemplate,
+  Palette,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -35,15 +36,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
-
 type RootState = {
   auth: {
     user: {
       id?: string;
       name?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
       role?: string;
       avatar?: string;
       capabilities?: string[];
+      tenantFeatures?: string[];
     } | null;
   };
   settings: {
@@ -52,6 +56,31 @@ type RootState = {
   };
 };
 
+/**
+ * Build a display name from whatever fields the backend populated.
+ * First-login users frequently have `email` + `firstName` but no `name`.
+ */
+function resolveDisplayName(...candidates: Array<any>): string {
+  for (const c of candidates) {
+    if (!c) continue;
+    // 1. Prefer explicit full name
+    if (typeof c.name === 'string' && c.name.trim()) return c.name.trim();
+    // 2. firstName (+ lastName)
+    const fn = (c.firstName || c.first_name || '').toString().trim();
+    const ln = (c.lastName  || c.last_name  || '').toString().trim();
+    if (fn || ln) return [fn, ln].filter(Boolean).join(' ');
+    // 3. username, then email local-part
+    if (typeof c.username === 'string' && c.username.trim()) return c.username.trim();
+    if (typeof c.email === 'string' && c.email.includes('@')) {
+      const local = c.email.split('@')[0]
+        .replace(/[._-]+/g, ' ')
+        .replace(/\b\w/g, (m: string) => m.toUpperCase())
+        .trim();
+      if (local) return local;
+    }
+  }
+  return 'User';
+}
 type NavItem = {
   href: string;
   label: string;
@@ -61,16 +90,20 @@ type NavItem = {
   requiredFeature?: string; // For feature-flag based access
   children?: Omit<NavItem, 'children'>[];
 };
-
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
-  const { hasFeature } = useAuth();
+  const { hasFeature, user: authUser } = useAuth();
   const { tenant, setTenantById, tenants } = useTenant();
   const { isDark } = useTheme();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const reduxUser = useSelector((state: RootState) => state.auth.user);
+  // Merge the two user sources. AuthContext has the full /api/auth/me payload
+  // (email, firstName, lastName, tenantFeatures, capabilities); Redux user is
+  // populated by the login action and sometimes only has `id` + `name`. Prefer
+  // AuthContext when present and overlay Redux fields as a fallback.
+  const user = useMemo(() => ({ ...(reduxUser || {}), ...(authUser || {}) }), [authUser, reduxUser]);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayName, setDisplayName] = useState("User");
@@ -78,21 +111,19 @@ export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
-
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
-
   // Hydration check
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-  // Update display name when user data changes
+  // Compute display name from whichever fields are populated. Falls back
+  // through name → firstName+lastName → username → email local-part → "User"
+  // so a freshly-logged-in user never sees the literal placeholder "User".
   useEffect(() => {
     if (!isHydrated) return;
-    setDisplayName(user?.name || "User");
-  }, [user, isHydrated]);
-
+    setDisplayName(resolveDisplayName(authUser, reduxUser));
+  }, [authUser, reduxUser, isHydrated]);
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -106,7 +137,6 @@ export function Sidebar() {
     }
     setIsMobileMenuOpen(false);
   };
-
   // Define all possible navigation items with their required capabilities
   const allNavItems: NavItem[] = [
     {
@@ -115,6 +145,7 @@ export function Sidebar() {
       icon: Home,
       details: "See your overall dashboard and metrics.",
       requiredCapability: "view_overview",
+      requiredFeature: "overview",
     },
     {
       href: "/onboarding/advanced-search-ai",
@@ -122,6 +153,7 @@ export function Sidebar() {
       icon: Search,
       details: "AI-powered ICP assistant and workflow setup",
       requiredCapability: "view_ai_assistant",
+      requiredFeature: "ai-chat",
     },
     {
       href: "/campaigns",
@@ -130,6 +162,7 @@ export function Sidebar() {
       details:
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",
+      requiredFeature: "campaigns",
       children: [
         {
           href: "/campaigns/templates",
@@ -137,6 +170,7 @@ export function Sidebar() {
           icon: LayoutTemplate,
           details: "Create and manage email templates for your campaigns.",
           requiredCapability: "view_campaigns",
+          requiredFeature: "campaigns",
         },
       ],
     },
@@ -146,6 +180,7 @@ export function Sidebar() {
       icon: MessageSquare,
       details: "View and manage your social media conversations.",
       requiredCapability: "view_conversations",
+      requiredFeature: "conversations",
     },
     {
       href: "/community-roi",
@@ -153,6 +188,7 @@ export function Sidebar() {
       icon: ChartNoAxesCombined,
       details: "Track and analyze community engagement and ROI metrics.",
       requiredCapability: "view_community_roi",
+      requiredFeature: "community-roi",
     },
     {
       href: "/make-call",
@@ -160,6 +196,7 @@ export function Sidebar() {
       icon: Phone,
       details: "Place outgoing calls using your assigned numbers.",
       requiredCapability: "view_make_call",
+      requiredFeature: "voice-agent",
       children: [
         {
           href: "/call-logs",
@@ -167,6 +204,7 @@ export function Sidebar() {
           icon: ChartNoAxesCombined,
           details: "Review past call history and recordings.",
           requiredCapability: "view_call_logs",
+          requiredFeature: "voice-agent",
         },
       ],
     },
@@ -178,6 +216,7 @@ export function Sidebar() {
         ? "Manage student admissions and counseling."
         : "Manage your sales pipeline and deals.",
       requiredCapability: "view_pipeline",
+      requiredFeature: "deals-pipeline",
     },
     {
       href: "/follow-ups",
@@ -185,36 +224,38 @@ export function Sidebar() {
       icon: GitFork,
       details: "Track and manage your follow-up tasks and reminders.",
       requiredCapability: "view_followups",
+      requiredFeature: "follow-ups",
     },
 
   ];
 
-  // Filter navigation items based on user capabilities (only after hydration)
-  const nav = isHydrated
-    ? allNavItems.filter((item) => {
-        // If user is admin or owner, show all items
-        const isAdminOrOwner = user?.role === "admin" || user?.role === "owner";
-        // Admin/owner sees all items
-        if (isAdminOrOwner && !item.requiredCapability) return true;
-        // If the item doesn't require any specific capability, show it
-        if (!item.requiredCapability) return true;
-        // TEMPORARY: If no capabilities are defined or empty array, show all items
-        // TODO: Implement proper RBAC with capabilities from backend
-        if (
-          !user?.capabilities ||
-          user.capabilities.length === 0 ||
-          (user.capabilities.length === 1 && user.capabilities[0] === null)
-        ) {
-          return true; // Show all items when no capabilities are set
-        }
-        // Check if user has the required capability
-        const hasCapability = user.capabilities.includes(
-          item.requiredCapability,
-        );
-        return hasCapability;
-      })
-    : []; // Show empty nav during SSR to prevent hydration mismatch
+  // Helper: does the user have access to this nav item?
+  // An item is visible when ANY of the following matches:
+  //   • Admin / owner role → always
+  //   • requiredCapability is in user.capabilities[]
+  //   • requiredFeature    is in user.tenantFeatures[] (i.e. hasFeature)
+  // Items without any required* field are public (always shown).
+  const hasNavAccess = (item: NavItem): boolean => {
+    if (!item.requiredCapability && !item.requiredFeature) return true;
+    const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
+    if (isAdminOrOwner) return true;
+    const caps = user?.capabilities || [];
+    const capOk = !!item.requiredCapability && caps.includes(item.requiredCapability);
+    const featOk = !!item.requiredFeature    && hasFeature(item.requiredFeature);
+    return capOk || featOk;
+  };
 
+  // Filter navigation strictly. Previously we showed every item when the
+  // user had no capabilities, which leaked admin-only features (Overview,
+  // Pipeline, Make a Call, …) to fresh accounts on first login. Now an
+  // unassigned user sees an empty sidebar — the right signal to assign
+  // them features in Settings → Team.
+  const nav = isHydrated
+    ? allNavItems.filter(hasNavAccess).map(item => ({
+        ...item,
+        children: item.children?.filter(hasNavAccess),
+      }))
+    : []; // Empty during SSR to prevent hydration mismatch
   return (
     <>
       {/* Mobile Top Bar */}
@@ -241,7 +282,6 @@ export function Sidebar() {
         </div>
         <div className="w-10" />
       </div>
-
       {/* Mobile Drawer */}
       <div
         className={cn(
@@ -272,7 +312,6 @@ export function Sidebar() {
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
         </div>
-
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
           {nav.map((n) => {
             const Icon = n.icon;
@@ -328,7 +367,6 @@ export function Sidebar() {
             );
           })}
         </nav>
-
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
           {/* Tenant Selector */}
@@ -387,7 +425,12 @@ export function Sidebar() {
               <span>Settings</span>
             </NavLink>
             <div className="w-full flex items-center justify-between rounded-xl px-4 py-2 text-sm text-sidebar-foreground">
-              <span>Theme</span>
+              {/* Left side mirrors the Settings/Logout rows: icon + label.
+                  ThemeToggle (right side) is the actual sun/moon control. */}
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                <span>Theme</span>
+              </div>
               <ThemeToggle />
             </div>
             <button
@@ -400,7 +443,6 @@ export function Sidebar() {
           </div>
         </div>
       </div>
-
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div
@@ -408,7 +450,6 @@ export function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
       <aside
         className={cn(
           "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
@@ -442,7 +483,6 @@ export function Sidebar() {
             }}
           />
         </div>
-
         {/* Navigation */}
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
           {nav.map((n) => {
@@ -511,7 +551,6 @@ export function Sidebar() {
                     </span>
                   )}
                 </NavLink>
-
                 {/* Flyout: collapsed → tooltip + children; expanded → children below */}
                 {!isExpanded ? (
                   <div
@@ -592,7 +631,6 @@ export function Sidebar() {
             );
           })}
         </nav>
-
         {/* User Profile Inline Section */}
         <div className="border-t border-sidebar-border mt-auto">
           {/* Avatar / profile row — click to toggle inline panel */}
@@ -689,7 +727,17 @@ export function Sidebar() {
                   isExpanded ? "justify-between w-full" : "justify-center w-10 mx-auto",
                 )}
               >
-                {isExpanded && <span>Theme</span>}
+                {/* Group the leading icon + label together so the layout
+                    mirrors the Settings row above and the Logout row below.
+                    When the sidebar collapses, only the ThemeToggle remains
+                    visible (centered) — the leading Palette icon hides to
+                    avoid two icons in a 40px-wide column. */}
+                {isExpanded && (
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 flex-shrink-0" />
+                    <span>Theme</span>
+                  </div>
+                )}
                 <ThemeToggle />
               </div>
 

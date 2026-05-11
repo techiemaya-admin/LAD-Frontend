@@ -143,12 +143,24 @@ export interface Conversation {
 // API Request/Response Types
 // ============================
 
+/**
+ * Sort modes accepted by the backend's GET /api/conversations endpoint.
+ *  - 'date'           : Last activity, newest first (default — matches WhatsApp).
+ *  - 'message_count'  : Most messages first.
+ *  - 'name'           : Contact name A → Z, unnamed contacts last.
+ */
+export type ConversationSortBy = 'date' | 'message_count' | 'name';
+
 export interface ConversationListFilters {
   status?: ConversationStatus | 'all';
   channel?: Channel | 'all';
   search?: string;
   owner?: ConversationOwner | 'all';
   context_status?: string;
+  /** When true, hide conversations that have no messages yet. */
+  hide_empty?: boolean;
+  /** Server-side sort order. Defaults to 'date' on the backend if omitted. */
+  sort_by?: ConversationSortBy;
   limit?: number;
   offset?: number;
 }
@@ -211,6 +223,12 @@ export interface UseConversationsReturn {
   setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  /** When true, conversations with no messages yet are hidden from the list. */
+  hideEmpty: boolean;
+  setHideEmpty: (hide: boolean) => void;
+  /** Active sort order for the conversation list (server-side). */
+  sortBy: ConversationSortBy;
+  setSortBy: (sortBy: ConversationSortBy) => void;
   unreadCounts: {
     all: number;
     whatsapp: number;

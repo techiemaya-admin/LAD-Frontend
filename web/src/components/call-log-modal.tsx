@@ -765,7 +765,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
       <ScrollArea className="h-full p-4">
         <div className="flex flex-col gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-14 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} className="h-14 rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse" />
           ))}
         </div>
       </ScrollArea>

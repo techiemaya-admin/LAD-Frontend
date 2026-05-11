@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -274,6 +275,9 @@ export default function ProfileSummaryDialog({
             <DialogTitle className="font-bold text-[#1E293B] m-0 truncate">
               {employeeName}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Profile summary for {employeeName}
+            </DialogDescription>
             {employee?.title && (
               <Badge className="mt-1 font-semibold text-xs h-6 max-w-full truncate block w-fit">
                 {employee.title}
