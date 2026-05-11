@@ -648,7 +648,7 @@ export const LinkedInIntegration: React.FC = () => {
               return (
                 <div className={`flex items-center px-3 py-1.5 rounded-full border-2 text-xs sm:text-sm ${
                   statusDisplay.color === 'text-green-600' ? 'bg-green-50 border-green-200' :
-                  statusDisplay.color === 'text-gray-400' ? 'bg-gray-50 border-gray-200' :
+                  statusDisplay.color === 'text-gray-400' ? 'bg-gray-50 dark:bg-slate-800 border-gray-200' :
                   statusDisplay.color === 'text-yellow-600' ? 'bg-yellow-50 border-yellow-200' :
                   statusDisplay.color === 'text-orange-600' ? 'bg-orange-50 border-orange-200' :
                   'bg-red-50 border-red-200'
@@ -683,7 +683,7 @@ export const LinkedInIntegration: React.FC = () => {
                         <p className="font-medium text-gray-900 truncate">{account.accountName || account.profileName || account.email || 'LinkedIn Account'}</p>
                         <div className={`flex items-center px-2 py-1 rounded-md text-xs font-medium w-fit flex-shrink-0 ${
                           accountStatusDisplay.color === 'text-green-600' ? 'bg-green-100 text-green-700' :
-                          accountStatusDisplay.color === 'text-gray-400' ? 'bg-gray-100 text-gray-600' :
+                          accountStatusDisplay.color === 'text-gray-400' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600' :
                           accountStatusDisplay.color === 'text-yellow-600' ? 'bg-yellow-100 text-yellow-700' :
                           accountStatusDisplay.color === 'text-orange-600' ? 'bg-orange-100 text-orange-700' :
                           'bg-red-100 text-red-700'
@@ -978,25 +978,11 @@ export const LinkedInIntegration: React.FC = () => {
                 </div>
               )}
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-8">
-                <button
-                  onClick={() => {
-                    setShowConnectionModal(false);
-                    setEmail('');
-                    setPassword('');
-                    setLiAtCookie('');
-                    setLiACookie('');
-                    setConnectionError(null);
-                    setConnectionSuccess(false);
-                  }}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
+              <div className="mt-8">
                 <button
                   onClick={handleConnect}
                   disabled={connecting || (authMethod === 'credentials' ? !email || !password : !liAtCookie)}
-                  className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
                     connectionSuccess
                       ? 'bg-green-600 text-white hover:bg-green-700'
                       : connectionError
@@ -1158,22 +1144,7 @@ export const LinkedInIntegration: React.FC = () => {
                 </button>
               )}
 
-              {/* Cancel */}
-              <button
-                onClick={() => {
-                  setShowOtpModal(false);
-                  setOtp('');
-                  setOtpError(null);
-                  setShowConnectionModal(false);
-                  if (currentCheckpointAccount?.checkpoint?.is_yes_no && yesNoPolling) {
-                    clearInterval(yesNoPolling);
-                    setYesNoPolling(null);
-                  }
-                }}
-                className="w-full py-3 rounded-full text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
+              {/* Continue button or OTP info only */}
             </div>
 
           </div>

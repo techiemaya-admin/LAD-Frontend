@@ -95,11 +95,12 @@ function formatDate(iso?: string) {
   });
 }
 
+const STATUS_DARK = 'dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:tracking-wide';
 const STATUS_COLORS: Record<string, string> = {
-  Greeting: 'bg-blue-100 text-blue-700',
-  'Info Gathering': 'bg-yellow-100 text-yellow-700',
-  'Slot Finalizing': 'bg-purple-100 text-purple-700',
-  default: 'bg-gray-100 text-gray-600',
+  Greeting: `bg-blue-100 text-blue-700 ${STATUS_DARK} dark:!text-sky-400`,
+  'Info Gathering': `bg-yellow-100 text-yellow-700 ${STATUS_DARK} dark:!text-amber-300`,
+  'Slot Finalizing': `bg-purple-100 text-purple-700 ${STATUS_DARK} dark:!text-sky-400`,
+  default: `bg-gray-100 text-gray-600 ${STATUS_DARK} dark:!text-slate-300`,
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -463,7 +464,7 @@ export default function FollowUpsPage() {
                         const statusColor = STATUS_COLORS[lead.context_status ?? ''] ?? STATUS_COLORS.default;
                         const isLoading = actionLoading[lead.lead_id];
                         return (
-                          <tr key={lead.lead_id} className="hover:bg-gray-50/50 transition-colors">
+                          <tr key={lead.lead_id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors">
                             <td className="py-3.5 pr-4">
                               <div className="font-medium text-gray-900">{name}</div>
                               <div className="text-xs text-gray-400 mt-0.5">{lead.phone_number}</div>

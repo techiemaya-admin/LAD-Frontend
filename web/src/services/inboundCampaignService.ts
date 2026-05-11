@@ -296,4 +296,4 @@ export function hasPlatformData(inboundData: InboundLeadData, platform: string):
     default:
       return false;
   }
-}
+}

@@ -24,7 +24,7 @@ export function getBackendUrl(): string {
     if (publicBackendUrl) {
       return publicBackendUrl;
     }
-    return 'https://lad-backend-develop-160078175457.us-central1.run.app';
+    return '';
   }
 
   // In local development, prefer explicit localhost overrides first.

@@ -12,7 +12,7 @@ export default function LeaderboardPanel() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-64 bg-slate-50 rounded-2xl animate-pulse" />
+        <div className="h-64 bg-slate-50 dark:bg-slate-800 rounded-2xl animate-pulse" />
       </div>
     )
   }

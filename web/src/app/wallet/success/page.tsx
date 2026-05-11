@@ -93,4 +93,4 @@ export default function WalletSuccessPage() {
       <WalletSuccessContent />
     </Suspense>
   );
-}
+}

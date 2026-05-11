@@ -15,7 +15,7 @@ const getCommunityROIBackend = () => {
   }
 
   // Fallback to alternate Cloud Run service
-  return 'https://lad-backend-develop-160078175457.us-central1.run.app';
+  return '';
 };
 
 interface RouteParams {

@@ -500,6 +500,38 @@ export async function revealLeadLinkedIn(
   };
 }
 
+/**
+ * Re-attempt the LinkedIn connect step for a single lead.
+ * Used by the Live Activity Feed "Retry" button when a previous send failed
+ * (rate limit reached, account briefly disconnected, network hiccup).
+ *
+ * Backend clears the in-memory weekly-limit cache before re-running so a
+ * stale cache entry doesn't immediately reject the retry.
+ */
+export interface RetryConnectionResult {
+  success: boolean;
+  isRateLimit: boolean;
+  error: string | null;
+  userAction: string | null;
+  details: {
+    validationError: boolean;
+    missingFields: string[] | null;
+    accountUsed: string | null;
+    strategy: string | null;
+  };
+}
+
+export async function retryConnection(
+  campaignId: string,
+  leadId: string
+): Promise<RetryConnectionResult> {
+  const response = await apiClient.post<RetryConnectionResult>(
+    `/api/campaigns/${campaignId}/leads/${leadId}/retry-connection`,
+    {}
+  );
+  return response.data;
+}
+
 // ====================
 // Inbound Leads Functions
 // ====================

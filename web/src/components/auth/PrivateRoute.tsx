@@ -25,4 +25,4 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   if (!isAuthenticated) return null;
   return <>{children}</>;
 };
-export default PrivateRoute;
+export default PrivateRoute;

@@ -66,4 +66,4 @@ export async function fetchLeadStats(params: Record<string, string | number> = {
     throw new Error(`Failed to fetch lead stats: ${response.status}`);
   }
   return response.json();
-}
+}

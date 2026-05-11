@@ -211,22 +211,16 @@ export default function AIEmailGeneratorQuestionnaire({
         <button
           onClick={handleBack}
           disabled={step === 1}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
         >
           ← Back
         </button>
         <button
-          onClick={onCancel}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-        >
-          Cancel
-        </button>
-        <button
           onClick={handleNext}
           disabled={!isStepValid()}
-          className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
         >
-          {step === 5 ? 'Generate Email' : 'Next →'}
+          {step === 5 ? 'Generate Email Template' : 'Next Step →'}
         </button>
       </div>
     </div>

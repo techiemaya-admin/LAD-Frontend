@@ -40,6 +40,7 @@ export {
   revealLeadEmail,
   revealLeadPhone,
   revealLeadLinkedIn,
+  retryConnection,
   saveInboundLeads,
   getInboundLeads,
   cancelLeadBookingsForReNurturing,
@@ -71,6 +72,7 @@ export type {
   CampaignAnalytics,
   CampaignLead,
 } from './types';
+export type { RetryConnectionResult } from './api';
 // ============================================================================
 // HOOK RETURN TYPES
 // ============================================================================

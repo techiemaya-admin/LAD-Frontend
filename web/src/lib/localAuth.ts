@@ -19,4 +19,4 @@ function getSecret() {
   const key = process.env.LOCAL_JWT_SECRET;
   if (!key) throw new Error('LOCAL_JWT_SECRET is not set');
   return new TextEncoder().encode(key);
-}
+}

@@ -23,6 +23,7 @@ import type {
   Message,
   UseConversationsReturn,
   ConversationListFilters,
+  ConversationSortBy,
   RichMessagePayload,
 } from '../types';
 
@@ -49,14 +50,23 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // List-shaping controls. Defaults preserve previous behaviour: show
+  // everything, sorted by most-recent activity. Both flow through to the
+  // server so pagination and totals respect the user's choice.
+  const [hideEmpty, setHideEmpty] = useState(false);
+  const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
   // Build filters from local state — include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
+  // hide_empty / sort_by are part of the queryKey via spread, so toggling either
+  // triggers a fresh fetch from page 0 instead of mutating already-loaded pages.
   const filters: ConversationQueryOptions = useMemo(() => ({
     backendChannel: hookOptions?.channel,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
-  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
+    hide_empty: hideEmpty || undefined,
+    sort_by: sortBy !== 'date' ? sortBy : undefined,
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy]);
 
   // Infinite query for incremental conversation loading (20 at a time)
   const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
@@ -195,6 +205,10 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    hideEmpty,
+    setHideEmpty,
+    sortBy,
+    setSortBy,
     unreadCounts,
     sendMessage,
     markAsResolved,

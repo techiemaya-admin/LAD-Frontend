@@ -196,4 +196,4 @@ export const getWidgetTypeFromId = (id: string): WidgetType | null => {
 // Generate unique widget id
 export const generateWidgetId = (type: WidgetType): string => {
   return `${type}-${Date.now()}`;
-};
+};

@@ -86,20 +86,16 @@ export function formatDateTimeUnified(
     const year = date.getFullYear();
     if (year < 1900 || year > 2100) return 'Invalid date';
     
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const day = date.getDate();
+    const time = date.toLocaleString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
+      second: showSeconds ? '2-digit' : undefined,
       hour12: true
-    };
+    });
     
-    if (showSeconds) {
-      options.second = '2-digit';
-    }
-    
-    return date.toLocaleString('en-US', options);
+    return `${month} ${day} ${year}, ${time}`;
   } catch (error) {
     return 'Invalid date';
   }

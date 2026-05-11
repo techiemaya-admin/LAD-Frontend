@@ -16,4 +16,4 @@ export async function GET(req: NextRequest) {
       enabled: false 
     }, { status: 200 });
   }
-}
+}

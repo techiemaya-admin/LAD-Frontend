@@ -24,4 +24,4 @@ function Progress({
     </ProgressPrimitive.Root>
   )
 }
-export { Progress }
+export { Progress }

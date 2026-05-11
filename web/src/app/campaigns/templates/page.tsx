@@ -35,35 +35,36 @@ function getHeaderInfo(tpl: WATemplate): { format: string; text?: string } | nul
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const DARK = "dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:tracking-wide";
   switch (status) {
     case 'APPROVED':
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 ${DARK} dark:!text-emerald-400`}>
           <CheckCircle2 className="w-3 h-3" /> Approved
         </span>
       );
     case 'PENDING':
     case 'PENDING_DELETION':
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 ${DARK} dark:!text-amber-300`}>
           <Clock className="w-3 h-3" /> Pending
         </span>
       );
     case 'REJECTED':
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 ${DARK} dark:!text-rose-400`}>
           <XCircle className="w-3 h-3" /> Rejected
         </span>
       );
     case 'PAUSED':
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 ${DARK} dark:!text-amber-300`}>
           <AlertCircle className="w-3 h-3" /> Paused
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 ${DARK} dark:!text-slate-300`}>
           {status}
         </span>
       );
@@ -217,7 +218,7 @@ export default function TemplatesPage() {
                       <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#253456]" />
                       <div className="flex-1 space-y-2">
                         <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-3/4" />
-                        <div className="h-3 bg-gray-100 dark:bg-[#253456] rounded w-1/2" />
+                        <div className="h-3 bg-gray-100 dark:bg-slate-800 dark:bg-[#253456] rounded w-1/2" />
                       </div>
                     </div>
                     <div className="h-3 bg-gray-100 dark:bg-[#253456] rounded w-full mb-2" />
@@ -277,10 +278,10 @@ export default function TemplatesPage() {
 
                     <div className="px-4 py-2.5 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724] flex items-center justify-between">
                       <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold ${
                           template.is_active
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
+                            ? 'bg-green-100 text-green-700 dark:!text-emerald-400'
+                            : 'bg-gray-100 text-gray-500 dark:!text-slate-300'
                         }`}
                       >
                         {template.is_active ? 'Active' : 'Inactive'}
@@ -319,7 +320,7 @@ export default function TemplatesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] rounded-xl p-6 animate-pulse">
-                    <div className="h-16 bg-gray-100 dark:bg-[#253456] rounded-lg mb-4" />
+                    <div className="h-16 bg-gray-100 dark:bg-slate-800 dark:bg-[#253456] rounded-lg mb-4" />
                     <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-3/4 mb-2" />
                     <div className="h-3 bg-gray-100 dark:bg-[#253456] rounded w-full mb-1" />
                     <div className="h-3 bg-gray-100 dark:bg-[#253456] rounded w-2/3" />
