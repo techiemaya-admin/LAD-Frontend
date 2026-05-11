@@ -227,7 +227,7 @@
 //                                   <Users className="h-4 w-4 text-primary" />
 //                                   Twilio Account SID
 //                                 </Label>
-//                                 <Input id="twilio-account-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
+//                                 <Input id="twilio-account-sid" placeholder="Enter Account SID" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
 //                               </motion.div>
 //                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
 //                                 <Label htmlFor="twilio-auth-token" className="flex items-center gap-2 text-sm font-medium">
@@ -569,7 +569,7 @@ export function CreateNumberDialog({ onCreated, existingContacts = [] }: Props) 
                                   <Users className="h-4 w-4 text-primary" />
                                   Twilio Account SID
                                 </Label>
-                                <Input id="twilio-account-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
+                                <Input id="twilio-account-sid" placeholder="Enter Account SID" value={twilioAccountSid} onChange={(e) => setTwilioAccountSid(e.target.value)} className="h-11" />
                               </motion.div>
                               <motion.div className="space-y-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
                                 <Label htmlFor="twilio-auth-token" className="flex items-center gap-2 text-sm font-medium">

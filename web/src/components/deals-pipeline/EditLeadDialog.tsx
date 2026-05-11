@@ -148,7 +148,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 h-auto max-h-[90vh]">
+      <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
@@ -241,6 +241,10 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
+                    {/* Always include Scheduled if it is the current status or needed */}
+                    {!statusOptions.find(opt => String(opt.key).toLowerCase() === 'scheduled') && (
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                    )}
                     {statusOptions
                       .filter((option) => option.key && String(option.key).trim() !== '')
                       .map((statusOption) => (
@@ -307,8 +311,15 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
                     <SelectValue placeholder="Select source..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
+                    <SelectItem value="linkedin">Linkedin</SelectItem>
+                    <SelectItem value="voice_agent">Voice Agent</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
+                    {/* Only show other options if they exist and aren't covered by the main 3 */}
                     {sourceOptions
-                      .filter((option) => option.key && String(option.key).trim() !== '')
+                      .filter((option) => 
+                        option.key && 
+                        !['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact', 'voice_agent', 'website'].includes(String(option.key).toLowerCase())
+                      )
                       .map((source) => (
                         <SelectItem key={source.key} value={String(source.key)}>
                           {source.label}

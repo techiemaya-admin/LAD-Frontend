@@ -86,9 +86,9 @@ export default function EmployeeCard({
   return (
     <Card
       className={`
-        flex-1 bg-white rounded-xl border border-gray-200 shadow-sm
+        flex-1 bg-white dark:bg-[#1a2a43] rounded-xl border border-gray-200 dark:border-[#262831] shadow-sm
         transition-all duration-300 ease-in-out relative
-        hover:shadow-lg hover:border-[#0b1957]
+        hover:shadow-lg hover:border-[#0b1957] dark:hover:border-[#4a6cf7]
         ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
       `}
     >
@@ -107,8 +107,8 @@ export default function EmployeeCard({
             <div className="flex justify-center mb-4 w-full">
               <Avatar className="w-[90px] h-[90px] border-4 shadow-md flex-shrink-0">
                 <AvatarImage src={employee.photo_url} alt={employeeName} />
-                <AvatarFallback className="bg-gray-200">
-                  <User className="w-12 h-12 text-gray-500" />
+                <AvatarFallback className="bg-gray-200 dark:bg-[#253456]">
+                  <User className="w-12 h-12 text-gray-500 dark:text-[#7a8ba3]" />
                 </AvatarFallback>
               </Avatar>
             </div>
@@ -124,14 +124,14 @@ export default function EmployeeCard({
             {employeeViewMode === 'list' && (
               <Avatar className="w-20 h-20 border-3 border-[#0b1957] shadow-lg flex-shrink-0 mb-2">
                 <AvatarImage src={employee.photo_url} alt={employeeName} />
-                <AvatarFallback className="bg-gray-200">
+                <AvatarFallback className="bg-gray-200 dark:bg-[#253456]">
                   <User className="w-10 h-10 text-gray-500" />
                 </AvatarFallback>
               </Avatar>
             )}
             <h3
               className={`
-                font-bold text-[1.05rem] text-[#0b1957] leading-tight w-full
+                font-bold text-[1.05rem] text-[#0b1957] dark:text-white leading-tight w-full
                 ${employeeViewMode === 'grid' ? 'line-clamp-2 break-words' : 'whitespace-nowrap overflow-hidden text-ellipsis'}
               `}
             >
@@ -140,7 +140,7 @@ export default function EmployeeCard({
             {(employee.title || employee.company) && (
               <div
                 className={`
-                  text-sm text-gray-600 w-full min-w-0
+                  text-sm text-gray-600 dark:text-[#7a8ba3] w-full min-w-0
                   ${employeeViewMode === 'grid' ? 'text-center' : 'text-left'}
                 `}
               >
@@ -180,8 +180,8 @@ export default function EmployeeCard({
                 className={`
                   text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
                   ${shouldHideUnlock || phoneRevealed 
-                    ? 'text-[#0b1957] font-semibold select-text' 
-                    : 'text-gray-600 tracking-wide blur-sm select-none'
+                    ? 'text-[#0b1957] dark:text-blue-300 font-semibold select-text' 
+                    : 'text-gray-600 dark:text-gray-400 tracking-wide blur-sm select-none'
                   }
                 `}
               >
@@ -201,7 +201,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={phoneLoading || phoneRevealed}
-                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
+                        className="bg-gray-50 dark:bg-[#253456] border border-gray-200 dark:border-[#262831] hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
                       >
                         {phoneLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
@@ -232,8 +232,8 @@ export default function EmployeeCard({
                 className={`
                   text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
                   ${shouldHideUnlock || emailRevealed 
-                    ? 'text-[#0b1957] font-semibold select-text' 
-                    : 'text-gray-600 tracking-wide blur-sm select-none'
+                    ? 'text-[#0b1957] dark:text-blue-300 font-semibold select-text' 
+                    : 'text-gray-600 dark:text-gray-400 tracking-wide blur-sm select-none'
                   }
                 `}
               >
@@ -253,7 +253,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={emailLoading || emailRevealed}
-                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
+                        className="bg-gray-50 dark:bg-[#253456] border border-gray-200 dark:border-[#262831] hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
                       >
                         {emailLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
@@ -302,7 +302,7 @@ export default function EmployeeCard({
                 </a>
               ) : (
                 <span
-                  className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 tracking-wide blur-sm select-none"
+                  className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400 tracking-wide blur-sm select-none"
                 >
                   linkedin.com/in/...
                 </span>
@@ -321,7 +321,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={linkedinLoading || linkedinRevealed}
-                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0077b5] p-1.5 h-7 w-7 flex-shrink-0"
+                        className="bg-gray-50 dark:bg-[#253456] border border-gray-200 dark:border-[#262831] hover:bg-gray-50 hover:border-[#0077b5] p-1.5 h-7 w-7 flex-shrink-0"
                       >
                         {linkedinLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0077b5] animate-spin" />
@@ -373,8 +373,8 @@ export default function EmployeeCard({
                   ${summaryExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}
                 `}
               >
-                <div className="p-4 bg-[#F8F9FE] rounded-lg border border-[#E2E8F0]">
-                  <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
+                <div className="p-4 bg-[#F8F9FE] dark:bg-[#0d1b3e] rounded-lg border border-[#E2E8F0] dark:border-[#262831]">
+                  <p className="text-sm text-[#475569] dark:text-[#7a8ba3] leading-relaxed whitespace-pre-wrap">
                     {profileSummary}
                   </p>
                 </div>

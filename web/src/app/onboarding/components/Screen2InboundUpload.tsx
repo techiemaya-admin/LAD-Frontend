@@ -278,4 +278,4 @@ export default function Screen2InboundUpload() {
       </div>
     </div>
   );
-}
+}

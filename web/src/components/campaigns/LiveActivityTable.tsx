@@ -469,11 +469,11 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     );
   }
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#1a2a43] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] bg-[#F8FAFC] gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#0d1b3e] gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
-          <h6 className="text-base sm:text-lg font-semibold text-[#1E293B]">
+          <h6 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-white">
             Live Activity Feed
           </h6>
           <LiveBadge isConnected={isConnected} showOffline className="font-semibold animate-pulse text-[10px] sm:text-xs" />
@@ -541,9 +541,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Campaign Workflow Stepper - Display if steps are configured */}
       {workflowSteps.length > 0 && (
-        <div className="px-4 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
-          <p className="text-xs font-semibold text-[#64748B] mb-3 uppercase tracking-wide">Campaign Workflow</p>
-          <div className="bg-white rounded-lg p-4 border border-[#E2E8F0]">
+        <div className="px-4 py-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#0d1b3e]">
+          <p className="text-xs font-semibold text-[#64748B] dark:text-[#7a8ba3] mb-3 uppercase tracking-wide">Campaign Workflow</p>
+          <div className="bg-white dark:bg-[#253456] rounded-lg p-4 border border-[#E2E8F0] dark:border-[#262831]">
             <StatusStepper
               currentStep={
                 groupedLeads.length > 0
@@ -557,36 +557,36 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       )}
 
       {/* Activity Table */}
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full">
           <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
-          <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] shadow-sm">
-            <TableRow className="bg-[#F8FAFC] hover:bg-transparent">
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[110px] sticky top-0 z-40 bg-[#F8FAFC]">
+          <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e] shadow-sm">
+            <TableRow className="bg-[#F8FAFC] dark:bg-[#0d1b3e] hover:bg-transparent">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[110px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e]">
                 <div className="flex items-center gap-1 cursor-pointer select-none">
                   Timestamp
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[140px] sticky top-0 z-40 bg-[#F8FAFC]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[140px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e]">
                 <div className="flex items-center gap-1 cursor-pointer select-none">
                   Lead
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[80px] sticky top-0 z-40 bg-[#F8FAFC]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[80px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e]">
                 <div className="flex items-center gap-1 cursor-pointer select-none">
                   State
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px] sticky top-0 z-40 bg-[#F8FAFC]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[150px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e]">
                 <div className="flex items-center gap-1 cursor-pointer select-none">
                   Details
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[240px] sticky top-0 z-40 bg-[#F8FAFC]">
+              <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap w-[240px] sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#0d1b3e]">
                 <div className="flex items-center gap-1 cursor-pointer select-none">
                   Status
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
@@ -613,7 +613,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
               paginatedLeads?.map((lead, index) => (
                 <TableRow
                   key={lead.leadId || index}
-                  className="hover:bg-gray-50"
+                  className="hover:bg-gray-50 dark:hover:bg-[#253456]"
                 >
                   <TableCell className="w-[110px]">
                     <p className="text-sm text-[#64748B]">
@@ -758,7 +758,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Pagination Controls */}
       {totalLeads > 0 && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#0d1b3e]">
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
             <span>Show</span>
             <select

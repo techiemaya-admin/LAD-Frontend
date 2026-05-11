@@ -473,7 +473,7 @@ export default function CampaignLeadsPage() {
               onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=${tab.key}`)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${filterParams === tab.key
                   ? 'bg-[#0b1957] text-white border-[#0b1957] shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-[#0b1957] hover:text-[#0b1957]'
+                  : 'bg-white dark:bg-[#1a2a43] text-slate-600 dark:text-[#7a8ba3] border-slate-200 dark:border-[#262831] hover:border-[#0b1957] hover:text-[#0b1957]'
                 }`}
             >
               {tab.label}
@@ -486,7 +486,7 @@ export default function CampaignLeadsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
-              className="pl-10 bg-white rounded-xl"
+              className="pl-10 bg-white dark:bg-[#1a2a43] dark:border-[#262831] rounded-xl"
               placeholder="Search leads by name, email, company, or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -193,4 +193,4 @@ export const selectMasterDataErrors = (state: RootState): string[] => {
   if (masterData.prioritiesError) errors.push(`Priorities: ${masterData.prioritiesError}`);
   if (masterData.sourcesError) errors.push(`Sources: ${masterData.sourcesError}`);
   return errors;
-};
+};

@@ -151,4 +151,4 @@ export const selectUsersCacheValid = createSelector(
 export const selectUserById = createSelector(
   [selectUsers, (state: RootState, userId: string) => userId],
   (users, userId): User | null => users.find(u => u.id === userId || u._id === userId) || null
-);
+);

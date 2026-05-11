@@ -221,6 +221,35 @@
     @apply bg-border rounded-full hover:bg-muted-foreground/30;
   }
 
+  /* Global dark mode scrollbar — applies to ALL scrollable elements */
+  .dark *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .dark *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox dark mode scrollbar */
+  .dark * {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-width: thin;
+  }
+
   /* Hide scrollbar completely */
   .hide-scrollbar {
     -ms-overflow-style: none;

@@ -202,7 +202,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div key={index} className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
               <div className="flex justify-between items-start mb-4">
                 <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
                 <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
@@ -214,8 +214,8 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Activity Table */}
-        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm mb-8">
-          <div className="p-4 border-b border-[#E2E8F0]">
+        <div className="bg-white dark:bg-[#1a2a43] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm mb-8">
+          <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
             <div className="flex justify-between items-center">
               <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
               <div className="flex gap-2">
@@ -226,7 +226,7 @@ export default function CampaignAnalyticsPage() {
           </div>
           <div className="p-4">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex gap-4 py-3 border-b border-gray-100">
+              <div key={index} className="flex gap-4 py-3 border-b border-gray-100 dark:border-[#262831]">
                 <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
                 <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
                 <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
@@ -237,7 +237,7 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Charts */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-8">
+        <div className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831] mb-8">
           <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
@@ -248,7 +248,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton 3-Column Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div key={index} className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-9 w-9 bg-gray-200 rounded-full animate-pulse"></div>
                 <div className="flex-1">
@@ -850,8 +850,8 @@ export default function CampaignAnalyticsPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-semibold text-[#1E293B]">{config.name}</p>
-                            <p className="text-xs text-[#64748B]">{item.actions > 0 ? 'Active' : 'Ready'}</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-white">{config.name}</p>
+                            <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">{item.actions > 0 ? 'Active' : 'Ready'}</p>
                           </div>
                         </div>
                       </div>
@@ -859,28 +859,28 @@ export default function CampaignAnalyticsPage() {
                       <div className="grid grid-cols-4 gap-2 mb-3">
                         <div className="text-center">
                           <p className="text-lg font-bold" style={{ color: config.color }}>{item.actions}</p>
-                          <p className="text-xs text-[#64748B]">Actions</p>
+                          <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Actions</p>
                         </div>
                         <div className="text-center">
                           <p className="text-lg font-bold text-green-600">{item.sent}</p>
-                          <p className="text-xs text-[#64748B]">Sent</p>
+                          <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Sent</p>
                         </div>
                         <div className="text-center">
                           <p className="text-lg font-bold text-blue-600">{item.connected}</p>
-                          <p className="text-xs text-[#64748B]">Connected</p>
+                          <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Connected</p>
                         </div>
                         <div className="text-center">
                           <p className="text-lg font-bold text-violet-600">{totalFollowupsSent}</p>
-                          <p className="text-xs text-[#64748B]">Follow-ups</p>
+                          <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Follow-ups</p>
                         </div>
                       </div>
 
                       <div>
                         <div className="flex justify-between mb-1">
-                          <p className="text-xs text-[#64748B]">Success Rate</p>
+                          <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Success Rate</p>
                           <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-slate-200">
+                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
                           <div
                             className="absolute h-1.5 rounded-full"
                             style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}
@@ -896,15 +896,15 @@ export default function CampaignAnalyticsPage() {
         )}
 
 
-        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-[#262831] shadow-sm">
                 <AvatarFallback><BarChart className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h6 className="text-lg font-bold text-[#1E293B]">Outreach Metrics</h6>
-                <p className="text-xs text-[#64748B]">Message tracking</p>
+                <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">Outreach Metrics</h6>
+                <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Message tracking</p>
               </div>
               <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
@@ -922,7 +922,7 @@ export default function CampaignAnalyticsPage() {
                     <Avatar className="w-9 h-9" style={{ backgroundColor: `${metric.color}20` }}>
                       <AvatarFallback><metric.icon className="w-4 h-4" style={{ color: metric.color }} /></AvatarFallback>
                     </Avatar>
-                    <p className="text-[#64748B]">{metric.label}</p>
+                    <p className="text-[#64748B] dark:text-[#7a8ba3]">{metric.label}</p>
                   </div>
                   <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">{metric.value}</h6>
                 </div>
@@ -931,15 +931,15 @@ export default function CampaignAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-[#262831] shadow-sm">
                 <AvatarFallback><Gauge className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h6 className="text-lg font-bold text-[#1E293B]">Performance Rates</h6>
-                <p className="text-xs text-[#64748B]">Success percentages</p>
+                <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">Performance Rates</h6>
+                <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Success percentages</p>
               </div>
               <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
@@ -953,10 +953,10 @@ export default function CampaignAnalyticsPage() {
               ].map((rate) => (
                 <div key={rate.label}>
                   <div className="flex justify-between mb-2">
-                    <p className="text-[#64748B]">{rate.label}</p>
+                    <p className="text-[#64748B] dark:text-[#7a8ba3]">{rate.label}</p>
                     <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
-                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80">
+                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80 dark:bg-slate-700">
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
                   </div>
                 </div>
