@@ -86,7 +86,11 @@ const STATUS_CONFIG: Record<ConnectionStatus, {
     icon:       <CheckCircle className="w-3 h-3" />,
     dotClass:   'bg-amber-400',
     badgeClass: 'bg-amber-50 text-amber-700',
-    bannerText: 'Connection accepted! Chat will be enabled after the automated follow-up is sent.',
+    // Empty — chat is now unlocked immediately on acceptance. Sending any
+    // message records CONTACTED on the backend, which cancels the workflow
+    // scheduler's automated follow-up so there's no duplicate. The
+    // FollowupComposer above the chat still offers AI/template shortcuts.
+    bannerText: '',
   },
   active: {
     label:      'Active',
@@ -444,9 +448,18 @@ export function LinkedInConversationView({
     setMessages(prev => [...prev, tempMsg]);
 
     try {
+      // Pass campaign_id + lead_id when known so the backend can record
+      // CONTACTED in campaign_analytics on a successful send. That marker
+      // cancels the workflow scheduler's automated follow-up so the lead
+      // never gets a duplicate auto-message after the user has already
+      // engaged in chat manually.
       const res  = await fetchWithTenant(li(`${API_BASE}/conversations/${selectedId}/messages`), {
         method: 'POST',
-        body:   JSON.stringify({ content: text }),
+        body:   JSON.stringify({
+          content: text,
+          campaign_id: selectedConv.campaign_id || undefined,
+          lead_id:     selectedConv.lead_id     || undefined,
+        }),
       });
       const json = await res.json();
       if (json.success && json.data) {
