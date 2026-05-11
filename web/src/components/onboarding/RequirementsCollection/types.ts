@@ -35,4 +35,4 @@ export const FIELD_MAPPINGS: Record<string, { label: string; type: 'text' | 'url
   agent_template: { label: 'Voice Agent Template', type: 'text' },
   script: { label: 'Call Script', type: 'textarea' },
   company_name: { label: 'Company Name', type: 'text' },
-};
+};

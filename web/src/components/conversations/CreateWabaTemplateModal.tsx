@@ -323,7 +323,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col gap-0 p-0">
+      <DialogContent className="max-h-[90vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2">
             Create WhatsApp Template

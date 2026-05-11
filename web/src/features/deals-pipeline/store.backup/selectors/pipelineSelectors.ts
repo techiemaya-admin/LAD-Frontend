@@ -419,4 +419,4 @@ export const selectRecentActivity = createSelector(
       })
       .slice(0, 10);
   }
-);
+);

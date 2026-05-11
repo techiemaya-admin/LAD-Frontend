@@ -30,4 +30,4 @@ export async function GET(req: NextRequest) {
     console.error('[/api/metrics] Error:', error.message);
     return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 });
   }
-}
+}

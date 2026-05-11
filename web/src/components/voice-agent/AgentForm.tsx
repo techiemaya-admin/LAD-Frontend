@@ -138,7 +138,6 @@ export function AgentForm({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={onReset}>Reset</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

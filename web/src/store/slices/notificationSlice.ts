@@ -105,4 +105,4 @@ export const {
 export const selectNotifications = (state: { notification: NotificationState }): Notification[] => state.notification.notifications;
 export const selectUnreadCounts = (state: { notification: NotificationState }): Record<string | number, number> => state.notification.unreadCounts;
 export const selectTotalUnread = (state: { notification: NotificationState }): number => state.notification.totalUnread;
-export default notificationSlice.reducer;
+export default notificationSlice.reducer;

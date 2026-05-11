@@ -843,15 +843,15 @@ export function ChatSettings() {
         </div>
 
         {/* Channel tabs */}
-        <div className="border-b border-gray-100 px-6">
-          <div className="flex gap-1 -mb-px">
+        <div className="border-b border-gray-100 px-6 overflow-hidden">
+          <div className="flex overflow-x-auto whitespace-nowrap gap-1 -mb-px no-scrollbar">
             {CHANNELS.map((ch) => (
               <button
                 key={ch.id}
                 onClick={() => setActiveChannel(ch.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                   activeChannel === ch.id
-                    ? 'border-blue-600 text-blue-700'
+                    ? 'border-[#0B1957] text-[#0B1957]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -1002,20 +1002,10 @@ export function ChatSettings() {
                 <button
                   onClick={handleCreatePrompt}
                   disabled={!newPromptName.trim() || !newPromptText.trim() || creatingPrompt}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {creatingPrompt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                  Create
-                </button>
-                <button
-                  onClick={() => {
-                    setShowNewPrompt(false);
-                    setNewPromptName('');
-                    setNewPromptText('');
-                  }}
-                  className="px-4 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
+                  {creatingPrompt ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  Create Prompt
                 </button>
               </div>
             </div>

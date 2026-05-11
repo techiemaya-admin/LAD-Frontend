@@ -41,4 +41,4 @@ export default function SkeletonPage() {
       </div>
     </div>
   );
-}
+}

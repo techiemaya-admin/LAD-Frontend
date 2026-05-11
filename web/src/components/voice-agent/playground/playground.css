@@ -1,0 +1,46 @@
+/* ─────────────────────────────────────────────────────────────────
+   Playground Component Styles - Integrated LAD Theme
+   ───────────────────────────────────────────────────────────────── */
+
+/* 
+   Most styling has been moved to Tailwind CSS directly in Playground.tsx 
+   to ensure consistency with the main LAD application.
+   This file now contains only essential overrides and custom animations.
+*/
+
+.playground-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Custom pulse for the live status dot */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+}
+
+.status-dot-live {
+  animation: status-pulse 2s infinite ease-in-out;
+}
+
+/* Ensure LiveKit components don't bring in conflicting default styles */
+.lk-audio-renderer {
+  display: none;
+}
+
+/* Custom scrollbar for transcript if needed */
+.playground-transcript-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #0b1957 transparent;
+}
+
+.playground-transcript-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.playground-transcript-scroll::-webkit-scrollbar-thumb {
+  background-color: #0b1957;
+  border-radius: 20px;
+}

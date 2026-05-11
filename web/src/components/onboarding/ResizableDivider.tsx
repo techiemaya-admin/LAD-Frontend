@@ -60,4 +60,4 @@ export default function ResizableDivider({
       </div>
     </div>
   );
-}
+}

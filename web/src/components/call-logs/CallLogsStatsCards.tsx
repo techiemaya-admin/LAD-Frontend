@@ -33,11 +33,11 @@ const SkeletonCard = () => (
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 dark:bg-[#253456] rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -150,6 +150,12 @@ export default function CallLogsStatsCards({
         value={stats.total_calls || 0} 
         icon={<BookUser className="w-6 h-6 text-blue-600" />} 
         bgColor="bg-blue-100" 
+        onClick={() => {
+          onStatusChange?.(null);
+          onLeadTagChange?.(null);
+        }}
+        isLeadTag={false}
+        isSelected={!selectedStatus && !selectedLeadTag}
       />
       
       {/* Completed Calls (Ended) */}

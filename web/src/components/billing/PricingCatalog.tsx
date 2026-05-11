@@ -295,4 +295,4 @@ export const PricingCatalog: React.FC = () => {
       </div>
     </div>
   );
-};
+};

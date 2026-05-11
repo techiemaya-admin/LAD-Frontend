@@ -551,9 +551,10 @@ function FooterBlockEditor({ local, set, inputCls, labelCls }: {
 
 // ── Signature block editor ────────────────────────────────────────────────────
 
-function SignatureBlockEditor({ local, set, inputCls, labelCls }: {
+function SignatureBlockEditor({ local, set, onCommit, inputCls, labelCls }: {
   local: Record<string, any>;
   set: (key: string, val: any) => void;
+  onCommit?: (patch: Record<string, any>) => void;
   inputCls: string;
   labelCls: string;
 }) {
@@ -571,7 +572,11 @@ function SignatureBlockEditor({ local, set, inputCls, labelCls }: {
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       const url  = data.url || data.data?.url;
-      if (url) set('logoSrc', url);
+      if (url) {
+        set('logoSrc', url);
+        // Auto-commit so logo is saved without requiring the user to click ✓
+        onCommit?.({ ...local, logoSrc: url });
+      }
     } catch { /* non-fatal */ }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
@@ -670,17 +675,39 @@ function SignatureBlockEditor({ local, set, inputCls, labelCls }: {
 function ImageBlockEditor({
   local,
   set,
+  onCommit,
   inputCls,
   labelCls,
 }: {
   local: Record<string, any>;
   set: (key: string, val: any) => void;
+  /** Called immediately after a successful upload to persist the URL to blocks state without requiring the user to click ✓. */
+  onCommit?: (patch: Record<string, any>) => void;
   inputCls: string;
   labelCls: string;
 }) {
   const fileRef  = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  /** Convert Google Drive share links to direct-embed URLs.
+   *  Handles:
+   *   - https://drive.google.com/file/d/FILE_ID/view?...
+   *   - https://drive.google.com/open?id=FILE_ID
+   *  Returns the URL unchanged if it's not a Drive link. */
+  function toDirectImageUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      if (u.hostname !== 'drive.google.com') return url;
+      // /file/d/FILE_ID/...
+      const fileMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+      if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+      // ?id=FILE_ID
+      const idParam = u.searchParams.get('id');
+      if (idParam) return `https://drive.google.com/uc?export=view&id=${idParam}`;
+    } catch { /* not a valid URL yet — leave as-is */ }
+    return url;
+  }
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -698,8 +725,12 @@ function ImageBlockEditor({
       const data = await res.json();
       const url  = data.url || data.data?.url;
       if (url) {
+        const altText = (!local.alt || local.alt === 'Image') ? file.name.replace(/\.[^.]+$/, '') : local.alt;
         set('src', url);
-        if (!local.alt || local.alt === 'Image') set('alt', file.name.replace(/\.[^.]+$/, ''));
+        set('alt', altText);
+        // Auto-commit: immediately propagate the new src to the parent blocks state
+        // so the image is saved even if the user doesn't click ✓ manually.
+        onCommit?.({ ...local, src: url, alt: altText });
       }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed');
@@ -730,16 +761,19 @@ function ImageBlockEditor({
         {/* Divider */}
         <div className="flex items-center gap-2 my-2">
           <div className="flex-1 border-t border-gray-200" />
-          <span className="text-[11px] text-gray-400 font-medium">or paste URL</span>
+          <span className="text-[11px] text-gray-400 font-medium">or paste URL / Google Drive link</span>
           <div className="flex-1 border-t border-gray-200" />
         </div>
 
-        {/* URL input */}
+        {/* URL input — auto-converts Google Drive share links to direct embed URLs */}
         <input
           type="text"
-          placeholder="https://example.com/image.png"
+          placeholder="https://example.com/image.png  or Google Drive share link"
           value={local.src || ''}
-          onChange={(e) => set('src', e.target.value)}
+          onChange={(e) => {
+            const converted = toDirectImageUrl(e.target.value.trim());
+            set('src', converted);
+          }}
           className={inputCls}
         />
 
@@ -1115,13 +1149,13 @@ function BlockEditor({
 
       {/* Image src + upload + alt + width */}
       {block.type === 'image' && (
-        <ImageBlockEditor local={local} set={set} inputCls={inputCls} labelCls={labelCls} />
+        <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
       )}
 
       {/* Logo — upload + optional link + width */}
       {block.type === 'logo' && (
         <>
-          <ImageBlockEditor local={local} set={set} inputCls={inputCls} labelCls={labelCls} />
+          <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
           <div>
             <label className={labelCls}>Link URL (optional)</label>
             <input type="text" placeholder="https://yoursite.com" value={local.href || ''}
@@ -1218,15 +1252,12 @@ function BlockEditor({
 
       {/* ── Signature editor ── */}
       {block.type === 'signature' && (
-        <SignatureBlockEditor local={local} set={set} inputCls={inputCls} labelCls={labelCls} />
+        <SignatureBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-          <Check className="w-3.5 h-3.5" /> Apply
-        </button>
-        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-          Cancel
+        <button onClick={handleSave} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+          <Check className="w-3.5 h-3.5" /> Apply Changes
         </button>
       </div>
     </div>
@@ -1468,9 +1499,7 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowPalette(false)} className="mt-3 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 mx-auto">
-              <X className="w-3 h-3" /> Cancel
-            </button>
+            {/* Palette closed by clicking outside or re-clicking Add Block */}
           </div>
         )}
       </div>

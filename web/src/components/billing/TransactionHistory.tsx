@@ -80,7 +80,7 @@ export const TransactionHistory: React.FC = () => {
     });
 
   const getTypeColor = (type: string) =>
-    type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    type === 'credit' ? 'bg-green-100 text-green-800 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400' : 'bg-red-100 text-red-800 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-rose-400';
 
   const getTypeIcon = (type: string) =>
     type === 'credit' ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />;
@@ -211,7 +211,7 @@ export const TransactionHistory: React.FC = () => {
                   const creditsBal = getCreditsBalance(transaction);
                   const isAI = isLLMUsage(transaction);
                   return (
-                    <tr key={transaction.id} className="hover:bg-gray-50">
+                    <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {formatDate(transaction.created_at)}
                       </td>
@@ -222,7 +222,7 @@ export const TransactionHistory: React.FC = () => {
                             {transaction.type.toUpperCase()}
                           </span>
                           {isAI && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">
                               <Cpu className="h-3 w-3" />
                               AI
                             </span>

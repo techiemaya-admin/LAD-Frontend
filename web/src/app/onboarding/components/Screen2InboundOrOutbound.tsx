@@ -76,4 +76,4 @@ export default function Screen2InboundOrOutbound() {
       </div>
     </div>
   );
-}
+}

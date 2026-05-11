@@ -10,6 +10,8 @@ import { FormSkeleton } from './FormSkeleton';
 import { SidebarSkeleton } from './SidebarSkeleton';
 import { VoiceLibrary } from './VoiceLibrary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AgentPlaygroundModal } from './AgentPlaygroundModal';
+import { Sparkles } from 'lucide-react';
 
 export function VoiceAgentSettings() {
   const { toast } = useToast();
@@ -21,6 +23,9 @@ export function VoiceAgentSettings() {
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isLoadingAgent, setIsLoadingAgent] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const formRef = useRef<HTMLElement>(null);
 
   const {
@@ -65,6 +70,13 @@ export function VoiceAgentSettings() {
 
         const authData = await authResponse.json();
         logger.debug('[VoiceAgentSettings] User authenticated', { user: authData.user?.email || authData.user?.name });
+        
+        // Capture identity for playground
+        const uId = authData.user?.id || authData.id;
+        const tId = authData.user?.activeTenantId || authData.user?.tenantId || authData.user?.organizationId || authData.organizationId;
+        
+        if (uId) setUserId(uId);
+        if (tId) setTenantId(tId);
 
         // Now fetch agents through proxy
         logger.debug('[VoiceAgentSettings] Fetching agents from proxy');
@@ -395,6 +407,7 @@ export function VoiceAgentSettings() {
                     agents={agents}
                     selectedAgentId={selectedAgentId}
                     onSelectAgent={handleSelectAgent}
+                    onOpenPlayground={() => setIsPlaygroundOpen(true)}
                     isLoading={isLoadingAgents}
                   />
                 )}
@@ -430,6 +443,12 @@ export function VoiceAgentSettings() {
           </TabsContent>
         </Tabs>
       </div>
+      <AgentPlaygroundModal 
+        isOpen={isPlaygroundOpen} 
+        onClose={() => setIsPlaygroundOpen(false)} 
+        userId={userId || undefined}
+        tenantId={tenantId || undefined}
+      />
     </div>
   );
 }

@@ -14,31 +14,52 @@ import { TeamManagement } from '../../components/settings/TeamManagement';
 import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload, MessageSquare } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
+
 type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits';
+
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        await getCurrentUser();
-        setAuthed(true);
-      } catch {
-        setAuthed(false);
-        const redirect = encodeURIComponent('/settings');
-        router.replace(`/login?redirect_url=${redirect}`);
-      }
-    })();
-  }, [router]);
   const dispatch = useDispatch();
+  const { tenant } = useTenant();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  
   const companyName = useSelector((state: any) => state.settings.companyName);
   const companyLogo = useSelector((state: any) => state.settings.companyLogo);
   const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [renewalDate, setRenewalDate] = useState<string>('');
   const [logoError, setLogoError] = useState(false);
+
+  // Redirect if not authenticated and not loading
   useEffect(() => {
-    if (authed !== true) return;
+    if (!isAuthLoading && !user) {
+      const redirect = encodeURIComponent('/settings');
+      router.replace(`/login?redirect_url=${redirect}`);
+    }
+  }, [isAuthLoading, user, router]);
+
+  // Update company name from tenant or user profile
+  useEffect(() => {
+    if (!user) return;
+
+    const sessionName = (tenant?.name && tenant.name !== "Default") 
+      ? tenant.name 
+      : ((user as any)?.company_name || user?.name);
+      
+    if (sessionName && sessionName !== companyName && sessionName !== "Default") {
+      dispatch(setCompanyName(sessionName));
+    }
+  }, [tenant?.name, user, companyName, dispatch]);
+
+  // Source of truth for display: prioritize tenant/user data over Redux if they exist
+  const displayCompanyName = (tenant?.name && tenant.name !== "Default")
+    ? tenant.name
+    : ((user as any)?.company_name || user?.name || (companyName !== "My Organization" ? companyName : ""));
+
+  useEffect(() => {
+    if (!user) return;
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
     const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits'];
@@ -63,15 +84,17 @@ const SettingsPage: React.FC = () => {
       }
     };
     fetchRenewalDate();
-  }, [authed, searchParams]);
-  if (authed === null) {
+  }, [user, searchParams]);
+
+  if (isAuthLoading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0B1957]"></div>
       </div>
     );
   }
-  if (!authed) return <></>;
+
+  if (!user) return null;
   const tabs = [
     { id: 'company' as ActiveTab, label: 'Company', icon: Building2 },
     { id: 'team' as ActiveTab, label: 'Team', icon: Users },
@@ -104,7 +127,7 @@ const SettingsPage: React.FC = () => {
                 )}
               </div>
               <div>
-                <h1 className="text-gray-900 font-semibold text-xl">{companyName}</h1>
+                <h1 className="text-gray-900 font-semibold text-xl">{displayCompanyName}</h1>
                 <p className="text-gray-600 text-sm">
                   Renews on {renewalDate || 'Loading...'}
                 </p>
@@ -125,7 +148,7 @@ const SettingsPage: React.FC = () => {
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                    ? 'bg-white text-blue-700 shadow-md font-semibold'
+                    ? 'bg-white text-[#0B1957] shadow-md font-semibold'
                     : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
                   }`}
               >
@@ -140,7 +163,7 @@ const SettingsPage: React.FC = () => {
       <div className="space-y-6">
         {activeTab === 'company' && (
           <CompanySettings
-            companyName={companyName}
+            companyName={displayCompanyName}
             setCompanyName={(name: string) => dispatch(setCompanyName(name))}
             companyLogo={companyLogo}
             setCompanyLogo={(logo: string) => dispatch(setCompanyLogo(logo))}

@@ -341,4 +341,4 @@ export default function SplitScreenOnboarding() {
       </div>
     </div>
   );
-}
+}

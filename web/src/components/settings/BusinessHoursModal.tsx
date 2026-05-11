@@ -192,7 +192,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 pr-9 text-sm text-gray-800 outline-none focus:border-[#0B1957] focus:ring-2 focus:ring-[#0B1957]/10 transition-all appearance-none cursor-pointer"
+              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 rounded-xl px-3.5 py-2.5 pr-9 text-sm text-gray-800 outline-none focus:border-[#0B1957] focus:ring-2 focus:ring-[#0B1957]/10 transition-all appearance-none cursor-pointer"
             >
               {timezoneOptions.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
