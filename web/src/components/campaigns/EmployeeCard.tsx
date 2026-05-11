@@ -22,6 +22,27 @@ import {
   Linkedin,
   Loader2,
 } from 'lucide-react';
+
+/**
+ * Microsoft Outlook brand glyph (inline SVG so no extra dependency is added).
+ * Used on the "Official email" row to visually distinguish a corporate /
+ * work address from the personal email row above it.
+ *
+ * Path data: Simple Icons v9 (CC0). See simpleicons.org/icons/microsoftoutlook
+ */
+function OutlookIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      fill="currentColor"
+      className={className}
+    >
+      <path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86 0-.45.1-.87.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.31.77.1.43.1.88zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7Q.58 6 1 6h6.5V2.55q0-.44.3-.75.3-.3.75-.3h12.9q.44 0 .75.3.3.3.3.75V10.85l1.24.72h.01q.1.07.18.18.07.12.07.25zm-6-8.25v3h3v-3zm0 4.5v3h3v-3zm0 4.5v1.83l3.05-1.83zm-5.25-9v3h3.75v-3zm0 4.5v3h3.75v-3zm0 4.5v2.03l2.41 1.5 1.34-.8v-2.73zM9 3.75V6h2l.13.01.12.04v-2.3zM5.98 15.98q.9 0 1.6-.3.7-.32 1.19-.86.48-.55.73-1.28.25-.74.25-1.61 0-.83-.25-1.55-.24-.71-.71-1.24t-1.15-.83q-.68-.3-1.55-.3-.92 0-1.64.3-.71.3-1.2.85-.5.54-.75 1.3-.25.74-.25 1.63 0 .85.25 1.56.26.72.74 1.23.48.52 1.17.81.68.3 1.57.3zM7.5 21h12.39L12 16.08V17q0 .41-.3.7-.29.3-.7.3H7.5zm15-.13v-7.24l-5.9 3.54Z" />
+    </svg>
+  );
+}
 interface EmployeeCardProps {
   employee: {
     id?: string;
@@ -206,9 +227,16 @@ export default function EmployeeCard({
           >
             {/* Phone */}
             <div className="flex items-center gap-2 w-full">
-              <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
-                <Phone className="w-4 h-4 text-white" />
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0 cursor-default">
+                      <Phone className="w-4 h-4 text-white" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Phone</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span
                 className={`
                   text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
@@ -258,9 +286,16 @@ export default function EmployeeCard({
             </div>
             {/* Email */}
             <div className="flex items-center gap-2 w-full">
-              <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-4 h-4 text-white" />
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0 cursor-default">
+                      <Mail className="w-4 h-4 text-white" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Personal email</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span
                 className={`
                   text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap
@@ -309,64 +344,81 @@ export default function EmployeeCard({
               )}
             </div>
 
-            {/* Official email — separate row, only when relevant.
-                Already-revealed: show the corporate address.
-                Not yet revealed but plausible: offer the unlock CTA. */}
+            {/* Official email — same visual language as the phone/email rows
+                above: dark-navy mail circle + a compact lock-icon button on
+                the right. Only the icon changes between locked / revealed
+                (lock → check), keeping the row vertically aligned with the
+                others. */}
             {(officialEmailRevealed && displayOfficialEmail) ? (
               <div className="flex items-center gap-2 w-full">
-                <div className="bg-emerald-600 rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-emerald-700 font-semibold select-text">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0 cursor-default">
+                        <OutlookIcon className="w-4 h-4 text-white" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Official email</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[#0b1957] font-semibold select-text">
                   {displayOfficialEmail}
                 </span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="bg-emerald-50 border border-emerald-200 p-1.5 h-7 w-7 flex items-center justify-center rounded-md flex-shrink-0">
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      <div className="bg-gray-50 border border-gray-200 p-1.5 h-7 w-7 flex items-center justify-center rounded-md flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 text-[#0b1957]" />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Official / work email revealed via Fullenrich</p>
+                      <p>Official email revealed</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
             ) : showOfficialEmailRow ? (
               <div className="flex items-center gap-2 w-full">
-                <div className="bg-emerald-600 rounded-full p-1.5 flex items-center justify-center flex-shrink-0 opacity-70">
-                  <Mail className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-xs flex-1 text-gray-500 italic">
-                  Official email locked
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="bg-[#0b1957] rounded-full p-1.5 flex items-center justify-center flex-shrink-0 cursor-default">
+                        <OutlookIcon className="w-4 h-4 text-white" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Official email</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span
+                  className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 tracking-wide blur-sm select-none"
+                >
+                  official@company.com
                 </span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        size="icon"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRevealOfficialEmail?.(employee);
                         }}
                         disabled={officialEmailLoading}
-                        className="h-7 px-2 text-[11px] border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 flex-shrink-0"
+                        className="bg-gray-50 border border-gray-200 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
                       >
                         {officialEmailLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                          <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin" />
                         ) : (
-                          <Lock className="h-3.5 w-3.5 mr-1" />
+                          <Lock className="h-5 w-5 text-[#0b1957]" />
                         )}
-                        {officialEmailLoading ? 'Searching…' : 'Unlock'}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[260px]">
-                      <p className="font-semibold mb-0.5">Find corporate email</p>
+                      <p className="font-semibold mb-0.5">Click to reveal official email</p>
                       <p className="text-xs text-slate-200">
-                        Searches Fullenrich for the lead's work address
-                        {personalDomain ? ` (the current ${personalDomain} address looks personal)` : ''}.
+                        Searches Fullenrich for the lead's corporate address
+                        {personalDomain ? ` (the ${personalDomain} address looks personal)` : ''}.
                         Costs 2 credits on success.
                       </p>
                     </TooltipContent>
