@@ -118,7 +118,7 @@ export function AgentSelector({
             </div>
           ) : (
             filteredAgents.map((agent, index) => {
-              const agentId = agent.id || agent.agent_id;
+              const agentId = agent.id || agent.agent_id || `fallback-agent-${index}`;
               const agentName = agent.name || agent.agent_name || 'Unnamed Agent';
               const isSelected = selectedAgentId === agentId;
               const status = agent.status ? statusConfig[agent.status as AgentStatus] : statusConfig['active'];
@@ -129,7 +129,7 @@ export function AgentSelector({
               return (
                 <button
                   key={agentId}
-                  onClick={() => onSelectAgent(agentId || '')}
+                  onClick={() => onSelectAgent(agentId)}
                   className={cn(
                     "w-full text-left rounded-lg md:rounded-xl transition-all duration-300 border-2",
                     "hover:shadow-lg hover:border-primary/50 hover:scale-[1.01] md:hover:scale-[1.02]",
