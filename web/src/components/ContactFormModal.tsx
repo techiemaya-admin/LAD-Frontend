@@ -143,7 +143,7 @@ const ContactFormModal: React.FC = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0">
-        <DialogHeader>
+        <DialogHeader className="px-8 pt-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
               <MessageSquare className="h-5 w-5" />
@@ -231,7 +231,7 @@ const ContactFormModal: React.FC = () => {
           </form>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button 
             form="contact-form"
             type="submit"
