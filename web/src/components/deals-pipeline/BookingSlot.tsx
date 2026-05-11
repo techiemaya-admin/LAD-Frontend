@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateLead as updateLeadInStore } from '@/features/deals-pipeline/store/slices/leadsSlice';
 import { Calendar, Clock, User, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   isEditMode = false,
   fullWidthButton = false,
 }) => {
+  const dispatch = useDispatch();
   // Get pipeline settings from Redux
   const pipelineSettings = useSelector(selectPipelineSettings);
   const currentUser = useSelector(selectUser);
@@ -218,7 +220,8 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             : booking.booking_date || booking.date || '';
         const startTimeStr = extractHHMM(String(startValue || '')) || extractHHMM(String(booking.startTime || ''));
         const endTimeStr = extractHHMM(String(endValue || '')) || extractHHMM(String(booking.endTime || ''));
-        const status = String(booking.status || '').toLowerCase();
+        const rawStatus = String(booking.status || '').toLowerCase();
+        const status = rawStatus === 'shedule' ? 'scheduled' : rawStatus;
         const bookingTypeValue =
           booking.booking_type ||
           booking.bookingType ||
@@ -296,6 +299,12 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         });
       logger.debug('Final mapped bookings', { count: sortedBookings?.length || 0 });
       setBookedSlots(sortedBookings);
+      
+      // Sync with lead status in store if a scheduled booking exists
+      const hasScheduled = mappedBookings.some(b => b.status === 'scheduled');
+      if (hasScheduled) {
+        dispatch(updateLeadInStore({ id: leadId, data: { status: 'scheduled' } }));
+      }
       setShowAllBookedAppointments(false);
       // Mark slots as booked (only in edit mode when we have time slots)
       if (isEditMode && date) {

@@ -458,7 +458,7 @@ export const TeamManagement: React.FC = () => {
       {/* Add User Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
-          <DialogHeader>
+          <DialogHeader className="px-8 pt-6">
             <DialogTitle>Add Team Member</DialogTitle>
           </DialogHeader>
 
@@ -598,7 +598,7 @@ export const TeamManagement: React.FC = () => {
             </div>
           </div>
 
-          <DialogActions>
+          <DialogActions className="px-8 pb-8 pt-4">
             <Button
               onClick={handleAddUser}
               disabled={loading || !newUser.name || !newUser.email || !newUser.password}
