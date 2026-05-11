@@ -1,27 +1,89 @@
 import React, { useState } from 'react';
-import { Gavel, Plus, Edit2, Trash2, Zap, ChevronDown, X } from 'lucide-react';
+import { Gavel, Plus, Edit2, Trash2, Zap, ChevronDown, X, Loader2, Brain, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Concept } from '../../types/concept';
 import { PricingRule } from '../../types/pricing_rule';
 import { cn } from '../../lib/utils';
+import { toast } from 'sonner';
+import { getApiBaseUrlForLocal } from '@/lib/api-utils';
 
 interface PricingRulesProps {
   pricingRules: PricingRule[];
   concepts: Concept[];
+  tenantId: string;
   requirementConfigs: { id: string; field_key: string; label: string }[];
   onSave: (rule: Partial<PricingRule>) => Promise<void>;
   onDelete: (id: string) => void;
+  afterSave: () => void;
 }
 
 export const PricingRules: React.FC<PricingRulesProps> = ({
   pricingRules,
   concepts,
   requirementConfigs,
+  tenantId,
   onSave,
-  onDelete
+  onDelete,
+  afterSave
 }) => {
   const [editingRule, setEditingRule] = useState<Partial<PricingRule> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[] | null>(null);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<number[]>([]);
+  const handleAddSuggestions = async () => {
+    if (!aiSuggestions) return;
+    setIsSaving(true);
+
+    const toAdd = aiSuggestions.filter((_, i) => selectedSuggestions.includes(i));
+
+    try {
+      for (const suggestion of toAdd) {
+        console.log("Sugegst>> ")
+        console.log(suggestion)
+        const payload = {
+          ...suggestion,
+          tenant_id: tenantId,
+          is_active: true,
+          // If it's a package, explicitly set concept_id to the UUID from the AI
+          concept_id: suggestion.target_type === 'package' ? suggestion.condition_field : null,
+          // If it's a service, your backend uses requirement_config_id column
+          requirement_config_id: suggestion.target_type === 'service' ? suggestion.condition_field : null,
+          // Ensure metadata is a stringified version of the full AI context
+          metadata: { ...suggestion, generated_by: 'Gemini AI' }
+        };
+        console.log(payload)
+        await onSave(payload);
+      }
+      toast.success(`Successfully added ${toAdd.length} concepts`);
+      setAiSuggestions(null);
+      setSelectedSuggestions([]);
+      afterSave();
+      // ... toast and cleanup
+    } catch (error) {
+      toast.error('Failed to save rules');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  const handleAskAi = async (tenantId: string) => {
+    setIsAiLoading(true);
+    console.log("TEN>>  ai sug " + tenantId)
+    try {
+      const suggestions = await fetch(`${getApiBaseUrlForLocal()}/api/ai-response/suggest-pricing-rule/${tenantId}`);
+      const resp = await suggestions.json();
+      console.log("concept sugges>> ")
+      console.log(resp);
+      console.log("Setting suggestions:", resp.suggestions)
+      setAiSuggestions(resp.suggestions);
+      setSelectedSuggestions([]);
+    } catch (error) {
+      console.error('AI Suggestion failed:', error);
+      toast.error('Failed to get AI suggestions');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const getConceptName = (id: string) => {
     return concepts.find(c => c.id === id)?.name || 'Unknown';
@@ -104,6 +166,15 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
             <p className="text-sm text-[#6B7280]">Create smart pricing logic that automatically adjusts based on volume.</p>
           </div>
         </div>
+        <button
+          onClick={() => handleAskAi(tenantId)}
+          disabled={isAiLoading}
+          className="px-4 py-2 bg-slate-900 text-white rounded-xl font-semibold text-xs hover:bg-black transition-colors flex items-center gap-2 disabled:opacity-50"
+        >
+          {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+          Ask AI
+        </button>
+
         <button
           onClick={() => setEditingRule({ is_active: true, priority: pricingRules.length + 1, target_type: 'service' })}
           className="px-4 py-2 bg-[#2563EB] text-white rounded-xl font-semibold text-xs hover:bg-[#1D4ED8] transition-colors flex items-center gap-2"
@@ -205,6 +276,109 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
           ))
         )}
       </div>
+      <AnimatePresence>
+        {aiSuggestions && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <Brain className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-800 text-xl">AI-Suggested Rules</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Based on your services and concepts</p>
+                  </div>
+                </div>
+                <button onClick={() => setAiSuggestions(null)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400"><X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="p-8 overflow-y-auto space-y-4">
+                {aiSuggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (selectedSuggestions.includes(idx)) {
+                        setSelectedSuggestions(selectedSuggestions.filter(s => s !== idx));
+                      } else {
+                        setSelectedSuggestions([...selectedSuggestions, idx]);
+                      }
+                    }}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 transition-all cursor-pointer group",
+                      selectedSuggestions.includes(idx) ? "border-blue-600 bg-blue-50/10" : "border-slate-50 hover:border-slate-200"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-black text-slate-800 uppercase tracking-tight">{suggestion.name}</h4>
+                      <div className={cn(
+                        "w-6 h-6 flex-shrink-0 flex items-center justify-center transition-all duration-200 border-2  !rounded-none",
+                        selectedSuggestions.includes(idx)
+                          ? "bg-blue-600 border-blue-600 shadow-md"
+                          : "bg-white border-slate-200",
+                        "rounded-md !important" // Use !important if a global style is forcing rounded-full
+                      )}>
+                        {selectedSuggestions.includes(idx) && (
+                          <Check className="w-4 h-4 text-white" style={{ strokeWidth: 4 }} />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* <div className="flex items-center gap-2 mb-2">
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded uppercase">IF</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        {suggestion.rule_type === 'package' ?
+                          `Package: ${concepts.find(c => c.id === suggestion.condition_field)?.name || suggestion.condition_field}` :
+                          `${requirementConfigs.find(c => c.field_key === suggestion.condition_field)?.label || suggestion.condition_field} ${suggestion.condition_operator} ${suggestion.condition_value}`}
+                      </span>
+                    </div> */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded uppercase">IF</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        {suggestion.target_type === 'package' ? 'Package: ' : ''}
+                        {suggestion.condition_name} {suggestion.condition_operator} {suggestion.condition_value}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded uppercase">THEN</span>
+                      <span className={cn(
+                        "text-xs font-bold uppercase",
+                        suggestion.action_type === 'discount' ? "text-blue-600" : "text-red-600"
+                      )}>
+                        {suggestion.action_type} {suggestion.action_value}{suggestion.action_mode === 'percentage' ? '%' : '$'} on {suggestion.action_value_type.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
+                <button
+                  onClick={() => setAiSuggestions(null)}
+                  className="flex-1 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-sm hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddSuggestions}
+                  disabled={selectedSuggestions.length === 0 || isSaving}
+                  className="flex-2 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Add {selectedSuggestions.length} Rules
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
 
       {/* Visual Rule Builder Modal */}
       <AnimatePresence>

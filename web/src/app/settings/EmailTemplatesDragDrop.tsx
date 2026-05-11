@@ -15,7 +15,11 @@ import {
   Info,
   Edit2,
   MoreVertical,
-  LayoutTemplate, Pencil, FileText, MessageSquare, RefreshCw, Clock, XCircle, Image, FileIcon, Video
+  LayoutTemplate, Pencil, FileText, MessageSquare, RefreshCw, Clock, XCircle, Image, FileIcon, Video,
+  Brain,
+  Loader2,
+  Sparkles,
+  Check
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,6 +30,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CreateEmailTemplateFlow } from './CreateEmailTemplateFlow';
 import { useRouter } from 'next/navigation';
 import QuotationEmailTemplateEditor, { Template } from './QuotationEmailTemplateEditor';
+import { getApiBaseUrlForLocal } from '@/lib/api-utils';
 
 
 interface EmailTemplatesDragDropProps {
@@ -66,6 +71,106 @@ export const EmailTemplatesDragDrop: React.FC<EmailTemplatesDragDropProps> = ({
   const [isDefault, setIsDefault] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[] | null>(null);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<number[]>([]);
+
+  const handleOpenAiModal = () => {
+    setIsAiModalOpen(true);
+    handleAskAi();
+  };
+
+  const handleAskAi = async () => {
+    setIsAiGenerating(true);
+    setAiSuggestions(null);
+    setSelectedSuggestions([]);
+    try {
+      const suggestions = await fetch(`${getApiBaseUrlForLocal()}/api/ai-response/suggest-email-templates/${tenantId}`);
+      const resp = await suggestions.json();
+      console.log("concept sugges>> ")
+      console.log(resp);
+      console.log("Setting suggestions:", resp.suggestions)
+      setAiSuggestions(resp.suggestions);
+      setSelectedSuggestions([]);
+    } catch (error) {
+      toast.error('Failed to generate email suggestions');
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
+  const handleAddSuggestions = async () => {
+    if (!aiSuggestions) return;
+
+    const toAdd = aiSuggestions.filter((_, i) => selectedSuggestions.includes(i));
+
+    try {
+      for (const suggestion of toAdd) {
+        // FIX: You were calling 'onSave' which doesn't exist in props.
+        // You should call an actual API endpoint or a passed-down handler.
+        console.log("suggestion>> " + JSON.stringify(suggestion))
+        const body = JSON.stringify({
+          ...suggestion,
+          tenant_id: tenantId,
+        });
+        console.log(body)
+        await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: body,
+        });
+      }
+      toast.success(`Successfully added ${toAdd.length} concepts`);
+      setAiSuggestions(null);
+      setSelectedSuggestions([]);
+      // Refresh the list after adding
+      onUpload(tenantId);
+    } catch (error) {
+      toast.error('Failed to save some concepts');
+    }
+  };
+
+  // const handleSave = async (andRedirect = true) => {
+  //   try {
+  //     const url = mode === 'create' ? `${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}` : `${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}/id/${template.id}`;
+  //     const method = mode === 'create' ? 'POST' : 'PUT';
+  //     const body = JSON.stringify({
+  //       name: template.name,
+  //       subject: template.subject,
+  //       body_text: isHtmlMode
+  //         ? (template.body_text || (template.body_html || '').replace(/<[^>]*>/g, '').trim())
+  //         : template.body_text,
+  //       body_html: isHtmlMode ? (template.body_html || null) : null,
+  //       content_format: isHtmlMode ? 'html' : 'plain_text',
+  //       description: template.description,
+  //       is_default: template.is_default,
+  //       media_url: template.media_url || null,
+  //       media_alt_text: template.media_alt_text || null,
+  //     });
+  //     console.log("emaile template body : " + body)
+  //     const res = await fetch(url, {
+  //       method,
+  //       headers: { 'Content-Type': 'application/json' },
+  //       credentials: 'include',
+  //       body: body,
+  //     });
+
+  //     if (!res.ok) {
+  //       const errData = await res.json().catch(() => ({}));
+  //       throw new Error(errData.error || errData.details || `${res.status} ${res.statusText}`);
+  //     } else {
+  //       onSuccess(); // This triggers the modal close and the fetch call in the parent
+  //     }
+
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : 'Unknown error occurred');
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
   return (
     <div className="relative">
       <div className="p-4 pb-3 flex items-center justify-between bg-white border-b border-slate-100">
@@ -74,6 +179,15 @@ export const EmailTemplatesDragDrop: React.FC<EmailTemplatesDragDropProps> = ({
           <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Manage your communication layouts</p>
         </div>
         <div className="flex items-center gap-6">
+          <motion.button
+
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleOpenAiModal}
+            className="px-4 py-4 bg-slate-900 text-white rounded-full font-semibold text-xl hover:bg-black transition-colors flex items-center gap-4 active:scale-95 shadow-sm"
+          >
+            <Brain className="w-4 h-4" /> Ask AI
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -85,8 +199,10 @@ export const EmailTemplatesDragDrop: React.FC<EmailTemplatesDragDropProps> = ({
             </div>
             Create Template
           </motion.button>
+
         </div>
       </div>
+
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template: any) => (
@@ -162,6 +278,177 @@ export const EmailTemplatesDragDrop: React.FC<EmailTemplatesDragDropProps> = ({
           ))}
         </div>
       </div>
+
+
+      {/* Ask AI Email Modal */}
+      <AnimatePresence>
+        {isAiModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[32px] w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-800 text-xl tracking-tight">AI Email Architect</h3>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Crafting elite communication templates</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* {aiSuggestions && !isAiGenerating && (
+                    <button
+                      onClick={handleAskAi}
+                      className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl font-bold text-xs transition-all active:scale-95"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Regenerate
+                    </button>
+                  )} */}
+                  <button
+                    onClick={() => setIsAiModalOpen(false)}
+                    className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#FDFDFF]">
+                {isAiGenerating ? (
+                  <div className="flex flex-col items-center justify-center h-80 text-slate-400 gap-6">
+                    <div className="relative">
+                      <div className="w-20 h-20 border-[6px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin shadow-lg shadow-indigo-500/10"></div>
+                      <Brain className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-black text-slate-800 text-lg mb-1 animate-pulse">Designing Sophisticated Templates</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">Synthesizing requirements, concepts, and pricing rules...</p>
+                    </div>
+                  </div>
+                ) : aiSuggestions ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        {aiSuggestions.length} Curated Blueprints
+                      </p>
+                      <button
+                        onClick={() => {
+                          if (selectedSuggestions.length === aiSuggestions.length) {
+                            setSelectedSuggestions([]);
+                          } else {
+                            setSelectedSuggestions(aiSuggestions.map((_, i) => i));
+                          }
+                        }}
+                        className="text-xs font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        {selectedSuggestions.length === aiSuggestions.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {aiSuggestions.map((suggestion, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          onClick={() => {
+                            if (selectedSuggestions.includes(idx)) {
+                              setSelectedSuggestions(selectedSuggestions.filter(s => s !== idx));
+                            } else {
+                              setSelectedSuggestions([...selectedSuggestions, idx]);
+                            }
+                          }}
+                          className={cn(
+                            "group relative p-8 rounded-[32px] border-2 transition-all cursor-pointer bg-white flex flex-col",
+                            selectedSuggestions.includes(idx)
+                              ? "border-indigo-600 shadow-2xl shadow-indigo-500/10 ring-4 ring-indigo-50"
+                              : "border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-slate-200/50"
+                          )}
+                        >
+                          <div className="flex items-start justify-between mb-6">
+                            <div className="space-y-2 flex-1 mr-4">
+                              <div className="flex items-center gap-2">
+                                <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                  {suggestion.category}
+                                </span>
+                              </div>
+                              <h4 className="font-black text-slate-900 text-lg leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">
+                                {suggestion.name}
+                              </h4>
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <span className="shrink-0 text-[9px] font-black text-slate-300 uppercase tracking-widest border border-slate-100 px-1.5 py-0.5 rounded">Subject</span>
+                                <span className="text-[11px] font-bold text-slate-500 leading-relaxed">
+                                  {suggestion.subject}
+                                </span>
+                              </div>
+                            </div>
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0",
+                              selectedSuggestions.includes(idx)
+                                ? "bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-500/30"
+                                : "border-slate-100 bg-slate-50 text-transparent"
+                            )}>
+                              <Check className="w-5 h-5 text-white stroke-[3px]" />
+                            </div>
+                          </div>
+
+                          <div className="relative flex-1">
+                            <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white opacity-0 group-hover:opacity-10 pointer-events-none" />
+                            <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100/50 italic text-[11px] leading-relaxed text-slate-400 font-medium line-clamp-4 group-hover:line-clamp-none transition-all duration-500">
+                              {suggestion.body_text}
+                            </div>
+                          </div>
+
+
+                          {selectedSuggestions.includes(idx) && (
+                            <div className="mt-4 flex items-center gap-2 text-indigo-600 text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-bottom-2">
+                              <CheckCircle2 className="w-3 h-3" /> Selected for Import
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-80 text-slate-300 gap-4">
+                    <Brain className="w-16 h-16 opacity-10" />
+                    <p className="font-black text-slate-400 uppercase tracking-widest text-xs">Awaiting Architecture Selection</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-white border-t border-slate-50 flex items-center justify-between shrink-0">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setIsAiModalOpen(false)}
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddSuggestions}
+                    disabled={selectedSuggestions.length === 0 || isAiGenerating}
+                    className="min-w-[200px] px-4 py-2 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/30 disabled:opacity-50 disabled:grayscale active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    {isAiGenerating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>Commit {selectedSuggestions.length} Blueprints</>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Action Button */}
 

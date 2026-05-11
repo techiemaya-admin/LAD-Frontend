@@ -923,6 +923,7 @@ const SettingsPage: React.FC = () => {
             {proposalSubTab === 'concepts' && (
               <ConceptManagement
                 concepts={concepts}
+                tenantId={tenantId}
                 requirementConfigs={requirementConfigs}
                 onEdit={(concept) => {
                   setEditingConcept(concept);
@@ -938,6 +939,11 @@ const SettingsPage: React.FC = () => {
                   setSelectedConceptServices([]);
                   setIsConceptModalOpen(true);
                 }}
+                afterSave={() => {
+                  fetchConcepts(tenantId);
+                  setIsConceptModalOpen(false);
+                  setEditingConcept(null);
+                }}
               />
             )}
 
@@ -945,9 +951,15 @@ const SettingsPage: React.FC = () => {
               <PricingRules
                 pricingRules={pricingRules}
                 concepts={concepts}
+                tenantId={tenantId}
                 requirementConfigs={requirementConfigs}
                 onSave={handleSavePricingRule}
                 onDelete={handleDeletePricingRule}
+                
+                afterSave={() => {
+                  fetchPricingRules(tenantId);
+                
+                }}
               />
             )}
             {proposalSubTab === 'email_templates' && (
@@ -961,15 +973,15 @@ const SettingsPage: React.FC = () => {
               // />
               // <QuotationEmailTemplateEditor mode="create" />
               <EmailTemplatesDragDrop
-                      templates={emailTemplates}
-                      placeholders={placeholders}
-                      tenantId={tenantId}
-                      onUpload={() => fetchEmailTemplates(tenantId)}
-                      onSaveDesign={handleSaveEmailTemplateDesign}
-                      onDelete={handleDeleteEmailTemplate}
-                      onPreview={handlePreviewTemplate}
-                      onSetDefault={handleSetDefaultEmailTemplate}
-                    />
+                templates={emailTemplates}
+                placeholders={placeholders}
+                tenantId={tenantId}
+                onUpload={() => fetchEmailTemplates(tenantId)}
+                onSaveDesign={handleSaveEmailTemplateDesign}
+                onDelete={handleDeleteEmailTemplate}
+                onPreview={handlePreviewTemplate}
+                onSetDefault={handleSetDefaultEmailTemplate}
+              />
             )}
             {proposalSubTab === 'quotation-templates' && (
               <QuotationTemplates
