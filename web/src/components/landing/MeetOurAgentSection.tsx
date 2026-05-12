@@ -2,6 +2,7 @@
 
 import { Zap, MessageSquare, TrendingUp } from "lucide-react";
 import { CometCard } from "@/components/ui/comet-card";
+import { useRef } from "react";
 
 interface Agent {
   id: number;
@@ -10,6 +11,83 @@ interface Agent {
   description: string;
   videoSrc: string;
   icon: React.ReactNode;
+}
+
+function AgentCard({ agent, index }: { agent: Agent; index: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.play();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  return (
+    <CometCard key={agent.id} className="relative hover:z-50 transition-all duration-300">
+      <div
+        className="group relative h-full"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          animation: `slideUp 0.6s ease-out ${index * 0.15}s both`,
+        }}
+      >
+        {/* Glow Effect */}
+        <div className="absolute -inset-0.5 bg-primary rounded-3xl blur-lg opacity-0 group-hover:opacity-75 transition duration-300 -z-10" />
+
+        {/* Card */}
+        <div className="bg-background border-2 border-primary/20 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-primary/40 transition-all duration-300 flex flex-col h-full backdrop-blur-sm">
+          {/* Video Container with Colored Border Frame */}
+          <div className="relative h-80 md:h-96 overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center">
+            <video
+              ref={videoRef}
+              loop
+              muted
+              playsInline
+              className="object-contain transition-transform duration-500"
+            >
+              <source src={agent.videoSrc} type="video/mp4" />
+            </video>
+
+            {/* Premium Badge with Animation */}
+            <div className="absolute top-4 right-4 bg-primary rounded-full p-4 text-white shadow-xl hover:shadow-2xl transform transition-all duration-300 border-2 border-white/30">
+              <div className="relative">
+                {agent.icon}
+                <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30" />
+              </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 flex flex-col flex-grow bg-gradient-to-b from-background/80 to-background/60 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-2xl font-bold text-primary">
+                {agent.name}
+              </h3>
+            </div>
+            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3 bg-primary/10 inline-block px-3 py-1 rounded-full w-fit">
+              {agent.role}
+            </p>
+            <p className="text-sm text-muted-foreground flex-grow mb-4 leading-relaxed">
+              {agent.description}
+            </p>
+
+            {/* Action Button with Glow */}
+            <button className="w-full bg-primary hover:shadow-lg hover:shadow-primary/50 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform uppercase text-sm tracking-wide border border-white/20">
+              Unlock Agent
+            </button>
+          </div>
+        </div>
+      </div>
+    </CometCard>
+  );
 }
 
 export default function MeetOurAgentSection() {
@@ -41,6 +119,33 @@ export default function MeetOurAgentSection() {
       videoSrc: "/agent-luna.mp4",
       icon: <TrendingUp className="w-5 h-5" />,
     },
+    {
+      id: 4,
+      name: "Max",
+      role: "Growth Agent",
+      description:
+        "Specializes in rapid scaling and market penetration. Analyzes growth loops and optimizes conversion funnels to maximize your business reach.",
+      videoSrc: "/agent-max.mp4",
+      icon: <Zap className="w-5 h-5" />,
+    },
+    {
+      id: 5,
+      name: "Ava",
+      role: "Marketing Agent",
+      description:
+        "Crafts compelling narratives and data-driven marketing strategies. Optimizes ad spend and enhances brand visibility across all digital touchpoints.",
+      videoSrc: "/agent-ava.mp4",
+      icon: <MessageSquare className="w-5 h-5" />,
+    },
+    {
+      id: 6,
+      name: "Emma",
+      role: "Operations Agent",
+      description:
+        "Streamlines internal workflows and automates repetitive tasks. Ensures your business runs like a well-oiled machine with intelligent process management.",
+      videoSrc: "/agent-Emma.mp4",
+      icon: <TrendingUp className="w-5 h-5" />,
+    },
   ];
 
   return (
@@ -61,70 +166,9 @@ export default function MeetOurAgentSection() {
         </div>
 
         {/* Agents Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
           {agents.map((agent, index) => (
-            <CometCard key={agent.id}>
-              <div
-                className="group relative"
-                style={{
-                  animation: `slideUp 0.6s ease-out ${index * 0.15}s both`,
-                }}
-              >
-              {/* Glow Effect */}
-              <div className="absolute -inset-0.5 bg-primary rounded-3xl blur-lg opacity-0 group-hover:opacity-75 transition duration-300 -z-10" />
-
-              {/* Card */}
-              <div className="bg-background border-2 border-primary/20 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-primary/40 transition-all duration-300 hover:scale-105 flex flex-col h-full backdrop-blur-sm">
-                {/* Video Container with Colored Border Frame */}
-                <div className="relative h-80 md:h-96 overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center">
-                  {/* Colored Border Frame - Top and Left Accent */}
-      
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="object-contain group-hover:scale-105 transition-transform duration-500"
-                  >
-                    <source src={agent.videoSrc} type="video/mp4" />
-                  </video>
-
-                  {/* Premium Badge with Animation */}
-                  <div className="absolute top-4 right-4 bg-primary rounded-full p-4 text-white shadow-xl hover:shadow-2xl transform group-hover:scale-125 transition-all duration-300 border-2 border-white/30">
-                    <div className="relative">
-                      {agent.icon}
-                      <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30" />
-                    </div>
-                  </div>
-
-                  {/* Level Badge */}
-                  <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
-                    <span className="text-xs font-bold text-white">LEVEL {agent.id}</span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6 flex flex-col flex-grow bg-gradient-to-b from-background/80 to-background/60 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-2xl font-bold text-primary">
-                      {agent.name}
-                    </h3>
-                  </div>
-                  <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3 bg-primary/10 inline-block px-3 py-1 rounded-full w-fit">
-                    {agent.role}
-                  </p>
-                  <p className="text-sm text-muted-foreground flex-grow mb-4 leading-relaxed">
-                    {agent.description}
-                  </p>
-
-                  {/* Action Button with Glow */}
-                  <button className="w-full bg-primary hover:shadow-lg hover:shadow-primary/50 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 uppercase text-sm tracking-wide border border-white/20">
-                    Unlock Agent
-                  </button>
-                </div>
-              </div>
-              </div>
-            </CometCard>
+            <AgentCard key={agent.id} agent={agent} index={index} />
           ))}
         </div>
 
