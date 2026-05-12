@@ -18,11 +18,11 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
       <Link
         ref={ref}
         href={href}
-        className={cn(className, isActive && activeClassName)}
+        className={cn("active:scale-95 select-none transition-transform", className, isActive && activeClassName)}
         {...props}
       />
     );
   },
 );
 NavLink.displayName = "NavLink";
-export { NavLink };
+export { NavLink };

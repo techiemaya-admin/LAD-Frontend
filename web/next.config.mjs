@@ -6,10 +6,6 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Increase body size limit for large file attachments (images, PDFs, videos)
-  // Default is 10MB — personal WhatsApp attachments exceed this limit
-  middlewareClientMaxBodySize: '50mb',
-
   // ✅ REQUIRED when importing ../sdk
   experimental: {
     externalDir: true,
@@ -81,8 +77,7 @@ const nextConfig = {
   // settings page upon success.
   async rewrites() {
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL ||
-      'https://lad-backend-develop-160078175457.us-central1.run.app';
+      process.env.NEXT_PUBLIC_BACKEND_URL || '';
     return [
       {
         source: '/api/social-integration/email/google/callback',
@@ -169,18 +164,7 @@ const nextConfig = {
     ],
   },
 
-  // Removed hardcoded env overrides - rely on .env.local instead
-  // This allows local development to use localhost URLs from .env.local
-  // env: {
-  //   NEXT_PUBLIC_API_BASE:
-  //     process.env.NEXT_PUBLIC_API_BASE || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_BACKEND_URL:
-  //     process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_API_URL:
-  //     process.env.NEXT_PUBLIC_API_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_SOCKET_URL:
-  //     process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  // },
+  // Environment variables are handled via .env files and process.env
 };
 
 export default nextConfig;

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { safeStorage } from '@lad/shared/storage';  
-import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -588,7 +588,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
   };
   const resolveAttachmentNameAndUrl = (raw: any): { filename: string; url: string } => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
     const filename =
       raw?.file_name ||
       raw?.filename ||
@@ -960,7 +960,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       case 'blocked': return '#EF4444';
       case 'inactive': return '#64748B';
       case 'new': return '#3B82F6';
-      case 'completed': return '#059669';
+      case 'completed': 
+      case 'success': return '#059669';
+      case 'scheduled': return '#3B82F6';
       default: return '#64748B';
     }
   };
@@ -977,7 +979,9 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       case 'pending': return <Flag className={iconClass} />;
       case 'inactive': return <Ban className={iconClass} />;
       case 'new': return <Sparkles className={iconClass} />;
-      case 'completed': return <CheckCheck className={iconClass} />;
+      case 'completed':
+      case 'success': return <CheckCheck className={iconClass} />;
+      case 'scheduled': return <Calendar className={iconClass} />;
       default: return <Flag className={iconClass} />;
     }
   };
@@ -1048,15 +1052,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Lead Information Section */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base font-semibold mb-4 text-gray-900">
+            <div className="p-4 bg-gray-50 dark:bg-[#253456] rounded-lg">
+              <h3 className="text-base font-semibold mb-4 text-gray-900 dark:text-white">
                 Lead Information
               </h3>
               <div className="flex flex-col gap-4">
                 {globalEditingOverview ? (
                   <>
                     <div className="relative">
-                      <Label htmlFor="email" className="text-sm text-gray-600 mb-1 block">Email</Label>
+                      <Label htmlFor="email" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Email</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1069,7 +1073,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div className="relative">
-                      <Label htmlFor="phone" className="text-sm text-gray-600 mb-1 block">Phone</Label>
+                      <Label htmlFor="phone" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Phone</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1082,7 +1086,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div className="relative">
-                      <Label htmlFor="company" className="text-sm text-gray-600 mb-1 block">Company</Label>
+                      <Label htmlFor="company" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Company</Label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1094,7 +1098,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="assignee" className="text-sm text-gray-600 mb-1 block">Assignee</Label>
+                      <Label htmlFor="assignee" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Assignee</Label>
                       <Select
                         value={globalEditFormData.assignee || 'unassigned'}
                         onValueChange={(value: string) => handleFormFieldChange('assignee', value === 'unassigned' ? '' : value)}
@@ -1117,7 +1121,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="source" className="text-sm text-gray-600 mb-1 block">Source</Label>
+                      <Label htmlFor="source" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Source</Label>
                       <Select
                         value={globalEditFormData.source || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('source', value)}
@@ -1142,7 +1146,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     <div className="group flex items-center gap-2 min-w-0">
                       <Mail className="h-4 w-4 text-gray-500 shrink-0" />
                       <span
-                        className="text-gray-900 truncate flex-1 min-w-0"
+                        className="text-gray-900 dark:text-white truncate flex-1 min-w-0"
                         title={typeof lead.email === 'string' ? lead.email : ''}
                       >
                         {typeof lead.email === 'string' ? lead.email : '-'}
@@ -1174,12 +1178,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">{String(lead.phone) || '-'}</span>
+                      <Phone className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <span className="text-gray-900 dark:text-white">{String(lead.phone) || '-'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
+                      <Building2 className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <span className="text-gray-900 dark:text-white">
                         {normalizeDisplayValue(
                           (
                             lead.company ??
@@ -1201,8 +1205,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       ''
                     ) && (
                       <div className="flex items-center gap-2">
-                        <UserStar className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-900">
+                        <UserStar className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                        <span className="text-gray-900 dark:text-white">
                           {normalizeDisplayValue(
                             (
                               (lead as any).title ??
@@ -1214,30 +1218,50 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <UserCircle className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
+                      <UserCircle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <span className="text-gray-900 dark:text-white">
                         {getAssigneeName((lead.assignee || lead.assigned_to_id) as string | number | null | undefined)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* <AlertTriangle className="h-4 w-4 text-gray-500" /> */}
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" /> */}
                       {(() => {
                         const sourceKey = String((lead as any)?.source || '').toLowerCase();
-                        const sourceLabel = getOptionLabel(sourceOptions, String((lead as any)?.source) || undefined) || '';
-                        const displayLabel = sourceLabel || (sourceKey ? sourceKey : 'No source');
-                        const isLinkedin = sourceKey === 'linkedin' || displayLabel.toLowerCase() === 'linkedin';
+                        
+                        // Map sources based on requirements
+                        const isVoiceAgent = sourceKey === 'voice_agent';
+                        const isWebsite = sourceKey === 'website';
+                        const isLinkedin = 
+                          sourceKey.includes('linkedin') || 
+                          sourceKey === 'inbound_upload' || 
+                          sourceKey === 'direct_contact' ||
+                          sourceKey === 'linkedin';
+                        
+                        let label = 'No source';
+                        let icon = null;
+                        let className = 'inline-flex items-center gap-2 rounded-full bg-gray-50 dark:bg-[#253456] text-gray-700 dark:text-white border border-gray-200 dark:border-[#262831] px-3 py-1 text-xs font-medium';
+                        
+                        if (isLinkedin) {
+                          label = 'Linkedin';
+                          icon = <Linkedin className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-medium';
+                        } else if (isVoiceAgent) {
+                          label = 'Voice Agent';
+                          icon = <Phone className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-violet-50 text-violet-700 border border-violet-200 px-3 py-1 text-xs font-medium';
+                        } else if (isWebsite) {
+                          label = 'Website';
+                          icon = <Globe className="h-4 w-4" />;
+                          className = 'inline-flex items-center gap-2 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 text-xs font-medium';
+                        } else if (sourceKey && sourceKey !== 'unknown') {
+                          label = sourceKey.charAt(0).toUpperCase() + sourceKey.slice(1);
+                        }
 
                         return (
-                          <span className="text-gray-900">
-                            <span
-                              className={
-                                isLinkedin
-                                  ? 'inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-medium'
-                                  : 'inline-flex items-center gap-2 rounded-full bg-gray-50 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium'
-                              }
-                            >
-                              {isLinkedin && <Linkedin className="h-4 w-4" />}
-                              {isLinkedin ? 'LinkedIn' : displayLabel}
+                          <span className="text-gray-900 dark:text-white">
+                            <span className={className}>
+                              {icon}
+                              {label}
                             </span>
                           </span>
                         );
@@ -1248,15 +1272,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </div>
             </div>
             {/* Pipeline & Deal Information Section */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-base font-semibold mb-4 text-gray-900">
+            <div className="p-4 bg-gray-50 dark:bg-[#253456] rounded-lg">
+              <h3 className="text-base font-semibold mb-4 text-gray-900 dark:text-white">
                 Pipeline & Deal Information
               </h3>
               <div className="flex flex-col gap-4">
                 {globalEditingOverview ? (
                   <>
                     <div>
-                      <Label htmlFor="status" className="text-sm text-gray-600 mb-1 block">Status</Label>
+                      <Label htmlFor="status" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Status</Label>
                       <Select
                         value={globalEditFormData.status || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('status', value)}
@@ -1276,7 +1300,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="priority" className="text-sm text-gray-600 mb-1 block">Priority</Label>
+                      <Label htmlFor="priority" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Priority</Label>
                       <Select
                         value={globalEditFormData.priority || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('priority', value)}
@@ -1296,7 +1320,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="stage" className="text-sm text-gray-600 mb-1 block">Stage</Label>
+                      <Label htmlFor="stage" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Stage</Label>
                       <Select
                         value={globalEditFormData.stage || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('stage', value)}
@@ -1317,7 +1341,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </div>
 
                     {/* <div className="relative">
-                      <Label htmlFor="expectedCloseDate" className="text-sm text-gray-600 mb-1 block">Expected Close Date</Label>
+                      <Label htmlFor="expectedCloseDate" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Expected Close Date</Label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
                         <Input
@@ -1334,19 +1358,19 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   <>
                     <div className="flex items-center gap-2">
                       {getStatusIcon(lead.status)}
-                      <span className="text-gray-900">
+                      <span className="text-gray-900 dark:text-white">
                         {getOptionLabel(statusOptions, lead.status) || 'No status'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* <AlertTriangle className="h-4 w-4 text-gray-500" /> */}
-                      <span className="text-gray-900">
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" /> */}
+                      <span className="text-gray-900 dark:text-white">
                         {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FolderTree className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-900">
+                      <FolderTree className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <span className="text-gray-900 dark:text-white">
                         {getOptionLabel(stageOptions, lead.stage) || lead.stage || 'No stage'}
                       </span>
                     </div>
@@ -1371,6 +1395,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={true}
+                    fullWidthButton={true}
                   />
                 ) : (
                   <BookingSlot 
@@ -1381,6 +1406,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     createdBy={createdBy || undefined}
                     users={users}
                     isEditMode={false}
+                    fullWidthButton={true}
                   />
                 )}
               </div>
@@ -1451,7 +1477,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </Badge>
                   ))}
                   {allTags.length === 0 && (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-gray-500 dark:text-[#7a8ba3] italic">
                       No tags assigned
                     </p>
                   )}
@@ -1469,25 +1495,25 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         <div className="flex flex-col gap-4">
           {notesLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500">Loading notes...</p>
+              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading notes...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {notes.length === 0 ? (
-                <div className="text-center py-6 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">
+                <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
                     No notes yet.
                   </p>
                 </div>
               ) : (
                 notes.map((note) => (
-                  <div key={note.id} className="bg-white rounded-lg border border-gray-100 p-3 shadow-sm">
+                  <div key={note.id} className="bg-white dark:bg-[#253456] rounded-lg border border-gray-100 dark:border-[#262831] p-3 shadow-sm">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {note.user_name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-[#7a8ba3]">
                           {formatDateTimeUnified(note.created_at)}
                         </p>
                       </div>
@@ -1499,7 +1525,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleEditNote(note)}
                             className="h-7 w-7 text-gray-500 hover:text-blue-500"
                           >
-                            ✏️
+                            âœï¸
                           </Button>
                         )}
                         {canUserModify(note.user_id) && (
@@ -1509,7 +1535,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('note', note.id, note.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            🗑️
+                            ðŸ—‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1542,7 +1568,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-800">
+                        <p className="text-sm text-gray-800 dark:text-white">
                           {note.content}
                         </p>
                       )}
@@ -1560,8 +1586,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       index: 2,
       content: (
         <div className="flex flex-col gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <Label htmlFor="new-comment" className="text-sm font-medium text-gray-700">
+          <div className="bg-gray-50 dark:bg-[#253456] rounded-lg p-4">
+            <Label htmlFor="new-comment" className="text-sm font-medium text-gray-700 dark:text-[#7a8ba3]">
               Add a public comment
             </Label>
             <Textarea
@@ -1584,25 +1610,25 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
           {commentsLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500">Loading comments...</p>
+              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading comments...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {comments.length === 0 ? (
-                <div className="text-center py-6 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">
+                <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
                     No comments yet. Add your first comment above.
                   </p>
                 </div>
               ) : (
                 comments.map((comment) => (
-                  <div key={comment.id} className="bg-white rounded-lg border border-gray-100 p-3 shadow-sm">
+                  <div key={comment.id} className="bg-white dark:bg-[#253456] rounded-lg border border-gray-100 dark:border-[#262831] p-3 shadow-sm">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {comment.user_name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-[#7a8ba3]">
                           {formatDateTimeUnified(comment.created_at)}
                         </p>
                       </div>
@@ -1614,7 +1640,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleEditComment(comment)}
                             className="h-7 w-7 text-gray-500 hover:text-blue-500"
                           >
-                            ✏️
+                            âœï¸
                           </Button>
                         )}
                         {canUserModify(comment.user_id) && (
@@ -1624,7 +1650,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('comment', comment.id, comment.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            🗑️
+                            ðŸ—‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1657,7 +1683,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-800">
+                        <p className="text-sm text-gray-800 dark:text-white">
                           {comment.text || comment.content}
                         </p>
                       )}
@@ -1694,13 +1720,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
           {attachmentsLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500">Loading attachments...</p>
+              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading attachments...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {attachments.length === 0 ? (
-                <div className="text-center py-6 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">
+                <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
                     No attachments yet. Upload your first file above.
                   </p>
                 </div>
@@ -1719,10 +1745,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   return (
                     <div
                       key={attachmentKey}
-                      className="max-w-[458px] rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between gap-3"
+                      className="max-w-[458px] rounded-lg border border-gray-200 dark:border-[#262831] bg-white dark:bg-[#253456] p-4 flex items-center justify-between gap-3"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{filename}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{filename}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Button
@@ -1760,11 +1786,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       open={isDetailsOpen} 
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
-      <DialogContent className="flex flex-col max-h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
-        <DialogTitle className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200">
+
+      <DialogContent className="flex flex-col p-0 overflow-hidden sm:h-[90vh] sm:max-w-5xl bg-white dark:bg-[#000724]">
+        <DialogHeader className="p-6 pb-4 border-b border-gray-200 dark:border-[#262831] sticky top-0 bg-white dark:bg-[#000724] z-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-10 w-10">
                 {lead.avatar ? (
                   <img src={lead.avatar} alt={getLeadDisplayName(lead) || 'Lead avatar'} className="h-full w-full object-cover rounded-full" />
                 ) : (
@@ -1773,10 +1800,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </span>
                 )}
               </Avatar>
-              <div>
-                <p className="text-base font-semibold text-gray-900">{getLeadDisplayName(lead)}</p>
+              <div className="flex-1">
+                <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">{getLeadDisplayName(lead)}</DialogTitle>
                 {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
-                  <p className="text-sm text-gray-500">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
+                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
                 )}
               </div>
             </div>
@@ -1787,12 +1814,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 e.stopPropagation();
                 handleClose();
               }}
-              className="text-gray-500 hover:text-gray-900"
+              className="text-gray-500 dark:text-[#7a8ba3] hover:text-gray-900 dark:hover:text-white"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </DialogTitle>
+        </DialogHeader>
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="w-full">
             <Tabs 
@@ -1800,13 +1827,14 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               onValueChange={(value) => dispatch(setLeadCardActiveTab(parseInt(value, 10)))}
               className="flex flex-col"
             >
-              <div className="border-b border-gray-200 px-6 sticky top-0 bg-white z-10">
-                <TabsList className="flex gap-2">
+              <div className="border-b border-gray-200 dark:border-[#262831] px-6 sticky top-0 bg-white dark:bg-[#000724] z-10">
+                <TabsList className="flex w-full justify-around bg-gray-50/50 dark:bg-[#1a2a43] p-1 rounded-xl">
+
                   {tabs.map((tab) => (
                     <TabsTrigger 
                       key={tab.index}
                       value={String(tab.index)}
-                      className="px-3 py-1 text-sm"
+                      className="px-8 text-sm font-medium py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1825,18 +1853,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </Tabs>
           </div>
         </div>
-        <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0 bg-white mb-2">
+
+        <DialogActions className="px-8 pb-8 pt-4 bg-white dark:bg-[#000724]">
+
           {globalActiveTab === 0 && (
             globalEditingOverview ? (
-              <div className="flex gap-2 ml-auto">
-                <Button
-                  onClick={handleCancelEdit}
-                  disabled={isLoading}
-                  variant="outline"
-                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
+              <>
                 <Button
                   onClick={(e) => {
                     e.preventDefault();
@@ -1848,21 +1870,21 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     handleSaveEdit();
                   }}
                   disabled={isLoading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
                 >
                   {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
-              </div>
+              </>
             ) : (
               <Button
                 onClick={handleStartEdit}
-                className="ml-auto bg-primary hover:bg-primary/80 text-white"
+                className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
               >
                 Edit Lead
               </Button>
             )
           )}
-        </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );
@@ -1884,7 +1906,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       role="presentation"
     >
       <div
-        className={`relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition ${
+        className={`relative rounded-2xl border border-gray-100 dark:border-[#262831] bg-white dark:bg-[#1a2a43] p-4 shadow-sm transition ${
           isDragging ? 'opacity-50 cursor-grabbing' : 'hover:shadow-md'
         }`}
         // Enable pointer events on card for clicks
@@ -1899,7 +1921,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           <button
             type="button"
             data-ignore-card-click
-            className="drag-handle text-gray-400 hover:text-gray-600 mt-1 cursor-grab active:cursor-grabbing"
+            className="drag-handle text-gray-400 dark:text-[#7a8ba3] hover:text-gray-600 dark:hover:text-white mt-1 cursor-grab active:cursor-grabbing"
             {...listeners}
             onMouseDown={handleDragHandleMouseDown}
             style={{ touchAction: 'none' }}
@@ -1921,7 +1943,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   if (!el) return;
                   stopHorizontalScroll(el);
                 }}
-                className="text-sm font-semibold text-gray-900 flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis group-hover:overflow-x-auto group-hover:text-clip [scrollbar-width:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar-thumb]:bg-transparent"
+                className="text-sm font-semibold text-gray-900 dark:text-white flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis group-hover:overflow-x-auto group-hover:text-clip [scrollbar-width:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar-thumb]:bg-transparent"
               >
                 {getLeadDisplayName(lead)}
               </p>
@@ -1980,7 +2002,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               <button 
                 type="button" 
                 data-ignore-card-click 
-                className="text-gray-400 hover:text-gray-600 focus:outline-none p-1 rounded hover:bg-gray-100"
+                className="text-gray-400 dark:text-[#7a8ba3] hover:text-gray-600 dark:hover:text-white focus:outline-none p-1 rounded hover:bg-gray-100 dark:hover:bg-[#253456]"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -2021,7 +2043,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 </Avatar>
               ))}
               {remainingAssignees > 0 && (
-                <div className="h-6 w-6 rounded-full bg-gray-200 text-xs flex items-center justify-center border-2 border-white">
+                <div className="h-6 w-6 rounded-full bg-gray-200 dark:bg-[#253456] text-xs flex items-center justify-center border-2 border-white dark:border-[#1a2a43]">
                   +{remainingAssignees}
                 </div>
               )}
@@ -2049,12 +2071,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </div>
 
             {(lead.description as string | undefined) && (
-              <p className="text-sm text-gray-600">{String(lead.description as unknown)}</p>
+              <p className="text-sm text-gray-600 dark:text-[#7a8ba3]">{String(lead.description as unknown)}</p>
             )}
           </div>
         )}
     
-        <div className="mt-4 border-t border-gray-100 pt-2 text-xs text-gray-500 flex items-center justify-between">
+        <div className="mt-4 border-t border-gray-100 dark:border-[#262831] pt-2 text-xs text-gray-500 dark:text-[#7a8ba3] flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
             {formatDateTimeUnified(getFieldValueLocal(lead, 'updatedAt'))}
@@ -2108,7 +2130,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               
               return temperature ? (
                 <>
-                  <div className="w-px h-4 bg-gray-200" />
+                  <div className="w-px h-4 bg-gray-200 dark:bg-[#262831]" />
                   <PipelineBadge
                     source={temperature}
                     showLabel={false}
@@ -2121,21 +2143,22 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       </div>
       {renderDetailsDialog()}
       <Dialog open={deleteDialogOpen}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
-          <DialogTitle className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#3A3A4F]">Delete Lead</span>
-            <button
-              onClick={handleDeleteDialogClose}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </DialogTitle>
-          <p className="mt-4">Are you sure you want to delete {getLeadDisplayName(lead)}? This action cannot be undone.</p>
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleDeleteDialogClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-              Cancel
-            </Button>
+        <DialogContent className="p-0 overflow-hidden flex flex-col justify-between">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-red-50 text-red-600 border border-red-100 shadow-sm">
+                <Trash2 className="h-5 w-5 stroke-[2.5px]" />
+              </div>
+              <DialogTitle>Delete Lead</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="py-8">
+            <p className="text-gray-600 text-base">
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{getLeadDisplayName(lead)}</span>? 
+              This action is permanent and cannot be undone.
+            </p>
+          </div>
+          <DialogActions>
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -2147,15 +2170,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 handleConfirmDelete();
               }}
               disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="px-8 bg-red-600 hover:bg-red-700 text-white h-11 rounded-xl font-bold shadow-lg transition-all"
             >
-              {isLoading ? 'Deleting...' : 'Delete'}
+              {isLoading ? 'Deleting...' : 'Delete Lead'}
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
       <Dialog open={deleteConfirmation.open}>
-        <DialogContent showCloseButton={false} className="p-6 pt-2">
+        <DialogContent showCloseButton={false} className="p-6 pt-2 sm:max-w-5xl sm:w-[90vw] h-auto max-h-[90vh]">
           <DialogTitle className="flex justify-between items-center">
             <span className="text-lg font-semibold text-[#3A3A4F]">
               Delete {String(deleteConfirmation.type?.charAt(0).toUpperCase() + deleteConfirmation.type?.slice(1))}
@@ -2168,10 +2191,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </button>
           </DialogTitle>
           <p className="mt-4">Are you sure you want to delete this {String(deleteConfirmation.type)}? This action cannot be undone.</p>
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleDeleteConfirmationClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">
-              Cancel
-            </Button>
+          <DialogActions>
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -2183,11 +2203,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 handleConfirmDelete();
               }}
               disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="rounded-xl px-8 h-11 font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg transition-all"
             >
               {isLoading ? 'Deleting...' : 'Delete'}
             </Button>
-          </div>
+          </DialogActions>
         </DialogContent>
       </Dialog>
       {snackbar.open && (

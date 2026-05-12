@@ -27,4 +27,4 @@ const Chip = React.forwardRef<HTMLSpanElement, ChipProps>(
   }
 );
 Chip.displayName = 'Chip';
-export { Chip };
+export { Chip };

@@ -12,12 +12,7 @@ export function getBackendUrl(): string {
   const internalBackendUrl = process.env.BACKEND_INTERNAL_URL?.replace(/\/$/, '');
   const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, '');
   const publicBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
-  console.log('Determining backend URL with config', {
-    isProduction,
-    internalBackendUrl,
-    backendUrl,
-    publicBackendUrl
-  });
+
   if (isProduction) {
     // In production, explicit server-side vars take precedence.
     if (internalBackendUrl) {
@@ -29,7 +24,7 @@ export function getBackendUrl(): string {
     if (publicBackendUrl) {
       return publicBackendUrl;
     }
-    return 'https://lad-backend-develop-160078175457.us-central1.run.app';
+    return '';
   }
 
   // In local development, prefer explicit localhost overrides first.
@@ -49,7 +44,7 @@ export function getBackendUrl(): string {
   if (publicBackendUrl) return publicBackendUrl;
 
   // Safe local default to prevent accidental remote calls during dev.
-  return 'http://localhost:3004';
+   return 'https://lad-backend-develop-160078175457.us-central1.run.app';
 }
 
 /**

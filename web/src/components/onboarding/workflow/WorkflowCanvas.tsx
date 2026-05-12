@@ -48,7 +48,7 @@ export function WorkflowCanvas({
       />
       <Controls
         showInteractive={false}
-        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg"
+        className="bg-white/80 dark:bg-[#1a2f6b]/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg"
       />
     </>
   );

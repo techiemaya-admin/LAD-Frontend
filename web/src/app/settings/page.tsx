@@ -1,7 +1,7 @@
 'use client';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
@@ -22,6 +22,7 @@ import { RequirementConfig } from '../../types/requirement_config';
 import { ConceptManagement } from './ConceptManagement';
 import { PricingRules } from './PricingRules';
 import QuotationEmailTemplateEditor from '@/app/settings/QuotationEmailTemplateEditor';
+
 import {
   Building2, Users, UserCircle, Globe, Plug,
   Terminal, CreditCard, Coins, Upload, ClipboardCheck,
@@ -36,6 +37,8 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -43,12 +46,19 @@ import { PricingRule } from '@/types/pricing_rule';
 import { EmailTemplatesDragDrop } from './EmailTemplatesDragDrop';
 
 type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
+
 const SettingsPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  // --- ADD THESE TOP-LEVEL STATES ---
-  // Inside SettingsPage component
+  const dispatch = useDispatch();
+  const { tenant } = useTenant();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  const companyName = useSelector((state: any) => state.settings.companyName);
+  const companyLogo = useSelector((state: any) => state.settings.companyLogo);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
+  const [renewalDate, setRenewalDate] = useState<string>('');
+  const [logoError, setLogoError] = useState(false);
   const [requirementConfigs, setRequirementConfigs] = useState<RequirementConfig[]>([]);
   const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules' | 'email_templates' | 'quotation-templates'>('lead_config');
   const [editingConfig, setEditingConfig] = useState<RequirementConfig | null>(null);
@@ -66,36 +76,116 @@ const SettingsPage: React.FC = () => {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPreviewQuotationModalOpen, setIsPreviewQuotationModalOpen] = useState(false);
-
-
-  // Get tenant_id from current user
+  const [concepts, setConcepts] = useState<Concept[]>([]);
+  // Redirect if not authenticated and not loading
   useEffect(() => {
-    const fetchUser = async () => {
+    if (!isAuthLoading && !user) {
+      const redirect = encodeURIComponent('/settings');
+      router.replace(`/login?redirect_url=${redirect}`);
+    }
+  }, [isAuthLoading, user, router]);
+
+  // Update company name from tenant or user profile
+  useEffect(() => {
+    if (!user) return;
+    const sessionName = (tenant?.name && tenant.name !== "Default")
+      ? tenant.name
+      : ((user as any)?.company_name || user?.name);
+
+    if (sessionName && sessionName !== companyName && sessionName !== "Default") {
+      dispatch(setCompanyName(sessionName));
+    }
+  }, [tenant?.name, user, companyName, dispatch]);
+
+  // useEffect(() => {
+  //   console.log("Tenant id : " + tenant?.id);
+  //   const fetchProposalSettingDetails = async () => {
+  //     try {
+  //       if (tenant?.id && tenan?.id !='default') {
+  //         setTenantId(tenant.id);
+  //         await fetchConfigs(tenant.id);
+  //         await fetchConcepts(tenant.id);
+  //         await fetchPricingRules(tenant.id);
+  //         await fetchpricingModels(tenant.id); // Fetch pricing modals after getting tenant_id
+  //         await fetchEmailTemplates(tenant.id); // Fetch email templates after getting tenant_id
+  //         await fetchQuotationTemplates(tenant.id);
+  //         await fetchPlaceholders(tenant.id);
+  //       } else {
+  //         console.log("No tenant id found in settings page");
+  //       }
+  //     } catch (error) {
+  //       logger.error("[Call Logs] Failed to get user tenant_id", error);
+  //     }
+  //   };
+  //   fetchProposalSettingDetails();
+  // }, []);
+
+
+  // Inside SettingsPage component...
+
+  const fetchProposalSettingDetails = async (targetTenantId?: string) => {
+    // Use the provided ID or fall back to the context tenant ID
+    const idToUse = targetTenantId || tenant?.id;
+    console.log("Tenant id : " + idToUse)
+    if (!idToUse || idToUse === 'default') {
+      console.log("No valid tenant id found for proposal settings");
+      return;
+    }
+
+    try {
+      setTenantId(idToUse);
+      // Execute all fetches needed for this section
+      await Promise.all([
+        fetchConfigs(idToUse),
+        fetchConcepts(idToUse),
+        fetchPricingRules(idToUse),
+        fetchpricingModels(idToUse),
+        fetchEmailTemplates(idToUse),
+        fetchQuotationTemplates(idToUse),
+        fetchPlaceholders(idToUse)
+      ]);
+    } catch (error) {
+      logger.error("[Proposal Settings] Failed to fetch details", error);
+    }
+  };
+
+  // Source of truth for display: prioritize tenant/user data over Redux if they exist
+  const displayCompanyName = (tenant?.name && tenant.name !== "Default")
+    ? tenant.name
+    : ((user as any)?.company_name || user?.name || (companyName !== "My Organization" ? companyName : ""));
+
+  useEffect(() => {
+    if (!user) return;
+    // Initialize active tab from URL query param if present
+    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
+    if (allowed.includes(tabParam as ActiveTab)) {
+      const targetTab = tabParam as ActiveTab;
+      setActiveTab(tabParam as ActiveTab);
+      if (targetTab === 'proposal_settings' && tenant?.id) {
+        fetchProposalSettingDetails(tenant.id);
+      }
+    }
+    // Fetch subscription data to get renewal date
+    const fetchRenewalDate = async () => {
       try {
-        console.log('Fetching current user to get tenant_id...');
-        const user: any = await getCurrentUser();
-        const userTenantId = user?.user?.tenantId
-        console.log('Fetched user tenant_id:', userTenantId);
-        if (userTenantId) {
-          setTenantId(userTenantId);
-        }
-        setAuthed(true); // <--- ADD THIS
-        // 2. ONLY call fetchConfigs AFTER we have the tenant_id
-        await fetchConfigs(userTenantId);
-        await fetchConcepts(userTenantId);
-        await fetchPricingRules(userTenantId);
-        await fetchpricingModels(userTenantId); // Fetch pricing modals after getting tenant_id
-        await fetchEmailTemplates(userTenantId); // Fetch email templates after getting tenant_id
-        await fetchQuotationTemplates(userTenantId);
-        await fetchPlaceholders(userTenantId);
+        // Calculate renewal date from current_period_end (15 days from now based on mock data)
+        const periodEnd = Date.now() + 86400 * 15 * 1000; // 15 days from now in milliseconds
+        const date = new Date(periodEnd);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        setRenewalDate(formattedDate);
       } catch (error) {
-        setAuthed(false); // <--- ADD THIS
-        logger.error("[Call Logs] Failed to get user tenant_id", error);
+        console.error('Error fetching renewal date:', error);
+        setRenewalDate('November 29th, 2025'); // Fallback
       }
     };
-    fetchUser();
-  }, []);
-  // ----------------------------------
+    fetchRenewalDate();
+  }, [user, searchParams]);
+
   const handleDeleteConfig = async (id: string) => {
     if (confirm('Are you sure you want to delete this configuration?')) {
       const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${id}`, { method: 'DELETE' });
@@ -484,51 +574,15 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const dispatch = useDispatch();
-  const companyName = useSelector((state: any) => state.settings.companyName);
-  const companyLogo = useSelector((state: any) => state.settings.companyLogo);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
-  const [renewalDate, setRenewalDate] = useState<string>('');
-  const [logoError, setLogoError] = useState(false);
-  const [concepts, setConcepts] = useState<Concept[]>([]);
-  useEffect(() => {
-    if (authed !== true) return;
-    // Initialize active tab from URL query param if present
-    const tabParam = (searchParams.get('tab') || '').toLowerCase();
-
-    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
-    if (allowed.includes(tabParam as ActiveTab)) {
-      setActiveTab(tabParam as ActiveTab);
-    }
-    // Fetch subscription data to get renewal date
-    const fetchRenewalDate = async () => {
-      try {
-        // Calculate renewal date from current_period_end (15 days from now based on mock data)
-        const periodEnd = Date.now() + 86400 * 15 * 1000; // 15 days from now in milliseconds
-        const date = new Date(periodEnd);
-        const formattedDate = date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        });
-        setRenewalDate(formattedDate);
-      } catch (error) {
-        console.error('Error fetching renewal date:', error);
-        setRenewalDate('November 29th, 2025'); // Fallback
-      }
-    };
-    fetchRenewalDate();
-  }, [authed, searchParams]);
-  if (authed === null) {
+  if (isAuthLoading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0B1957]"></div>
       </div>
     );
   }
-  if (!authed) return <></>;
 
-  // 3. Add Lead Requirements to the tabs array
+  if (!user) return null;
   const tabs = [
     { id: 'company' as ActiveTab, label: 'Company', icon: Building2 },
     { id: 'team' as ActiveTab, label: 'Team', icon: Users },
@@ -562,7 +616,7 @@ const SettingsPage: React.FC = () => {
                 )}
               </div>
               <div>
-                <h1 className="text-gray-900 font-semibold text-xl">{companyName}</h1>
+                <h1 className="text-gray-900 font-semibold text-xl">{displayCompanyName}</h1>
                 <p className="text-gray-600 text-sm">
                   Renews on {renewalDate || 'Loading...'}
                 </p>
@@ -578,12 +632,15 @@ const SettingsPage: React.FC = () => {
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
+                  if (tab.id === 'proposal_settings') {
+                    fetchProposalSettingDetails();
+                  }
                   const sp = new URLSearchParams(Array.from(searchParams.entries()));
                   sp.set('tab', tab.id);
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                  ? 'bg-white text-blue-700 shadow-md font-semibold'
+                  ? 'bg-white text-[#0B1957] shadow-md font-semibold'
                   : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
                   }`}
               >
@@ -598,7 +655,7 @@ const SettingsPage: React.FC = () => {
       <div className="space-y-6">
         {activeTab === 'company' && (
           <CompanySettings
-            companyName={companyName}
+            companyName={displayCompanyName}
             setCompanyName={(name: string) => dispatch(setCompanyName(name))}
             companyLogo={companyLogo}
             setCompanyLogo={(logo: string) => dispatch(setCompanyLogo(logo))}
@@ -955,10 +1012,10 @@ const SettingsPage: React.FC = () => {
                 requirementConfigs={requirementConfigs}
                 onSave={handleSavePricingRule}
                 onDelete={handleDeletePricingRule}
-                
+
                 afterSave={() => {
                   fetchPricingRules(tenantId);
-                
+
                 }}
               />
             )}

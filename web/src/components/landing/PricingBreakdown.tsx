@@ -96,7 +96,7 @@ export default function PricingBreakdown() {
 
   return (
     <motion.div 
-      className="py-16 bg-white border-t border-gray-200"
+      className="py-20 relative bg-gradient-to-b from-background via-background to-background"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}

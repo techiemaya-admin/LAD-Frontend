@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   flex flex-col sm:flex-row sm:items-center 
   bg-gradient-to-r 
   from-blue-50 via-white to-purple-50 
-  dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 
+  dark:from-[#1a2f6b] dark:via-[#000724] dark:to-[#1a2f6b] 
   shadow-lg 
   border border-gray-200 dark:border-gray-700
 ">

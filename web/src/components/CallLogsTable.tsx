@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { useState } from "react";
 import {
   Table,
@@ -345,10 +345,15 @@ export function CallLogsTable({
 
   // Apply status filter manually to items
   const filteredItems = useMemo(() => {
-    if (statusFilter === 'all') return itemsWithTags;
-    return itemsWithTags.filter(item =>
-      item.status?.toLowerCase().includes(statusFilter.toLowerCase())
-    );
+    return itemsWithTags.filter(item => {
+      const itemStatus = item.status?.toLowerCase() || "";
+      const filter = statusFilter.toLowerCase();
+      if (filter === 'all') return true;
+      if (filter === 'ended' || filter === 'completed') {
+        return itemStatus === 'ended' || itemStatus === 'completed';
+      }
+      return itemStatus.includes(filter);
+    });
   }, [itemsWithTags, statusFilter]);
 
   // Apply global search filter
@@ -398,7 +403,7 @@ export function CallLogsTable({
   const columns = React.useMemo<ColumnDef<CallLog, any>[]>(() => [
     {
       id: 'select',
-      meta: { sticky: 'left-0', zIndex: 'z-40' },
+      meta: { zIndex: 'z-40' },
       header: ({ table }) => {
         // Check if all rows on current page are selected
         const visibleIds = table.getRowModel().rows.map(row => row.original.id);
@@ -444,7 +449,7 @@ export function CallLogsTable({
     {
       id: 'serialNo',
       accessorKey: 'serialNo',
-      meta: { sticky: 'left-[44px]', zIndex: 'z-30' },
+      meta: { zIndex: 'z-30' },
       header: 'S/No',
       size: 60,
       maxSize: 80,
@@ -458,7 +463,7 @@ export function CallLogsTable({
     {
       id: 'assistant',
       accessorKey: 'assistant',
-      meta: { sticky: 'left-[104px]', zIndex: 'z-20' },
+      meta: { zIndex: 'z-20' },
       header: 'Agent',
       size: 120,
       maxSize: 150,
@@ -467,7 +472,7 @@ export function CallLogsTable({
     {
       id: 'lead_name',
       accessorKey: 'lead_name',
-      meta: { sticky: 'left-[224px]', zIndex: 'z-10' },
+      meta: { zIndex: 'z-10' },
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
@@ -485,7 +490,7 @@ export function CallLogsTable({
                     description: `Lead name "${leadName}" copied to clipboard`,
                   });
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100 dark:hover:bg-[#253456]"
                 title="Copy lead name"
               >
                 <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
@@ -503,9 +508,9 @@ export function CallLogsTable({
         const type = getValue() as string;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${type === "Outbound"
-              ? "bg-warning/15 text-warning border border-warning/30"
-              : "bg-primary/15 text-primary border border-primary/30"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:tracking-wide ${type === "Outbound"
+              ? "bg-warning/15 text-warning border border-warning/30 dark:!text-amber-300"
+              : "bg-primary/15 text-primary border border-primary/30 dark:!text-sky-400"
               }`}
           >
             {type === "Outbound" ? (
@@ -723,7 +728,7 @@ export function CallLogsTable({
       <TableRow
         key={`batch-${batchId}`}
         onClick={() => onToggleBatch?.(batchId)}
-        className="bg-[#F8FAFC] hover:bg-[#F1F5F9] cursor-pointer border-b-2 border-[#E2E8F0] transition-colors"
+        className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-[#F1F5F9] dark:hover:bg-[#253456] cursor-pointer border-b-2 border-[#E2E8F0] dark:border-[#262831] transition-colors"
       >
         <TableCell colSpan={columns.length} className="py-4">
           <div className="flex items-center gap-3">
@@ -732,24 +737,24 @@ export function CallLogsTable({
             ) : (
               <ChevronRight className="w-5 h-5 text-primary" />
             )}
-            <div className="flex-1 flex items-center gap-6">
-              <div>
+            <div className="flex-1 flex items-center gap-12">
+              <div className="min-w-[180px]">
                 <span className="font-semibold text-foreground">Batch:</span>
                 <span className="ml-2 font-mono text-sm text-muted-foreground">
                   {batchId.slice(0, 8)}...
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-muted-foreground">
+              <div className="flex items-center gap-8 text-sm">
+                <span className="text-muted-foreground min-w-[80px]">
                   <span className="font-semibold text-foreground">{totalCalls}</span> calls
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground min-w-[100px]">
                   <span className="font-semibold text-foreground">{completedCalls}</span> completed
                 </span>
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground ml-4">
                   {hasAttachment && `${formatAttachmentFileName(attachmentFileName)}`}
                 </span>
               </div>
@@ -796,8 +801,8 @@ export function CallLogsTable({
         <TableRow
           key={callId}
           onClick={() => onRowClick(callId)}
-          className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-            } ${indent ? "bg-[#F8FAFC]" : ""}`}
+          className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+            } ${indent ? "bg-[#F8FAFC] dark:bg-[#253456]" : ""}`}
         >
           {columns.map((column, cellIndex) => {
             // Build proper cell context that matches tanstack table's expected format
@@ -814,20 +819,20 @@ export function CallLogsTable({
               getValue: rowContext.getValue,
             };
             return (
-                <TableCell
-                  key={`${callId}-${column.id}`}
-                  onClick={(e) => {
-                    if (column.id === 'select' || column.id === 'actions') {
-                      e.stopPropagation();
-                    }
-                  }}
-                  className={cn(
-                    cellIndex === 0 && indent ? "pl-8" : "",
-                    (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
-                  )}
-                >
-                  {flexRender(column.cell, cellContext as any)}
-                </TableCell>
+              <TableCell
+                key={`${callId}-${column.id}`}
+                onClick={(e) => {
+                  if (column.id === 'select' || column.id === 'actions') {
+                    e.stopPropagation();
+                  }
+                }}
+                className={cn(
+                  cellIndex === 0 && indent ? "pl-8" : "",
+                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
+                )}
+              >
+                {flexRender(column.cell, cellContext as any)}
+              </TableCell>
             );
           })}
         </TableRow>
@@ -838,8 +843,8 @@ export function CallLogsTable({
       <TableRow
         key={callId}
         onClick={() => onRowClick(callId)}
-        className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
-          } ${indent ? "bg-[#F8FAFC]" : ""}`}
+        className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(callId) ? "bg-primary/5" : ""
+          } ${indent ? "bg-[#F8FAFC] dark:bg-[#253456]" : ""}`}
       >
         {tableRow.getVisibleCells().map((cell, cellIndex) => (
           <TableCell
@@ -852,7 +857,7 @@ export function CallLogsTable({
             }}
             className={cn(
               cellIndex === 0 && indent ? "pl-8" : "",
-              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
             )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -863,9 +868,9 @@ export function CallLogsTable({
   };
 
   return (
-    <div id="call-logs-table" className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#1a2a43]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -955,7 +960,7 @@ export function CallLogsTable({
                 value={fromDate || ""}
                 max={toDate || undefined}
                 onChange={(e) => onFromDateChange?.(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="px-3 py-2 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -982,17 +987,17 @@ export function CallLogsTable({
           </div>
         )}
       </div>
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full">
           <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
                       className={cn(
-                        "font-semibold text-[#1E293B] whitespace-nowrap bg-[#F8FAFC] sticky top-0 z-30",
+                        "font-semibold text-[#1E293B] dark:text-white whitespace-nowrap bg-[#F8FAFC] dark:bg-[#1a2a43] sticky top-0 z-30",
                         header.column.getCanSort() ? 'cursor-pointer select-none' : '',
                         (header.column.columnDef.meta as any)?.sticky ? `sticky ${(header.column.columnDef.meta as any)?.sticky} z-50` : ''
                       )}
@@ -1004,10 +1009,10 @@ export function CallLogsTable({
                           {header.column.getCanSort() && (
                             <span>
                               {{
-                                asc: <ArrowUp className="w-4 h-4 text-primary" />,
-                                desc: <ArrowDown className="w-4 h-4 text-primary" />,
+                                asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                                desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
                               }[header.column.getIsSorted() as string] ?? (
-                                  <ArrowUpDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                                 )}
                             </span>
                           )}
@@ -1025,7 +1030,7 @@ export function CallLogsTable({
                   <TableRow key={`skeleton-${i}`} className="animate-pulse">
                     {columns.map((col, j) => (
                       <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
-                        <div className="h-4 bg-gray-200 rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1040,9 +1045,10 @@ export function CallLogsTable({
                   );
 
                   // Use filteredBatchGroups instead of batchGroups
+                  // Use filteredBatchGroups instead of batchGroups
                   const groupsToRender = filteredBatchGroups || batchGroups;
 
-                  // Add batch groups with their earliest timestamp
+                  // Add batch groups with their latest timestamp (to show newest batches first)
                   Object.entries(groupsToRender.groups).forEach(([batchId, calls]) => {
                     // For expanded batches, show all calls; for collapsed batches, only show headers
                     const callsToRender = expandedBatches.has(batchId)
@@ -1050,13 +1056,16 @@ export function CallLogsTable({
                       : calls.filter((c) => visibleRowIds.has((c as any)?.id));  // Filter when collapsed
 
                     if (callsToRender.length === 0) return;
-                    const earliestTimestamp = Math.min(
-                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : Date.now())
+                    
+                    // Use the LATEST timestamp in the batch to represent its position in the timeline
+                    const latestTimestamp = Math.max(
+                      ...callsToRender.map(c => c.startedAt ? new Date(c.startedAt).getTime() : 0)
                     );
+
                     timelineItems.push({
                       type: 'batch',
                       data: { batchId, calls: callsToRender },
-                      timestamp: earliestTimestamp
+                      timestamp: latestTimestamp || Date.now()
                     });
                   });
 
@@ -1069,6 +1078,9 @@ export function CallLogsTable({
                       timestamp: call.startedAt ? new Date(call.startedAt).getTime() : Date.now()
                     });
                   });
+
+                  // SORT timeline items by timestamp DESC (newest first)
+                  timelineItems.sort((a, b) => b.timestamp - a.timestamp);
 
                   // Check if there's any data
                   if (timelineItems.length === 0) {
@@ -1084,10 +1096,10 @@ export function CallLogsTable({
                                 <Phone className="w-8 h-8 text-primary" />
                               </div>
                               <div>
-                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                <h3 className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                                   No calls in current batch
                                 </h3>
-                                <p className="text-sm text-[#64748B] mb-4">
+                                <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-4">
                                   Start making calls to see them appear here
                                 </p>
                               </div>
@@ -1105,10 +1117,10 @@ export function CallLogsTable({
                                 <Phone className="w-8 h-8 text-primary" />
                               </div>
                               <div>
-                                <h3 className="text-lg font-semibold text-[#1E293B] mb-2">
+                                <h3 className="text-lg font-semibold text-[#1E293B] dark:text-white mb-2">
                                   Trigger a call
                                 </h3>
-                                <p className="text-sm text-[#64748B] mb-4">
+                                <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-4">
                                   Start making calls to see them appear here
                                 </p>
                               </div>
@@ -1210,10 +1222,10 @@ export function CallLogsTable({
                   <TableRow
                     key={row.id}
                     onClick={() => onRowClick(row.original.id)}
-                    className={`cursor-pointer hover:bg-gray-50 border-b border-[#E2E8F0] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
                       }`}
                   >
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell, cellIndex) => (
                       <TableCell
                         key={cell.id}
                         onClick={(e) => {
@@ -1222,6 +1234,9 @@ export function CallLogsTable({
                             e.stopPropagation();
                           }
                         }}
+                        className={cn(
+                          (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0]` : ""
+                        )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -1235,9 +1250,9 @@ export function CallLogsTable({
       </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:bg-card">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724]">
           {/* Left Side: Records per page */}
-          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B]">
+          <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select
@@ -1247,7 +1262,7 @@ export function CallLogsTable({
                   onPageSizeChange?.(newSize);
                   onPageChange?.(1);
                 }}
-                className="border border-[#E2E8F0] rounded px-2 py-1 text-sm bg-transparent"
+                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>{size}</option>
@@ -1259,7 +1274,7 @@ export function CallLogsTable({
               <span className="text-xs text-muted-foreground">(filtered from {totalRecords} total)</span>
             )}
             {callFilter === 'batch' && batchStats && (
-              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0]">
+              <div className="ml-2 flex items-center gap-2 border-l pl-2 border-[#E2E8F0] dark:border-[#262831]">
                 <span className="text-[10px] xs:text-xs">
                   <span className="font-semibold text-foreground">{batchStats.completed_batches}</span> comp
                 </span>
@@ -1272,7 +1287,7 @@ export function CallLogsTable({
 
           {/* Right Side: Page navigation */}
           <div className="flex items-center gap-2">
-            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] whitespace-nowrap">
+            <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3] whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </div>
             <div className="flex items-center gap-1">
@@ -1320,21 +1335,30 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar rounded-3xl">
-          <DialogTitle className="text-lg font-semibold mb-4">
-            Schedule Appointment {selectedLead?.name ? `- ${selectedLead.name}` : ''}
-          </DialogTitle>
-          {selectedLead && (
-            <BookingSlot
-              leadId={selectedLead.id}
-              tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
-              studentId={String(selectedLead.id)}
-              assignedUserId={currentUser?.id || undefined}
-              createdBy={currentUser?.id || undefined}
-              users={bookingUsers}
-              isEditMode={true}
-            />
-          )}
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
+                <CalendarRange className="h-5 w-5" />
+              </div>
+              <DialogTitle>
+                Schedule Appointment {selectedLead?.name ? `— ${selectedLead.name}` : ''}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            {selectedLead && (
+              <BookingSlot
+                leadId={selectedLead.id}
+                tenantId={currentUser?.tenantId || currentUser?.tenant_id || currentUser?.organization_id || undefined}
+                studentId={String(selectedLead.id)}
+                assignedUserId={currentUser?.id || undefined}
+                createdBy={currentUser?.id || undefined}
+                users={bookingUsers}
+                isEditMode={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

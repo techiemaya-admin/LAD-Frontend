@@ -49,4 +49,4 @@ export const RequireFeature: React.FC<RequireFeatureProps> = ({
       </button>
     </div>
   );
-};
+};

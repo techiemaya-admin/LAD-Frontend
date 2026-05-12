@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Coins } from 'lucide-react';
+import { Plus, Play, Pause, Square, CheckCircle, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Coins, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { formatDateTimeUnified } from '@/utils/dateTime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,7 +49,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({
     name: 300,
@@ -92,11 +93,17 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       id: 'name',
       header: 'Campaign Name',
       size: 300,
-      cell: ({ getValue }) => (
-        <span className="text-sm font-semibold capitalize">
-          {getValue()}
-        </span>
-      ),
+      cell: ({ getValue }) => {
+        const value = getValue() as string;
+        return (
+          <div
+            className="text-sm font-semibold capitalize truncate"
+            title={value}
+          >
+            {value}
+          </div>
+        );
+      },
     }),
     columnHelper.accessor('status', {
       id: 'status',
@@ -104,11 +111,12 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       cell: ({ getValue }) => {
         const status = getValue();
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs capitalize ${
-            getStatusColor(status) === 'success' ? 'bg-green-100 text-green-700' : 
-            getStatusColor(status) === 'warning' ? 'bg-yellow-100 text-yellow-700' : 
-            getStatusColor(status) === 'error' ? 'bg-red-100 text-red-700' : 
-            'bg-gray-100 text-gray-700'
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs capitalize dark:!px-0 dark:!py-0 dark:!rounded-none dark:!bg-transparent dark:!border-transparent dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${
+            getStatusColor(status) === 'success' ? 'bg-green-100 text-green-700 dark:!text-emerald-400' :
+            getStatusColor(status) === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:!text-amber-300' :
+            getStatusColor(status) === 'error' ? 'bg-red-100 text-red-700 dark:!text-rose-400' :
+            getStatusColor(status) === 'info' ? 'bg-gray-100 text-gray-700 dark:!text-sky-400' :
+            'bg-gray-100 text-gray-700 dark:!text-slate-300'
           }`}>
             {getStatusIconComponent(status)}
             {status}
@@ -130,8 +138,16 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       (row) => row.created_at as string,
       {
         id: 'created_at',
-        header: 'Created',
-        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
+        header: 'Created Date',
+        cell: ({ getValue }) => formatDateTimeUnified(getValue() as string),
+      }
+    ),
+    columnHelper.accessor(
+      (row) => (row as any).updated_at || (row as any).last_activity || row.created_at as string,
+      {
+        id: 'last_activity',
+        header: 'Last Activity',
+        cell: ({ getValue }) => formatDateTimeUnified(getValue() as string),
       }
     ),
     columnHelper.display({
@@ -140,7 +156,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       cell: ({ row }) => (
         <div className="text-right">
           <button
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-white rounded"
             onClick={(e) => { e.stopPropagation(); onMenuOpen(e, row.original); }}
           >
             <MoreVertical className="h-4 w-4" />
@@ -174,21 +190,21 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   });
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Filters Section */}
-      <div className="p-4 border-b border-[#E2E8F0] bg-white">
-        <div className="flex gap-3 flex-col sm:flex-row justify-end items-center">
-          <div className="relative min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+        <div className="flex gap-2 sm:gap-3 flex-row justify-between items-center">
+          <div className="relative flex-1 sm:min-w-[300px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] dark:text-[#7a8ba3] h-4 w-4" />
             <Input
               placeholder="Search campaigns..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-10 h-10 w-full"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="min-w-[150px] h-10">
+            <SelectTrigger className="w-[120px] sm:w-[150px] h-10 shrink-0">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -208,38 +224,42 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#F8FAFC]">
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Campaign Name</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Status</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Actions</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] whitespace-nowrap">Leads</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B]">Created</TableHead>
-                  <TableHead className="font-semibold text-[#1E293B] text-right"></TableHead>
+                <TableRow className="bg-[#F8FAFC] dark:bg-[#000724]">
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Campaign Name</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Status</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Actions</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white whitespace-nowrap">Leads</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white">Created Date</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white">Last Activity</TableHead>
+                  <TableHead className="font-semibold text-[#1E293B] dark:text-white text-right"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index} className="hover:bg-gray-50">
+                  <TableRow key={index} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
                     <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-32"></div>
                     </TableCell>
                     <TableCell>
-                      <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                      <div className="h-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
+                        <div className="h-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-16"></div>
+                        <div className="h-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-16"></div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-8"></div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell>
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="h-6 w-6 bg-gray-200 rounded animate-pulse ml-auto"></div>
+                      <div className="h-6 w-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse ml-auto"></div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -247,26 +267,26 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             </Table>
             
             {/* Skeleton for pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
               <div className="flex items-center gap-2">
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-12"></div>
-                <div className="h-6 bg-gray-200 rounded animate-pulse w-12"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-12"></div>
+                <div className="h-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-12"></div>
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-16"></div>
                 <div className="flex gap-1">
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse"></div>
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse"></div>
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse"></div>
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse"></div>
                 </div>
               </div>
             </div>
           </div>
         ) : filteredCampaigns.length === 0 ? (
           <div className="p-4 text-center">
-            <p className="text-[#64748B] mb-2">
+            <p className="text-[#64748B] dark:text-[#7a8ba3] mb-2">
               No campaigns found
             </p>
             <Button
@@ -279,15 +299,17 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table className="w-full table-fixed">
-              <TableHeader>
+          <>
+            <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] relative">
+              <div className="min-w-[1000px] w-full">
+                <Table containerClassName="overflow-visible" className="w-full border-separate border-spacing-0">
+              <TableHeader className="sticky top-0 z-20 bg-[#F8FAFC] shadow-sm">
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-white">
+                  <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#000724] hover:bg-transparent">
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
-                        className={`font-semibold text-[#1E293B] whitespace-nowrap px-6 ${
+                        className={`font-semibold text-[#1E293B] dark:text-white whitespace-nowrap px-6 sticky top-0 z-20 bg-[#F8FAFC] dark:bg-[#1a2a43] ${
                           header.column.getCanSort() ? 'cursor-pointer select-none' : ''
                         } ${header.id === 'name' ? 'w-[300px]' : ''}`}
                         onClick={header.column.getToggleSortingHandler()}
@@ -298,20 +320,14 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                             : flexRender(header.column.columnDef.header, header.getContext())
                           }
                           {header.column.getCanSort() && (
-                            <div className="flex flex-col">
-                              {header.column.getIsSorted() === 'asc' && (
-                                <ChevronUp className="h-3 w-3" />
+                            <span className="ml-1">
+                              {{
+                                asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                                desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
+                              }[header.column.getIsSorted() as string] ?? (
+                                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-50" />
                               )}
-                              {header.column.getIsSorted() === 'desc' && (
-                                <ChevronDown className="h-3 w-3" />
-                              )}
-                              {!header.column.getIsSorted() && (
-                                <div className="h-3 w-3 opacity-50">
-                                  <ChevronUp className="h-1.5 w-3 absolute" />
-                                  <ChevronDown className="h-1.5 w-3 absolute mt-1.5" />
-                                </div>
-                              )}
-                            </div>
+                            </span>
                           )}
                         </div>
                       </TableHead>
@@ -322,7 +338,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
               <TableBody>
                 {table.getRowModel().rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="text-center py-8 text-[#64748B]">
+                    <TableCell colSpan={columns.length} className="text-center py-8 text-[#64748B] dark:text-[#7a8ba3]">
                       No campaigns found
                     </TableCell>
                   </TableRow>
@@ -330,11 +346,11 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                   table.getRowModel().rows.map((row) => (
                     <TableRow 
                       key={row.id} 
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-[#253456] cursor-pointer"
                       onClick={() => router.push(`/campaigns/${row.original.id}/analytics`)}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className={`px-6 ${cell.column.id === 'name' ? 'w-[300px]' : ''}`}>
+                        <TableCell key={cell.id} className={`px-6 ${cell.column.id === 'name' ? 'w-[300px] max-w-[300px] overflow-hidden' : ''}`}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -343,32 +359,34 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 )}
               </TableBody>
             </Table>
+          </div>
+        </div>
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0]">
-                <div className="flex items-center gap-2 text-sm text-[#64748B]">
+              <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+                <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-[#7a8ba3]">
                   <span>Show</span>
                   <select
                     value={table.getState().pagination.pageSize}
                     onChange={(e) => {
                       table.setPageSize(Number(e.target.value));
                     }}
-                    className="border border-[#E2E8F0] rounded px-2 py-1 text-sm"
+                    className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white"
                   >
-                    {[5, 10, 20, 50].map((pageSize) => (
-                      <option key={pageSize} value={pageSize}>
-                        {pageSize}
-                      </option>
-                    ))}
+                  {[10, 20, 50, 100].map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </option>
+                  ))}
                   </select>
-                  <span>
+                  <span className="whitespace-nowrap">
                     of {table.getFilteredRowModel().rows.length} campaigns
                   </span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <div className="text-sm text-[#64748B]">
+                  <div className="text-[10px] xs:text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3] whitespace-nowrap">
                     Page {table.getState().pagination.pageIndex + 1} of{' '}
                     {table.getPageCount()}
                   </div>
@@ -414,7 +432,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                 </div>
               </div>
             )}
-          </div>
+          </>
         )}
     </div>
   );

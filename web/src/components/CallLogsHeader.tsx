@@ -45,7 +45,7 @@ export function CallLogsHeader({
   onPerPageChange,
 }: CallLogsHeaderProps) {
   return (
-    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Title Section */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
 

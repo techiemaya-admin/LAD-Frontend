@@ -16,7 +16,7 @@ export default function CreateTemplatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE]">
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-6">
         <div className="flex items-center gap-4">

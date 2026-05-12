@@ -72,7 +72,7 @@ export default function HeroSection() {
     >
       {/* Background gradient matching app theme */}
       <div
-        className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
+        className="absolute inset-0 bg-gradient-to-r from-background via-background to-background"
       />
 
 
@@ -83,27 +83,17 @@ export default function HeroSection() {
             variants={itemVariants}
             className="space-y-6"
           >
-            {/* Logo */}
-            <motion.div variants={itemVariants}>
-              <h1 className="text-6xl lg:text-7xl font-bold text-[#222B45] dark:text-white leading-tight">
-                Mr LAD
-              </h1>
-              <p className="text-xl text-[#8F9BB3] dark:text-gray-400 font-semibold mt-2">
-                Powered by Techiemaya
-              </p>
-            </motion.div>
-
             <motion.h2
               variants={itemVariants}
-              className="text-4xl lg:text-5xl font-bold text-[#222B45] dark:text-white leading-tight"
+              className="text-4xl lg:text-5xl font-bold text-foreground leading-tight"
             >
               Meet your{" "}
-              <span className="text-[#1A3F7F]">AI sales co-pilot</span>
+              <span className="text-primary">AI sales co-pilot</span>
             </motion.h2>
 
             <motion.p
               variants={itemVariants}
-              className="text-xl text-[#8F9BB3] dark:text-gray-400 leading-relaxed"
+              className="text-xl text-muted-foreground leading-relaxed"
             >
               Automatically engage leads on LinkedIn, email, WhatsApp, and voice calls. More outreach, more conversations, more closed deals.
             </motion.p>
@@ -128,7 +118,7 @@ export default function HeroSection() {
                     repeat: Infinity,
                     ease: 'easeInOut'
                   }}
-                  className="px-8 py-4 bg-[#1A3F7F] text-white rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
+                  className="px-8 py-4 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-2xl transition-shadow"
                 >
                   Get Started
                 </motion.button>
@@ -136,7 +126,7 @@ export default function HeroSection() {
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)' }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-white dark:bg-gray-800 text-[#222B45] dark:text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
+                className="px-8 py-4 bg-background text-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow border border-border"
               >
                 Watch Demo
               </motion.button>
@@ -156,10 +146,10 @@ export default function HeroSection() {
                   key={i}
                   variants={statVariants}
                   whileHover="hover"
-                  className="text-center p-4 rounded-xl backdrop-blur-sm bg-white/30 dark:bg-gray-800/30 border border-white/20 dark:border-gray-700/20 transition-colors"
+                  className="text-center p-4 rounded-xl backdrop-blur-sm bg-background/30 border border-border/20 transition-colors"
                 >
                   <motion.div
-                    className="text-3xl font-bold text-[#222B45] dark:text-white"
+                    className="text-3xl font-bold text-foreground"
                     animate={{
                       scale: [1, 1.05, 1],
                     }}
@@ -170,7 +160,7 @@ export default function HeroSection() {
                   >
                     {stat.value}{stat.suffix}
                   </motion.div>
-                  <div className="text-sm text-[#8F9BB3] dark:text-gray-400 mt-2 font-medium">
+                  <div className="text-sm text-muted-foreground mt-2 font-medium">
                     {stat.label}
                   </div>
                 </motion.div>
