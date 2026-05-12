@@ -237,7 +237,7 @@ function MemberIntelCard({ member, onViewProfile }: MemberIntelCardProps) {
         {/* Loading skeleton — reading cache */}
         {intel.status === 'loading' && (
           <div className="space-y-2 animate-pulse">
-            <div className="h-3 bg-slate-100 rounded w-3/4" />
+            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-3/4" />
             <div className="h-3 bg-slate-100 rounded w-full" />
             <div className="h-3 bg-slate-100 rounded w-2/3" />
             <div className="h-3 bg-slate-100 rounded w-5/6" />

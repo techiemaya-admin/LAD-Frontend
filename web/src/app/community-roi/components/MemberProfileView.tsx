@@ -428,7 +428,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
             </div>
 
             <div className="flex gap-4 pb-2">
-              <Button variant="outline" size="icon" className="w-14 h-14 bg-white border-slate-200 text-slate-400 rounded-2xl hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
+              <Button variant="outline" size="icon" className="w-14 h-14 bg-white border-slate-200 text-slate-400 rounded-2xl hover:bg-slate-50 dark:bg-slate-800 hover:text-slate-900 transition-all shadow-sm">
                 <ExternalLink className="w-6 h-6" />
               </Button>
               <Button className="h-14 px-8 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/40 transition-all hover:-translate-y-1">
@@ -612,7 +612,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
                   <button
                     onClick={runResearch}
                     disabled={researchLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-500 hover:text-slate-800 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-500 hover:text-slate-800 disabled:opacity-50"
                   >
                     {researchLoading
                       ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Researching…</>

@@ -508,9 +508,9 @@ export function CallLogsTable({
         const type = getValue() as string;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${type === "Outbound"
-              ? "bg-warning/15 text-warning border border-warning/30"
-              : "bg-primary/15 text-primary border border-primary/30"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:tracking-wide ${type === "Outbound"
+              ? "bg-warning/15 text-warning border border-warning/30 dark:!text-amber-300"
+              : "bg-primary/15 text-primary border border-primary/30 dark:!text-sky-400"
               }`}
           >
             {type === "Outbound" ? (
@@ -1030,7 +1030,7 @@ export function CallLogsTable({
                   <TableRow key={`skeleton-${i}`} className="animate-pulse">
                     {columns.map((col, j) => (
                       <TableCell key={`skeleton-cell-${i}-${j}`} className="py-4">
-                        <div className="h-4 bg-gray-200 dark:bg-[#253456] rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded w-full" />
                       </TableCell>
                     ))}
                   </TableRow>

@@ -149,7 +149,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader>
+        <DialogHeader className="px-8 pt-6">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Edit className="h-5 w-5 stroke-[2.5px]" />
@@ -394,7 +394,7 @@ const EditLeadDialog: React.FC<EditLeadDialogProps> = ({
           </div>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             onClick={handleSubmit}
             className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"

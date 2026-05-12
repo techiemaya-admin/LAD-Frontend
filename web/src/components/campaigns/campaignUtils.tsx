@@ -213,7 +213,7 @@ export const renderChannelIcons = (campaign: Campaign): React.ReactElement => {
 export const renderActionChips = (campaign: Campaign) => {
   const actions = getDetailedActions(campaign);
   if (actions.length === 0) {
-    return <Badge variant="outline" className="text-xs">No actions</Badge>;
+    return <Badge variant="outline" className="text-xs dark:border-blue-400 dark:text-blue-300 dark:bg-transparent">No actions</Badge>;
   }
   // Group actions by platform
   const platformActions: Record<string, string[]> = {};
@@ -385,7 +385,7 @@ export const renderActionChips = (campaign: Campaign) => {
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge
-              className="h-8 w-8 p-0 flex items-center justify-center cursor-default"
+              className="h-8 w-8 p-0 flex items-center justify-center cursor-default dark:!bg-transparent dark:!border-transparent"
               style={{
                 backgroundColor: config.bgColor,
                 color: config.color,
