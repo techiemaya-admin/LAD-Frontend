@@ -879,11 +879,7 @@ export default function CampaignAnalyticsPage() {
                           <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Success Rate</p>
                           <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
-<<<<<<< HEAD
-                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
-=======
                         <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-800">
->>>>>>> origin/develop
                           <div
                             className="absolute h-1.5 rounded-full"
                             style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}
@@ -959,11 +955,7 @@ export default function CampaignAnalyticsPage() {
                     <p className="text-[#64748B] dark:text-[#7a8ba3]">{rate.label}</p>
                     <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
-<<<<<<< HEAD
-                  <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200/80 dark:bg-slate-700">
-=======
                   <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800/80">
->>>>>>> origin/develop
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
                   </div>
                 </div>

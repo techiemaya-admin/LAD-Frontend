@@ -811,22 +811,14 @@ export const LinkedInIntegration: React.FC = () => {
               <div className="bg-blue-100 p-2 rounded">
                 {/* Official LinkedIn Icon */}
                 <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
-<<<<<<< HEAD
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-=======
                   <path d={LINKEDIN_LOGO_PATH}/>
->>>>>>> origin/develop
                 </svg>
               </div>
               <DialogTitle className="text-xl font-semibold text-gray-900">Sign in to LinkedIn</DialogTitle>
             </div>
           </DialogHeader>
 
-<<<<<<< HEAD
-          <div className="px-8 py-6 space-y-6 max-h-[70vh] overflow-y-auto">
-=======
           <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 max-h-[70vh]">
->>>>>>> origin/develop
             {/* Choose Method */}
             <div className="mb-6">
               <h3 className="text-center text-2xl font-semibold text-gray-700 mb-4">Choose a method</h3>
@@ -868,34 +860,19 @@ export const LinkedInIntegration: React.FC = () => {
                 </div>
                 <div className="relative">
                   <input
-<<<<<<< HEAD
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-=======
                     type={showPin ? "text" : ("pass" + "word" as any)}
                     placeholder="LinkedIn Details"
                     value={pinCode}
                     onChange={(e) => setPinCode(e.target.value)}
->>>>>>> origin/develop
                     className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
-<<<<<<< HEAD
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-=======
                     onClick={() => setShowPin(!showPin)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                     aria-label={showPin ? "Hide pin" : "Show pin"}
                   >
                     {showPin ? (
->>>>>>> origin/develop
                       <EyeOff className="h-5 w-5" />
                     ) : (
                       <Eye className="h-5 w-5" />
@@ -1010,17 +987,10 @@ export const LinkedInIntegration: React.FC = () => {
             )}
           </div>
 
-<<<<<<< HEAD
-          <DialogActions>
-            <Button
-              onClick={handleConnect}
-              disabled={connecting || (authMethod === 'credentials' ? !email || !password : !liAtCookie)}
-=======
           <DialogActions className="px-8 pb-8 pt-4">
             <Button
               onClick={handleConnect}
               disabled={connecting || (authMethod === 'credentials' ? !email || !pinCode : !liAtCookie)}
->>>>>>> origin/develop
               className={`px-8 h-11 rounded-full font-semibold transition-colors ${
                 connectionSuccess
                   ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -1103,11 +1073,7 @@ export const LinkedInIntegration: React.FC = () => {
                 {yesNoPolling && !autoResolving && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] rounded-lg">
                     <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] flex-shrink-0" />
-<<<<<<< HEAD
-                    <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval…</p>
-=======
                     <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval...</p>
->>>>>>> origin/develop
                   </div>
                 )}
 
@@ -1115,11 +1081,7 @@ export const LinkedInIntegration: React.FC = () => {
                 {autoResolving && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] rounded-lg">
                     <CheckCircle2 className="h-4 w-4 text-[#057642] flex-shrink-0" />
-<<<<<<< HEAD
-                    <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account…</p>
-=======
                     <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account...</p>
->>>>>>> origin/develop
                   </div>
                 )}
 
@@ -1162,11 +1124,7 @@ export const LinkedInIntegration: React.FC = () => {
             )}
           </div>
 
-<<<<<<< HEAD
-          <DialogActions className="px-8 pb-7">
-=======
           <DialogActions className="px-8 pb-8 pt-4">
->>>>>>> origin/develop
             {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
               <Button
                 onClick={handleVerifyOtp}
@@ -1180,11 +1138,7 @@ export const LinkedInIntegration: React.FC = () => {
                 {verifyingOtp ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-<<<<<<< HEAD
-                    Verifying…
-=======
                     Verifying...
->>>>>>> origin/develop
                   </span>
                 ) : 'Continue'}
               </Button>
