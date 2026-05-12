@@ -36,16 +36,14 @@ interface ExtendedCampaignLead extends CampaignLead {
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
-    //   const campaignId = params.id as string;
-    // TODO: Once leads api done will update this code
-  const campaignId = "85134050-5fca-40d9-8c99-46bedd55b814";
+  const campaignId = params.id as string;
   const { push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
 
   // Fetch campaign to get campaign_type
   const { data: campaign, isLoading: campaignLoading } = useCampaign(
-    "85134050-5fca-40d9-8c99-46bedd55b814",
+    campaignId,
   );
   const isInboundCampaign = campaign?.campaign_type === "inbound";
 
@@ -55,7 +53,7 @@ export default function CampaignLeadsPage() {
     loading: leadsLoading,
     error: leadsError,
     refetch,
-  } = useCampaignLeads("85134050-5fca-40d9-8c99-46bedd55b814");
+  } = useCampaignLeads(campaignId);
 
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];

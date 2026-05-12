@@ -1533,11 +1533,13 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
             style={{ height: 0 }} // Force flex item to respect container height
           >
             {(() => {
-              const apiLeads = pipelineLeadsQuery.data?.leads || [];
+              // Use locally filtered leads from Redux state for instant UI responsiveness
+              // This ensures that our grouped filters (like 'Linkedin') work even if the API query hasn't refreshed
+              const filteredLeads = pipelineBoardData.stages.flatMap(s => s.leads);
               const apiPagination = pipelineLeadsQuery.data?.pagination;
 
               // Normalize leads to ensure compatibility with PipelineListView's Lead interface
-              const normalizedLeads = apiLeads.map(lead => ({
+              const normalizedLeads = filteredLeads.map(lead => ({
                 ...lead,
                 name: lead.name ?? undefined,
                 email: lead.email ?? undefined,
