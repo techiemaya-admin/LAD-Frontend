@@ -285,7 +285,7 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
+          "md:hidden fixed inset-y-0 left-0 w-[70%] bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}

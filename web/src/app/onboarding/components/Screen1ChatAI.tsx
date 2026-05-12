@@ -278,4 +278,4 @@ export default function Screen1ChatAI() {
       )}
     </div>
   );
-}
+}

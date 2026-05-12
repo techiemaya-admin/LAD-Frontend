@@ -54,4 +54,4 @@ export const {
   showSnackbar,
   hideSnackbar,
 } = bootstrapSlice.actions;
-export default bootstrapSlice.reducer;
+export default bootstrapSlice.reducer;
