@@ -259,11 +259,13 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
     
     try {
       const baseUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
+      const token = safeStorage.getItem("token");
       
       const response = await fetch(`${baseUrl}/voices/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           voice_id: selectedVoice.provider_voice_id || selectedVoice.id,
@@ -332,20 +334,7 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
 
     setIsCloning(true);
     try {
-      // Fetch tenant_id
       const token = safeStorage.getItem("token");
-      const authResponse = await fetch('/api/auth/me', {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        }
-      });
-      
-      let tenantId = "";
-      if (authResponse.ok) {
-        const authData = await authResponse.json();
-        tenantId = authData.user?.tenantId || authData.user?.tenant_id || authData.user?.organization_id || "";
-      }
 
       // Slice audio using AudioBuffer
       const decodedBuffer = wavesurferRef.current.getDecodedData();
@@ -364,10 +353,9 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
       formData.append("mode", cloneMode);
       formData.append("enhance", cloneEnhance ? "true" : "false");
       formData.append("gender", cloneGender);
-      if (tenantId) formData.append("tenant_id", tenantId);
-
       const response = await fetch(`${baseUrl}/voices/clone`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
 
