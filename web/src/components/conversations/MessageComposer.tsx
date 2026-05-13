@@ -122,7 +122,7 @@ function PollModal({ onClose, onSend }: { onClose: () => void; onSend: (p: RichM
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-[#0b1957] flex items-center justify-center"><BarChart2 className="w-4 h-4 text-white"/></div>
@@ -156,7 +156,6 @@ function PollModal({ onClose, onSend }: { onClose: () => void; onSend: (p: RichM
           </div>
         </div>
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 rounded-xl">Cancel</button>
           <button onClick={handleSend} disabled={!question.trim() || options.filter(o=>o.trim()).length<2}
             className="px-4 py-2 text-sm font-semibold bg-[#0b1957] text-white rounded-xl hover:bg-[#0a1540] disabled:opacity-40">
             Send Poll
@@ -188,7 +187,7 @@ function ContactModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Ri
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center"><Phone className="w-4 h-4 text-white"/></div>
@@ -206,7 +205,6 @@ function ContactModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Ri
           ))}
         </div>
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 rounded-xl">Cancel</button>
           <button onClick={handleSend} disabled={!name.trim()||!phone.trim()}
             className="px-4 py-2 text-sm font-semibold bg-teal-500 text-white rounded-xl hover:bg-teal-600 disabled:opacity-40">
             Share Contact
@@ -236,7 +234,7 @@ function EventModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Rich
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center"><Calendar className="w-4 h-4 text-white"/></div>
@@ -274,7 +272,6 @@ function EventModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Rich
           </div>
         </div>
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 rounded-xl">Cancel</button>
           <button onClick={handleSend} disabled={!title.trim()||!date}
             className="px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 disabled:opacity-40">
             Share Event
@@ -313,7 +310,7 @@ function LocationModal({ onClose, onSend }: { onClose: () => void; onSend: (p: R
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center"><MapPin className="w-4 h-4 text-white"/></div>
@@ -347,7 +344,6 @@ function LocationModal({ onClose, onSend }: { onClose: () => void; onSend: (p: R
           </div>
         </div>
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 rounded-xl">Cancel</button>
           <button onClick={handleSend} disabled={!coords && !manual.trim()}
             className="px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-40">
             Share Location
@@ -379,7 +375,7 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-96">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden flex flex-col max-h-96">
         {/* Header */}
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
           <h3 className="font-semibold text-[#1E293B]">Stickers</h3>
@@ -748,30 +744,32 @@ export const MessageComposer = memo(function MessageComposer({
       <div className="flex items-end gap-2">
 
         {/* ── Agent type toggle ── */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon"
-              className={cn('h-9 w-9 flex-shrink-0',
-                agentType === 'human' ? 'text-orange-500 hover:text-orange-600' : 'text-green-500 hover:text-green-600')}
-              disabled={disabled}
-              title={agentType === 'human' ? 'Human agent controls this chat' : 'AI agent controls this chat'}>
-              {agentType === 'human' ? <User className="h-5 w-5"/> : <Bot className="h-5 w-5"/>}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="bg-popover z-50">
-            <DropdownMenuItem onClick={()=>handleAgentTypeChange('human')} className={cn(agentType==='human'&&'bg-accent')}>
-              <User className="h-4 w-4 mr-2"/> Human Agent
-              {agentType==='human' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={()=>handleAgentTypeChange('ai')} className={cn(agentType==='ai'&&'bg-accent')}>
-              <Bot className="h-4 w-4 mr-2"/> AI Agent
-              {agentType==='ai' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="hidden lg:block">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon"
+                className={cn('h-9 w-9 flex-shrink-0',
+                  agentType === 'human' ? 'text-orange-500 hover:text-orange-600' : 'text-green-500 hover:text-green-600')}
+                disabled={disabled}
+                title={agentType === 'human' ? 'Human agent controls this chat' : 'AI agent controls this chat'}>
+                {agentType === 'human' ? <User className="h-5 w-5"/> : <Bot className="h-5 w-5"/>}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover z-50">
+              <DropdownMenuItem onClick={()=>handleAgentTypeChange('human')} className={cn(agentType==='human'&&'bg-accent')}>
+                <User className="h-4 w-4 mr-2"/> Human Agent
+                {agentType==='human' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={()=>handleAgentTypeChange('ai')} className={cn(agentType==='ai'&&'bg-accent')}>
+                <Bot className="h-4 w-4 mr-2"/> AI Agent
+                {agentType==='ai' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* ── "+" Attachment menu ── */}
-        <div ref={attachBtnRef} className="relative flex-shrink-0">
+        <div ref={attachBtnRef} className="relative flex-shrink-0 hidden lg:block">
           <button
             onClick={()=>{ if (!disabled) setShowAttachMenu(v=>!v); }}
             disabled={disabled}
@@ -803,16 +801,18 @@ export const MessageComposer = memo(function MessageComposer({
         </div>
 
         {/* ── Template Picker (replaces Quick Replies) ── */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
-          disabled={disabled || !conversationId}
-          title="Send template message"
-          onClick={() => setIsTemplatePickerOpen(true)}
-        >
-          <LayoutTemplate className="h-5 w-5" />
-        </Button>
+        <div className="hidden lg:block">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            disabled={disabled || !conversationId}
+            title="Send template message"
+            onClick={() => setIsTemplatePickerOpen(true)}
+          >
+            <LayoutTemplate className="h-5 w-5" />
+          </Button>
+        </div>
         <TemplatePicker
           open={isTemplatePickerOpen}
           onOpenChange={setIsTemplatePickerOpen}
@@ -846,7 +846,7 @@ export const MessageComposer = memo(function MessageComposer({
         </div>
 
         {/* ── Sticker / Emoji button ── */}
-        <div className="relative flex-shrink-0">
+        <div className="relative flex-shrink-0 hidden lg:block">
           <Button variant="ghost" size="icon"
             className="h-9 w-9 text-muted-foreground hover:text-foreground"
             disabled={disabled}
@@ -884,7 +884,7 @@ export const MessageComposer = memo(function MessageComposer({
       )}
 
       {/* ── Hint bar ── */}
-      <p className="text-[10px] text-muted-foreground mt-2 px-1">
+      <p className="text-[10px] text-muted-foreground mt-2 px-1 hidden lg:block">
         Enter to send · Shift+Enter for new line
         {agentType === 'human' && <span className="ml-2 text-orange-500 font-medium">· You have manual control</span>}
       </p>
