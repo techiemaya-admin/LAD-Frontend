@@ -457,7 +457,7 @@ export function usePlayground({
       // Also fire initial fetch to backend so the first step data is ready!
       fetch(`${workerUrl}/playground-builder/chat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
               session_id: newSessionId,
           })
@@ -486,7 +486,7 @@ export function usePlayground({
           // also inform backend to clean up
           fetch(`${workerUrl}/playground-builder/chat`, {
              method: "POST",
-             headers: { "Content-Type": "application/json" },
+             headers: getAuthHeaders(),
              body: JSON.stringify({ session_id: builderSessionId, action: "finalize" })
           }).catch(err => console.error(err));
           return;
@@ -497,7 +497,7 @@ export function usePlayground({
        try {
            const res = await fetch(`${workerUrl}/playground-builder/chat`, {
                method: "POST",
-               headers: { "Content-Type": "application/json" },
+               headers: getAuthHeaders(),
                body: JSON.stringify({
                    session_id: builderSessionId,
                    message: typeof userInput === "string" ? userInput : (userInput || []).join(", "),
