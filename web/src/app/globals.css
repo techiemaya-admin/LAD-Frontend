@@ -616,3 +616,47 @@ body {
   }
 }
 
+/* Ensure the link tooltip is always on top */
+.ql-tooltip {
+  z-index: 9999 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background-color: white !important;
+  border: 1px solid #ccc !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+/* Fix for the "clumsy" UI clipping the tooltip */
+.quill-wrapper {
+  overflow: visible !important;
+}
+
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.quill-wrapper .ql-container {
+  min-height: 150px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Makes links inside the editor look like distinct buttons/attachments */
+.ql-editor a[href*="storage.googleapis.com"] {
+  background-color: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #2563eb;
+  border: 1px solid #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  margin: 2px;
+}
+
+.ql-editor a[href*="storage.googleapis.com"]:before {
+  margin-right: 4px;
+}

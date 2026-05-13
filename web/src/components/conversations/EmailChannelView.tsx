@@ -18,6 +18,8 @@ import {cn} from '@/lib/utils';
 import {safeStorage} from '@lad/shared/storage';
 import {ImportLeadsDialog} from './ImportLeadsDialog';
 import {EmailTemplatePicker} from './EmailTemplatePicker';
+import ReactQuill from 'react-quill-new'; // Just add "-new"
+import 'react-quill-new/dist/quill.snow.css';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -514,8 +516,21 @@ interface EmailComposePanelProps {
     onShowDetails: () => void;
     showDetails: boolean;
 }
-
-function EmailComposePanel({contact, provider, onShowDetails, showDetails}: EmailComposePanelProps) {
+// Add this before your EmailComposePanel definition
+const Quill = typeof window !== 'undefined' ? require('react-quill-new').Quill : null;
+if (Quill) {
+    const icons = Quill.import('ui/icons');
+    // Using a simple SVG path for a paperclip
+    icons['attachment'] = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`;
+}
+function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
+                           EmailComposePanelProps) {
+    const ALLOWED_FORMATS = [
+        'header', 'font', 'size',
+        'bold', 'italic', 'underline', 'strike', 'blockquote',
+        'list', 'indent',
+        'link', 'image', 'video'
+    ];
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [sending, setSending] = useState(false);
@@ -796,104 +811,105 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                 ) : (
                     /* Thread messages */
                     <>
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-gray-50/50">
-                        {messages.map((msg) => {
-                            const isOut = msg.direction === 'outbound';
-                            const expanded = expandedIds.has(msg.id);
-                            return (
-                                <div
-                                    key={msg.id}
-                                    className={cn(
-                                        'rounded-xl border bg-card shadow-sm overflow-hidden transition-shadow hover:shadow-md',
-                                        isOut ? 'ml-6' : 'mr-6',
-                                    )}
-                                >
-                                    {/* Collapsed header — click to expand */}
-                                    <button
-                                        type="button"
-                                        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
-                                        onClick={() => toggleExpand(msg.id)}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-gray-50/50">
+                            {messages.map((msg) => {
+                                const isOut = msg.direction === 'outbound';
+                                const expanded = expandedIds.has(msg.id);
+                                return (
+                                    <div
+                                        key={msg.id}
+                                        className={cn(
+                                            'rounded-xl border bg-card shadow-sm overflow-hidden transition-shadow hover:shadow-md',
+                                            isOut ? 'ml-6' : 'mr-6',
+                                        )}
                                     >
-                                        {/* Direction dot */}
-                                        <span
-                                            className="h-2 w-2 rounded-full flex-shrink-0 mt-1.5"
-                                            style={{backgroundColor: isOut ? providerColor : '#9ca3af'}}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
+                                        {/* Collapsed header — click to expand */}
+                                        <button
+                                            type="button"
+                                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                                            onClick={() => toggleExpand(msg.id)}
+                                        >
+                                            {/* Direction dot */}
+                                            <span
+                                                className="h-2 w-2 rounded-full flex-shrink-0 mt-1.5"
+                                                style={{backgroundColor: isOut ? providerColor : '#9ca3af'}}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold">
                                       {isOut ? 'You' : (contact.contact_name || contact.email)}
                                     </span>
-                                                {isOut && (
-                                                    <span
-                                                        className="text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white flex-shrink-0"
-                                                        style={{backgroundColor: providerColor}}
-                                                    >
+                                                    {isOut && (
+                                                        <span
+                                                            className="text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white flex-shrink-0"
+                                                            style={{backgroundColor: providerColor}}
+                                                        >
                             {providerLabel}
                           </span>
-                                                )}
-                                                <span
-                                                    className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
+                                                    )}
+                                                    <span
+                                                        className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
                                               {formatMsgDate(msg.sent_at)}
                                             </span>
-                                            </div>
-                                            <p className="text-xs font-medium text-foreground/80 truncate mt-0.5">
-                                                {msg.subject || '(no subject)'}
-                                            </p>
-                                            {!expanded && (
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                                        {msg.body_html?.replace(/<[^>]+>/g, '').slice(0, 100) || ''}
-                                                    </p>
-
                                                 </div>
-                                            )}
-                                        </div>
-                                        {/* ADD THIS: Show attachments saved in raw_payload */}
-                                        {msg.attachments?.map((file, i) => (
-                                            <a
-                                                key={i}
-                                                href={file.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 mt-3 p-2 border rounded-md bg-white/50 hover:bg-white hover:shadow-sm transition-all group"
-                                            >
-                                                <Paperclip className="w-3 h-3 text-gray-400 group-hover:text-blue-500"/>
-                                                <span
-                                                    className="text-xs text-blue-600 font-medium truncate max-w-[200px]">
+                                                <p className="text-xs font-medium text-foreground/80 truncate mt-0.5">
+                                                    {msg.subject || '(no subject)'}
+                                                </p>
+                                                {!expanded && (
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                                            {msg.body_html?.replace(/<[^>]+>/g, '').slice(0, 100) || ''}
+                                                        </p>
+
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {/* ADD THIS: Show attachments saved in raw_payload */}
+                                            {msg.attachments?.map((file, i) => (
+                                                <a
+                                                    key={i}
+                                                    href={file.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 mt-3 p-2 border rounded-md bg-white/50 hover:bg-white hover:shadow-sm transition-all group"
+                                                >
+                                                    <Paperclip
+                                                        className="w-3 h-3 text-gray-400 group-hover:text-blue-500"/>
+                                                    <span
+                                                        className="text-xs text-blue-600 font-medium truncate max-w-[200px]">
                                                   {file.filename || 'Attachment'}
                                                 </span>
-                                            </a>
-                                        ))}
-                                        <ChevronDown
-                                            className={cn(
-                                                'h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5 transition-transform',
-                                                expanded && 'rotate-180',
-                                            )}
-                                        />
-                                    </button>
+                                                </a>
+                                            ))}
+                                            <ChevronDown
+                                                className={cn(
+                                                    'h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5 transition-transform',
+                                                    expanded && 'rotate-180',
+                                                )}
+                                            />
+                                        </button>
 
-                                    {/* Expanded body */}
-                                    {expanded && (
-                                        <div className="px-4 pb-4 pt-2 border-t border-border/40 bg-white/50">
-                                            {msg.body_html ? (
-                                                <div
-                                                    className="email-body-container text-sm leading-relaxed text-[#374151] whitespace-normal"
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: msg.body_html.replace(/\r\n|\n/g, '<br />') // Ensures line breaks from your JSON are rendered
-                                                    }}
-                                                />
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground italic">No content</p>
-                                            )}
+                                        {/* Expanded body */}
+                                        {expanded && (
+                                            <div className="px-4 pb-4 pt-2 border-t border-border/40 bg-white/50">
+                                                {msg.body_html ? (
+                                                    <div
+                                                        className="email-body-container text-sm leading-relaxed text-[#374151] whitespace-normal"
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: msg.body_html.replace(/\r\n|\n/g, '<br />') // Ensures line breaks from your JSON are rendered
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground italic">No content</p>
+                                                )}
 
 
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                         <div ref={threadEndRef} className="h-1"/>
                     </>
                 )}
@@ -913,83 +929,127 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                 </div>
 
                 {/* Body */}
-                <div className="px-4 pt-2 pb-1 relative">
-          <textarea
-              ref={bodyRef}
-              placeholder={`Hi ${contact.contact_name?.split(' ')[0] || '{name}'},\n\nWrite your message here...`}
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              className="w-full h-28 bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground/50"
-          />
-                    {showTemplate && (
-                        <InlineTemplatePicker
-                            onSelect={handleTemplateSelect}
-                            onClose={() => setShowTemplate(false)}
-                        />
+
+
+                {/* --- MODIFIED: Replace Textarea with ReactQuill --- */}
+                <div className="quill-wrapper" style={{minHeight: '150px'}}>
+                    <ReactQuill
+                        theme="snow"
+                        value={body}
+                        onChange={setBody}
+                        formats={ALLOWED_FORMATS} // ADD THIS LINE
+                        modules={{
+                            toolbar: {
+                                container: [
+                                    ['bold', 'italic', 'underline'],
+                                    [{'header': [1, 2, 3, false]}], // Better way to show header options
+                                    [{'list': 'ordered'}, {'list': 'bullet'}], // These are values of 'list'
+                                    ['link', 'image','attachment'],
+                                    ['clean']
+                                ],
+                                handlers: {
+                                    link: function (value: string) {
+                                        if (value) {
+                                            const href = prompt('Enter the URL');
+                                            if (href) {
+                                                this.quill.format('link', href);
+                                            }
+                                        } else {
+                                            this.quill.format('link', false);
+                                        }
+                                    },
+                                    image: function () {
+                                        // Trigger the hidden file input specifically for images
+                                        const input = document.createElement('input');
+                                        input.setAttribute('type', 'file');
+                                        input.setAttribute('accept', 'image/*');
+                                        input.click();
+
+                                        input.onchange = async () => {
+                                            const file = input.files?.[0];
+                                            if (file) {
+                                                const res = await uploadAttachmentToGCS(file); // Use your GCS function
+                                                const range = this.quill.getSelection();
+                                                this.quill.insertEmbed(range.index, 'image', res.url);
+                                            }
+                                        };
+                                    },// CUSTOM ATTACHMENT HANDLER
+                                    attachment: function() {
+                                        const input = document.createElement('input');
+                                        input.setAttribute('type', 'file');
+                                        input.setAttribute('multiple', 'true');
+                                        input.click();
+
+                                        input.onchange = () => {
+                                            const files = Array.from(input.files || []);
+                                            if (files.length > 0) {
+                                                // We reach out to the state setter passed in or defined in scope
+                                                // This adds them to the list that handleSend uses
+                                                setAttachments(prev => [...prev, ...files]);
+                                            }
+                                        };
+                                    }
+                                }
+                            },
+                        }}
+                        // your modules and formats...
+                    />
+                    {/* Personalization vars */}
+
+                    {/* Error banner */}
+                    {error && (
+                        <div
+                            className="mx-4 mb-2 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0"/>
+                            {error}
+                        </div>
                     )}
-                </div>
 
-                {/* Personalization vars */}
+                    {/* Toolbar + Send */}
+                    <div className="px-4 py-2.5 border-t border-border/60 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                            <ToolbarButton
+                                icon={FileText}
+                                label="Use template"
+                                active={showTemplate}
+                                onClick={() => setShowTemplate(v => !v)}
+                            />
+                            <div className="px-4 pt-2 pb-1 relative">
 
-                {/* Error banner */}
-                {error && (
-                    <div
-                        className="mx-4 mb-2 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0"/>
-                        {error}
-                    </div>
-                )}
+                                {showTemplate && (
+                                    <InlineTemplatePicker
+                                        onSelect={handleTemplateSelect}
+                                        onClose={() => setShowTemplate(false)}
+                                    />
+                                )}
+                            </div>
+                        </div>
 
-                {/* Toolbar + Send */}
-                <div className="px-4 py-2.5 border-t border-border/60 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
-                        <ToolbarButton
-                            icon={FileText}
-                            label="Use template"
-                            active={showTemplate}
-                            onClick={() => setShowTemplate(v => !v)}
-                        />
-                        <ToolbarButton
-                            icon={Paperclip}
-                            label="Attach file"
-                            onClick={() => fileRef.current?.click()}
-                        />
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            multiple
-                            className="hidden"
-                            onChange={e => setAttachments(prev => [...prev, ...Array.from(e.target.files || [])])}
-                        />
-                        <div className="w-px h-4 bg-border mx-1"/>
-                        <ToolbarButton icon={Bold} label="Bold" onClick={() => insertVar('**bold**')}/>
-                        <ToolbarButton icon={Italic} label="Italic" onClick={() => insertVar('*italic*')}/>
-                        <ToolbarButton icon={Link2} label="Insert link" onClick={() => insertVar('[link text](url)')}/>
-                    </div>
-
-                    {attachments.length > 0 && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
+                        {attachments.length > 0 && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
               <Paperclip className="h-3 w-3"/>
-                            {attachments.length}
+                                {attachments.length}
             </span>
-                    )}
-
-                    <Button
-                        size="sm"
-                        className="gap-1.5 h-8 text-xs ml-auto"
-                        style={{backgroundColor: sent ? '#10b981' : providerColor, borderColor: 'transparent'}}
-                        onClick={handleSend}
-                        disabled={sending || !subject.trim() || !body.trim() || !contact.email}
-                    >
-                        {sent ? (
-                            <><Check className="h-3.5 w-3.5"/> Sent!</>
-                        ) : sending ? (
-                            <><Loader2 className="h-3.5 w-3.5 animate-spin"/> Sending…</>
-                        ) : (
-                            <><Send className="h-3.5 w-3.5"/> Send via {PROVIDER_LABEL[provider]}</>
                         )}
-                    </Button>
+
+                        <Button
+                            size="sm"
+                            className="gap-1.5 h-8 text-xs ml-auto"
+                            style={{backgroundColor: sent ? '#10b981' : providerColor, borderColor: 'transparent'}}
+                            onClick={handleSend}
+                            disabled={sending || !subject.trim() || !body.trim() || !contact.email}
+                        >
+                            {sent ? (
+                                <><Check className="h-3.5 w-3.5"/> Sent!</>
+                            ) : sending ? (
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin"/> Sending…</>
+                            ) : (
+                                <><Send className="h-3.5 w-3.5"/> Send via {PROVIDER_LABEL[provider]}</>
+                            )}
+                        </Button>
+                    </div>
                 </div>
+
             </div>
         </div>
     );
