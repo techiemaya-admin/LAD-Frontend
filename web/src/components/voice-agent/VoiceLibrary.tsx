@@ -89,7 +89,7 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
   const [cloneName, setCloneName] = useState("");
   const [cloneDesc, setCloneDesc] = useState("");
   const [cloneFile, setCloneFile] = useState<File | null>(null);
-  const [cloneMode, setCloneMode] = useState<"similarity" | "stability">("similarity");
+  const [cloneMode, setCloneMode] = useState<"instant" | "pro">("instant");
   const [cloneEnhance, setCloneEnhance] = useState(false);
 
   // Recording states
@@ -134,14 +134,16 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
         
         wsRegions.clearRegions();
         
-        // Default region: 5s or full length
-        const end = Math.min(duration, cloneMode === "similarity" ? 5 : 15);
+        // Default region: 10s or full length
+        const end = Math.min(duration, cloneMode === "instant" ? 10 : 15);
         wsRegions.addRegion({
           start: 0,
           end: end,
           color: 'rgba(59, 130, 246, 0.2)',
           drag: true,
           resize: true,
+          minLength: 5,
+          maxLength: cloneMode === "instant" ? 10.5 : 15,
         });
         setTrimStart(0);
         setTrimEnd(end);
@@ -197,7 +199,7 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
       const regions = regionsRef.current.getRegions();
       if (regions.length > 0) {
         const region = regions[0];
-        const defaultLength = cloneMode === "similarity" ? 5 : 15;
+        const defaultLength = cloneMode === "instant" ? 10 : 15;
         const newEnd = Math.min(audioDuration, region.start + defaultLength);
         region.onResize(newEnd - region.end, 'right');
       }
@@ -305,6 +307,24 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
       toast({
         title: "Missing Fields",
         description: "Please provide a name and an audio file.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (cloneMode === "instant" && (trimEnd - trimStart) > 10.5) {
+      toast({
+        title: "Audio Too Long",
+        description: "Instant Voice Cloning requires 10 seconds of audio. Please trim your clip.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if ((trimEnd - trimStart) < 4.5) {
+      toast({
+        title: "Audio Too Short",
+        description: "Please provide at least 5 seconds of audio for a high-quality clone.",
         variant: "destructive"
       });
       return;
@@ -420,7 +440,7 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[550px] p-6 rounded-3xl">
-              <DialogHeader>
+              <DialogHeader className="flex-col items-start gap-1.5 pb-4 border-none">
                 <DialogTitle>Clone a New Voice</DialogTitle>
                 <DialogDescription>
                   Upload or record a clean audio clip. Use the handles to trim it to the required length.
@@ -472,25 +492,26 @@ export function VoiceLibrary({ voices, setVoices }: VoiceLibraryProps) {
                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Clone Mode</Label>
                     <div className="grid grid-cols-2 gap-3">
                       <Button 
-                        variant={cloneMode === "similarity" ? "default" : "outline"} 
+                        variant={cloneMode === "instant" ? "default" : "outline"} 
                         size="sm" 
-                        onClick={() => setCloneMode("similarity")}
+                        onClick={() => setCloneMode("instant")}
                         className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1"
                       >
-                        <span className="font-semibold text-xs">Similarity (5s)</span>
+                        <span className="font-semibold text-xs">Instant Clone</span>
                         <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
-                          Closer match, keeps noise
+                          10s audio • 1 credit / char
                         </span>
                       </Button>
                       <Button 
-                        variant={cloneMode === "stability" ? "default" : "outline"} 
+                        variant={cloneMode === "pro" ? "default" : "outline"} 
                         size="sm" 
-                        onClick={() => setCloneMode("stability")}
-                        className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1"
+                        onClick={() => setCloneMode("pro")}
+                        disabled
+                        className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1 opacity-60"
                       >
-                        <span className="font-semibold text-xs">Stability (15s)</span>
+                        <span className="font-semibold text-xs">Pro Voice Clone</span>
                         <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
-                          More stable studio sound
+                          30m audio • Coming Soon
                         </span>
                       </Button>
                     </div>
