@@ -5,3 +5,8 @@
 export const getApiBaseUrl = (): string => {
   return process.env.NEXT_PUBLIC_BACKEND_URL || '';
 };
+
+
+export const getApiBaseUrlForLocal = (): string => {
+  return 'http://localhost:3001';
+};

@@ -1058,7 +1058,7 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
                 <UserPlus className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium">Import Leads</span>
+              <span className="text-sm font-medium">MMMMM Import Leads</span>
             </button>
 
             {/* Broadcast */}

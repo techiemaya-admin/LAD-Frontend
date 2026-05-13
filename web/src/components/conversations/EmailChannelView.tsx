@@ -62,7 +62,8 @@ interface EmailChannelViewProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const API            = '/api/email-conversations';
+// const API            = 'https://lad-backend-develop-160078175457.us-central1.run.app/api/email-conversations';
+const API            = 'http://localhost:3001/api/email-conversations';
 const TEMPLATES_API  = '/api/campaigns/email-templates';
 
 const PROVIDER_COLOR: Record<EmailProvider, string> = {
@@ -473,6 +474,11 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 // ── Email Message Type ────────────────────────────────────────────────────────
+interface EmailAttachment {
+  url: string;
+  filename: string;
+  type: string;
+}
 
 interface EmailMessage {
   id: string;
@@ -484,6 +490,7 @@ interface EmailMessage {
   preview_text: string | null;
   status: string;
   sent_at: string;
+  attachments: EmailAttachment[] | null; // Changed from [] to an array of objects
 }
 
 // ── Email Compose Panel (middle — thread + compose) ───────────────────────────
@@ -515,7 +522,29 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
 
   const providerColor = PROVIDER_COLOR[provider];
   const providerLabel = PROVIDER_LABEL[provider];
+  const uploadAttachmentToGCS = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
 
+    const response = await fetch(`${API}/upload`, {
+      method: 'POST',
+      headers: {
+        // Note: Do NOT set Content-Type header when sending FormData;
+        // the browser will set it automatically with the boundary string.
+        ...authHeaders(),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error('Failed to upload attachment');
+
+    const data = await response.json();
+    return {
+      url: data.url,      // The GCS URL returned by backend
+      filename: file.name,
+      type: file.type
+    };
+  };
   // ── Load thread ──────────────────────────────────────────────────────────────
   const loadThread = useCallback(async () => {
     if (!contact.id) return;
@@ -572,25 +601,17 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
     try {
       const backendProvider = toBackendProvider(provider);
 
-      // Serialize File[] → base64 payloads
-      const attachmentPayloads = await Promise.all(
-        attachments.map(file => new Promise<{ filename: string; contentType: string; content: string }>(
-          (resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const dataUrl = e.target?.result as string;
-              const base64 = dataUrl.split(',')[1] ?? '';
-              resolve({ filename: file.name, contentType: file.type || 'application/octet-stream', content: base64 });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          }
-        )),
+// 1. Upload files to GCS first (No more Base64!)
+      const uploadedAttachments = await Promise.all(
+          attachments.map(file => uploadAttachmentToGCS(file))
       );
 
       const res = await fetch(`${API}/send-bulk`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           provider: backendProvider,
           recipients: [{
@@ -600,27 +621,14 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
           }],
           subject: subject.trim(),
           body_html: body.trim(),
-          ...(attachmentPayloads.length ? { attachments: attachmentPayloads } : {}),
+          // Send the tiny URL objects instead of giant base64 strings
+          ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
         }),
       });
+
       const data = await res.json();
       if (data.success) {
-        // Persist to email_messages thread table
-        try {
-          await fetch(`${API}/messages`, {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({
-              contact_id: contact.id,
-              direction: 'outbound',
-              provider,
-              subject: subject.trim(),
-              body_html: body.trim(),
-              status: 'sent',
-            }),
-          });
-        } catch { /* non-fatal — send succeeded, history write failed */ }
-
+        loadThread();
         // Optimistically append to thread
         const optimistic: EmailMessage = {
           id: `opt-${Date.now()}`,
@@ -799,11 +807,29 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
                         {msg.subject || '(no subject)'}
                       </p>
                       {!expanded && (
+                          <div>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {msg.preview_text || msg.body_html?.replace(/<[^>]+>/g, '').slice(0, 120) || ''}
+                          {msg.body_html?.replace(/<[^>]+>/g, '').slice(0, 100) || ''}
                         </p>
+
+                          </div>
                       )}
                     </div>
+                    {/* ADD THIS: Show attachments saved in raw_payload */}
+                    {msg.attachments?.map((file, i) => (
+                        <a
+                            key={i}
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 mt-3 p-2 border rounded-md bg-white/50 hover:bg-white hover:shadow-sm transition-all group"
+                        >
+                          <Paperclip className="w-3 h-3 text-gray-400 group-hover:text-blue-500" />
+                          <span className="text-xs text-blue-600 font-medium truncate max-w-[200px]">
+      {file.filename || 'Attachment'}
+    </span>
+                        </a>
+                    ))}
                     <ChevronDown
                       className={cn(
                         'h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5 transition-transform',
@@ -814,16 +840,20 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
 
                   {/* Expanded body */}
                   {expanded && (
-                    <div className="px-4 pb-4 pt-2 border-t border-border/40">
-                      {msg.body_html ? (
-                        <div
-                          className="prose prose-sm max-w-none text-sm leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: msg.body_html }}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No content</p>
-                      )}
-                    </div>
+                      <div className="px-4 pb-4 pt-2 border-t border-border/40 bg-white/50">
+                        {msg.body_html ? (
+                            <div
+                                className="email-body-container text-sm leading-relaxed text-[#374151] whitespace-normal"
+                                dangerouslySetInnerHTML={{
+                                  __html: msg.body_html.replace(/\r\n|\n/g, '<br />') // Ensures line breaks from your JSON are rendered
+                                }}
+                            />
+                        ) : (
+                            <p className="text-sm text-muted-foreground italic">No content</p>
+                        )}
+
+
+                      </div>
                   )}
                 </div>
               );
@@ -864,17 +894,6 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails }: Em
         </div>
 
         {/* Personalization vars */}
-        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-          {['{name}', '{first_name}', '{company}', '{email}'].map(v => (
-            <button
-              key={v}
-              onClick={() => insertVar(v)}
-              className="px-2 py-0.5 rounded bg-muted border border-border text-[10px] font-mono text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-            >
-              {v}
-            </button>
-          ))}
-        </div>
 
         {/* Error banner */}
         {error && (
