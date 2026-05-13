@@ -58,4 +58,4 @@ const SearchSpinner = ({ size = 'md', message }: SearchSpinnerProps) => {
     </div>
   );
 };
-export default SearchSpinner;
+export default SearchSpinner;
