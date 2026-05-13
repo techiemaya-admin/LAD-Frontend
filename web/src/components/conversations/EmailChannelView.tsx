@@ -796,6 +796,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                 ) : (
                     /* Thread messages */
                     <>
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-gray-50/50">
                         {messages.map((msg) => {
                             const isOut = msg.direction === 'outbound';
                             const expanded = expandedIds.has(msg.id);
@@ -820,9 +821,9 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold">
-                          {isOut ? 'You' : (contact.contact_name || contact.email)}
-                        </span>
+                                    <span className="text-xs font-semibold">
+                                      {isOut ? 'You' : (contact.contact_name || contact.email)}
+                                    </span>
                                                 {isOut && (
                                                     <span
                                                         className="text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white flex-shrink-0"
@@ -833,8 +834,8 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                                                 )}
                                                 <span
                                                     className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
-                          {formatMsgDate(msg.sent_at)}
-                        </span>
+                                              {formatMsgDate(msg.sent_at)}
+                                            </span>
                                             </div>
                                             <p className="text-xs font-medium text-foreground/80 truncate mt-0.5">
                                                 {msg.subject || '(no subject)'}
@@ -860,8 +861,8 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                                                 <Paperclip className="w-3 h-3 text-gray-400 group-hover:text-blue-500"/>
                                                 <span
                                                     className="text-xs text-blue-600 font-medium truncate max-w-[200px]">
-      {file.filename || 'Attachment'}
-    </span>
+                                                  {file.filename || 'Attachment'}
+                                                </span>
                                             </a>
                                         ))}
                                         <ChevronDown
@@ -892,6 +893,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}: Emai
                                 </div>
                             );
                         })}
+                    </div>
                         <div ref={threadEndRef} className="h-1"/>
                     </>
                 )}
