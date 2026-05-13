@@ -36,6 +36,9 @@ const nextConfig = {
       '@lad/frontend-features/deals-pipeline': path.resolve(__dirname, '../sdk/features/deals-pipeline'),
       '@lad/frontend-features/apollo-leads': path.resolve(__dirname, '../sdk/features/apollo-leads'),
       '@lad/frontend-features/dashboard': path.resolve(__dirname, '../sdk/features/dashboard'),
+      '@livekit/components-react': path.resolve(__dirname, '../node_modules/@livekit/components-react'),
+      '@livekit/components-styles': path.resolve(__dirname, '../node_modules/@livekit/components-styles'),
+      'livekit-client': path.resolve(__dirname, '../node_modules/livekit-client'),
     };
 
     // Use browser-compatible exceljs build on client side
@@ -64,6 +67,9 @@ const nextConfig = {
       '@lad/frontend-features/deals-pipeline': '../sdk/features/deals-pipeline',
       '@lad/frontend-features/apollo-leads': '../sdk/features/apollo-leads',
       '@lad/frontend-features/dashboard': '../sdk/features/dashboard',
+      '@livekit/components-react': '../node_modules/@livekit/components-react',
+      '@livekit/components-styles': '../node_modules/@livekit/components-styles',
+      'livekit-client': '../node_modules/livekit-client',
     },
   },
 

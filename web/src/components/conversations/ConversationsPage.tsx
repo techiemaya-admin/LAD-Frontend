@@ -426,9 +426,9 @@ function ChannelConversationView({
       <AnimatePresence mode="wait">
         {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
           <motion.div
-            initial={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
-            animate={isMobile ? { x: 0 } : { width: 320, opacity: 1 }}
-            exit={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className={cn(
               "h-full flex-shrink-0 overflow-hidden",
@@ -623,13 +623,6 @@ export function ConversationsPage() {
       setChannelStatus(status);
       setActiveTab(getDefaultTab(status));
     });
-  }, []);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
   }, []);
 
   // Show only tabs whose channel is actively connected.

@@ -209,8 +209,25 @@
   }
 
   /* Scrollbar styling */
-  .custom-scrollbar::-webkit-scrollbar {
+  ::-webkit-scrollbar {
     width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 3px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
@@ -218,9 +235,14 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full hover:bg-muted-foreground/30;
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
   }
 
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb transparent;
+  }
+  
   /* Global dark mode scrollbar — applies to ALL scrollable elements */
   .dark *::-webkit-scrollbar {
     width: 8px;

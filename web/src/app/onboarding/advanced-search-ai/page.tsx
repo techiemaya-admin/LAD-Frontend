@@ -8989,8 +8989,31 @@ const css = `
                 .adv-gemini-sparkle {width: 24px; height: 24px; }
                 .adv-gemini-logo-wrap {width: 64px; height: 64px; margin-bottom: 8px; }
                 .adv-gemini-logo {width: 50px; }
-                .adv-gemini-chips { flex-wrap: wrap; justify-content: center; padding: 10px 20px 40px !important; overflow-x: visible; gap: 10px; width: 100%; margin: 0 auto; }
-                .adv-gemini-chip { padding: 10px 16px; font-size: 12.5px; flex: 0 0 auto; border-radius: 12px; }
+                .adv-gemini-chips { 
+                    display: grid !important; 
+                    grid-template-columns: repeat(2, 1fr) !important; 
+                    gap: 10px !important; 
+                    padding: 10px 20px 40px !important; 
+                    width: 100% !important; 
+                    max-width: 600px; 
+                    margin: 0 auto !important; 
+                    overflow-x: visible !important;
+                }
+                .adv-gemini-chip { 
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    padding: 12px 10px !important; 
+                    font-size: 12px !important; 
+                    line-height: 1.3 !important;
+                    border-radius: 16px !important; 
+                    white-space: normal !important; 
+                    text-align: left !important; 
+                    justify-content: flex-start !important; 
+                    width: 100% !important;
+                    min-height: 64px !important;
+                    flex: 0 0 auto !important;
+                }
                 html, body, .adv-landing, .adv-chat-root, main { background: #FFFFFF !important; }
                 .adv-chat-input-box { width: 100% !important; max-width: 100% !important; border-radius: 20px; padding: 16px 18px 12px; border: none !important; box-shadow: none !important; outline: none !important; background: #FFFFFF !important; }
                 .adv-chat-ta { text-align: center; font-size: 15px !important; outline: none !important; border: none !important; background: #FFFFFF !important; }
@@ -9144,13 +9167,35 @@ const css = `
                 .adv-center { padding: 0 0 60px !important; align-items: center !important; }
                 .adv-input-outer { width: 92% !important; max-width: 92% !important; margin: 0 auto 40px !important; }
                 .adv-title { font-size: 24px !important; width: 88%; margin: 0 auto 24px !important; text-align: center; }
-                .adv-chips-row { width: 90% !important; justify-content: center !important; padding: 0 !important; margin: 0 auto !important; }
+                .adv-chips-row { 
+                    display: grid !important; 
+                    grid-template-columns: repeat(2, 1fr) !important; 
+                    gap: 10px !important; 
+                    width: 90% !important; 
+                    justify-content: center !important; 
+                    padding: 0 0 20px !important; 
+                    margin: 0 auto !important; 
+                }
+                .adv-chip {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    padding: 12px 10px !important;
+                    font-size: 12px !important;
+                    line-height: 1.3 !important;
+                    border-radius: 16px !important;
+                    white-space: normal !important;
+                    text-align: left !important;
+                    justify-content: flex-start !important;
+                    width: 100% !important;
+                    min-height: 64px !important;
+                }
                 .adv-recent-wrap { width: 90% !important; margin: 16px auto 0 !important; }
             }
             @media (max-width: 480px) {
                 .adv-gemini-title {font-size: 18px; margin-bottom: 20px; }
-                .adv-gemini-chips {gap: 6px; padding: 0 12px 12px; }
-                .adv-gemini-chip {padding: 7px 12px; font-size: 11.5px; gap: 6px; }
+                .adv-gemini-chips { gap: 8px !important; padding: 0 12px 12px !important; }
+                .adv-gemini-chip { padding: 10px 8px !important; font-size: 11px !important; gap: 6px !important; min-height: 56px !important; }
 
             }
 

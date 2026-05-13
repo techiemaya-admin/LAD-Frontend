@@ -187,7 +187,7 @@ function TemplateFormDialog({
           <DialogTitle>{initial.name ? 'Edit Template' : 'New Template'}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-6 px-8 py-6">
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Template Name *</label>
@@ -382,9 +382,7 @@ function TemplateFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || uploading}>
-            Cancel
-          </Button>
+
           <Button
             onClick={() => onSave(form)}
             disabled={saving || uploading || !form.name.trim() || !form.content.trim()}
