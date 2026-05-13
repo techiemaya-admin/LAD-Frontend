@@ -66,7 +66,7 @@ export default function HtmlEmailEditor({
     <div className="flex gap-0 h-full -m-6">
 
       {/* ── Left: Media Library ── */}
-      <div className="w-52 flex-shrink-0 border-r border-gray-200 bg-gray-50 overflow-y-auto p-4">
+      <div className="w-52 flex-shrink-0 border-r border-gray-200 bg-gray-50 dark:bg-slate-800 overflow-y-auto p-4">
         <EmailMediaLibrary onInsert={insertAtCursor} />
       </div>
 

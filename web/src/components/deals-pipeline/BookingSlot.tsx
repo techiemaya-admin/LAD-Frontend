@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateLead as updateLeadInStore } from '@/features/deals-pipeline/store/slices/leadsSlice';
 import { Calendar, Clock, User, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
   isEditMode = false,
   fullWidthButton = false,
 }) => {
+  const dispatch = useDispatch();
   // Get pipeline settings from Redux
   const pipelineSettings = useSelector(selectPipelineSettings);
   const currentUser = useSelector(selectUser);
@@ -218,7 +220,8 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             : booking.booking_date || booking.date || '';
         const startTimeStr = extractHHMM(String(startValue || '')) || extractHHMM(String(booking.startTime || ''));
         const endTimeStr = extractHHMM(String(endValue || '')) || extractHHMM(String(booking.endTime || ''));
-        const status = String(booking.status || '').toLowerCase();
+        const rawStatus = String(booking.status || '').toLowerCase();
+        const status = rawStatus === 'shedule' ? 'scheduled' : rawStatus;
         const bookingTypeValue =
           booking.booking_type ||
           booking.bookingType ||
@@ -296,6 +299,12 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         });
       logger.debug('Final mapped bookings', { count: sortedBookings?.length || 0 });
       setBookedSlots(sortedBookings);
+      
+      // Sync with lead status in store if a scheduled booking exists
+      const hasScheduled = mappedBookings.some(b => b.status === 'scheduled');
+      if (hasScheduled) {
+        dispatch(updateLeadInStore({ id: leadId, data: { status: 'scheduled' } }));
+      }
       setShowAllBookedAppointments(false);
       // Mark slots as booked (only in edit mode when we have time slots)
       if (isEditMode && date) {
@@ -731,6 +740,18 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                               <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
                             ) : null}
                             <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
+                            {slot.status && (
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase",
+                                slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                                slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
+                                slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
+                                slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
+                                "bg-gray-50 text-gray-600 border border-gray-100"
+                              )}>
+                                {slot.status}
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-700 mt-1">
                             {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
@@ -1167,6 +1188,18 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                   <span className="text-gray-600 text-sm">• {slot.bookingType}</span>
                 ) : null}
                 <span className="text-gray-600 text-sm">• Retry: {slot.retryCount ?? 0}</span>
+                {slot.status && (
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ml-1",
+                    slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                    slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
+                    slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
+                    slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
+                    "bg-gray-50 text-gray-600 border border-gray-100"
+                  )}>
+                    {slot.status}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 ml-6">
                 <Clock className="h-4 w-4 text-gray-500" />

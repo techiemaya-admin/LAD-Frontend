@@ -597,13 +597,6 @@ export function TemplatePicker({
             </div>
             <div className="flex gap-3">
               <Button
-                variant="outline"
-                onClick={() => (selectedTemplate ? setSelectedTemplate(null) : onOpenChange(false))}
-                className="rounded-xl px-6 py-2.5 font-semibold text-gray-500 border-gray-200 hover:bg-gray-50"
-              >
-                {selectedTemplate ? 'Back' : 'Cancel'}
-              </Button>
-              <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
                 className="rounded-xl px-8 py-2.5 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all disabled:opacity-50"

@@ -344,7 +344,7 @@ export default function NewHeroSection() {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-row gap-3 mb-8">
               <Link href="/onboarding">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -364,28 +364,22 @@ export default function NewHeroSection() {
               </motion.button>
             </div>
 
-            {/* Stats */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">10x</p>
-                  <p className="text-sm text-muted-foreground">Faster Closures</p>
-                </div>
+            {/* Stats Row */}
+            <div className="flex flex-row justify-between items-start gap-2 sm:gap-6 mt-8">
+              <div className="flex flex-col items-center text-center flex-1">
+                <Zap className="w-5 h-5 text-primary mb-2" />
+                <p className="font-bold text-foreground text-lg md:text-xl">10x</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">Faster Closures</p>
               </div>
-              <div className="flex items-center gap-3">
-                <Target className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">95%</p>
-                  <p className="text-sm text-muted-foreground">Success Rate</p>
-                </div>
+              <div className="flex flex-col items-center text-center flex-1">
+                <Target className="w-5 h-5 text-primary mb-2" />
+                <p className="font-bold text-foreground text-lg md:text-xl">95%</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">Success Rate</p>
               </div>
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">24/7</p>
-                  <p className="text-sm text-muted-foreground">AI Availability</p>
-                </div>
+              <div className="flex flex-col items-center text-center flex-1">
+                <Clock className="w-5 h-5 text-primary mb-2" />
+                <p className="font-bold text-foreground text-lg md:text-xl">24/7</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">AI Availability</p>
               </div>
             </div>
           </motion.div>

@@ -265,11 +265,11 @@ export const TeamManagement: React.FC = () => {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'owner':  return 'bg-purple-50 text-purple-700 border-purple-100';
-      case 'admin':  return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'member': return 'bg-green-50 text-green-700 border-green-100';
-      case 'viewer': return 'bg-gray-50 text-gray-700 border-gray-100';
-      default:       return 'bg-gray-50 text-gray-700 border-gray-100';
+      case 'owner':  return 'bg-purple-50 text-purple-700 border border-purple-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400';
+      case 'admin':  return 'bg-blue-50 text-blue-700 border border-blue-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400';
+      case 'member': return 'bg-green-50 text-green-700 border border-green-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400';
+      case 'viewer': return 'bg-gray-50 text-gray-700 border border-gray-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-slate-300';
+      default:       return 'bg-gray-50 text-gray-700 border border-gray-200 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-slate-300';
     }
   };
 
@@ -339,16 +339,18 @@ export const TeamManagement: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
+                  // Row layout merges develop's 5-column schema (matches
+                  // the header) with HEAD's dark-mode hover state.
                   users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <tr key={user.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-[#0B1957] flex items-center justify-center text-white font-bold shadow-sm">
                             {(user.name || user.email || '?').charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-900">{user.name || '—'}</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                            <span className="font-bold text-gray-900 dark:text-slate-100">{user.name || '—'}</span>
+                            <span className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                               <Mail className="h-3 w-3 opacity-60" />
                               {user.email}
                             </span>
@@ -378,8 +380,14 @@ export const TeamManagement: React.FC = () => {
                               </SelectContent>
                             </Select>
                           )}
-                          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-green-600 pl-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <div className={cn(
+                            "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider pl-1",
+                            user.status === 'inactive' ? "text-rose-600 dark:text-rose-400" : "text-green-600 dark:text-emerald-400"
+                          )}>
+                            <div className={cn(
+                              "h-1.5 w-1.5 rounded-full animate-pulse",
+                              user.status === 'inactive' ? "bg-rose-500" : "bg-green-500"
+                            )} />
                             {user.status || 'Active'}
                           </div>
                         </div>
@@ -458,7 +466,7 @@ export const TeamManagement: React.FC = () => {
       {/* Add User Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
-          <DialogHeader>
+          <DialogHeader className="px-8 pt-6">
             <DialogTitle>Add Team Member</DialogTitle>
           </DialogHeader>
 
@@ -598,7 +606,7 @@ export const TeamManagement: React.FC = () => {
             </div>
           </div>
 
-          <DialogActions>
+          <DialogActions className="px-8 pb-8 pt-4">
             <Button
               onClick={handleAddUser}
               disabled={loading || !newUser.name || !newUser.email || !newUser.password}

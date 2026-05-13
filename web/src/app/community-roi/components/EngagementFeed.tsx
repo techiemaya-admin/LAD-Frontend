@@ -31,7 +31,7 @@ export const EngagementFeed: React.FC<EngagementFeedProps> = ({ memberId }) => {
 
   if (!activity || activity.length === 0) {
     return (
-      <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+      <div className="text-center py-8 bg-gray-50 dark:bg-slate-800 rounded-lg border border-dashed border-gray-200">
         <p className="text-sm text-gray-500">No recent engagement recorded</p>
       </div>
     );

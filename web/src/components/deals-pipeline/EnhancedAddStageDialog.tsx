@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { Stage } from '../store/slices/pipelineSlice';
 
 interface EnhancedAddStageDialogProps {
@@ -23,11 +23,11 @@ interface EnhancedAddStageDialogProps {
   getPositionPreview?: () => React.ReactNode;
 }
 
-const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({ 
-  open, 
-  onClose, 
-  onAdd, 
-  stages = [], 
+const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
+  open,
+  onClose,
+  onAdd,
+  stages = [],
   isSubmitting = false,
   error = '',
   newStageName,
@@ -90,9 +90,9 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="p-0 sm:w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
               <Plus className="h-6 w-6 stroke-[3px]" />
             </div>
@@ -188,7 +188,7 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
           </div>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             variant="outline"
             onClick={onClose}
@@ -200,7 +200,7 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
+            className="w-full rounded-xl px-8 h-11 font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 text-white shadow-lg transition-all"
           >
             {isSubmitting ? 'Adding Stage...' : 'Add Stage'}
           </Button>

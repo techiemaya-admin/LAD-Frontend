@@ -62,9 +62,9 @@ export default function MRLadsSection() {
           style={{ y: textY }}
         >
           <h1
-            className="font-black mb-8 text-primary dark:text-white whitespace-nowrap"
+            className="font-black mb-8 text-primary dark:text-white"
             style={{
-              fontSize: "clamp(17rem, 10vw, 12rem)",
+              fontSize: "clamp(3rem, 15vw, 12rem)",
               lineHeight: 1,
               letterSpacing: "-0.03em",
             }}
@@ -79,22 +79,22 @@ export default function MRLadsSection() {
         {/* Stats Row - Parallax */}
         <motion.div
           variants={itemVariants}
-          className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16 mt-16"
+          className="flex flex-row justify-around items-start gap-2 md:gap-16 mt-16"
           style={{ y: contentY }}
         >
-          <div className="text-center">
-            <p className="text-3xl md:text-4xl font-bold text-foreground">12,000+</p>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">Teams using our software</p>
+          <div className="text-center flex-1">
+            <p className="text-xl md:text-4xl font-bold text-foreground leading-none">12,000+</p>
+            <p className="text-[10px] md:text-base text-muted-foreground mt-2 uppercase tracking-tight font-semibold">Teams using our software</p>
           </div>
           <div className="hidden md:block w-px h-16 bg-border" />
-          <div className="text-center">
-            <p className="text-3xl md:text-4xl font-bold text-foreground">10x</p>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">Faster deal closures</p>
+          <div className="text-center flex-1">
+            <p className="text-xl md:text-4xl font-bold text-foreground leading-none">10x</p>
+            <p className="text-[10px] md:text-base text-muted-foreground mt-2 uppercase tracking-tight font-semibold">Faster deal closures</p>
           </div>
           <div className="hidden md:block w-px h-16 bg-border" />
-          <div className="text-center">
-            <p className="text-3xl md:text-4xl font-bold text-foreground">95%</p>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">Success rate</p>
+          <div className="text-center flex-1">
+            <p className="text-xl md:text-4xl font-bold text-foreground leading-none">95%</p>
+            <p className="text-[10px] md:text-base text-muted-foreground mt-2 uppercase tracking-tight font-semibold">Success rate</p>
           </div>
         </motion.div>
 

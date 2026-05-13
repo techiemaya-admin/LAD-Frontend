@@ -47,8 +47,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         const config = await response.json();
         // Check if we have a valid publishable key
         if (!config.publishableKey) {
-          logger.warn('Stripe not configured: Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
-          // Don't throw - allow app to work without Stripe
+          logger.info('Stripe disabled (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY not set) — billing UI will be hidden');
           setLoading(false);
           return;
         }

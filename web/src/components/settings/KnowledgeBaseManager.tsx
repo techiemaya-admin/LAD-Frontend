@@ -198,7 +198,7 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
   // --- Worker not configured in this environment ---
   if (!rag.isConfigured) {
     return (
-      <div className="flex flex-col items-center justify-center w-full min-h-[300px] text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 p-6">
+      <div className="flex flex-col items-center justify-center w-full min-h-[300px] text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-6">
         <BookOpen className="size-10 mb-3 opacity-30" />
         <p className="text-sm font-medium text-slate-500">Voice Playground not available</p>
         <p className="text-xs mt-1 text-center max-w-[260px]">
