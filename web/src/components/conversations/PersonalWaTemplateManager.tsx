@@ -182,12 +182,12 @@ function TemplateFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader>
           <DialogTitle>{initial.name ? 'Edit Template' : 'New Template'}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 px-8 py-6">
+        <div className="space-y-4 sm:space-y-6 px-4 sm:px-8 py-4 sm:py-6">
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Template Name *</label>
@@ -247,7 +247,7 @@ function TemplateFormDialog({
             <label className="text-sm font-medium">Media Attachment (optional)</label>
 
             {/* Type selector */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['none', 'image', 'video', 'document'] as MediaType[]).map((type) => (
                 <button
                   key={type}
