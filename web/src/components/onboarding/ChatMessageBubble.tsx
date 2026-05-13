@@ -20,6 +20,8 @@ interface ChatMessageBubbleProps {
   missing?: Record<string, boolean> | string[];
   workflow?: any[];
   searchResults?: any[];
+  moduleUsed?: string;
+  moduleLabel?: string;
   onRequirementsComplete?: (data: Record<string, any>) => void;
   onOptionSubmit?: (selectedValues: string[]) => void;
   isLastMessage?: boolean;
@@ -33,6 +35,8 @@ export default function ChatMessageBubble({
   missing,
   workflow,
   searchResults,
+  moduleUsed,
+  moduleLabel,
   onRequirementsComplete,
   onOptionSubmit,
   isLastMessage = false,
@@ -264,7 +268,9 @@ export default function ChatMessageBubble({
         {showSearchResults && (
           <div className="mt-4">
             <SearchResultsCards
-              results={searchResults}
+              results={searchResults!}
+              moduleUsed={moduleUsed}
+              moduleLabel={moduleLabel}
               onCompanyClick={(company) => {
                 logger.debug('Company clicked', { company });
                 // Handle company click - could open details, add to workflow, etc.

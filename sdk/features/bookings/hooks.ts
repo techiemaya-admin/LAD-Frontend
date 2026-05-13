@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import * as bookingsApi from './api';
-import { logger } from '@/lib/logger';
+const logger = { error: (...args: any[]) => console.error(...args), warn: (...args: any[]) => console.warn(...args) };
 interface UseBookingsState {
   bookings: bookingsApi.BookingResponse[];
   loading: boolean;
@@ -156,4 +156,4 @@ export function useCounsellors() {
     return () => { isMounted = false; };
   }, []);
   return { counsellors, loading, error };
-}
+}

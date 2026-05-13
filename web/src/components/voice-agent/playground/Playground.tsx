@@ -189,6 +189,14 @@ function AgentUI() {
     transcriptSpeaker = "You";
   }
 
+  // Truncate to the last 30 words to prevent pushing the hangup button off screen
+  if (activeTranscript) {
+    const words = activeTranscript.split(/\s+/);
+    if (words.length > 30) {
+      activeTranscript = "..." + words.slice(-30).join(" ");
+    }
+  }
+
   return (
     <div className="flex flex-col items-center w-full py-2 space-y-4">
       {/* Header info */}

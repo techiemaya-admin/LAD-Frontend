@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { safeStorage } from "@lad/shared/storage";
 
 /* ──────────────────────────────────────────────────────────────────
    CONSTANTS
@@ -120,6 +121,19 @@ export function usePlayground({
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = safeStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+  };
+
+  const getAuthHeaderOnly = () => {
+    const token = safeStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   /* Agent listing */
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<number | null>(() => {
@@ -168,7 +182,7 @@ export function usePlayground({
       try {
         await fetch(`${workerUrl}/release-call`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: id }),
         });
         console.log(`[Playground] Released hold for ${id}`);
@@ -213,6 +227,7 @@ export function usePlayground({
         console.log(`[Playground] Establishing hold for ${id}...`);
         const probe = await fetch(`${workerUrl}/worker-status`, {
           method: "GET",
+          headers: getAuthHeaderOnly(),
         });
         if (!probe.ok) throw new Error("Worker not reachable");
 
@@ -223,7 +238,7 @@ export function usePlayground({
         // Fire-and-forget: /hold-for-call is long-polling (blocks up to 600s).
         fetch(`${workerUrl}/hold-for-call`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: id }),
           signal: controller.signal,
         }).catch((e) => {
@@ -264,7 +279,7 @@ export function usePlayground({
     try {
       const resp = await fetch(`${workerUrl}/playground-agents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
       if (!resp.ok)
@@ -360,7 +375,7 @@ export function usePlayground({
     try {
       const resp = await fetch(`${workerUrl}/playground-init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 

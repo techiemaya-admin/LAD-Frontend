@@ -36,16 +36,14 @@ interface ExtendedCampaignLead extends CampaignLead {
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
-    //   const campaignId = params.id as string;
-    // TODO: Once leads api done will update this code
-  const campaignId = "85134050-5fca-40d9-8c99-46bedd55b814";
+  const campaignId = params.id as string;
   const { push } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
 
   // Fetch campaign to get campaign_type
   const { data: campaign, isLoading: campaignLoading } = useCampaign(
-    "85134050-5fca-40d9-8c99-46bedd55b814",
+    campaignId,
   );
   const isInboundCampaign = campaign?.campaign_type === "inbound";
 
@@ -55,7 +53,7 @@ export default function CampaignLeadsPage() {
     loading: leadsLoading,
     error: leadsError,
     refetch,
-  } = useCampaignLeads("85134050-5fca-40d9-8c99-46bedd55b814");
+  } = useCampaignLeads(campaignId);
 
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
@@ -340,22 +338,22 @@ export default function CampaignLeadsPage() {
   }, [leads, searchTerm]);
   if (loading && leads.length === 0) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-[#000724]">
         <div className="flex flex-col gap-4 items-center">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <p>Loading leads...</p>
+          <Loader2 className="w-8 h-8 animate-spin dark:text-white" />
+          <p className="dark:text-white">Loading leads...</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="w-full h-screen overflow-auto bg-slate-50">
+    <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
       <div className="p-6 pb-12">
         {/* Header */}
 
         <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] mb-1">
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white mb-1">
               Campaign Leads
             </h1>
             <p className="text-sm text-slate-500">

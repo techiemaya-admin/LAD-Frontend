@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import {
   Twitter, Github, Youtube, Instagram, Globe,
   BookOpen, Mic, Trophy, Newspaper, Presentation,
   Linkedin, ThumbsUp, MessageSquare, FileText,
+  RefreshCw, Clock,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -97,6 +99,12 @@ interface ProfileSummaryDialogProps {
   recentPosts?: RecentPost[] | null;
   loading: boolean;
   error: string | null;
+  /** How many days old the cached research data is. null = fresh research just ran. */
+  dataAgeDays?: number | null;
+  /** Called when user clicks "Get Latest Data" — triggers a force-refresh. */
+  onRefresh?: () => void;
+  /** True while the refresh request is in-flight. */
+  refreshLoading?: boolean;
 }
 
 // ── Social platform config ────────────────────────────────────────────────────
@@ -121,9 +129,9 @@ const SOCIAL_CONFIG: Record<string, { icon: React.ElementType; label: string; co
 function SectionHeader({ icon: Icon, label, count }: { icon: React.ElementType; label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <Icon className="w-4 h-4 text-[#0b1957]" />
-      <h6 className="font-semibold text-[#1E293B] text-sm uppercase tracking-wide">{label}</h6>
-      <span className="ml-auto text-xs text-[#94A3B8] bg-[#F1F5F9] px-2 py-0.5 rounded-full">{count}</span>
+      <Icon className="w-4 h-4 text-[#0b1957] dark:text-blue-400" />
+      <h6 className="font-semibold text-[#1E293B] dark:text-white text-sm uppercase tracking-wide">{label}</h6>
+      <span className="ml-auto text-xs text-[#94A3B8] bg-[#F1F5F9] dark:bg-[#253456] dark:text-[#7a8ba3] px-2 py-0.5 rounded-full">{count}</span>
     </div>
   );
 }
@@ -134,10 +142,10 @@ function ContentCard({ item, urlLabel }: { item: ContentItem; urlLabel?: string 
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg border border-[#E2E8F0] hover:border-[#0b1957] hover:bg-[#F8FAFF] transition-all group"
+      className="block p-3 rounded-lg border border-[#E2E8F0] dark:border-[#262831] hover:border-[#0b1957] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all group"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-[#1E293B] group-hover:text-[#0b1957] leading-snug line-clamp-2">
+        <p className="text-sm font-medium text-[#1E293B] dark:text-white group-hover:text-[#0b1957] dark:group-hover:text-blue-300 leading-snug line-clamp-2">
           {item.title}
         </p>
         <ExternalLink className="w-3.5 h-3.5 text-[#94A3B8] shrink-0 mt-0.5" />
@@ -174,8 +182,8 @@ function PostCard({ post }: { post: RecentPost }) {
   const reactions = post.likes_count ?? post.reactions;
 
   return (
-    <div className="p-3 rounded-lg border border-[#E2E8F0] bg-white hover:bg-[#F8FAFF] transition-all">
-      <p className="text-sm text-[#1E293B] leading-relaxed whitespace-pre-wrap line-clamp-4">{text}</p>
+    <div className="p-3 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all">
+      <p className="text-sm text-[#1E293B] dark:text-[#E0E0E0] leading-relaxed whitespace-pre-wrap line-clamp-4">{text}</p>
       <div className="flex items-center gap-3 mt-2">
         {displayDate && (
           <span className="text-xs text-[#94A3B8]">{displayDate}</span>
@@ -216,6 +224,9 @@ export default function ProfileSummaryDialog({
   recentPosts,
   loading,
   error,
+  dataAgeDays,
+  onRefresh,
+  refreshLoading = false,
 }: ProfileSummaryDialogProps) {
   const employeeName = employee
     ? employee.name ||
@@ -250,10 +261,10 @@ export default function ProfileSummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] rounded-2xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[90vh] rounded-2xl overflow-y-auto p-0">
 
         {/* ── Header ── */}
-        <DialogHeader className="flex-row items-center gap-4 p-6 pb-4 border-b sticky top-0 bg-white z-10">
+        <DialogHeader className="flex-row items-center gap-4 p-6 pb-4 border-b sticky top-0 z-10">
           <Avatar className="w-14 h-14 border-[3px] border-[#0b1957] shrink-0">
             <AvatarImage src={employee?.photo_url} alt={employeeName} />
             <AvatarFallback className="bg-[#0b1957] text-white">
@@ -261,13 +272,32 @@ export default function ProfileSummaryDialog({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <DialogTitle className="font-bold text-[#1E293B] m-0 truncate">
+            <DialogTitle className="font-bold text-[#1E293B] dark:text-white m-0 truncate">
               {employeeName}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Profile summary for {employeeName}
+            </DialogDescription>
             {employee?.title && (
               <Badge className="mt-1 font-semibold text-xs h-6 max-w-full truncate block w-fit">
                 {employee.title}
               </Badge>
+            )}
+            {/* ── Data age indicator (shown only when serving cached data) ── */}
+            {!loading && dataAgeDays != null && dataAgeDays > 0 && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <span className="text-xs text-[#92400E] bg-[#FEF3C7] border border-[#FDE68A] px-2 py-0.5 rounded-full font-medium">
+                  Research data from {dataAgeDays === 1 ? '1 day' : `${dataAgeDays} days`} ago
+                </span>
+              </div>
+            )}
+            {!loading && (dataAgeDays === 0 || dataAgeDays === null) && !error && (summary || webPresence) && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-xs text-[#065F46] bg-[#D1FAE5] border border-[#6EE7B7] px-2 py-0.5 rounded-full font-medium">
+                  ✓ Fresh research
+                </span>
+              </div>
             )}
           </div>
         </DialogHeader>
@@ -290,8 +320,8 @@ export default function ProfileSummaryDialog({
               {/* ── AI Profile Summary ── */}
               {summary && (
                 <section>
-                  <h6 className="font-semibold text-[#1E293B] mb-3 text-base">Profile Summary</h6>
-                  <p className="text-[#475569] leading-relaxed whitespace-pre-wrap text-[15px]">
+                  <h6 className="font-semibold text-[#1E293B] dark:text-white mb-3 text-base">Profile Summary</h6>
+                  <p className="text-[#475569] dark:text-[#7a8ba3] leading-relaxed whitespace-pre-wrap text-[15px]">
                     {summary}
                   </p>
                 </section>
@@ -300,16 +330,16 @@ export default function ProfileSummaryDialog({
               {/* ── Knowledge Graph attributes ── */}
               {hasKg && (
                 <section>
-                  <div className="rounded-xl bg-[#F8FAFF] border border-[#E2E8F0] p-4 space-y-2">
+                  <div className="rounded-xl bg-[#F8FAFF] dark:bg-[#0d1b3e] border border-[#E2E8F0] dark:border-[#262831] p-4 space-y-2">
                     {kg?.description && (
-                      <p className="text-sm text-[#475569] leading-relaxed">{kg.description}</p>
+                      <p className="text-sm text-[#475569] dark:text-[#7a8ba3] leading-relaxed">{kg.description}</p>
                     )}
                     {kg?.attributes && Object.keys(kg.attributes).length > 0 && (
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-2 border-t border-[#E2E8F0]">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-2 border-t border-[#E2E8F0] dark:border-[#262831]">
                         {Object.entries(kg.attributes).slice(0, 8).map(([k, v]) => (
                           <div key={k} className="flex items-start gap-1.5">
                             <span className="text-xs font-medium text-[#64748B] shrink-0">{k}:</span>
-                            <span className="text-xs text-[#1E293B]">{String(v)}</span>
+                            <span className="text-xs text-[#1E293B] dark:text-[#E0E0E0]">{String(v)}</span>
                           </div>
                         ))}
                       </div>
@@ -327,7 +357,7 @@ export default function ProfileSummaryDialog({
               {/* ── Social Profiles ── */}
               {hasSocial && (
                 <section>
-                  <h6 className="font-semibold text-[#1E293B] mb-3 text-base">Social & Online Profiles</h6>
+                  <h6 className="font-semibold text-[#1E293B] dark:text-white mb-3 text-base">Social & Online Profiles</h6>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(social).map(([platform, profile]) => {
                       const cfg = SOCIAL_CONFIG[platform] || { icon: Globe, label: platform, color: '#374151' };
@@ -338,8 +368,8 @@ export default function ProfileSummaryDialog({
                           href={profile.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E2E8F0]
-                                     bg-white hover:bg-[#F8FAFF] hover:border-[#0b1957] transition-all text-sm font-medium text-[#1E293B]"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-[#262831]
+                                     bg-white dark:bg-[#1a2a43] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] hover:border-[#0b1957] transition-all text-sm font-medium text-[#1E293B] dark:text-white"
                         >
                           <Icon className="w-4 h-4" style={{ color: cfg.color }} />
                           {cfg.label}
@@ -425,10 +455,26 @@ export default function ProfileSummaryDialog({
         </div>
 
         {/* ── Footer ── */}
-        <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-white">
+        <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 flex items-center gap-3">
+          {/* "Get Latest Data" — shown when cached data is being displayed */}
+          {!loading && dataAgeDays != null && dataAgeDays > 0 && onRefresh && (
+            <Button
+              onClick={onRefresh}
+              disabled={refreshLoading}
+              variant="outline"
+              className="flex items-center gap-2 border-[#0b1957] text-[#0b1957] hover:bg-[#F0F4FF] font-semibold px-5"
+            >
+              {refreshLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {refreshLoading ? 'Refreshing…' : 'Get Latest Data'}
+            </Button>
+          )}
           <Button
             onClick={onClose}
-            className="bg-[#0b1957] hover:bg-[#0a1440] font-semibold px-6"
+            className="bg-[#0b1957] hover:bg-[#0a1440] font-semibold px-6 ml-auto"
           >
             Close
           </Button>

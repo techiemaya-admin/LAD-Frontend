@@ -19,6 +19,7 @@ import {
   RefreshCw,
   CheckSquare,
   Square,
+  Megaphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,21 +101,23 @@ async function fetchGroups(channel?: 'personal' | 'waba'): Promise<ChatGroup[]> 
   return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
-async function createGroup(name: string, color: string, description?: string): Promise<ChatGroup | null> {
-  const res = await fetch(API_BASE, {
+async function createGroup(name: string, color: string, description?: string, channel?: 'personal' | 'waba'): Promise<ChatGroup | null> {
+  const channelParam = channel === 'personal' ? '?channel=personal' : '';
+  const res = await fetch(`${API_BASE}${channelParam}`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ name, color, description: description || null }),
   });
   const data = await res.json();
 
-  // Python service wraps in {success, data}; handle both formats
+  // Node.js backend returns {success, group}; Python returns {success, data}
+  if (data.success && data.group) return data.group;
   if (data.success && data.data) return data.data;
   // Direct group object (id present = success)
   if (data.id) return data as ChatGroup;
   // 409: group name already exists — fetch existing groups and return the match
   if (res.status === 409) {
-    const listRes = await fetch(API_BASE, { headers: authHeaders() });
+    const listRes = await fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() });
     const listData = await listRes.json();
     const groups: ChatGroup[] = listData.data || listData || [];
     return groups.find((g) => g.name.toLowerCase() === name.toLowerCase()) || null;
@@ -414,13 +417,14 @@ export function ChatGroupManager({
   // Create group with selected contacts
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
-    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined);
+    const group = await createGroup(newName.trim(), newColor, newDesc.trim() || undefined, channel);
     if (group) {
       // If contacts are selected, add them to the group via backend
       if (selectedContacts.size > 0) {
         try {
           const contactsList = Array.from(selectedContacts.values());
-          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts`, {
+          const channelParam = channel === 'personal' ? '?channel=personal' : '';
+          await fetchWithTenant(`/api/whatsapp-conversations/chat-groups/${group.id}/import-contacts${channelParam}`, {
             method: 'POST',
             body: JSON.stringify({
               contacts: contactsList.map(c => ({
@@ -518,21 +522,21 @@ export function ChatGroupManager({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <div className="bg-primary/5 border-b border-border px-4 py-3">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Users className="h-5 w-5 text-primary" />
+              <Megaphone className="h-5 w-5 text-primary" />
               {isGroupSelectMode ? (
                 <span>
                   {selectedGroupIds.size > 0
-                    ? `${selectedGroupIds.size} group${selectedGroupIds.size !== 1 ? 's' : ''} selected`
-                    : 'Select Groups'}
+                    ? `${selectedGroupIds.size} broadcast${selectedGroupIds.size !== 1 ? 's' : ''} selected`
+                    : 'Select Broadcasts'}
                 </span>
               ) : (
                 <>
-                  Chat Groups
+                  Broadcasts
                   <Badge variant="secondary" className="text-[10px] ml-1">
                     {groups.length}
                   </Badge>
@@ -540,7 +544,7 @@ export function ChatGroupManager({
               )}
 
               {/* Select mode controls */}
-              <div className="ml-auto flex items-center gap-1">
+              <div className="ml-auto flex items-center gap-1 mr-8">
                 {isGroupSelectMode ? (
                   <>
                     {selectedGroupIds.size < filteredGroups.length ? (
@@ -691,14 +695,7 @@ export function ChatGroupManager({
                     <Button size="sm" className="h-8 text-xs" variant="outline" onClick={handleCreate} disabled={!newName.trim()}>
                       Skip & Create
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); }}
-                    >
-                      Cancel
-                    </Button>
+
                   </div>
                 </>
               ) : (
@@ -832,7 +829,7 @@ export function ChatGroupManager({
                             );
                           })()}
 
-                          <ScrollArea className="h-[200px]">
+                          <ScrollArea className="h-[400px]">
                             <div className="space-y-0.5">
                               {sourceContacts.map((contact, idx) => {
                                 const isSelected = selectedContacts.has(contact.id);
@@ -863,15 +860,18 @@ export function ChatGroupManager({
                                         <p className="text-xs font-medium truncate">
                                           {contact.name || contact.phone || contact.email || 'Unknown'}
                                         </p>
-                                        {contact.channel && (
-                                          <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
-                                            style={{
-                                              background: contact.channel === 'personal' ? '#dcfce7' : contact.channel === 'waba' ? '#d1fae5' : '#dbeafe',
-                                              color:      contact.channel === 'personal' ? '#15803d' : contact.channel === 'waba' ? '#065f46' : '#1d4ed8',
-                                            }}>
-                                            {contact.channel === 'personal' ? 'Personal WA' : contact.channel === 'waba' ? 'WA Business' : contact.channel.toUpperCase()}
-                                          </span>
-                                        )}
+                                        {contact.channel && (() => {
+                                          const ch = contact.channel.startsWith('personal') ? 'personal' : contact.channel;
+                                          return (
+                                            <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded font-medium"
+                                              style={{
+                                                background: ch === 'personal' ? '#dcfce7' : ch === 'waba' ? '#d1fae5' : '#dbeafe',
+                                                color:      ch === 'personal' ? '#15803d' : ch === 'waba' ? '#065f46' : '#1d4ed8',
+                                              }}>
+                                              {ch === 'personal' ? 'Personal WA' : ch === 'waba' ? 'WA Business' : ch.toUpperCase()}
+                                            </span>
+                                          );
+                                        })()}
                                       </div>
                                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                         {contact.phone && (
@@ -928,14 +928,7 @@ export function ChatGroupManager({
                         ? `Create Group with ${selectedContacts.size} Contact${selectedContacts.size > 1 ? 's' : ''}`
                         : 'Create Group'}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => { setIsCreating(false); setNewName(''); setNewDesc(''); setCreateStep('details'); setSelectedContacts(new Map()); }}
-                    >
-                      Cancel
-                    </Button>
+
                   </div>
                 </>
               )}
@@ -1005,9 +998,7 @@ export function ChatGroupManager({
                         <Button size="sm" className="h-7 text-[11px] flex-1" onClick={handleUpdate}>
                           Save
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => setEditingId(null)}>
-                          Cancel
-                        </Button>
+
                       </div>
                     </div>
                   ) : confirmDeleteId === group.id ? (
@@ -1027,14 +1018,7 @@ export function ChatGroupManager({
                         >
                           Delete
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-[11px]"
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Cancel
-                        </Button>
+
                       </div>
                     </div>
                   ) : (
@@ -1227,7 +1211,8 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
   const handleAddToGroup = useCallback(async (groupId: string) => {
     if (selectedIds.size === 0) return;
     try {
-      await fetch(`${API_BASE}/${groupId}/conversations`, {
+      const channelParam = channel === 'personal' ? '?channel=personal' : '';
+      await fetch(`${API_BASE}/${groupId}/conversations${channelParam}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selectedIds) }),
@@ -1237,7 +1222,7 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
     }
     setIsOpen(false);
     onDone();
-  }, [selectedIds, onDone]);
+  }, [selectedIds, onDone, channel]);
 
   if (!isOpen) {
     return (
@@ -1261,34 +1246,36 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
 
   return (
     <div className="relative">
-      <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl border border-border bg-card shadow-xl z-50 py-1 overflow-hidden">
+      <div className="absolute bottom-full right-0 mb-1 w-52 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Add to Group</span>
           <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : groups.length === 0 ? (
-          <p className="text-xs text-muted-foreground px-3 py-4 text-center">No groups. Create one first.</p>
-        ) : (
-          groups.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => handleAddToGroup(g.id)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
-            >
-              <GroupAvatar name={g.name} color={g.color} size="sm" />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium truncate block">{g.name}</span>
-                <span className="text-[10px] text-muted-foreground">{g.conversation_count} chats</span>
-              </div>
-            </button>
-          ))
-        )}
+        <div className="max-h-56 overflow-y-auto py-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : groups.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-3 py-4 text-center">No groups. Create one first.</p>
+          ) : (
+            groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => handleAddToGroup(g.id)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
+              >
+                <GroupAvatar name={g.name} color={g.color} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium truncate block">{g.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{g.conversation_count} chats</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
       </div>
       <Tooltip>
         <TooltipTrigger asChild>

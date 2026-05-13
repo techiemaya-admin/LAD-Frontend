@@ -23,6 +23,7 @@ import {
   Mail,
   Cpu,
   Hash,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTenant } from "@/lib/fetch-with-tenant";
@@ -45,10 +46,20 @@ interface PlaygroundSettings {
   language: string;
 }
 
+interface PlaygroundAttachment {
+  key?: string | null;
+  filename: string;
+  mime_type: string;
+  media_type: "document" | "image";
+  matched_keyword: string;
+  url?: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  would_attach?: PlaygroundAttachment[];
 }
 
 interface AIPlaygroundProps {
@@ -369,7 +380,12 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
       if (data.success && data.response) {
         setMessages([
           ...history,
-          { role: "assistant", content: data.response, timestamp: new Date() },
+          {
+            role: "assistant",
+            content: data.response,
+            timestamp: new Date(),
+            would_attach: Array.isArray(data.would_attach) ? data.would_attach : undefined,
+          },
         ]);
       } else {
         setSendError(data.detail || data.error || "AI did not return a response.");
@@ -427,11 +443,9 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
         <div className="flex items-center gap-2">
           <FlaskConical className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-sm">AI Playground</h2>
-          {settings?.ai_model && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {settings.ai_model}
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {settings?.ai_model || "claude-sonnet-4-6"}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadConfig} title="Reload config">
@@ -684,7 +698,31 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
                     {msg.content}
                   </div>
                 ) : (
-                  <AssistantBubble content={msg.content} />
+                  <div className="flex flex-col gap-1.5 max-w-[80%]">
+                    <AssistantBubble content={msg.content} />
+                    {msg.would_attach && msg.would_attach.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        {msg.would_attach.map((att, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1.5 text-xs"
+                            title={`Live WhatsApp would attach this file. Matched on keyword: "${att.matched_keyword}"`}
+                          >
+                            <BookOpen className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                            <span className="font-mono text-violet-700 dark:text-violet-300 truncate flex-1">
+                              📎 {att.filename}
+                            </span>
+                            <span className="text-violet-500 dark:text-violet-400 text-[10px] uppercase tracking-wide">
+                              would attach
+                            </span>
+                            <span className="text-muted-foreground text-[10px] truncate max-w-[120px]">
+                              triggered: "{att.matched_keyword}"
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

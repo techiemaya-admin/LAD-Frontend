@@ -77,8 +77,7 @@ const nextConfig = {
   // settings page upon success.
   async rewrites() {
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL ||
-      'https://lad-backend-develop-160078175457.us-central1.run.app';
+      process.env.NEXT_PUBLIC_BACKEND_URL || '';
     return [
       {
         source: '/api/social-integration/email/google/callback',
@@ -103,6 +102,47 @@ const nextConfig = {
           },
         ],
       },
+      // CORS headers for contact form embed
+      {
+        source: "/api/contact",
+        headers: [
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*", // Allow all origins, or restrict to specific domains
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value:
+              "X-CSRF-Token, X-Forwarded-Host, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+          },
+        ],
+      },
+      // CORS headers for embed.js script
+      {
+        source: "/embed.js",
+        headers: [
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*",
+          },
+          {
+            key: "Content-Type",
+            value: "application/javascript",
+          },
+        ],
+      },
     ];
   },
 
@@ -124,18 +164,7 @@ const nextConfig = {
     ],
   },
 
-  // Removed hardcoded env overrides - rely on .env.local instead
-  // This allows local development to use localhost URLs from .env.local
-  // env: {
-  //   NEXT_PUBLIC_API_BASE:
-  //     process.env.NEXT_PUBLIC_API_BASE || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_BACKEND_URL:
-  //     process.env.NEXT_PUBLIC_BACKEND_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_API_URL:
-  //     process.env.NEXT_PUBLIC_API_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  //   NEXT_PUBLIC_SOCKET_URL:
-  //     process.env.NEXT_PUBLIC_SOCKET_URL || "https://lad-backend-develop-741719885039.us-central1.run.app",
-  // },
+  // Environment variables are handled via .env files and process.env
 };
 
 export default nextConfig;

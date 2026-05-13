@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  BarChart3, Play, Linkedin, Mail, Video, Users, MessageCircle
+  BarChart3, Play, Linkedin, Mail, Video, Users, MessageCircle, TrendingUp, TrendingDown, Minus
 } from 'lucide-react';
 import type { CampaignStats } from '@lad/frontend-features/campaigns';
 
@@ -30,15 +30,15 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -70,7 +70,7 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div
-      className={`bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+      className={`bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
       onClick={onClick}
     >
       <div className="flex-1 flex flex-col p-4">
@@ -83,10 +83,10 @@ const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
               {title}
             </p>
-            <h5 className="text-2xl font-bold text-slate-800">
+            <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
               <AnimatedValue value={value} />
             </h5>
           </div>
@@ -120,21 +120,21 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
         onClick={() => router.push('/campaigns')}
       >
-        <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
+        <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
           <div className="flex-1 flex flex-col p-4">
             <div className="flex flex-col h-full">
               <div className="flex justify-end mb-2">
-                <Avatar className="bg-blue-100 w-12 h-12 rounded-full">
-                  <AvatarFallback className="bg-blue-100">
-                    <BarChart3 className="w-6 h-6 text-blue-600" />
+                <Avatar className="bg-blue-100 dark:bg-[#253456] w-12 h-12 rounded-full">
+                  <AvatarFallback className="bg-blue-100 dark:bg-[#253456]">
+                    <BarChart3 className="w-6 h-6 text-blue-600 dark:text-[#60a5fa]" />
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="flex-1 flex flex-col justify-end">
-                <p className="text-sm text-slate-500 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                   Total Campaigns
                 </p>
-                <h5 className="text-2xl font-bold text-slate-800">
+                <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
                   <AnimatedValue value={stats.total_campaigns} />
                 </h5>
               </div>
@@ -170,14 +170,54 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         onClick={() => router.push('/campaigns?status=running')}
       />
 
-      {/* Lead Contact Back → count of replied leads */}
-      <StatCard
-        title="Leads Responded"
-        value={stats.total_replied || 0}
-        icon={<Mail className="w-6 h-6 text-amber-600" />}
-        bgColor="bg-amber-100"
-        onClick={() => router.push('/campaigns')}
-      />
+      {/* LinkedIn Connections card — shows network size + daily accepted trend */}
+      {(() => {
+        const networkSize = stats.linkedin_network_size ?? null;
+        const today = stats.connections_today ?? 0;
+        const yesterday = stats.connections_yesterday ?? 0;
+        const diff = today - yesterday;
+        const TrendIcon = diff > 0 ? TrendingUp : diff < 0 ? TrendingDown : Minus;
+        const trendColor = diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-500' : 'text-slate-400';
+        const trendBg = diff > 0 ? 'bg-green-50' : diff < 0 ? 'bg-red-50' : 'bg-slate-50';
+        const displayValue = networkSize != null ? networkSize : (stats.total_connected || 0);
+        const displayLabel = networkSize != null ? '1st Connections' : 'Connections Accepted';
+        return (
+          <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+            <div
+              className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => router.push('/campaigns')}
+            >
+              <div className="flex-1 flex flex-col p-4">
+                <div className="flex flex-col h-full">
+                  <div className="flex justify-between items-start mb-2">
+                    {(today > 0 || yesterday > 0) ? (
+                      <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${trendBg} ${trendColor}`}>
+                        <TrendIcon className="w-3 h-3" />
+                        {diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0'} today
+                      </span>
+                    ) : (
+                      <div />
+                    )}
+                    <Avatar className="bg-blue-100 dark:bg-[#253456] w-12 h-12 rounded-full">
+                      <AvatarFallback className="bg-blue-100 dark:bg-[#253456]">
+                        <Linkedin className="w-6 h-6 text-[#0077B5]" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-end">
+                    <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {displayLabel}
+                    </p>
+                    <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
+                      <AnimatedValue value={displayValue} />
+                    </h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Instagram → filter campaigns by instagram platform */}
       {/* <StatCard

@@ -23,9 +23,17 @@ export interface CallLogResponse {
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
+  lead_score?: number;
   analysis?: {
+    lead_score?: number;
+    lead_category?: string;
+    disposition?: string;
     raw_analysis?: {
+      lead_score?: number;
+      lead_category?: string;
+      lead_disposition?: string;
       lead_score_full?: {
+        lead_score?: number;
         lead_category?: string;
       };
     };
@@ -36,6 +44,14 @@ export interface CallLogResponse {
 
 export interface CallLogsResponse {
   logs: CallLogResponse[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
 }
 
 export interface BatchResultItem {
@@ -132,6 +148,7 @@ export interface CallLog {
   batch_completed_calls?: number;
   batch_failed_calls?: number;
   lead_category?: string;
+  lead_score?: number;
   lead_tags?: string[];
   signed_recording_url?: string;
   recording_url?: string;

@@ -8,10 +8,9 @@
  * This replaces the old mock-based useConversations hook.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getConversationsOptions,
-  getConversationMessagesOptions,
+  getConversationsInfiniteOptions,
   sendMessage as sendMessageApi,
   updateConversationStatus,
   markConversationRead as markConversationReadApi,
@@ -24,6 +23,8 @@ import type {
   Message,
   UseConversationsReturn,
   ConversationListFilters,
+  ConversationSortBy,
+  RichMessagePayload,
 } from '../types';
 
 export interface UseConversationsOptions {
@@ -49,21 +50,35 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // List-shaping controls. Defaults preserve previous behaviour: show
+  // everything, sorted by most-recent activity. Both flow through to the
+  // server so pagination and totals respect the user's choice.
+  const [hideEmpty, setHideEmpty] = useState(false);
+  const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
   // Build filters from local state — include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
+  // hide_empty / sort_by are part of the queryKey via spread, so toggling either
+  // triggers a fresh fetch from page 0 instead of mutating already-loaded pages.
   const filters: ConversationQueryOptions = useMemo(() => ({
     backendChannel: hookOptions?.channel,
     search: searchQuery || undefined,
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
-  }), [hookOptions?.channel, searchQuery, contextStatusFilter]);
+    hide_empty: hideEmpty || undefined,
+    sort_by: sortBy !== 'date' ? sortBy : undefined,
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy]);
 
-  // Fetch conversations from backend
-  const conversationsQuery = useQuery(getConversationsOptions(filters));
-  const allConversationsQuery = useQuery(getConversationsOptions({ backendChannel: hookOptions?.channel }));
+  // Infinite query for incremental conversation loading (20 at a time)
+  const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
 
-  const conversations = conversationsQuery.data || [];
-  const allConversations = allConversationsQuery.data || [];
+  // Flatten pages into a single list
+  const conversations: Conversation[] = useMemo(
+    () => conversationsQuery.data?.pages.flatMap((p) => p.conversations) ?? [],
+    [conversationsQuery.data],
+  );
+
+  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  const allConversations = conversations;
 
   // Auto-select first conversation if none selected
   const effectiveSelectedId = useMemo(() => {
@@ -88,22 +103,22 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     return counts;
   }, [allConversations]);
 
+  // Load next page of conversations
+  const loadMore = useCallback(() => {
+    if (conversationsQuery.hasNextPage && !conversationsQuery.isFetchingNextPage) {
+      conversationsQuery.fetchNextPage();
+    }
+  }, [conversationsQuery]);
+
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
-
-    // Optimistically zero the unread badge in every conversation-list cache entry
-    // so the sidebar updates immediately without waiting for the next poll.
-    queryClient.setQueriesData<Conversation[]>(
-      { queryKey: conversationKeys.lists() },
-      (old) => (old || []).map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-    );
 
     // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
       // Non-critical — the next poll will re-sync from DB
     });
-  }, [queryClient, hookOptions?.channel]);
+  }, [hookOptions?.channel]);
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -118,17 +133,38 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   });
 
   const sendMessage = useCallback(
-    (content: string) => {
-      if (!effectiveSelectedId || !content.trim() || !selectedConversation) return;
+    (payload: RichMessagePayload) => {
+      if (!effectiveSelectedId || !selectedConversation) return;
+      // Require at least some content for text messages (also guard against missing type)
+      const payloadType = payload.type || 'text';
+      if (payloadType === 'text' && !payload.content?.trim()) return;
 
       sendMutation.mutate({
         conversationId: effectiveSelectedId,
-        content: content.trim(),
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
+        channel: hookOptions?.channel,
+        // spread all rich fields
+        type:            payloadType,
+        content:         payload.content ?? '',  // always send content key, even if empty (non-text types)
+
+        fileBase64:      payload.fileBase64,
+        filename:        payload.filename,
+        contentType:     payload.contentType,
+        caption:         payload.caption,
+        latitude:        payload.latitude,
+        longitude:       payload.longitude,
+        locationName:    payload.locationName,
+        locationAddress: payload.locationAddress,
+        contactName:     payload.contactName,
+        contactPhone:    payload.contactPhone,
+        contactEmail:    payload.contactEmail,
+        contactCompany:  payload.contactCompany,
+        pollQuestion:    payload.pollQuestion,
+        pollOptions:     payload.pollOptions,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation]
+    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations
@@ -169,6 +205,10 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    hideEmpty,
+    setHideEmpty,
+    sortBy,
+    setSortBy,
     unreadCounts,
     sendMessage,
     markAsResolved,
@@ -176,5 +216,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     isLoading: conversationsQuery.isLoading,
     error: conversationsQuery.error,
     refetch: conversationsQuery.refetch,
+    loadMore,
+    hasMore: conversationsQuery.hasNextPage ?? false,
+    isLoadingMore: conversationsQuery.isFetchingNextPage,
   };
 }

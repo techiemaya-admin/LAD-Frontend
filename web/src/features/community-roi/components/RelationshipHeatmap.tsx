@@ -7,12 +7,16 @@
  * - Green  (#10B981) = Both Meetings & Referrals
  * - Empty            = No interaction
  *
+ * ENHANCED: Click any member name to select them and see their relationship breakdown
+ * (counts by type: no interaction, meetings only, referrals only, both)
+ *
  * Auto-updates whenever new data is appended.
  */
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRelationshipHeatmap } from '@lad/frontend-features/community-roi';
+import { RecommendationPairs } from './RecommendationPairs';
 
 const COLORS = {
   M:  { bg: '#EF444420', border: '#EF4444', badge: '#EF4444', label: 'Meeting Only' },
@@ -33,6 +37,21 @@ interface CellData {
 interface MatrixMember {
   id: string;
   name: string;
+}
+
+interface RelationshipBreakdownType {
+  combination_type: number;
+  color_code: string;
+  count: number;
+  label: string;
+  total_meetings: number;
+  total_referrals: number;
+}
+
+interface RelationshipBreakdownData {
+  memberId: string;
+  totalRelationships: number;
+  breakdown: RelationshipBreakdownType[];
 }
 
 // ─── Matrix Cell ────────────────────────────────────────────────────────────
@@ -99,27 +118,88 @@ const DiagonalCell: React.FC = () => (
   </td>
 );
 
-// ─── Legend ─────────────────────────────────────────────────────────────────
+// ─── Legend with Selection ───────────────────────────────────────────────────
 
-const Legend: React.FC = () => (
-  <div className="flex items-center gap-5 text-[11px] font-semibold text-slate-500">
-    {(Object.entries(COLORS) as [CombinationType, (typeof COLORS)[CombinationType]][]).map(
-      ([key, val]) => (
-        <div key={key} className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-3 h-3 rounded-sm"
-            style={{ backgroundColor: val.badge }}
-          />
-          <span className="uppercase tracking-wide">{val.label}</span>
+interface LegendProps {
+  selectedMember?: MatrixMember;
+  breakdownData?: RelationshipBreakdownData;
+  onClearSelection: () => void;
+}
+
+const Legend: React.FC<LegendProps> = ({ selectedMember, breakdownData, onClearSelection }) => {
+  if (selectedMember && breakdownData) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Selected Member Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Selected:</span>
+            <span className="text-sm font-bold text-slate-900">{selectedMember.name}</span>
+            <span className="text-xs text-slate-500">({breakdownData.totalRelationships} total)</span>
+          </div>
+          <button
+            onClick={onClearSelection}
+            className="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+          >
+            Clear
+          </button>
         </div>
-      )
-    )}
-    <div className="flex items-center gap-1.5">
-      <span className="inline-block w-3 h-3 rounded-sm bg-slate-100 border border-slate-200" />
-      <span className="uppercase tracking-wide">No interaction</span>
+
+        {/* Breakdown by Type */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {breakdownData.breakdown.map((type) => {
+            const percentage =
+              breakdownData.totalRelationships > 0
+                ? Math.round((type.count / breakdownData.totalRelationships) * 100)
+                : 0;
+
+            return (
+              <div key={type.combination_type} className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: type.color_code }}
+                  />
+                  <span className="text-[10px] font-semibold text-slate-600 truncate">
+                    {type.label}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold text-slate-900">{type.count}</span>
+                  <span className="text-xs text-slate-500">({percentage}%)</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Default legend
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-slate-400 italic">👆 Click a member name to see their relationship breakdown</p>
+      <div className="flex items-center gap-5 text-[11px] font-semibold text-slate-500 flex-wrap">
+        {(Object.entries(COLORS) as [CombinationType, (typeof COLORS)[CombinationType]][]).map(
+          ([key, val]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 h-3 rounded-sm"
+                style={{ backgroundColor: val.badge }}
+              />
+              <span className="uppercase tracking-wide">{val.label}</span>
+            </div>
+          )
+        )}
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-sm bg-slate-100 border border-slate-200" />
+          <span className="uppercase tracking-wide">No interaction</span>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── Name helpers ────────────────────────────────────────────────────────────
 
@@ -132,9 +212,7 @@ function displayName(name: string): string {
 function initials(name: string): string {
   const clean = displayName(name);
   if (clean === '(No name)') return '?';
-  // For email addresses use the part before @
   if (clean.includes('@')) return clean.split('@')[0].slice(0, 2).toUpperCase();
-  // For Member-xxxxxxxx fallback IDs
   if (clean.startsWith('Member-')) return clean.slice(7, 9).toUpperCase();
   return clean.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -143,6 +221,9 @@ function initials(name: string): string {
 
 export const RelationshipHeatmap: React.FC = () => {
   const { heatmapData, isLoading, isError, error } = useRelationshipHeatmap();
+  const [selectedMember, setSelectedMember] = useState<MatrixMember | null>(null);
+  const [breakdownData, setBreakdownData] = useState<RelationshipBreakdownData | null>(null);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
   // Derive sorted unique member list and cell lookup map from the flat pair array
   const { members, cellMap } = useMemo(() => {
@@ -160,16 +241,12 @@ export const RelationshipHeatmap: React.FC = () => {
       .map(([id, name]) => ({ id, name: name || 'Unknown' }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Build bidirectional cell lookup: "aId|bId" → CellData
-    // Compute combination type from raw counts (defensive — works even if backend
-    // hasn't run the update script and combination_type is null in the DB).
     const cellMap = new Map<string, CellData>();
     heatmapData.forEach((row) => {
       const meetingCount  = Number(row.meeting_count)  || 0;
       const referralCount = Number(row.referral_count) || 0;
       const bothCount     = Number(row.both_count)     || 0;
 
-      // Derive combination type from counts first; fall back to backend value
       let combinationType: CombinationType | null = null;
       if (bothCount > 0 || (meetingCount > 0 && referralCount > 0)) {
         combinationType = 'MR';
@@ -181,7 +258,7 @@ export const RelationshipHeatmap: React.FC = () => {
         combinationType = row.combination_type as CombinationType;
       }
 
-      if (!combinationType) return; // No interaction data at all
+      if (!combinationType) return;
 
       const cell: CellData = {
         combinationType,
@@ -193,14 +270,44 @@ export const RelationshipHeatmap: React.FC = () => {
 
       const aId = String(row.member_a_id);
       const bId = String(row.member_b_id);
+      // Only set the directional cell A→B
+      // Bidirectionality is already handled by the database function:
+      // - Meetings are returned in both directions (A→B and B→A)
+      // - Referrals are returned in ONE direction only (as given)
       cellMap.set(`${aId}|${bId}`, cell);
-      if (!cellMap.has(`${bId}|${aId}`)) {
-        cellMap.set(`${bId}|${aId}`, cell);
-      }
     });
 
     return { members, cellMap };
   }, [heatmapData]);
+
+  // Handle member selection
+  const handleSelectMember = async (member: MatrixMember) => {
+    setSelectedMember(member);
+    setLoadingBreakdown(true);
+    try {
+      const response = await fetch(
+        `/api/community-roi/members/${member.id}/relationship-breakdown`,
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setBreakdownData(result.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch member breakdown:', err);
+    } finally {
+      setLoadingBreakdown(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedMember(null);
+    setBreakdownData(null);
+  };
 
   // ── Loading / Error / Empty states ────────────────────────────────────────
 
@@ -243,14 +350,20 @@ export const RelationshipHeatmap: React.FC = () => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Relationship Matrix</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {members.length} members · {heatmapData?.length ?? 0} active pairs
-          </p>
+      <div className="px-6 pt-6 pb-4 flex flex-col gap-4 border-b border-slate-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Relationship Matrix</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {members.length} members · {heatmapData?.length ?? 0} active pairs
+            </p>
+          </div>
         </div>
-        <Legend />
+        <Legend
+          selectedMember={selectedMember || undefined}
+          breakdownData={breakdownData || undefined}
+          onClearSelection={handleClearSelection}
+        />
       </div>
 
       {/* Scrollable matrix */}
@@ -269,7 +382,8 @@ export const RelationshipHeatmap: React.FC = () => {
               {members.map((col) => (
                 <th
                   key={col.id}
-                  className="sticky top-0 z-20 bg-slate-50 border border-slate-100 p-0"
+                  className="sticky top-0 z-20 bg-slate-50 border border-slate-100 p-0 hover:bg-blue-50 cursor-pointer transition-colors"
+                  onClick={() => handleSelectMember(col)}
                 >
                   <div className="min-w-[72px] px-2 py-2 text-center">
                     <span
@@ -293,10 +407,13 @@ export const RelationshipHeatmap: React.FC = () => {
             {members.map((row) => (
               <tr key={row.id}>
                 {/* Row header */}
-                <th className="sticky left-0 z-10 bg-white border border-slate-100 p-0 text-left">
-                  <div className="min-w-[120px] px-3 py-2 flex items-center">
+                <th
+                  className="sticky left-0 z-10 bg-white border border-slate-100 p-0 text-left hover:bg-blue-50 cursor-pointer transition-colors"
+                  onClick={() => handleSelectMember(row)}
+                >
+                  <div className="min-w-[120px] px-3 py-2 flex items-center gap-2">
                     <div
-                      className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white mr-2"
+                      className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white"
                       style={{ backgroundColor: '#6366F1' }}
                     >
                       {initials(row.name)}
@@ -330,5 +447,14 @@ export const RelationshipHeatmap: React.FC = () => {
     </div>
   );
 };
+
+// ─── Heatmap + Recommendations ──────────────────────────────────────────────
+
+export const RelationshipHeatmapWithRecommendations: React.FC = () => (
+  <div className="flex flex-col gap-6">
+    <RelationshipHeatmap />
+    <RecommendationPairs />
+  </div>
+);
 
 export default RelationshipHeatmap;

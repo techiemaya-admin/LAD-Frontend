@@ -330,11 +330,10 @@ export default function LeadImportChat({ onImportComplete, onCancel }: LeadImpor
     return (
       <div
         key={channelKey}
-        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-          isSelected
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${isSelected
             ? 'bg-white border border-slate-200 shadow-sm'
             : 'bg-slate-50 border border-slate-100 opacity-60'
-        }`}
+          }`}
       >
         <div
           className="flex h-6 w-6 items-center justify-center rounded-md"
@@ -362,9 +361,20 @@ export default function LeadImportChat({ onImportComplete, onCancel }: LeadImpor
       {/* ------------------------------------------------------------------ */}
       {/* Section 1: Header + Template Download                              */}
       {/* ------------------------------------------------------------------ */}
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Import Your Leads</h3>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="mb-4 relative">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-semibold text-slate-900">Import Your Leads</h3>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-slate-500 pr-8">
           Upload any file with lead data: images (business cards, contact photos), PDFs, CSV, Excel, or text. All fields are optional.
         </p>
 
@@ -413,11 +423,10 @@ export default function LeadImportChat({ onImportComplete, onCancel }: LeadImpor
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-all ${
-                isDragging
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-all ${isDragging
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <Upload className="mb-3 h-10 w-10 text-slate-400" />
               <p className="text-sm font-medium text-slate-600">
@@ -628,15 +637,10 @@ export default function LeadImportChat({ onImportComplete, onCancel }: LeadImpor
           {/* ---------------------------------------------------------------- */}
           {/* Section 4: Action Buttons                                        */}
           {/* ---------------------------------------------------------------- */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-            {onCancel && (
-              <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSaving}>
-                Cancel
-              </Button>
-            )}
+          <div className="flex items-center justify-end pt-4 border-t border-slate-100">
             <Button
               size="sm"
-              className="bg-green-600 text-white hover:bg-green-700"
+              className="bg-green-600 text-white hover:bg-green-700 px-8 h-10 rounded-xl font-bold"
               onClick={handleConfirmImport}
               disabled={isSaving || selectedChannels.length === 0}
             >
@@ -656,14 +660,7 @@ export default function LeadImportChat({ onImportComplete, onCancel }: LeadImpor
         </div>
       )}
 
-      {/* Cancel button when no results yet */}
-      {!importResult && onCancel && (
-        <div className="flex justify-end pt-2 border-t border-slate-100">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-      )}
+      {/* Action buttons only */}
     </div>
   );
 }

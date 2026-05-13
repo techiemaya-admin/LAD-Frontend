@@ -31,6 +31,7 @@ import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
 import { ScrollText } from "lucide-react";
+import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
 
@@ -113,7 +114,7 @@ export default function CallLogsPage() {
   // SDK Hooks
   // Use lead-status hook when status or lead_tag filter is active, otherwise use regular call logs
   const shouldUseLeadStatusHook = !!(statusFilter || leadTagFilter);
-  
+
   const callLogsQuery = useCallLogs(
     {
       from_date: dateRange.from,
@@ -201,9 +202,10 @@ export default function CallLogsPage() {
         logger.debug("[Call Logs] Setting batchJobId", { jobId });
         setBatchJobId(jobId);
         setSelectedBatchId(null);
+        setExpandedBatches(new Set([jobId]));
         if (mode === "current-batch") {
-          logger.debug("[Call Logs] Setting timeFilter to batch");
-          setTimeFilter("batch");
+          logger.debug("[Call Logs] Setting timeFilter to current");
+          setTimeFilter("current");
         }
       } else {
         logger.warn("[Call Logs] Invalid batch ID format", { jobId });
@@ -212,40 +214,89 @@ export default function CallLogsPage() {
     }
   }, [searchParams, router]);
 
+  // Automatically switch between "Current Batch" and "Batch View" based on batch status
+  useEffect(() => {
+    if (!batchJobId || !batchStatusQuery.data) return;
+
+    const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result || batchStatusQuery.data.data || batchStatusQuery.data;
+    if (!batch || typeof batch !== 'object') return;
+
+    const status = (batch.status || "").toLowerCase();
+    const isOngoing = ["running", "pending", "queued", "queue", "in_queue", "ongoing", "calling", "in_progress", "started"].includes(status);
+    const isFinished = ["completed", "failed", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
+
+    // If the batch we are tracking has finished, and we are in the 'Current Batch' view,
+    // move to 'Batch View' so the user can see the final results.
+    if (!isOngoing && isFinished) {
+      if (timeFilter === "current") {
+        logger.debug("[Call Logs] Batch finished, auto-switching to batch view");
+        setTimeFilter("batch");
+      }
+    }
+  }, [batchJobId, batchStatusQuery.data, timeFilter]);
+
   // ----------------------
   // PROCESS SDK DATA
   // ----------------------
   useEffect(() => {
     // Handle batch view
-    if (timeFilter === "batch" && batchJobId && batchStatusQuery.data) {
+    if ((timeFilter === "batch" || timeFilter === "current") && batchJobId && batchStatusQuery.data) {
       logger.debug("[Call Logs] Processing batch data", { batchJobId });
 
-      const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result;
+      const batch = batchStatusQuery.data.batch || batchStatusQuery.data.result || batchStatusQuery.data.data || batchStatusQuery.data;
 
-      if (!batch) {
+      if (!batch || typeof batch !== 'object') {
         setItems([]);
         setInitialLoading(false);
         return;
       }
 
       const batchStatus = batch.status || "";
-      const results = batch.results || [];
+      const results = batch.entries || batch.results || batch.call_logs || batch.logs || (Array.isArray(batch) ? batch : []);
 
-      const logs: CallLog[] = results.map((r, idx) => ({
-        id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
+      const logs: CallLog[] = results.map((r, idx) => {
+        const score = r.lead_score ?? r.score ?? 0;
+        let category = (r.lead_category || r.category || "WARM").toUpperCase();
+        
+        if (score >= 8) category = "HOT";
+        else if (score > 0 && score <= 3) category = "COLD";
+
+        return {
+          id: r.call_log_id || `batch-${batchJobId}-idx-${idx}`,
+          assistant: r.agent_name || "",
+          lead_name: r.lead_name || "",
+          type: "Outbound",
+          status: r.call_status || r.status || "pending",
+          startedAt: r.started_at || r.created_at || "",
+          duration: r.call_duration || r.duration_seconds || 0,
+          cost: r.cost || 0,
+          batch_status: r.batch_status || batchStatus,
+          batch_id: r.batch_id || batchJobId,
+          lead_category: category,
+          lead_score: score,
+        };
+      });
+
+      // Add a virtual header row for this specific batch
+      const headerRow: CallLog = {
+        id: batchJobId,
         assistant: "",
-        lead_name: r.lead_name || "",
+        lead_name: `Batch (${batch.total_calls || results.length} calls)`,
         type: "Outbound",
-        status: r.status || "pending",
-        startedAt: "",
+        status: batch.status || "",
+        startedAt: batch.started_at || batch.created_at || (logs.length > 0 ? logs[0].startedAt : ""),
         duration: 0,
         cost: 0,
-        batch_status: r.batch_status || batchStatus,
         batch_id: batchJobId,
-      }));
+        batch_status: batch.status,
+        is_batch_header: true,
+        batch_total_calls: batch.total_calls || results.length,
+        batch_completed_calls: batch.completed_calls || logs.filter(l => l.status === "completed" || l.status === "ended").length,
+        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed").length,
+      } as any;
 
       logger.debug("[Call Logs] Setting batch items", { count: logs.length });
-      setItems(logs);
+      setItems([headerRow, ...logs]);
       setInitialLoading(false);
       return;
     }
@@ -276,9 +327,20 @@ export default function CallLogsPage() {
           r.lead_name ||
           "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const score = analysis?.lead_score ?? analysis?.raw_analysis?.lead_score ?? r.lead_score ?? r.score ?? 0;
+        let category = (
+          analysis?.lead_category ||
+          analysis?.category ||
+          analysis?.raw_analysis?.lead_category ||
+          analysis?.raw_analysis?.category ||
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          r.category ||
+          "WARM"
+        ).toUpperCase();
+
+        if (score >= 8 && category !== "HOT") category = "HOT";
+        if (score > 0 && score <= 3 && category !== "COLD") category = "COLD";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -293,8 +355,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id || selectedBatchId,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
+          disposition: r.analysis?.disposition || r.disposition || r.analysis?.raw_analysis?.disposition || r.analysis?.raw_analysis?.lead_disposition || "PROCEED",
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -356,11 +420,13 @@ export default function CallLogsPage() {
       return;
     }
 
-    // Handle normal call logs (including status / lead_tag filtering)
+    // Handle normal call logs (All Time, Today, Current system-wide, etc.)
     if (
-      timeFilter !== "batch" &&
-      !batchJobId &&
-      activeCallLogsQuery.isSuccess &&
+      (timeFilter === "all" ||
+        timeFilter === "today" ||
+        timeFilter === "month" ||
+        timeFilter === "custom" ||
+        (timeFilter === "current" && !batchJobId)) &&
       activeCallLogsQuery.data
     ) {
       logger.debug("[Call Logs] Processing normal call logs", {
@@ -372,9 +438,54 @@ export default function CallLogsPage() {
         const leadName =
           [r.lead_first_name, r.lead_last_name].filter(Boolean).join(" ") || "";
 
-        const leadCategory =
+        const analysis = r.analysis || {};
+        const rawAnalysis = (r as any).raw_analysis || analysis?.raw_analysis || {};
+
+        // Score is the ultimate source of truth for temperature buckets
+        const score =
+          r.lead_score ??
+          r.score ??
+          analysis?.lead_score ??
+          rawAnalysis?.lead_score ??
+          (r as any).leadScore ??
+          0;
+
+        // 1. Get duration-based tag (heuristic)
+        const durationTag = categorizeLead({
+          status: r.status,
+          duration: r.duration_seconds || r.call_duration || 0
+        });
+
+        // Direct mapping from the latest database "tags" column (category:xxx)
+        const extractCategoryFromTags = (tags?: string[]) => {
+          if (!tags || !Array.isArray(tags)) return null;
+          const catTag = tags.find(t => String(t).toLowerCase().startsWith("category:"));
+          if (catTag) {
+            const val = String(catTag).split(":")[1]?.toLowerCase();
+            if (val === "hot") return "HOT";
+            if (val === "cold") return "COLD";
+            if (val === "warm") return "WARM";
+          }
+          return null;
+        };
+
+        // 2. Determine category - Priority: Specific Call Analysis > Lead Tags (fallback) > Heuristics
+        let category = (
           r.lead_category ||
-          r.analysis?.raw_analysis?.lead_score_full?.lead_category;
+          analysis?.lead_category ||
+          analysis?.category ||
+          rawAnalysis?.lead_category ||
+          rawAnalysis?.category ||
+          r.category ||
+          extractCategoryFromTags(r.lead_tags) || // Use the Lead's current tag only if call analysis is missing
+          (durationTag === "cold" ? "COLD" : "WARM")
+        ).toUpperCase();
+
+        // Safety Nets: Force status based on score thresholds (MUST match modal exactly)
+        if (score >= 8) category = "HOT";
+        else if (score > 0 && score <= 3) category = "COLD";
+
+        const disposition = analysis?.disposition || r.disposition || rawAnalysis?.disposition || rawAnalysis?.lead_disposition || "PROCEED";
 
         return {
           id: String(r.call_log_id || r.id || ""),
@@ -389,8 +500,10 @@ export default function CallLogsPage() {
           cost: r.cost ?? r.call_cost ?? 0,
           batch_status: r.batch_status,
           batch_id: r.batch_id,
-          lead_category: leadCategory,
+          lead_category: category,
+          lead_score: score,
           lead_tags: r.lead_tags,
+          disposition: disposition,
           signed_recording_url: r.signed_recording_url,
           recording_url: r.recording_url,
           call_recording_url: r.call_recording_url,
@@ -569,15 +682,25 @@ export default function CallLogsPage() {
       if (timeFilter === "current") {
         // Current Batch: only show batch calls with running/pending/queued status
         if (i.batch_id) {
-          const status = i.status?.toLowerCase() || "";
-          matchTime = [
-            "running",
-            "pending",
-            "queued",
-            "ongoing",
-            "calling",
-            "in_progress",
-          ].includes(status);
+          // If a specific jobId is tracked, prioritize it
+          if (batchJobId) {
+            // Show all calls for the tracked batch, regardless of status,
+            // to ensure they don't "disappear" from the Current Batch view if they finish quickly.
+            matchTime = i.batch_id === batchJobId;
+          } else {
+            const status = i.status?.toLowerCase() || "";
+            matchTime = [
+              "running",
+              "pending",
+              "queued",
+              "queue",
+              "in_queue",
+              "ongoing",
+              "calling",
+              "in_progress",
+              "started",
+            ].includes(status);
+          }
         } else {
           matchTime = false; // Hide individual calls in Current Batch view
         }
@@ -600,9 +723,16 @@ export default function CallLogsPage() {
         }
       }
 
-      return matchProvider && matchTime;
+      const matchStatus = !statusFilter ||
+        i.status?.toLowerCase().includes(statusFilter.toLowerCase()) ||
+        (statusFilter === "ended" && i.status?.toLowerCase() === "completed") ||
+        (statusFilter === "completed" && i.status?.toLowerCase() === "ended");
+
+      const matchTag = !leadTagFilter || i.lead_category?.toLowerCase() === leadTagFilter.toLowerCase();
+
+      return matchProvider && matchTime && matchStatus && matchTag;
     });
-  }, [items, providerFilter, timeFilter, batchJobId]);
+  }, [items, providerFilter, timeFilter, batchJobId, statusFilter, leadTagFilter]);
 
   const uniqueProviders = useMemo(
     () => [...new Set(items.map((i) => i.type))],
@@ -664,10 +794,10 @@ export default function CallLogsPage() {
   }, [paginated]);
 
   const batchGroupsProp = useMemo(() => {
-    if (timeFilter !== "batch" || batchJobId) return undefined;
+    // Always enable batch grouping if there are items to group
     if (items.length === 0) return undefined;
     return batchGroups;
-  }, [timeFilter, batchJobId, items.length, batchGroups]);
+  }, [items.length, batchGroups]);
 
   // Toggle batch expansion
   const toggleBatch = (batchId: string) => {
@@ -712,22 +842,20 @@ export default function CallLogsPage() {
   };
 
   const handleSelectAll = (checked: boolean, visibleIds?: string[]) => {
-    if (checked) {
-      if (selectAllMode === 'page') {
-        // Switch to selecting ALL calls across all pages
-        const allIds = items.map((i: CallLog) => i.id);
-        setSelected(new Set(allIds));
-        setSelectAllMode('all');
-      } else {
-        // First click - select current page only
-        const idsToSelect = visibleIds || paginated.map((i: CallLog) => i.id);
-        setSelected(new Set(idsToSelect));
+    const idsToToggle = visibleIds || paginated.map((i: CallLog) => i.id);
+    
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        idsToToggle.forEach(id => next.add(id));
         setSelectAllMode('page');
+      } else {
+        idsToToggle.forEach(id => next.delete(id));
+        // Update selectAllMode based on remaining selection
+        setSelectAllMode(next.size > 0 ? 'page' : 'none');
       }
-    } else {
-      setSelected(new Set());
-      setSelectAllMode('none');
-    }
+      return next;
+    });
   };
 
   // ✅ Handle row click - prevent modal for active calls and failed calls
@@ -816,38 +944,56 @@ export default function CallLogsPage() {
     initialLoading;
   const { stats } = (callLogsStatsQuery?.data as any) || {};
   return (
-    <div className="p-3 bg-[#F8F9FE] h-full overflow-auto">
+    <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
       <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <ScrollText className="w-6 h-6 text-[#1E293B]" />
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B]">
+            <ScrollText className="w-6 h-6 text-[#1E293B] dark:text-white" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white">
               Call Logs
             </h1>
           </div>
-          <p className="text-sm text-[#64748B] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
             View and manage your call history
           </p>
         </div>
         {selected.size > 0 && (
           <div className="hidden sm:flex gap-2 items-center">
-            {selectAllMode === 'all' && (
+            {selectAllMode === 'all' ? (
               <span className="text-sm text-primary font-medium mr-2">
                 All {totalRecords} calls selected
               </span>
+            ) : (
+              <div className="flex items-center gap-2 mr-2">
+                <span className="text-sm text-slate-600 font-medium">
+                  {selected.size} calls selected
+                </span>
+                {selected.size < totalRecords && (
+                  <button
+                    onClick={() => {
+                      setSelectAllMode('all');
+                      // In a real scenario, we might not have all IDs, 
+                      // but for now let's keep the 'all' mode flag.
+                    }}
+                    className="text-sm text-primary hover:underline font-bold"
+                  >
+                    Select all {totalRecords} calls
+                  </button>
+                )}
+              </div>
             )}
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
               >
                 Retry Failed ({failedCallIds.length})
               </button>
             )}
             <button
               onClick={endSelectedCalls}
-              className="px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
             >
               End Selected ({selected.size})
             </button>
@@ -911,6 +1057,10 @@ export default function CallLogsPage() {
         onToDateChange={setToDate}
         callFilter={timeFilter}
         onCallFilterChange={(f) => {
+          if (f === 'all') {
+            setBatchJobId(null);
+            router.replace('/call-logs');
+          }
           setTimeFilter(f as TimeFilter);
           setPage(1);
         }}

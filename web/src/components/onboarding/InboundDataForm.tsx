@@ -15,6 +15,7 @@ import {
   FileUp
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
+
 interface ParsedLead {
   firstName: string;
   lastName: string;
@@ -26,11 +27,13 @@ interface ParsedLead {
   website: string;
   notes: string;
 }
+
 interface InboundDataFormProps {
   onSubmit: (data: InboundLeadData) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
+
 type UploadStep = 'download' | 'upload' | 'mapping' | 'preview';
 
 interface ColumnMapping {
@@ -65,12 +68,14 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Generate and download CSV template
   const downloadTemplate = () => {
     const headers = ['First Name', 'Last Name', 'Company Name', 'LinkedIn Profile URL', 'Email', 'WhatsApp Number', 'Phone Number', 'Website', 'Notes'];
     const exampleRow = ['John', 'Doe', 'DELETE THIS ROW - Example Corp', 'https://linkedin.com/in/johndoe', 'example@example.com', "'+1234567890", "'+1234567890", 'https://example.com', 'DELETE THIS ROW - Remove before uploading'];
     const instructionRow = ['Lead first name', 'Lead last name', 'INSTRUCTIONS: Format phone as TEXT in Excel', '', '', "Start with ' (apostrophe)", "Example: '+919087654321", '', 'Delete example rows before upload'];
     const emptyRows = Array(10).fill(headers.map(() => ''));
+
     // Create CSV content
     const csvContent = [
       headers.join(','),
@@ -78,6 +83,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       instructionRow.map(cell => `"${cell}"`).join(','),
       ...emptyRows.map(row => row.join(','))
     ].join('\n');
+
     // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -89,14 +95,17 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     logger.debug('CSV Template downloaded');
+
     // Move to upload step after short delay
     setTimeout(() => setStep('upload'), 800);
   };
+
   // Handle file drag over
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
+
   // Handle file drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -106,6 +115,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       processFile(files[0]);
     }
   };
+
   // Handle file selection via input
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,15 +123,18 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       processFile(file);
     }
   };
+
   // Parse CSV string into rows
   const parseCSV = (text: string): string[][] => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentCell = '';
     let insideQuotes = false;
+
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
       const nextChar = text[i + 1];
+
       if (char === '"') {
         if (insideQuotes && nextChar === '"') {
           currentCell += '"';
@@ -144,6 +157,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         currentCell += char;
       }
     }
+
     // Add last cell and row
     if (currentCell || currentRow.length > 0) {
       currentRow.push(currentCell.trim());
@@ -151,8 +165,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
         rows.push(currentRow);
       }
     }
+
     return rows;
   };
+
   // Process uploaded file
   const processFile = async (file: File) => {
     setError(null);
@@ -162,17 +178,22 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       if (!file.name.match(/\.csv$/i)) {
         throw new Error('Please upload a CSV file (.csv)');
       }
+
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         throw new Error('File size must be less than 5MB');
       }
+
       setUploadedFile(file);
+
       // Read file content
       const text = await file.text();
       const rows = parseCSV(text);
+
       if (rows.length <= 1) {
         throw new Error('The uploaded file is empty or only contains headers. Please add your lead data.');
       }
+
       // First row is headers
       const headers = rows[0];
       const dataRows = rows.slice(1);
@@ -286,6 +307,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       resetUpload();
     }
   };
+
   // Reset upload state
   const resetUpload = () => {
     setUploadedFile(null);
@@ -297,16 +319,19 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       fileInputRef.current.value = '';
     }
   };
+
   // Submit the parsed leads
   const handleSubmit = () => {
     if (parsedLeads.length === 0) {
       setError('No leads to submit');
       return;
     }
+
     // Aggregate data from all leads into the format expected by the store
     const aggregatedData: InboundLeadData = {
-      companyName: parsedLeads.length === 1 
-        ? parsedLeads[0].companyName 
+
+      companyName: parsedLeads.length === 1
+        ? parsedLeads[0].companyName
         : `${parsedLeads.length} Companies`,
       platforms: {
         linkedin: parsedLeads.some(l => l.linkedinProfile),
@@ -324,12 +349,15 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       phoneNumbers: parsedLeads.map(l => l.phone).filter(Boolean),
       notes: `Uploaded ${parsedLeads.length} lead(s). ${parsedLeads.map(l => l.notes).filter(Boolean).join(' | ')}`,
     };
-    logger.debug('Submitting aggregated inbound data', { 
+
+
+    logger.debug('Submitting aggregated inbound data', {
       leadCount: parsedLeads.length,
-      platforms: aggregatedData.platforms 
+      platforms: aggregatedData.platforms
     });
     onSubmit(aggregatedData);
   };
+
   // Get platform counts for summary
   const getPlatformCounts = () => {
     return {
@@ -340,6 +368,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       website: parsedLeads.filter(l => l.website).length,
     };
   };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-w-2xl w-full max-h-[80vh] flex flex-col">
       {/* Header */}
@@ -349,7 +378,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             <FileSpreadsheet className="w-6 h-6 text-green-600" />
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Import Inbound Leads</h2>
-              <p className="text-sm text-gray-600">Download template → Add your leads → Upload</p>
+              <p className="text-sm text-gray-600">Download template â†’ Add your leads â†’ Upload</p>
             </div>
           </div>
           <button
@@ -361,6 +390,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           </button>
         </div>
       </div>
+
       {/* Steps Progress Indicator */}
       <div className="px-6 py-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -376,6 +406,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
               (s.key === 'download' && (step === 'upload' || step === 'mapping' || step === 'preview')) ||
               (s.key === 'upload' && (step === 'mapping' || step === 'preview')) ||
               (s.key === 'mapping' && step === 'preview');
+
             return (
               <React.Fragment key={s.key}>
                 <div className="flex items-center gap-2">
@@ -402,6 +433,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
           })}
         </div>
       </div>
+
       {/* Content Area */}
       <div className="p-5 overflow-y-auto flex-1 min-h-0">
         {/* Step 1: Download Template */}
@@ -415,6 +447,10 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
               Download our Excel template, fill in your inbound leads data with contact information, 
+
+
+
+
               then upload it back. We'll analyze and set up your campaign automatically.
             </p>
             <button
@@ -429,14 +465,19 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 Already have leads in a spreadsheet?{' '}
                 <button 
                   onClick={() => setStep('upload')} 
+
+
+
+
                   className="text-green-600 hover:text-green-700 font-medium hover:underline"
                 >
-                  Skip to upload →
+                  Skip to upload â†’
                 </button>
               </p>
             </div>
           </div>
         )}
+
         {/* Step 2: Upload File */}
         {step === 'upload' && (
           <div className="py-6">
@@ -481,6 +522,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 </>
               )}
             </div>
+
             {/* Error Display */}
             {error && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
@@ -491,9 +533,14 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 </div>
               </div>
             )}
+
             <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
               <button 
                 onClick={() => setStep('download')} 
+
+
+
+
                 className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -502,6 +549,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
+
         {/* Step 3: Map Columns */}
         {step === 'mapping' && (
           <div className="py-6">
@@ -593,6 +641,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
             </div>
           </div>
         )}
+
         {/* Step 4: Preview & Review */}
         {step === 'preview' && (
           <div>
@@ -619,6 +668,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 Upload Different File
               </button>
             </div>
+
             {/* Leads List */}
             {parsedLeads.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
@@ -639,39 +689,39 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                         </h4>
                         {lead.companyName && (
                           <p className="text-sm text-gray-600 mt-0.5">
-                            🏢 {lead.companyName}
+                            ðŸ¢ {lead.companyName}
                           </p>
                         )}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {lead.email && (
                             <span className="inline-flex items-center text-xs bg-red-100 text-red-700 px-2 py-1 rounded-md">
-                              ✉️ {lead.email}
+                              âœ‰ï¸ {lead.email}
                             </span>
                           )}
                           {lead.linkedinProfile && (
                             <span className="inline-flex items-center text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md">
-                              🔗 LinkedIn
+                              ðŸ”— LinkedIn
                             </span>
                           )}
                           {lead.whatsapp && (
                             <span className="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md">
-                              💬 {lead.whatsapp}
+                              ðŸ’¬ {lead.whatsapp}
                             </span>
                           )}
                           {lead.phone && (
                             <span className="inline-flex items-center text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-md">
-                              📞 {lead.phone}
+                              ðŸ“ž {lead.phone}
                             </span>
                           )}
                           {lead.website && (
                             <span className="inline-flex items-center text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md">
-                              🌐 Website
+                              ðŸŒ Website
                             </span>
                           )}
                         </div>
                         {lead.notes && (
                           <p className="mt-2 text-xs text-gray-500 truncate">
-                            📝 {lead.notes}
+                            ðŸ“ {lead.notes}
                           </p>
                         )}
                       </div>
@@ -687,11 +737,12 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                 ))}
               </div>
             )}
+
             {/* Platform Summary */}
             {parsedLeads.length > 0 && (
               <div className="mt-5 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                 <h4 className="text-sm font-semibold text-green-800 mb-3">
-                  📊 Detected Contact Channels
+                  ðŸ“Š Detected Contact Channels
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
@@ -700,27 +751,27 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                       <>
                         {counts.linkedin > 0 && (
                           <span className="text-xs bg-white text-blue-700 px-3 py-1.5 rounded-full border border-blue-200 font-medium">
-                            🔗 LinkedIn ({counts.linkedin})
+                            ðŸ”— LinkedIn ({counts.linkedin})
                           </span>
                         )}
                         {counts.email > 0 && (
                           <span className="text-xs bg-white text-red-700 px-3 py-1.5 rounded-full border border-red-200 font-medium">
-                            ✉️ Email ({counts.email})
+                            âœ‰ï¸ Email ({counts.email})
                           </span>
                         )}
                         {counts.whatsapp > 0 && (
                           <span className="text-xs bg-white text-green-700 px-3 py-1.5 rounded-full border border-green-200 font-medium">
-                            💬 WhatsApp ({counts.whatsapp})
+                            ðŸ’¬ WhatsApp ({counts.whatsapp})
                           </span>
                         )}
                         {counts.phone > 0 && (
                           <span className="text-xs bg-white text-orange-700 px-3 py-1.5 rounded-full border border-orange-200 font-medium">
-                            📞 Phone ({counts.phone})
+                            ðŸ“ž Phone ({counts.phone})
                           </span>
                         )}
                         {counts.website > 0 && (
                           <span className="text-xs bg-white text-purple-700 px-3 py-1.5 rounded-full border border-purple-200 font-medium">
-                            🌐 Website ({counts.website})
+                            ðŸŒ Website ({counts.website})
                           </span>
                         )}
                       </>
@@ -728,15 +779,19 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                   })()}
                 </div>
                 <p className="text-xs text-green-700 mt-3">
-                  ✨ I'll ask relevant setup questions based on these channels
+                  âœ¨ I'll ask relevant setup questions based on these channels
                 </p>
               </div>
             )}
           </div>
         )}
       </div>
+
+
+
+
       {/* Footer Actions */}
-      <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex gap-3 flex-shrink-0">
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 flex-shrink-0">
         <button
           type="button"
           onClick={onCancel}
@@ -767,4 +822,4 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
       </div>
     </div>
   );
-}
+}

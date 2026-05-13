@@ -1,0 +1,14 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Red background -->
+  <rect width="200" height="200" rx="20" fill="#C41E3A"/>
+
+  <!-- White text "BNI" -->
+  <text x="100" y="115" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">
+    BNI
+  </text>
+
+  <!-- Registered trademark symbol -->
+  <text x="155" y="85" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle">
+    ®
+  </text>
+</svg>

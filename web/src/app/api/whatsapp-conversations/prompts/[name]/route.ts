@@ -1,38 +1,32 @@
 /**
- * Single Prompt Proxy
- * GET    /api/whatsapp-conversations/prompts/:name → Backend /api/prompts/:name
- * PUT    /api/whatsapp-conversations/prompts/:name → Backend /api/prompts/:name
- * DELETE /api/whatsapp-conversations/prompts/:name → Backend /api/prompts/:name
+ * Single Prompt Proxy — Personal WhatsApp (Node.js backend)
+ * GET    /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name
+ * PUT    /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name
+ * DELETE /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name
+ *
+ * Uses channel=backend so the proxy routes directly to Node.js LAD_backend
+ * without path transformation (unlike channel=personal which prepends /api/whatsapp-conversations).
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-proxy';
+import { proxyToPythonService, getBackendUrl } from '../../utils/python-proxy';
+
+function withBackendChannel(req: NextRequest): NextRequest {
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'backend');
+  return new NextRequest(url, req);
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), `/api/personal-whatsapp/prompts/${name}`);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), `/api/personal-whatsapp/prompts/${name}`);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), `/api/prompts/${name}`);
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), `/api/personal-whatsapp/prompts/${name}`);
 }

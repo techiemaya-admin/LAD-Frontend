@@ -143,6 +143,7 @@ export default function StepSettings({
   const [whatsappTemplates, setWhatsappTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loadingWa, setLoadingWa] = useState(false);
   const [showAgentPrompt, setShowAgentPrompt] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   useEffect(() => {
     if (resolvedStepType !== 'whatsapp_send') return;
@@ -1244,6 +1245,72 @@ export default function StepSettings({
         <p className="text-sm text-slate-600">
           This step will be executed automatically. No configuration needed.
         </p>
+      )}
+
+      {/* Advanced Options - Delay Configuration for Any Step Type (except delay and start/end) */}
+      {resolvedStepType !== 'delay' && resolvedStepType !== 'start' && resolvedStepType !== 'end' && (
+        <>
+          <Separator className="my-4" />
+          <div className="mb-4">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between text-xs font-semibold text-slate-600 py-2 px-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              onClick={() => setShowAdvancedOptions((v) => !v)}
+            >
+              <span>⏱️ Advanced Options - Step Delay (Optional)</span>
+              {showAdvancedOptions
+                ? <ChevronUp className="w-4 h-4 text-slate-500" />
+                : <ChevronDown className="w-4 h-4 text-slate-500" />}
+            </button>
+            {showAdvancedOptions && (
+              <div className="mt-3 p-4 border border-slate-200 rounded-lg bg-white">
+                <p className="text-xs text-slate-500 mb-3">
+                  Configure an optional delay before executing this step. If set, the system will wait the specified time after the previous step completes before proceeding.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <Label htmlFor="step-delay-days">Days</Label>
+                    <Input
+                      id="step-delay-days"
+                      type="number"
+                      value={data.delayDays || 0}
+                      onChange={(e) => handleUpdate('delayDays', parseInt(e.target.value) || 0)}
+                      min={0}
+                      max={365}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Number of days to wait before this step (0-365)</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="step-delay-hours">Hours</Label>
+                    <Input
+                      id="step-delay-hours"
+                      type="number"
+                      value={data.delayHours || 0}
+                      onChange={(e) => handleUpdate('delayHours', parseInt(e.target.value) || 0)}
+                      min={0}
+                      max={23}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Additional hours to wait (0-23)</p>
+                  </div>
+                </div>
+                <div className={`mt-3 p-2 rounded-lg border text-[11px] ${
+                  (data.delayDays || 0) > 0 || (data.delayHours || 0) > 0
+                    ? 'bg-blue-50 border-blue-200 text-blue-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}>
+                  <strong>Total Delay:</strong> {data.delayDays || 0} day(s), {data.delayHours || 0} hour(s)
+                  {((data.delayDays || 0) > 0 || (data.delayHours || 0) > 0) && (
+                    <span className="block mt-1 font-semibold">⏱️ This step will be delayed as configured</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
     </TooltipProvider>

@@ -40,15 +40,86 @@ export interface Message {
     name: string;
   };
   attachments?: Attachment[];
+  /** 'user' = lead | 'assistant' = AI | 'human_agent' = human takeover */
   role?: string;
   intent?: string;
+  /** Display name of the human agent who sent this message (if role='human_agent') */
+  senderName?: string;
+  /** User ID of the human agent (if stored in message metadata) */
+  humanAgentId?: string;
+  /** Template name if this message was sent via a WhatsApp template */
+  templateName?: string;
+
+  // ── Location message fields ──────────────────────────────────────────────
+  /** GPS latitude for location messages */
+  latitude?: number;
+  /** GPS longitude for location messages */
+  longitude?: number;
+  /** Location name or label (e.g. "HAY AL NAHDA") */
+  locationName?: string;
+  /** Location address string */
+  locationAddress?: string;
+
+  // ── Inbound media message fields ─────────────────────────────────────────
+  /** WhatsApp media ID for inbound image/video/audio/document messages */
+  mediaId?: string;
+  /** Media type: 'image' | 'video' | 'audio' | 'document' | 'sticker' */
+  mediaType?: string;
+  /** MIME type of the media (e.g. 'image/jpeg', 'application/pdf') */
+  mediaMimeType?: string;
+  /** Original filename for document messages */
+  mediaFilename?: string;
+  /** Optional caption attached to the media */
+  mediaCaption?: string;
 }
 
 export interface Attachment {
   id: string;
   url: string;
-  type: 'image' | 'document' | 'video';
+  type: 'image' | 'document' | 'video' | 'audio';
   name: string;
+  size?: number;
+}
+
+// ── Rich message types ────────────────────────────────────────────────────────
+
+export type RichMessageType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'document'
+  | 'audio'
+  | 'location'
+  | 'contact'
+  | 'poll';
+
+export interface RichMessagePayload {
+  type: RichMessageType;
+
+  /** Plain text content — required for 'text', optional caption for media */
+  content?: string;
+
+  // ── Media (image / video / document / audio) ────────────────────────────
+  fileBase64?: string;
+  filename?: string;
+  contentType?: string;
+  caption?: string;
+
+  // ── Location ──────────────────────────────────────────────────────────
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  locationAddress?: string;
+
+  // ── Contact card ──────────────────────────────────────────────────────
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactCompany?: string;
+
+  // ── Poll ──────────────────────────────────────────────────────────────
+  pollQuestion?: string;
+  pollOptions?: string[];
 }
 
 export interface Conversation {
@@ -72,12 +143,24 @@ export interface Conversation {
 // API Request/Response Types
 // ============================
 
+/**
+ * Sort modes accepted by the backend's GET /api/conversations endpoint.
+ *  - 'date'           : Last activity, newest first (default — matches WhatsApp).
+ *  - 'message_count'  : Most messages first.
+ *  - 'name'           : Contact name A → Z, unnamed contacts last.
+ */
+export type ConversationSortBy = 'date' | 'message_count' | 'name';
+
 export interface ConversationListFilters {
   status?: ConversationStatus | 'all';
   channel?: Channel | 'all';
   search?: string;
   owner?: ConversationOwner | 'all';
   context_status?: string;
+  /** When true, hide conversations that have no messages yet. */
+  hide_empty?: boolean;
+  /** Server-side sort order. Defaults to 'date' on the backend if omitted. */
+  sort_by?: ConversationSortBy;
   limit?: number;
   offset?: number;
 }
@@ -90,10 +173,30 @@ export interface MessageListResponse {
 
 export interface SendMessageRequest {
   conversationId: string;
-  content: string;
   leadId: string;
   phoneNumber?: string;
   humanAgentId?: string;
+  channel?: 'personal' | 'waba';
+  tenantId?: string;  // used for X-Tenant-ID header during multipart media pre-upload
+
+  // Rich payload — all fields from RichMessagePayload forwarded to backend
+  type?: RichMessageType;
+  content?: string;
+  fileBase64?: string;
+  mediaId?: string;   // pre-uploaded WhatsApp media ID (skips base64 in message body)
+  filename?: string;
+  contentType?: string;
+  caption?: string;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  locationAddress?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactCompany?: string;
+  pollQuestion?: string;
+  pollOptions?: string[];
 }
 
 export interface ConversationStats {
@@ -120,16 +223,26 @@ export interface UseConversationsReturn {
   setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  /** When true, conversations with no messages yet are hidden from the list. */
+  hideEmpty: boolean;
+  setHideEmpty: (hide: boolean) => void;
+  /** Active sort order for the conversation list (server-side). */
+  sortBy: ConversationSortBy;
+  setSortBy: (sortBy: ConversationSortBy) => void;
   unreadCounts: {
     all: number;
     whatsapp: number;
     linkedin: number;
     gmail: number;
   };
-  sendMessage: (content: string) => void;
+  sendMessage: (payload: RichMessagePayload) => void;
   markAsResolved: (id: string) => void;
   muteConversation: (id: string) => void;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  // ── Pagination ────────────────────────────────────────────────────────
+  loadMore: () => void;
+  isLoadingMore: boolean;
+  hasMore: boolean;
 }

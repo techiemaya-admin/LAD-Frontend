@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock } from 'lucide-react';
+import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server, X } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
 import { MicrosoftAuthIntegration } from './MicrosoftAuthIntegration';
+import { CustomEmailIntegration } from './CustomEmailIntegration';
 import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
@@ -26,7 +27,7 @@ interface IntegrationCard {
   comingSoon?: boolean;
 }
 
-const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'google', 'microsoft']);
+const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'whatsapp-personal', 'google', 'microsoft']);
 
 const INTEGRATIONS: IntegrationCard[] = [
   {
@@ -88,6 +89,14 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Email & Calendar',
   },
   {
+    id: 'custom-email',
+    name: 'Custom Email (SMTP)',
+    description: 'Connect Roundcube, cPanel mail, Zoho, Yandex, Fastmail, or any self-hosted webmail.',
+    icon: <Server className="h-6 w-6 text-emerald-600" />,
+    iconBg: 'bg-emerald-50',
+    category: 'Email & Calendar',
+  },
+  {
     id: 'linkedin',
     name: 'LinkedIn',
     description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
@@ -101,15 +110,12 @@ const INTEGRATIONS: IntegrationCard[] = [
     description: 'Connect GoHighLevel CRM to sync contacts, deals, and automate workflows.',
     icon: (
       <svg viewBox="0 0 120 120" className="h-6 w-6">
-        {/* Yellow arrow (left) - shortest */}
         <polygon points="15,100 27,100 27,60 15,60" fill="#FFB902"/>
         <polygon points="7,60 35,60 21,30" fill="#FFB902"/>
         <polygon points="21,30 35,60 28,60 28,42" fill="#E0A300"/>
-        {/* Blue arrow (center) */}
         <polygon points="40,100 52,100 52,55 40,55" fill="#0B81FF"/>
         <polygon points="32,55 60,55 46,22" fill="#0B81FF"/>
         <polygon points="46,22 60,55 53,55 53,36" fill="#0066CC"/>
-        {/* Green arrow (right) - tallest */}
         <polygon points="65,100 77,100 77,48 65,48" fill="#00C853"/>
         <polygon points="57,48 85,48 71,12" fill="#00C853"/>
         <polygon points="71,12 85,48 78,48 78,28" fill="#009624"/>
@@ -145,97 +151,8 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Social',
     comingSoon: true,
   },
-  // Coming Soon integrations
-  {
-    id: 'instagram',
-    name: 'Instagram',
-    description: 'Connect Instagram for DM automation and lead capture from social interactions.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <defs>
-          <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FD5" />
-            <stop offset="50%" stopColor="#FF543E" />
-            <stop offset="100%" stopColor="#C837AB" />
-          </linearGradient>
-        </defs>
-        <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="url(#ig-grad)" strokeWidth="2"/>
-        <circle cx="12" cy="12" r="5" fill="none" stroke="url(#ig-grad)" strokeWidth="2"/>
-        <circle cx="18" cy="6" r="1.5" fill="url(#ig-grad)"/>
-      </svg>
-    ),
-    iconBg: 'bg-pink-50',
-    category: 'Social',
-    comingSoon: true,
-  },
-  {
-    id: 'facebook',
-    name: 'Facebook',
-    description: 'Connect Facebook Messenger and Pages for lead engagement and messaging.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
-      </svg>
-    ),
-    iconBg: 'bg-blue-50',
-    category: 'Social',
-    comingSoon: true,
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter / X',
-    description: 'Monitor mentions, engage with leads, and automate outreach on Twitter.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="#000"/>
-      </svg>
-    ),
-    iconBg: 'bg-gray-50',
-    category: 'Social',
-    comingSoon: true,
-  },
-  {
-    id: 'tiktok',
-    name: 'TikTok',
-    description: 'Integrate TikTok for lead generation and social commerce automation.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.29 6.29 0 0 0-.79-.05 6.27 6.27 0 0 0-6.27 6.27 6.27 6.27 0 0 0 6.27 6.27 6.27 6.27 0 0 0 6.27-6.27V8.98a8.22 8.22 0 0 0 4.83 1.56V7.09a4.84 4.84 0 0 1-1-.4z" fill="#000"/>
-      </svg>
-    ),
-    iconBg: 'bg-gray-50',
-    category: 'Social',
-    comingSoon: true,
-  },
-  {
-    id: 'salesforce',
-    name: 'Salesforce',
-    description: 'Sync contacts, deals, and activities with your Salesforce CRM.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path d="M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.862 3.677 2.14a5.1 5.1 0 0 1 2.16-.478c2.82 0 5.112 2.293 5.112 5.112 0 2.82-2.293 5.113-5.112 5.113a5.1 5.1 0 0 1-1.303-.169 3.744 3.744 0 0 1-3.412 2.198 3.72 3.72 0 0 1-1.623-.371A4.495 4.495 0 0 1 8.39 20.22a4.494 4.494 0 0 1-2.2.572c-1.682 0-3.139-.923-3.912-2.29A4.038 4.038 0 0 1 1 18.59c-1.1 0-2.1-.448-2.823-1.172A3.982 3.982 0 0 1-3 14.595c0-1.4.723-2.633 1.815-3.345A4.03 4.03 0 0 1-.5 8.595c0-2.2 1.8-4 4-4a3.98 3.98 0 0 1 2.5.878 4.195 4.195 0 0 1 4.006.942z" fill="#00A1E0" transform="translate(3 2)"/>
-      </svg>
-    ),
-    iconBg: 'bg-sky-50',
-    category: 'CRM',
-    comingSoon: true,
-  },
-  {
-    id: 'zoho',
-    name: 'Zoho CRM',
-    description: 'Integrate Zoho CRM for contact sync, deal tracking, and workflow automation.',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6">
-        <path d="M5.6 7.2L1 12l4.6 4.8L8 14.5 6 12l2-2.5zM12 4l-2.4 1.4L12 16l2.4-10.6zm6.4 3.2L16 9.5l2 2.5-2 2.5 2.4 2.3L23 12z" fill="#E42527"/>
-      </svg>
-    ),
-    iconBg: 'bg-red-50',
-    category: 'CRM',
-    comingSoon: true,
-  },
 ];
 
-// Connection status for integrations that support it
 type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
@@ -248,7 +165,6 @@ export const IntegrationsSettings: React.FC = () => {
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
 
-  // MindBody modal state
   const [showMindBodyModal, setShowMindBodyModal] = useState(false);
   const [mindBodyForm, setMindBodyForm] = useState({
     site_id: '',
@@ -257,11 +173,128 @@ export const IntegrationsSettings: React.FC = () => {
     api_key: '',
     password: '',
   });
-  // Target class selection
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [fetchingClasses, setFetchingClasses] = useState(false);
   const [classFetchError, setClassFetchError] = useState<string | null>(null);
+
+  const [mindBodyConnecting, setMindBodyConnecting] = useState(false);
+  const [mindBodyError, setMindBodyError] = useState<string | null>(null);
+  const [mindBodyStatusData, setMindBodyStatusData] = useState<{
+    site_id: string | null;
+    display_name: string | null;
+    target_classes: string[];
+  } | null>(null);
+
+  const [editingClasses, setEditingClasses] = useState(false);
+  const [connectedAvailableClasses, setConnectedAvailableClasses] = useState<string[]>([]);
+  const [connectedSelectedClasses, setConnectedSelectedClasses] = useState<string[]>([]);
+  const [connectedFetchingClasses, setConnectedFetchingClasses] = useState(false);
+  const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
+  const [updatingClasses, setUpdatingClasses] = useState(false);
+
+  const setStatus = useCallback((id: string, status: ConnectionStatus) => {
+    setStatusMap((prev) => ({ ...prev, [id]: status }));
+  }, []);
+
+  const refreshStatuses = useCallback(() => {
+    const checkAll = async () => {
+      // WhatsApp Personal
+      setStatus('whatsapp-personal', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
+        if (!res.ok) { setStatus('whatsapp-personal', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+          const connected = accounts.some((a: any) => a.status === 'connected');
+          setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
+          if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
+        }
+      } catch { setStatus('whatsapp-personal', 'disconnected'); }
+
+      // WhatsApp AI
+      setStatus('whatsapp-ai', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
+        if (!res.ok) { setStatus('whatsapp-ai', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+          const active = accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+          setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('whatsapp-ai', 'disconnected'); }
+
+      // Google
+      setStatus('google', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
+        if (!res.ok) { setStatus('google', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('google', data?.connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('google', 'disconnected'); }
+
+      // Microsoft
+      setStatus('microsoft', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
+        if (!res.ok) { setStatus('microsoft', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('microsoft', 'disconnected'); }
+
+      // LinkedIn
+      setStatus('linkedin', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
+        if (!res.ok) { setStatus('linkedin', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
+          const connected = accounts.some((a: any) => a.status === 'connected' || a.status === 'active');
+          setStatus('linkedin', connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('linkedin', 'disconnected'); }
+
+      // GoHighLevel
+      setStatus('gohighlevel', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
+        if (!res.ok) { setStatus('gohighlevel', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('gohighlevel', 'disconnected'); }
+
+      // MindBody
+      try {
+        setStatus('mindbody', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
+        const data = await r.json();
+        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setMindBodyStatusData({
+            site_id: data.site_id ?? null,
+            display_name: data.display_name ?? null,
+            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
+          });
+        }
+      } catch {
+        setStatus('mindbody', 'disconnected');
+      }
+    };
+    checkAll();
+  }, [setStatus]);
+
+  useEffect(() => {
+    refreshStatuses();
+  }, [tenantId, refreshStatuses]);
 
   const fetchAvailableClasses = async () => {
     setFetchingClasses(true);
@@ -294,247 +327,6 @@ export const IntegrationsSettings: React.FC = () => {
     setMindBodyError(null);
   };
 
-  const [mindBodyConnecting, setMindBodyConnecting] = useState(false);
-  const [mindBodyError, setMindBodyError] = useState<string | null>(null);
-  const [mindBodyStatusData, setMindBodyStatusData] = useState<{
-    site_id: string | null;
-    display_name: string | null;
-    target_classes: string[];
-  } | null>(null);
-
-  // Edit target classes on the connected account (no re-entry of credentials needed)
-  const [editingClasses, setEditingClasses] = useState(false);
-  const [connectedAvailableClasses, setConnectedAvailableClasses] = useState<string[]>([]);
-  const [connectedSelectedClasses, setConnectedSelectedClasses] = useState<string[]>([]);
-  const [connectedFetchingClasses, setConnectedFetchingClasses] = useState(false);
-  const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
-  const [updatingClasses, setUpdatingClasses] = useState(false);
-
-  // Helper to update a single integration's status
-  const setStatus = useCallback((id: string, status: ConnectionStatus) => {
-    setStatusMap((prev) => ({ ...prev, [id]: status }));
-  }, []);
-
-  // Check all integration statuses on mount
-  useEffect(() => {
-    // WhatsApp Personal
-    const checkWaPersonal = async () => {
-      setStatus('whatsapp-personal', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
-        if (!res.ok) { setStatus('whatsapp-personal', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
-        const connected = accounts.some((a: { status: string }) => a.status === 'connected');
-        setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
-        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
-      } catch { setStatus('whatsapp-personal', 'disconnected'); }
-    };
-
-    // WhatsApp AI (Business API)
-    const checkWaAI = async () => {
-      setStatus('whatsapp-ai', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
-        if (!res.ok) { setStatus('whatsapp-ai', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
-        const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
-        setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
-        if (active) try { localStorage.setItem('whatsappChannel', 'waba'); } catch {}
-      } catch { setStatus('whatsapp-ai', 'disconnected'); }
-    };
-
-    // Google — checks email OAuth status (same flow as Connect with Google button)
-    const checkGoogle = async () => {
-      setStatus('google', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
-        if (!res.ok) { setStatus('google', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('google', data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('google', 'disconnected'); }
-    };
-
-    // Microsoft — checks email OAuth status (same flow as Connect with Microsoft button)
-    const checkMicrosoft = async () => {
-      setStatus('microsoft', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
-        if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('microsoft', 'disconnected'); }
-    };
-
-    // LinkedIn
-    const checkLinkedIn = async () => {
-      setStatus('linkedin', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
-        if (!res.ok) { setStatus('linkedin', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
-        const connected = accounts.some((a: { status?: string }) =>
-          a.status === 'connected' || a.status === 'active'
-        );
-        setStatus('linkedin', connected ? 'connected' : 'disconnected');
-      } catch { setStatus('linkedin', 'disconnected'); }
-    };
-
-    // GoHighLevel
-    const checkGHL = async () => {
-      setStatus('gohighlevel', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
-        if (!res.ok) { setStatus('gohighlevel', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('gohighlevel', 'disconnected'); }
-    };
-
-    // MindBody
-    const checkMindBody = async () => {
-      try {
-        setStatus('mindbody', 'loading');
-        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
-        const data = await r.json();
-        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
-        if (data?.connected) {
-          setMindBodyStatusData({
-            site_id: data.site_id ?? null,
-            display_name: data.display_name ?? null,
-            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
-          });
-        }
-      } catch {
-        setStatus('mindbody', 'disconnected');
-      }
-    };
-
-    checkWaPersonal();
-    checkWaAI();
-    checkGoogle();
-    checkMicrosoft();
-    checkLinkedIn();
-    checkGHL();
-    checkMindBody();
-  }, [tenantId, setStatus]);
-
-  // Detect OAuth redirect-back (?google=connected or ?microsoft=connected)
-  // When the OAuth flow completes, the backend redirects to /settings?google=connected.
-  // At that point activeView is reset to 'grid' so GoogleAuthIntegration is not mounted —
-  // we must refresh the grid status here instead.
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const googleDone = urlParams.get('google');
-    const microsoftDone = urlParams.get('microsoft');
-
-    if (googleDone === 'connected' || googleDone === 'error') {
-      // Re-check Google status and clean up URL
-      fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => setStatus('google', data?.connected ? 'connected' : 'disconnected'))
-        .catch(() => setStatus('google', 'disconnected'));
-      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
-    }
-
-    if (microsoftDone === 'connected' || microsoftDone === 'error') {
-      fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => setStatus('microsoft', data?.connected ? 'connected' : 'disconnected'))
-        .catch(() => setStatus('microsoft', 'disconnected'));
-      window.history.replaceState({}, '', window.location.pathname + '?tab=integrations');
-    }
-  }, [setStatus]);
-
-  // Re-check all statuses
-  const refreshStatuses = useCallback(() => {
-    // Trigger re-check by re-running the effect
-    const checkAll = async () => {
-      // WhatsApp Personal
-      setStatus('whatsapp-personal', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/personal-whatsapp/accounts');
-        if (!res.ok) { setStatus('whatsapp-personal', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
-        const connected = accounts.some((a: { status: string }) => a.status === 'connected');
-        setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
-        if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
-      } catch { setStatus('whatsapp-personal', 'disconnected'); }
-
-      // WhatsApp AI
-      setStatus('whatsapp-ai', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts');
-        if (!res.ok) { setStatus('whatsapp-ai', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
-        const active = accounts.some((a: { status?: string }) => a.status === 'active' || a.status === 'connected');
-        setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
-      } catch { setStatus('whatsapp-ai', 'disconnected'); }
-
-      // Google
-      setStatus('google', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
-        if (!res.ok) { setStatus('google', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('google', data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('google', 'disconnected'); }
-
-      // Microsoft
-      setStatus('microsoft', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/email/microsoft/status', { method: 'POST' });
-        if (!res.ok) { setStatus('microsoft', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('microsoft', 'disconnected'); }
-
-      // LinkedIn
-      setStatus('linkedin', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/campaigns/linkedin/accounts');
-        if (!res.ok) { setStatus('linkedin', 'disconnected'); return; }
-        const data = await res.json();
-        const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
-        const connected = accounts.some((a: { status?: string }) =>
-          a.status === 'connected' || a.status === 'active'
-        );
-        setStatus('linkedin', connected ? 'connected' : 'disconnected');
-      } catch { setStatus('linkedin', 'disconnected'); }
-
-      // GoHighLevel
-      setStatus('gohighlevel', 'loading');
-      try {
-        const res = await fetchWithTenant('/api/social-integration/gohighlevel/status');
-        if (!res.ok) { setStatus('gohighlevel', 'disconnected'); return; }
-        const data = await res.json();
-        setStatus('gohighlevel', data?.data?.connected ? 'connected' : 'disconnected');
-      } catch { setStatus('gohighlevel', 'disconnected'); }
-
-      // MindBody
-      try {
-        setStatus('mindbody', 'loading');
-        const r = await fetchWithTenant('/api/social-integration/mindbody/status', { method: 'POST' });
-        const data = await r.json();
-        setStatus('mindbody', data?.connected ? 'connected' : 'disconnected');
-        if (data?.connected) {
-          setMindBodyStatusData({
-            site_id: data.site_id ?? null,
-            display_name: data.display_name ?? null,
-            target_classes: Array.isArray(data.target_classes) ? data.target_classes : [],
-          });
-        }
-      } catch {
-        setStatus('mindbody', 'disconnected');
-      }
-    };
-    checkAll();
-  }, [setStatus]);
-
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return INTEGRATIONS;
     const q = searchQuery.toLowerCase();
@@ -543,377 +335,373 @@ export const IntegrationsSettings: React.FC = () => {
     );
   }, [searchQuery]);
 
-  // Single return — modal must be accessible from both detail and grid views
   return (
     <>
-    {activeView !== 'grid' ? (
-      <div className="space-y-4">
-        <button
-          onClick={() => {
-            setActiveView('grid');
-            refreshStatuses();
-          }}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-        >
-          &larr; Back to Integrations
-        </button>
+      {activeView !== 'grid' ? (
+        <div className="space-y-4">
+          <button
+            onClick={() => {
+              setActiveView('grid');
+              refreshStatuses();
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+          >
+            &larr; Back to Integrations
+          </button>
 
-        {activeView === 'whatsapp-ai' && <TenantOnboarding />}
-        {activeView === 'whatsapp-personal' && (
-          <div className="space-y-6">
-            <WhatsAppIntegration />
-            <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ minHeight: 400 }}>
-              <PersonalWaTemplateManager />
-            </div>
-          </div>
-        )}
-        {activeView === 'google' && <GoogleAuthIntegration />}
-        {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
-        {activeView === 'linkedin' && <LinkedInIntegration />}
-        {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
-        {activeView === 'slack' && (
-          <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
-            Slack integration coming soon.
-          </div>
-        )}
-        {activeView === 'mindbody' && (
-          <div className="rounded-xl border border-border bg-card p-6 space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
-                <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-base text-foreground">MindBody</h3>
-                <p className="text-xs text-muted-foreground">Automate trial class booking via WhatsApp AI</p>
+          {activeView === 'whatsapp-ai' && <TenantOnboarding />}
+          {activeView === 'whatsapp-personal' && (
+            <div className="space-y-6">
+              <WhatsAppIntegration />
+              <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ minHeight: 400 }}>
+                <PersonalWaTemplateManager />
               </div>
             </div>
+          )}
+          {activeView === 'google' && <GoogleAuthIntegration />}
+          {activeView === 'microsoft' && <MicrosoftAuthIntegration />}
+          {activeView === 'custom-email' && (
+            <CustomEmailIntegration
+              onStatusChange={(connected) =>
+                setStatus('custom-email', connected ? 'connected' : 'disconnected')
+              }
+            />
+          )}
+          {activeView === 'linkedin' && <LinkedInIntegration />}
+          {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
+          {activeView === 'slack' && (
+            <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
+              Slack integration coming soon.
+            </div>
+          )}
+          {activeView === 'mindbody' && (
+            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+                  <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base text-foreground">MindBody</h3>
+                  <p className="text-xs text-muted-foreground">Automate trial class booking via WhatsApp AI</p>
+                </div>
+              </div>
 
-            {statusMap['mindbody'] === 'connected' ? (
-              <div className="space-y-4">
-                {/* Account info */}
-                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
-                  {mindBodyStatusData?.display_name && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Display Name</span>
-                      <span className="font-medium text-foreground">{mindBodyStatusData.display_name}</span>
+              {statusMap['mindbody'] === 'connected' ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                    {mindBodyStatusData?.display_name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Display Name</span>
+                        <span className="font-medium text-foreground">{mindBodyStatusData.display_name}</span>
+                      </div>
+                    )}
+                    {mindBodyStatusData?.site_id && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Site ID</span>
+                        <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
+                      <div className="flex items-start gap-2 min-w-0">
+                        <span className="font-medium text-foreground text-right break-words">
+                          {mindBodyStatusData?.target_classes?.length
+                            ? mindBodyStatusData.target_classes.join(', ')
+                            : <span className="text-muted-foreground italic">None selected</span>}
+                        </span>
+                        {!editingClasses && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setEditingClasses(true);
+                              setConnectedFetchingClasses(true);
+                              setConnectedClassFetchError(null);
+                              setConnectedSelectedClasses(mindBodyStatusData?.target_classes ?? []);
+                              try {
+                                const r = await fetchWithTenant('/api/social-integration/mindbody/classes');
+                                const data = await r.json();
+                                const names: string[] = Array.isArray(data?.classes)
+                                  ? [...new Set((data.classes as { name: string }[]).map(c => c.name).filter(Boolean))].sort() as string[]
+                                  : [];
+                                setConnectedAvailableClasses(names);
+                                if (!names.length) setConnectedClassFetchError('No classes found in the next 7 days.');
+                              } catch {
+                                setConnectedClassFetchError('Failed to load classes from MindBody.');
+                              } finally {
+                                setConnectedFetchingClasses(false);
+                              }
+                            }}
+                            className="text-[11px] font-medium text-primary hover:underline flex-shrink-0 mt-0.5"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {mindBodyStatusData?.site_id && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Site ID</span>
-                      <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
-                    </div>
-                  )}
-                  {/* Target Classes row — always visible with Edit button */}
-                  <div className="flex justify-between items-start gap-4">
-                    <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
-                    <div className="flex items-start gap-2 min-w-0">
-                      <span className="font-medium text-foreground text-right break-words">
-                        {mindBodyStatusData?.target_classes?.length
-                          ? mindBodyStatusData.target_classes.join(', ')
-                          : <span className="text-muted-foreground italic">None selected</span>}
-                      </span>
-                      {!editingClasses && (
+                  </div>
+
+                  {editingClasses && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground">Select Target Classes</span>
                         <button
                           type="button"
-                          onClick={async () => {
-                            setEditingClasses(true);
-                            setConnectedFetchingClasses(true);
-                            setConnectedClassFetchError(null);
-                            setConnectedSelectedClasses(mindBodyStatusData?.target_classes ?? []);
-                            try {
-                              const r = await fetchWithTenant('/api/social-integration/mindbody/classes');
-                              const data = await r.json();
-                              const names: string[] = Array.isArray(data?.classes)
-                                ? [...new Set((data.classes as { name: string }[]).map(c => c.name).filter(Boolean))].sort() as string[]
-                                : [];
-                              setConnectedAvailableClasses(names);
-                              if (!names.length) setConnectedClassFetchError('No classes found in the next 7 days.');
-                            } catch {
-                              setConnectedClassFetchError('Failed to load classes from MindBody.');
-                            } finally {
-                              setConnectedFetchingClasses(false);
-                            }
-                          }}
-                          className="text-[11px] font-medium text-primary hover:underline flex-shrink-0 mt-0.5"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inline class editor */}
-                {editingClasses && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">Select Target Classes</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingClasses(false);
-                          setConnectedAvailableClasses([]);
-                          setConnectedClassFetchError(null);
-                        }}
-                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        ✕ Cancel
-                      </button>
-                    </div>
-
-                    {connectedFetchingClasses && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        Loading available classes…
-                      </div>
-                    )}
-
-                    {connectedClassFetchError && (
-                      <p className="text-xs text-destructive">{connectedClassFetchError}</p>
-                    )}
-
-                    {!connectedFetchingClasses && connectedAvailableClasses.length > 0 && (
-                      <div className="rounded-lg border border-border bg-background divide-y divide-border max-h-44 overflow-y-auto">
-                        {connectedAvailableClasses.map((cls) => (
-                          <label
-                            key={cls}
-                            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={connectedSelectedClasses.includes(cls)}
-                              onChange={(e) => {
-                                setConnectedSelectedClasses((prev) =>
-                                  e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
-                                );
-                              }}
-                              className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
-                            />
-                            <span className="text-sm text-foreground">{cls}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                    {connectedSelectedClasses.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground">
-                        <span className="font-medium text-foreground">{connectedSelectedClasses.length}</span>{' '}
-                        class{connectedSelectedClasses.length !== 1 ? 'es' : ''} selected
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={updatingClasses || connectedFetchingClasses}
-                      onClick={async () => {
-                        setUpdatingClasses(true);
-                        setConnectedClassFetchError(null);
-                        try {
-                          const r = await fetchWithTenant('/api/social-integration/mindbody/target-classes', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ target_classes: connectedSelectedClasses }),
-                          });
-                          const data = await r.json();
-                          if (r.ok) {
-                            setMindBodyStatusData((prev) =>
-                              prev ? { ...prev, target_classes: connectedSelectedClasses } : prev
-                            );
+                          onClick={() => {
                             setEditingClasses(false);
                             setConnectedAvailableClasses([]);
-                          } else {
-                            setConnectedClassFetchError(data?.error || 'Failed to update target classes.');
+                            setConnectedClassFetchError(null);
+                          }}
+                          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          ✕ Cancel
+                        </button>
+                      </div>
+
+                      {connectedFetchingClasses && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          Loading available classes…
+                        </div>
+                      )}
+
+                      {connectedClassFetchError && (
+                        <p className="text-xs text-destructive">{connectedClassFetchError}</p>
+                      )}
+
+                      {!connectedFetchingClasses && connectedAvailableClasses.length > 0 && (
+                        <div className="rounded-lg border border-border bg-background divide-y divide-border max-h-44 overflow-y-auto">
+                          {connectedAvailableClasses.map((cls) => (
+                            <label
+                              key={cls}
+                              className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={connectedSelectedClasses.includes(cls)}
+                                onChange={(e) => {
+                                  setConnectedSelectedClasses((prev) =>
+                                    e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
+                                  );
+                                }}
+                                className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                              />
+                              <span className="text-sm text-foreground">{cls}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={updatingClasses || connectedFetchingClasses}
+                        onClick={async () => {
+                          setUpdatingClasses(true);
+                          setConnectedClassFetchError(null);
+                          try {
+                            const r = await fetchWithTenant('/api/social-integration/mindbody/target-classes', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ target_classes: connectedSelectedClasses }),
+                            });
+                            const data = await r.json();
+                            if (r.ok) {
+                              setMindBodyStatusData((prev) =>
+                                prev ? { ...prev, target_classes: connectedSelectedClasses } : prev
+                              );
+                              setEditingClasses(false);
+                              setConnectedAvailableClasses([]);
+                            } else {
+                              setConnectedClassFetchError(data?.error || 'Failed to update target classes.');
+                            }
+                          } catch {
+                            setConnectedClassFetchError('Failed to save changes. Please try again.');
+                          } finally {
+                            setUpdatingClasses(false);
                           }
-                        } catch {
-                          setConnectedClassFetchError('Failed to save changes. Please try again.');
-                        } finally {
-                          setUpdatingClasses(false);
-                        }
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {updatingClasses ? 'Saving…' : 'Save Target Classes'}
-                    </button>
-                  </div>
-                )}
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingClasses ? 'Saving…' : 'Save Target Classes'}
+                      </button>
+                    </div>
+                  )}
 
-                <button
-                  onClick={async () => {
-                    try {
-                      await fetchWithTenant('/api/social-integration/mindbody/disconnect', { method: 'POST' });
-                      setStatus('mindbody', 'disconnected');
-                      setMindBodyStatusData(null);
-                      setEditingClasses(false);
-                      setConnectedAvailableClasses([]);
-                    } catch {
-                      // silently ignore; user can retry
-                    }
-                  }}
-                  className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
-                >
-                  Disconnect MindBody
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Connect your MindBody account to enable automated trial class booking workflows through the WhatsApp AI agent.
-                </p>
-                <button
-                  onClick={() => {
-                    mindBodyFormReset();
-                    setShowMindBodyModal(true);
-                  }}
-                  className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
-                  Connect to MindBody
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Integrations</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Connect your tools to automate workflows and sync data.
-          </p>
-        </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search integrations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 sm:h-9 text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Card Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((integration) => {
-          const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
-          const isAlreadyConnected = statusMap[integration.id] === 'connected';
-          // Lock the card only when credit-gated, credits are confirmed 0, and not already connected
-          const isLocked = isCreditGated && !hasCredits && !isAlreadyConnected;
-
-          return (
-          <div
-            key={integration.id}
-            className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
-              integration.comingSoon || isLocked
-                ? 'opacity-75 cursor-default'
-                : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
-            }`}
-            onClick={() => {
-              if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
-            }}
-          >
-            {/* Coming Soon badge (top-right) */}
-            {integration.comingSoon && (
-              <div className="absolute top-3 right-3">
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  <Clock className="h-2.5 w-2.5" />
-                  Coming Soon
-                </span>
-              </div>
-            )}
-
-            {/* Locked badge (top-right) — shown when credit-gated and no credits */}
-            {!integration.comingSoon && isLocked && (
-              <div className="absolute top-3 right-3">
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
-                  <Lock className="h-2.5 w-2.5" />
-                  Requires Credits
-                </span>
-              </div>
-            )}
-
-            {/* Status badge (top-right) — only for non-coming-soon, non-locked integrations */}
-            {!integration.comingSoon && !isLocked && statusMap[integration.id] && statusMap[integration.id] !== 'loading' && (
-              <div className="absolute top-3 right-3">
-                <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                  statusMap[integration.id] === 'connected'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-50 text-gray-500 border border-gray-200'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    statusMap[integration.id] === 'connected' ? 'bg-green-500' : 'bg-gray-400'
-                  }`} />
-                  {statusMap[integration.id] === 'connected' ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-            )}
-
-            {/* Icon + Title */}
-            <div className="flex items-start gap-3 mb-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${integration.iconBg} flex items-center justify-center`}>
-                {integration.icon}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-medium text-sm text-foreground leading-tight">{integration.name}</h3>
-                <span className="text-[11px] text-muted-foreground">{integration.category}</span>
-              </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetchWithTenant('/api/social-integration/mindbody/disconnect', { method: 'POST' });
+                        setStatus('mindbody', 'disconnected');
+                        setMindBodyStatusData(null);
+                        setEditingClasses(false);
+                        setConnectedAvailableClasses([]);
+                      } catch {}
+                    }}
+                    className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
+                  >
+                    Disconnect MindBody
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect your MindBody account to enable automated trial class booking workflows through the WhatsApp AI agent.
+                  </p>
+                  <button
+                    onClick={() => {
+                      mindBodyFormReset();
+                      setShowMindBodyModal(true);
+                    }}
+                    className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
+                  >
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Connect to MindBody
+                  </button>
+                </div>
+              )}
             </div>
-
-            {/* Description */}
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-4 flex-1 leading-relaxed">
-              {integration.description}
-            </p>
-
-            {/* Action */}
-            {integration.comingSoon ? (
-              <button
-                disabled
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground border border-border rounded-lg py-2 cursor-not-allowed"
-              >
-                <Clock className="h-3.5 w-3.5" />
-                Coming Soon
-              </button>
-            ) : isLocked ? (
-              <button
-                disabled
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-orange-600 border border-orange-200 bg-orange-50 rounded-lg py-2 cursor-not-allowed"
-              >
-                <Lock className="h-3.5 w-3.5" />
-                Add Credits to Connect
-              </button>
-            ) : (
-              <button className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-primary border border-border rounded-lg py-2 hover:bg-primary/5 transition-colors">
-                <Settings2 className="h-3.5 w-3.5" />
-                Manage
-              </button>
-            )}
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Integrations</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Connect your tools to automate workflows and sync data.
+              </p>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search integrations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 sm:h-9 text-sm"
+              />
+            </div>
           </div>
-          );
-        })}
-      </div>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          No integrations found matching &ldquo;{searchQuery}&rdquo;
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map((integration) => {
+              const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
+              const isAlreadyConnected = statusMap[integration.id] === 'connected';
+              const isLocked = isCreditGated && !hasCredits && !isAlreadyConnected;
+              const status = statusMap[integration.id];
+
+              return (
+                <div
+                  key={integration.id}
+                  className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
+                    integration.comingSoon || isLocked
+                      ? 'opacity-75 cursor-default'
+                      : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
+                  }}
+                >
+                  {integration.comingSoon && (
+                    <div className="absolute top-3 right-3">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <Clock className="h-2.5 w-2.5" />
+                        Coming Soon
+                      </span>
+                    </div>
+                  )}
+
+                  {!integration.comingSoon && isLocked && (
+                    <div className="absolute top-3 right-3">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                        <Lock className="h-2.5 w-2.5" />
+                        Requires Credits
+                      </span>
+                    </div>
+                  )}
+
+                  {!integration.comingSoon && !isLocked && status && status !== 'loading' && (
+                    <div className="absolute top-3 right-3">
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        status === 'connected'
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-gray-50 text-gray-500 border border-gray-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          status === 'connected' ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                        {status === 'connected' ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${integration.iconBg} flex items-center justify-center`}>
+                      {integration.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-medium text-sm text-foreground leading-tight">{integration.name}</h3>
+                      <span className="text-[11px] text-muted-foreground">{integration.category}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-4 flex-1 leading-relaxed">
+                    {integration.description}
+                  </p>
+
+                  <div className="mt-auto">
+                    {integration.comingSoon ? (
+                      <button
+                        disabled
+                        className="w-full py-2.5 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 text-xs font-bold uppercase tracking-wider cursor-not-allowed border border-dashed border-gray-200"
+                      >
+                        Coming Soon
+                      </button>
+                    ) : isLocked ? (
+                      <button
+                        disabled
+                        className="w-full py-2.5 px-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 text-xs font-bold uppercase tracking-wider cursor-not-allowed border border-orange-200"
+                      >
+                        <Lock className="h-3 w-3 inline mr-1" />
+                        Credits Required
+                      </button>
+                    ) : (
+                      <button
+                        className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
+                          status === 'connected'
+                            ? 'bg-gray-50 dark:bg-gray-800 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                            : 'bg-primary text-primary-foreground hover:shadow-lg'
+                        }`}
+                      >
+                        {status === 'connected' ? 'Manage Settings' : 'Connect Now'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      </div>
-    )}
-
-      {/* MindBody Connect Modal — rendered at fragment level so it works from both detail and grid views */}
+      {/* MindBody Connect Modal - Standardized */}
       {showMindBodyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-xl p-6 space-y-5 mx-4">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center">
-                <span className="text-xl leading-none select-none" aria-label="MindBody">🧘</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#000724] border border-gray-200 dark:border-[#262831] rounded-[2rem] shadow-2xl w-full sm:max-w-5xl sm:w-[90vw] overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-teal-50 text-teal-600">
+                  <span className="text-xl">🧘</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Connect MindBody</h3>
               </div>
-              <h3 className="font-semibold text-base text-foreground">Connect MindBody</h3>
+              <button
+                onClick={() => {
+                  setShowMindBodyModal(false);
+                  mindBodyFormReset();
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#253456] rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
             </div>
 
             <form
@@ -946,7 +734,6 @@ export const IntegrationsSettings: React.FC = () => {
                     setShowMindBodyModal(false);
                     mindBodyFormReset();
                   } else {
-                    // Show specific MindBody API error if available, otherwise generic message
                     const errorMsg = data?.detail
                       ? `${data.error}: ${data.detail}`
                       : (data?.error || data?.message || 'Connection failed. Please check your credentials.');
@@ -959,117 +746,82 @@ export const IntegrationsSettings: React.FC = () => {
                   setMindBodyConnecting(false);
                 }
               }}
-              className="space-y-4"
+              className="p-8 space-y-6"
             >
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Site ID <span className="text-destructive">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. -99"
-                  value={mindBodyForm.site_id}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, site_id: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Site ID <span className="text-destructive">*</span></label>
+                  <Input
+                    required
+                    placeholder="e.g. -99"
+                    value={mindBodyForm.site_id}
+                    onChange={(e) => setMindBodyForm((f) => ({ ...f, site_id: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Display Name</label>
+                  <Input
+                    placeholder="e.g. My Yoga Studio"
+                    value={mindBodyForm.display_name}
+                    onChange={(e) => setMindBodyForm((f) => ({ ...f, display_name: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Username <span className="text-destructive">*</span></label>
+                  <Input
+                    required
+                    placeholder="MindBody username"
+                    value={mindBodyForm.username}
+                    onChange={(e) => setMindBodyForm((f) => ({ ...f, username: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">API Key <span className="text-destructive">*</span></label>
+                  <Input
+                    required
+                    placeholder="MindBody API key"
+                    value={mindBodyForm.api_key}
+                    onChange={(e) => setMindBodyForm((f) => ({ ...f, api_key: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Password <span className="text-destructive">*</span></label>
+                  <Input
+                    required
+                    type="password"
+                    placeholder="MindBody password"
+                    value={mindBodyForm.password}
+                    onChange={(e) => setMindBodyForm((f) => ({ ...f, password: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Display Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. My Yoga Studio"
-                  value={mindBodyForm.display_name}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, display_name: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Username <span className="text-destructive">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="MindBody username"
-                  value={mindBodyForm.username}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, username: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">API Key <span className="text-destructive">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="MindBody API key"
-                  value={mindBodyForm.api_key}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, api_key: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Password <span className="text-destructive">*</span></label>
-                <input
-                  type="password"
-                  required
-                  placeholder="MindBody password"
-                  value={mindBodyForm.password}
-                  onChange={(e) => setMindBodyForm((f) => ({ ...f, password: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground">Target Classes</label>
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Target Classes</label>
                   {mindBodyForm.site_id && mindBodyForm.api_key && (
                     <button
                       type="button"
                       onClick={fetchAvailableClasses}
                       disabled={fetchingClasses}
-                      className="flex items-center gap-1.5 text-[11px] font-medium text-primary border border-primary/30 rounded-md px-2.5 py-1 hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 text-[11px] font-bold text-primary uppercase tracking-widest border border-primary/30 rounded-lg px-4 py-1.5 hover:bg-primary/5 transition-all disabled:opacity-60"
                     >
-                      {fetchingClasses ? (
-                        <>
-                          <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                          Loading...
-                        </>
-                      ) : availableClasses.length > 0 ? (
-                        'Refresh Classes'
-                      ) : (
-                        'Fetch Classes from MindBody'
-                      )}
+                      {fetchingClasses ? 'Fetching...' : 'Fetch Classes'}
                     </button>
                   )}
                 </div>
 
-                {/* Hint when credentials not yet entered */}
-                {(!mindBodyForm.site_id || !mindBodyForm.api_key) && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Enter your Site ID and API Key above, then click &ldquo;Fetch Classes from MindBody&rdquo; to see available classes.
-                  </p>
-                )}
-
-                {/* Credentials entered but no fetch yet */}
-                {mindBodyForm.site_id && mindBodyForm.api_key && availableClasses.length === 0 && !fetchingClasses && !classFetchError && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Click the button above to load your MindBody class schedule.
-                  </p>
-                )}
-
-                {/* Fetch error */}
-                {classFetchError && (
-                  <p className="text-[11px] text-destructive">{classFetchError}</p>
-                )}
-
-                {/* Class checkbox list */}
                 {availableClasses.length > 0 && (
-                  <div className="rounded-lg border border-border bg-muted/20 divide-y divide-border max-h-44 overflow-y-auto">
+                  <div className="rounded-2xl border border-gray-200 dark:border-[#262831] bg-gray-50/50 dark:bg-[#1a2a43]/30 divide-y divide-gray-100 dark:divide-[#262831] max-h-48 overflow-y-auto p-2">
                     {availableClasses.map((cls) => (
                       <label
                         key={cls}
-                        className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white dark:hover:bg-[#1a2a43] rounded-xl transition-all"
                       >
                         <input
                           type="checkbox"
@@ -1079,43 +831,32 @@ export const IntegrationsSettings: React.FC = () => {
                               e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
                             );
                           }}
-                          className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                         />
-                        <span className="text-sm text-foreground">{cls}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-white">{cls}</span>
                       </label>
                     ))}
                   </div>
                 )}
 
-                {/* Selected summary */}
-                {selectedClasses.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    <span className="font-medium text-foreground">{selectedClasses.length}</span> class{selectedClasses.length !== 1 ? 'es' : ''} selected: {selectedClasses.join(', ')}
-                  </p>
+                {classFetchError && (
+                  <p className="text-sm text-destructive font-medium px-2">{classFetchError}</p>
                 )}
               </div>
 
               {mindBodyError && (
-                <p className="text-sm text-destructive">{mindBodyError}</p>
+                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-rose-600 dark:text-rose-400 text-sm font-medium">
+                  {mindBodyError}
+                </div>
               )}
 
-              <div className="flex items-center gap-3 pt-1">
+              <div className="pt-4">
                 <button
                   type="submit"
                   disabled={mindBodyConnecting}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {mindBodyConnecting ? 'Connecting...' : 'Connect'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMindBodyModal(false);
-                    mindBodyFormReset();
-                  }}
-                  className="flex-1 text-sm font-medium text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted/40 transition-colors"
-                >
-                  Cancel
+                  {mindBodyConnecting ? 'Connecting...' : 'Connect MindBody Account'}
                 </button>
               </div>
             </form>

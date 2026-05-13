@@ -33,13 +33,16 @@ class CommunityROIApiClient {
         throw new Error('NEXT_PUBLIC_COMMUNITY_API_URL or NEXT_PUBLIC_BACKEND_URL environment variable is required');
       }
       
-      // If URL is provided, append /api; otherwise use production backend as default
+      // If URL is provided, append /api/community-roi; otherwise use production backend as default
       if (communityUrl) {
-        // Check if URL already contains /api suffix
-        this.baseURL = communityUrl.endsWith('/api') ? communityUrl : `${communityUrl}/api`;
+        // Remove trailing slash if present, then append /api/community-roi
+        const baseUrl = communityUrl.endsWith('/') ? communityUrl.slice(0, -1) : communityUrl;
+        this.baseURL = baseUrl.endsWith('/api/community-roi')
+          ? baseUrl
+          : `${baseUrl}/api/community-roi`;
       } else {
-        // Default to production backend
-        this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api`;
+        // Default to production backend with /api/community-roi prefix
+        this.baseURL = `https://lad-backend-develop-160078175457.us-central1.run.app/api/community-roi`;
       }
     }
   }
@@ -50,7 +53,12 @@ class CommunityROIApiClient {
     body?: any,
     options?: RequestOptions
   ): Promise<ApiResponse<T>> {
-    const url = new URL(path, this.baseURL);
+    // new URL(path, base) discards the base pathname when path starts with '/'
+    // e.g. new URL('/foo', 'http://host/api/community-roi') → http://host/foo  (WRONG)
+    // Fix: strip leading slash from path, ensure base ends with '/'
+    const normalizedBase = this.baseURL.endsWith('/') ? this.baseURL : `${this.baseURL}/`;
+    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    const url = new URL(normalizedPath, normalizedBase);
 
     // Add query parameters
     if (options?.params) {
@@ -76,7 +84,9 @@ class CommunityROIApiClient {
 
     let response: Response | undefined;
     try {
-      response = await fetch(url.toString(), {
+      const fullUrl = url.toString();
+      console.debug(`[CommunityROI API] ${method} ${fullUrl}`, { baseURL: this.baseURL, path });
+      response = await fetch(fullUrl, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -84,7 +94,7 @@ class CommunityROIApiClient {
       });
     } catch (networkError) {
       // True network failure (offline, DNS, CORS, etc.) — always log
-      console.error('API network error:', networkError);
+      console.error('[CommunityROI API] Network error:', networkError);
       throw networkError;
     }
 
@@ -92,11 +102,12 @@ class CommunityROIApiClient {
 
     if (!response.ok) {
       const err = new Error(`API Error: ${response.status} ${response.statusText}`);
-      // Only log unexpected server errors (5xx). 4xx are handled by callers
-      // (e.g. 401/403 while auth is loading, 404 for optional resources).
-      if (response.status >= 500) {
-        console.error(`[CommunityROI] Server error ${response.status} on ${method} ${path}`, data);
-      }
+      // Log all failed requests to help debug
+      console.error(`[CommunityROI API] ${response.status} on ${method} ${url.toString()}`, {
+        baseURL: this.baseURL,
+        path,
+        response: data
+      });
       throw err;
     }
 

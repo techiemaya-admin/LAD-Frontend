@@ -76,6 +76,7 @@ interface GroupChatWindowProps {
   groupName: string;
   groupColor: string;
   onBack: () => void;
+  onGroupDeleted?: () => void;
   autoOpenInfo?: boolean;
   channel?: 'personal' | 'waba';
 }
@@ -154,6 +155,7 @@ interface ConversationResult {
 
 interface AddMembersPanelProps {
   groupId: string;
+  channel: 'personal' | 'waba';
   existingConvIds: Set<string>;
   onClose: () => void;
   onMembersAdded: () => void;
@@ -161,6 +163,7 @@ interface AddMembersPanelProps {
 
 const AddMembersPanel = memo(function AddMembersPanel({
   groupId,
+  channel,
   existingConvIds,
   onClose,
   onMembersAdded,
@@ -173,6 +176,14 @@ const AddMembersPanel = memo(function AddMembersPanel({
 
   // Channel source selector: 'personal' | 'waba'
   const [contactSource, setContactSource] = useState<'personal' | 'waba'>('personal');
+
+  // New contact form state
+  const [showNewContactForm, setShowNewContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Saved contacts state
   const [savedContacts, setSavedContacts] = useState<ConversationResult[]>([]);
@@ -203,8 +214,8 @@ const AddMembersPanel = memo(function AddMembersPanel({
         setContactsPage(page);
         if (src === 'personal') {
           setSavedContacts(raw.map((c, idx) => ({
-            id: String((c as Record<string,unknown>).whatsapp_id || (c as Record<string,unknown>).phone || `pwa-${page}-${idx}`),
-            lead_name: (c.name || c.phone) as string | null,
+            id: String((c as Record<string,unknown>).id || (c as Record<string,unknown>).whatsapp_id || (c as Record<string,unknown>).phone || `pwa-${page}-${idx}`),
+            lead_name: (c.name || c.contact_name || c.phone) as string | null,
             lead_phone: c.phone as string | null,
             lead_email: null,
             lead_company: null,
@@ -279,18 +290,58 @@ const AddMembersPanel = memo(function AddMembersPanel({
     if (selected.size === 0) return;
     setAdding(true);
     try {
-      await fetch(`${GROUP_API}/${groupId}/conversations`, {
+      const res = await fetch(`${GROUP_API}/${groupId}/conversations?channel=${channel}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ conversation_ids: Array.from(selected) }),
       });
+      const data = await res.json();
+      console.log('[AddMembersPanel] add result:', data);
       onMembersAdded();
     } catch (err) {
       console.error('Error adding members:', err);
     } finally {
       setAdding(false);
     }
-  }, [groupId, selected, onMembersAdded]);
+  }, [groupId, channel, selected, onMembersAdded]);
+
+  const handleCreateContact = useCallback(async () => {
+    const name = newContactName.trim();
+    const phone = newContactPhone.trim();
+    if (!name || !phone) {
+      setCreateError('Name and phone are required.');
+      return;
+    }
+    setCreatingContact(true);
+    setCreateError(null);
+    try {
+      const contact: Record<string, string> = { name, phone };
+      if (newContactEmail.trim()) contact.email = newContactEmail.trim();
+      const res = await fetch(`${GROUP_API}/${groupId}/import-contacts?channel=${channel}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ contacts: [contact] }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data?.error || data?.message || 'Failed to create contact');
+        return;
+      }
+      console.log('[AddMembersPanel] contact created:', data);
+      // Reset form
+      setNewContactName('');
+      setNewContactPhone('');
+      setNewContactEmail('');
+      setShowNewContactForm(false);
+      // Refresh both contact list and group members
+      loadContactsPage(1, '', contactSource);
+      onMembersAdded();
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create contact');
+    } finally {
+      setCreatingContact(false);
+    }
+  }, [groupId, channel, newContactName, newContactPhone, newContactEmail, contactSource, loadContactsPage, onMembersAdded]);
 
   return (
     <div className="absolute inset-0 z-10 bg-card flex flex-col">
@@ -338,6 +389,78 @@ const AddMembersPanel = memo(function AddMembersPanel({
             autoFocus
           />
         </div>
+      </div>
+
+      {/* New Contact Button + Inline Form */}
+      <div className="px-4 pb-2">
+        {!showNewContactForm ? (
+          <button
+            onClick={() => { setShowNewContactForm(true); setCreateError(null); }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-green-400 text-green-600 hover:bg-green-50 transition-colors text-sm font-medium"
+          >
+            <UserPlus className="h-4 w-4 flex-shrink-0" />
+            Create new contact
+          </button>
+        ) : (
+          <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+              New Contact
+            </p>
+            <Input
+              placeholder="Full name *"
+              value={newContactName}
+              onChange={(e) => setNewContactName(e.target.value)}
+              className="h-8 text-sm"
+              autoFocus
+            />
+            <Input
+              placeholder="Phone number * (e.g. +971501234567)"
+              value={newContactPhone}
+              onChange={(e) => setNewContactPhone(e.target.value)}
+              className="h-8 text-sm"
+              type="tel"
+            />
+            <Input
+              placeholder="Email (optional)"
+              value={newContactEmail}
+              onChange={(e) => setNewContactEmail(e.target.value)}
+              className="h-8 text-sm"
+              type="email"
+            />
+            {createError && (
+              <p className="text-xs text-red-500">{createError}</p>
+            )}
+            <div className="flex gap-2 pt-1">
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleCreateContact}
+                disabled={creatingContact}
+              >
+                {creatingContact ? (
+                  <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Creating...</>
+                ) : (
+                  'Create & Add'
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setShowNewContactForm(false);
+                  setNewContactName('');
+                  setNewContactPhone('');
+                  setNewContactEmail('');
+                  setCreateError(null);
+                }}
+                disabled={creatingContact}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Selected chips */}
@@ -496,24 +619,30 @@ const AddMembersPanel = memo(function AddMembersPanel({
 
 interface GroupInfoPanelProps {
   groupId: string;
+  channel: 'personal' | 'waba';
   detail: GroupDetail;
   groupColor: string;
   senderColorMap: Map<string, string>;
   onClose: () => void;
   onMembersChanged: () => void;
+  onGroupDeleted: () => void;
 }
 
 const GroupInfoPanel = memo(function GroupInfoPanel({
   groupId,
+  channel,
   detail,
   groupColor,
   senderColorMap,
   onClose,
   onMembersChanged,
+  onGroupDeleted,
 }: GroupInfoPanelProps) {
   const [memberSearch, setMemberSearch] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
   const [metaAdsConnected, setMetaAdsConnected] = useState(false);
   const [loadingAdsStatus, setLoadingAdsStatus] = useState(false);
@@ -524,22 +653,39 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  // Optimistic removal: track IDs removed this session so they disappear
+  // immediately without waiting for the server refresh round-trip.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+
+  // When the parent re-fetches detail (after add/remove), clear stale optimistic IDs
+  // so we don't accidentally hide a member that was re-added.
+  const prevMembersRef = useRef(detail.members);
+  if (prevMembersRef.current !== detail.members) {
+    prevMembersRef.current = detail.members;
+    if (removedIds.size > 0) setRemovedIds(new Set());
+  }
+
+  const visibleMembers = detail.members.filter(
+    (m) => !removedIds.has(m.conversation_id)
+  );
 
   const existingConvIds = useMemo(
-    () => new Set(detail.members.map((m) => m.conversation_id)),
-    [detail.members]
+    () => new Set(visibleMembers.map((m) => m.conversation_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [detail.members, removedIds]
   );
 
   const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return detail.members;
+    if (!memberSearch.trim()) return visibleMembers;
     const q = memberSearch.toLowerCase();
-    return detail.members.filter(
+    return visibleMembers.filter(
       (m) =>
         m.name.toLowerCase().includes(q) ||
         (m.phone && m.phone.includes(q)) ||
         (m.company && m.company.toLowerCase().includes(q))
     );
-  }, [detail.members, memberSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.members, memberSearch, removedIds]);
 
   const getUserId = useCallback(async (): Promise<string | null> => {
     const token = safeStorage.getItem('token') || '';
@@ -676,6 +822,10 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
         method: 'DELETE',
         headers: authHeaders(),
       });
+      // Optimistic update: hide the member immediately without waiting for the
+      // server refresh round-trip (detail prop may be stale until parent re-fetches).
+      setRemovedIds((prev) => new Set([...prev, conversationId]));
+      // Also trigger the parent refresh so the canonical detail syncs from server.
       onMembersChanged();
     } catch (err) {
       console.error('Error removing member:', err);
@@ -687,8 +837,30 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
   const handleMembersAdded = useCallback(() => {
     setShowAddMembers(false);
-    onMembersChanged(); // refreshDetail is passed as onMembersChanged from GroupChatWindow
+    onMembersChanged();
   }, [onMembersChanged]);
+
+  const handleDeleteGroup = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${GROUP_API}/${groupId}?channel=${channel}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        onGroupDeleted();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to delete group: ${err.error || res.statusText}`);
+      }
+    } catch (err) {
+      console.error('Error deleting group:', err);
+      alert('Failed to delete group');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [groupId, channel, onGroupDeleted]);
 
   return (
     <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden relative">
@@ -696,6 +868,7 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
       {showAddMembers && (
         <AddMembersPanel
           groupId={groupId}
+          channel={channel}
           existingConvIds={existingConvIds}
           onClose={() => setShowAddMembers(false)}
           onMembersAdded={handleMembersAdded}
@@ -905,11 +1078,20 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
                     {member.company ? ` · ${member.company}` : ''}
                   </span>
                 </div>
-                {member.channel && member.channel !== 'whatsapp' && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
-                    {member.channel}
-                  </span>
-                )}
+                {member.channel && member.channel !== 'whatsapp' && (() => {
+                  const ch = member.channel.startsWith('personal') ? 'personal' : member.channel;
+                  const label = ch === 'personal' ? 'Personal WA' : ch === 'waba' ? 'WABA' : ch.toUpperCase();
+                  const style = ch === 'personal'
+                    ? { background: '#dcfce7', color: '#15803d' }
+                    : ch === 'waba'
+                    ? { background: '#d1fae5', color: '#065f46' }
+                    : { background: '#dbeafe', color: '#1d4ed8' };
+                  return (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-medium" style={style}>
+                      {label}
+                    </span>
+                  );
+                })()}
 
                 {/* Action toggle */}
                 <button
@@ -955,15 +1137,50 @@ const GroupInfoPanel = memo(function GroupInfoPanel({
 
         {/* Danger zone */}
         <div className="px-2 py-2">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
-            <LogOut className="h-4 w-4" />
-            <span className="text-sm flex-1 text-left">Exit group</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500">
-            <Trash2 className="h-4 w-4" />
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-red-500 disabled:opacity-50"
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             <span className="text-sm flex-1 text-left">Delete group</span>
           </button>
         </div>
+
+        {/* Delete confirmation dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 rounded-lg">
+            <div className="bg-card border border-border rounded-xl shadow-xl p-5 mx-4 w-full max-w-xs">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="h-5 w-5 text-red-500 flex-shrink-0" />
+                <h3 className="font-semibold text-sm">Delete group?</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                <span className="font-medium text-foreground">"{detail.name}"</span> and all its members will be permanently deleted. This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  onClick={handleDeleteGroup}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -976,6 +1193,7 @@ export const GroupChatWindow = memo(function GroupChatWindow({
   groupName,
   groupColor,
   onBack,
+  onGroupDeleted,
   autoOpenInfo = false,
   channel = 'waba',
 }: GroupChatWindowProps) {
@@ -1002,8 +1220,10 @@ export const GroupChatWindow = memo(function GroupChatWindow({
       .then(([detailResult, messagesResult]) => {
         if (detailResult.status === 'fulfilled') {
           const detailRes = detailResult.value;
+          console.log('[GroupChatWindow] detail response:', detailRes);
           if (detailRes?.success) {
             setDetail(detailRes.data);
+            console.log('[GroupChatWindow] members count:', detailRes.data?.members?.length, detailRes.data?.members);
           } else {
             setDetailError(detailRes?.error || 'Unable to load group info');
           }
@@ -1186,11 +1406,13 @@ export const GroupChatWindow = memo(function GroupChatWindow({
         detail ? (
           <GroupInfoPanel
             groupId={groupId}
+            channel={channel}
             detail={detail}
             groupColor={groupColor}
             senderColorMap={senderColorMap}
             onClose={() => setShowInfoPanel(false)}
             onMembersChanged={refreshDetail}
+            onGroupDeleted={onGroupDeleted ?? onBack}
           />
         ) : (
           <div className="w-[340px] h-full flex flex-col bg-card border-l border-border flex-shrink-0 overflow-hidden">

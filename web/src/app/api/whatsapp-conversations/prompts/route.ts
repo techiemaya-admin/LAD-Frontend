@@ -1,25 +1,24 @@
 /**
- * Prompts Proxy
- * GET  /api/whatsapp-conversations/prompts → Backend /api/prompts
- * POST /api/whatsapp-conversations/prompts → Backend /api/prompts
+ * Prompts Proxy — Personal WhatsApp (Node.js backend)
+ * GET  /api/whatsapp-conversations/prompts → Node.js /api/personal-whatsapp/prompts
+ * POST /api/whatsapp-conversations/prompts → Node.js /api/personal-whatsapp/prompts
+ *
+ * Uses channel=backend so the proxy routes directly to Node.js LAD_backend
+ * without path transformation (unlike channel=personal which prepends /api/whatsapp-conversations).
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../utils/python-proxy';
+import { proxyToPythonService, getBackendUrl } from '../utils/python-proxy';
+
+function withBackendChannel(req: NextRequest): NextRequest {
+  const url = new URL(req.url);
+  url.searchParams.set('channel', 'backend');
+  return new NextRequest(url, req);
+}
 
 export async function GET(req: NextRequest) {
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/prompts');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/prompts');
 }
 
 export async function POST(req: NextRequest) {
-    // Force WABA channel routing to Python service (LAD-WABA-Comms)
-  const url = new URL(req.url);
-  if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');
-  const newReq = new NextRequest(url, req);
-
-  return proxyToPythonService(newReq, getWhatsAppServiceUrl(), '/api/prompts');
+  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/prompts');
 }

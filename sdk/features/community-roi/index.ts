@@ -79,6 +79,16 @@ export {
   useDashboardLeaderboards,
   useRelationshipHeatmap,
   useUpdateRelationshipScores,
+  useGenerateBulkRecommendations,
+  useSavedRecommendations,
+  useNewMembers,
+  useOnboardNewMembers,
+  useSendOnboardingTemplate,
+  // Recommendation Messages
+  useRecommendationTemplates,
+  useSendInstantMessages,
+  useScheduleMessages,
+  usePendingSchedules,
 } from './hooks';
 
 // ============================================================================
@@ -105,4 +115,13 @@ export type {
   UpdateRelationshipScoresResponse,
   UUID,
 } from './types';
+export type { NewMembersResponse, UseNewMembersReturn } from './hooks';
+export type {
+  CommunicationTemplate,
+  SendInstantMessagesRequest,
+  SendInstantMessagesResponse,
+  ScheduleMessagesRequest,
+  ScheduleMessagesResponse,
+  PendingSchedule,
+} from './hooks';
 

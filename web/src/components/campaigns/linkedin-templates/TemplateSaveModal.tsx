@@ -124,7 +124,7 @@ export default function TemplateSaveModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Save className="h-5 w-5" />
@@ -188,7 +188,7 @@ export default function TemplateSaveModal({
           {/* Preview Messages */}
           <div className="space-y-2 p-3 bg-gray-50 rounded-md border">
             <Label className="text-xs font-semibold text-gray-700">Template Preview:</Label>
-            
+
             {connectionMessage && (
               <div className="space-y-1">
                 <p className="text-xs font-medium text-gray-600">Connection Message:</p>
@@ -242,19 +242,12 @@ export default function TemplateSaveModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={createMutation.isPending}
-          >
-            Cancel
-          </Button>
+        <DialogFooter className="flex justify-end">
           <Button
             type="button"
             onClick={handleSave}
             disabled={createMutation.isPending}
+            className="px-8 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl"
           >
             {createMutation.isPending ? (
               <>

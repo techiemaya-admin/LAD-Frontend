@@ -1,5 +1,40 @@
-import { apiPost } from '@/lib/api';
-import { PLATFORM_FEATURES } from '@/lib/platformFeatures';
+import { proxyClient } from '../../../shared/proxyClient';
+
+// Platform features data (inlined from web/src/lib/platformFeatures to avoid cross-boundary imports)
+const PLATFORM_FEATURES = {
+  linkedin: [
+    { id: 'linkedin_profile_visit', label: 'Profile Visit', description: 'Visit the lead\'s LinkedIn profile' },
+    { id: 'linkedin_follow', label: 'Follow', description: 'Follow the lead on LinkedIn' },
+    { id: 'linkedin_connect', label: 'Connection Request', description: 'Send a connection request with message' },
+    { id: 'linkedin_message', label: 'LinkedIn Message', description: 'Send a message (only if connected)' },
+    { id: 'linkedin_scrape_profile', label: 'Scrape Profile', description: 'Scrape LinkedIn profile data' },
+    { id: 'linkedin_company_search', label: 'Company Search', description: 'Search for company on LinkedIn' },
+    { id: 'linkedin_autopost', label: 'Auto-post', description: 'Automatically post content to LinkedIn' },
+    { id: 'linkedin_comment_reply', label: 'Reply-to-comments', description: 'Automatically reply to comments' },
+  ],
+  instagram: [
+    { id: 'instagram_autopost', label: 'Auto-post', description: 'Automatically post content to Instagram' },
+    { id: 'instagram_dm', label: 'Auto-DM', description: 'Send automated direct messages' },
+    { id: 'instagram_comment_reply', label: 'Auto-comment', description: 'Automatically comment on posts' },
+    { id: 'instagram_comment_monitor', label: 'Comment Monitoring', description: 'Monitor and reply to comments' },
+  ],
+  whatsapp: [
+    { id: 'whatsapp_broadcast', label: 'Send Broadcast', description: 'Send broadcast message to multiple contacts' },
+    { id: 'whatsapp_send', label: 'Send 1:1 Message', description: 'Send individual WhatsApp message' },
+    { id: 'whatsapp_followup', label: 'Follow-up Message', description: 'Send follow-up message' },
+    { id: 'whatsapp_template', label: 'Template Message', description: 'Send template-based message' },
+  ],
+  email: [
+    { id: 'email_send', label: 'Send Email', description: 'Send email to leads' },
+    { id: 'email_followup', label: 'Email Follow-up', description: 'Send follow-up email sequence' },
+    { id: 'email_track', label: 'Track Opens / Clicks', description: 'Track email engagement metrics' },
+    { id: 'email_bounce', label: 'Bounced Detection', description: 'Detect and handle bounced emails' },
+  ],
+  voice: [
+    { id: 'voice_agent_call', label: 'Trigger Call', description: 'Trigger automated voice call' },
+    { id: 'voice_agent_script', label: 'Call Script', description: 'Use predefined call script' },
+  ],
+} as const;
 export interface MayaMessage {
   role: 'user' | 'ai';
   content: string;
@@ -48,7 +83,7 @@ class MayaAIService {
     context?: OnboardingContext
   ): Promise<MayaResponse> {
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await proxyClient.post<MayaResponse>('/api/onboarding/gemini/chat', {
         message,
         history,
         currentQuestionKey,
@@ -56,7 +91,7 @@ class MayaAIService {
         config,
         context,
       });
-      return response;
+      return response.data;
     } catch (error) {
       console.error('[MayaAI] Error sending message:', error);
       return {
@@ -79,7 +114,7 @@ class MayaAIService {
     }));
     const prompt = `The user selected ${platform} platform. Present these features as selectable options: ${platformFeatures.map(f => f.label).join(', ')}. Ask: "Which ${platform} features do you want? (You can select multiple)"`;
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await proxyClient.post<MayaResponse>('/api/onboarding/gemini/chat', {
         message: prompt,
         history,
         currentQuestionKey: `features_${platform}`,
@@ -92,7 +127,7 @@ class MayaAIService {
         },
       });
       return {
-        ...response,
+        ...response.data,
         options: featureOptions,
         nextAction: 'ask_feature_utilities',
         platform,
@@ -123,7 +158,7 @@ class MayaAIService {
     ];
     const prompt = `Ask utility questions for ${platform} feature: ${feature}. Questions: ${utilityQuestions.join('; ')}. Ask one question at a time.`;
     try {
-      const response = await apiPost<MayaResponse>('/api/onboarding/gemini/chat', {
+      const response = await proxyClient.post<MayaResponse>('/api/onboarding/gemini/chat', {
         message: prompt,
         history,
         currentQuestionKey: `utilities_${platform}_${feature}`,
@@ -136,7 +171,7 @@ class MayaAIService {
         },
       });
       return {
-        ...response,
+        ...response.data,
         nextAction: 'ask_feature_utilities',
         platform,
         feature,
@@ -212,4 +247,4 @@ class MayaAIService {
   }
 }
 export const mayaAI = new MayaAIService();
-export default mayaAI;
+export default mayaAI;

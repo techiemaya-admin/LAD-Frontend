@@ -116,6 +116,53 @@ export function useCampaignCreation() {
   );
 
   /**
+   * Save good/bad feedback for a search result lead.
+   */
+  const saveProspectFeedback = useCallback(
+    async (params: {
+      sessionId?: string;
+      moduleUsed?: string;
+      lead: Record<string, any>;
+      feedback: 'good' | 'bad';
+      feedbackComment?: string;
+    }): Promise<any> => {
+      try {
+        const response = await fetch(`${API_BASE}/api/campaigns/search-prospects/feedback`, {
+          method: 'POST', headers: headers(),
+          body: JSON.stringify(params),
+        });
+        return await response.json();
+      } catch (err) {
+        console.warn('[useCampaignCreation] saveProspectFeedback error:', err);
+        return null;
+      }
+    }, []
+  );
+
+  /**
+   * Trigger company research + profile summary for a lead.
+   * Debits 1 credit. Returns { company_profile, profile_summary, credit_deducted }.
+   */
+  const generateProspectSummary = useCallback(
+    async (params: {
+      sessionId?: string;
+      moduleUsed?: string;
+      lead: Record<string, any>;
+    }): Promise<any> => {
+      try {
+        const response = await fetch(`${API_BASE}/api/campaigns/search-prospects/generate-summary`, {
+          method: 'POST', headers: headers(),
+          body: JSON.stringify(params),
+        });
+        return await response.json();
+      } catch (err) {
+        console.warn('[useCampaignCreation] generateProspectSummary error:', err);
+        return null;
+      }
+    }, []
+  );
+
+  /**
    * Reset state
    */
   const reset = useCallback(() => {
@@ -128,6 +175,8 @@ export function useCampaignCreation() {
     // Actions
     createCampaign,
     fetchLeadSummaryPreview,
+    saveProspectFeedback,
+    generateProspectSummary,
     reset,
   };
 }

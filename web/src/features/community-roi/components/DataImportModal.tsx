@@ -445,11 +445,17 @@ export function DataImportModal() {
               </h4>
               <div className="text-xs text-blue-800 space-y-1">
                 {extractedData.recordCounts &&
-                  Object.entries(extractedData.recordCounts).map(([k, v]: [string, any]) => (
-                    <p key={k}>
-                      <span className="font-medium capitalize">{k.replace(/_/g, ' ')}</span>: {v} records
-                    </p>
-                  ))}
+                  Object.entries(extractedData.recordCounts).map(([k, v]: [string, any]) => {
+                    // Skip nested objects (like relationship_scores_by_type)
+                    if (typeof v === 'object' && v !== null) {
+                      return null;
+                    }
+                    return (
+                      <p key={k}>
+                        <span className="font-medium capitalize">{k.replace(/_/g, ' ')}</span>: {v} records
+                      </p>
+                    );
+                  })}
               </div>
             </div>
           )}

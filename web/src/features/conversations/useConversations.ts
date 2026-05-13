@@ -18,6 +18,15 @@ import {
   type Message,
 } from '@/store/slices/conversationSlice';
 import { RootState } from '@/store/store';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+
+/**
+ * Sort modes for the conversation list.
+ *  - 'date'           : Most recent activity first (default — matches WhatsApp).
+ *  - 'message_count'  : Busiest conversations first (most messages → top).
+ *  - 'name'           : Contact name A → Z, unnamed contacts (phone-only) last.
+ */
+export type ConversationSortBy = 'date' | 'message_count' | 'name';
 
 export interface UseConversationsReturn {
   conversations: Conversation[];
@@ -31,6 +40,12 @@ export interface UseConversationsReturn {
   setContextStatusFilter: (status: string | 'all') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  /** When true, conversations with no messages yet are hidden from the list. */
+  hideEmpty: boolean;
+  setHideEmpty: (hide: boolean) => void;
+  /** Active sort order — see ConversationSortBy for options. */
+  sortBy: ConversationSortBy;
+  setSortBy: (sortBy: ConversationSortBy) => void;
   unreadCounts: Record<string, number>;
   sendMessage: (content: string) => void;
   markAsResolved: (id: string | number) => void;
@@ -47,7 +62,7 @@ export interface UseConversationsReturn {
  * - Conversation status management (resolved, muted)
  * - Unread count tracking
  */
-export function useConversations(): UseConversationsReturn {
+export function useConversations({ channel }: { channel?: 'personal' | 'waba' } = {}): UseConversationsReturn {
   const dispatch = useDispatch();
   const conversationsFromRedux = useSelector(selectConversations);
   const activeConversationId = useSelector(selectActiveConversationId);
@@ -58,8 +73,44 @@ export function useConversations(): UseConversationsReturn {
   const [channelFilter, setChannelFilter] = useState<string | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // New UX controls — hide empty conversations + sort mode.
+  // Defaults preserve previous behaviour: show everything, sorted by recency.
+  const [hideEmpty, setHideEmpty] = useState(false);
+  const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
   const filteredConversations = useMemo(() => {
+    /**
+     * Pull a conversation's message count from whichever shape redux is
+     * holding it in. The backend returns `message_count`, but mappers in
+     * different parts of the app camel-case it, so we accept both. We also
+     * fall back to checking `last_message_at` / `lastMessageTime` so a
+     * conversation that has activity but no count column is still treated
+     * as non-empty.
+     */
+    const messageCountOf = (conv: Conversation): number => {
+      const c = conv as Record<string, unknown>;
+      const raw = c.messageCount ?? c.message_count;
+      const n = typeof raw === 'number' ? raw : Number(raw);
+      if (Number.isFinite(n) && n > 0) return n;
+      // Fallback: any last-message timestamp implies ≥ 1 message.
+      return c.lastMessageAt || c.last_message_at || c.lastMessageTime ? 1 : 0;
+    };
+
+    /** Best-effort contact name extraction for the 'name' sort. */
+    const nameOf = (conv: Conversation): string => {
+      const c = conv as Record<string, unknown>;
+      return String(
+        c.contactName ?? c.contact_name ?? c.leadName ?? c.lead_name ?? ''
+      ).trim().toLowerCase();
+    };
+
+    /** Last-activity timestamp for the 'date' sort. */
+    const timeOf = (conv: Conversation): number => {
+      return new Date(
+        (conv.updatedAt || conv.lastMessageTime || 0) as string | number
+      ).getTime();
+    };
+
     return conversationsFromRedux
       .filter((conv) => {
         // Match by conv.channel field (set from API response)
@@ -101,14 +152,33 @@ export function useConversations(): UseConversationsReturn {
           lastMsgContent.includes(searchLower) ||
           String(conv.id).toLowerCase().includes(searchLower);
 
-        return matchesChannel && matchesContextStatus && matchesSearch;
+        // New: drop conversations with no messages yet when the toggle is on.
+        const matchesHideEmpty = !hideEmpty || messageCountOf(conv) > 0;
+
+        return matchesChannel && matchesContextStatus && matchesSearch && matchesHideEmpty;
       })
       .sort((a, b) => {
-        const aTime = new Date((a.updatedAt || a.lastMessageTime || 0) as string | number).getTime();
-        const bTime = new Date((b.updatedAt || b.lastMessageTime || 0) as string | number).getTime();
-        return bTime - aTime;
+        if (sortBy === 'message_count') {
+          // Most messages first; tie-break by recency so equally busy
+          // conversations still feel ordered intuitively.
+          const diff = messageCountOf(b) - messageCountOf(a);
+          return diff !== 0 ? diff : timeOf(b) - timeOf(a);
+        }
+        if (sortBy === 'name') {
+          // A → Z. Empty-name rows sink to the bottom (matches backend
+          // NULLS LAST behaviour) so unidentified phone-only contacts
+          // don't dominate the top of an alphabetical list.
+          const an = nameOf(a);
+          const bn = nameOf(b);
+          if (!an && !bn) return 0;
+          if (!an) return 1;
+          if (!bn) return -1;
+          return an.localeCompare(bn);
+        }
+        // 'date' (default) — newest activity first.
+        return timeOf(b) - timeOf(a);
       });
-  }, [conversationsFromRedux, channelFilter, contextStatusFilter, searchQuery]);
+  }, [conversationsFromRedux, channelFilter, contextStatusFilter, searchQuery, hideEmpty, sortBy]);
 
   const selectedConversation = useMemo(() => {
     return conversationsFromRedux.find((c) => String(c.id) === String(selectedId)) || null;
@@ -150,9 +220,10 @@ export function useConversations(): UseConversationsReturn {
     );
 
     // Send to backend API (which sends via WhatsApp)
+    const channelParam = channel ? `?channel=${channel}` : '';
     try {
-      const res = await fetch(
-        `/api/whatsapp-conversations/conversations/${selectedId}/messages`,
+      const res = await fetchWithTenant(
+        `/api/whatsapp-conversations/conversations/${selectedId}/messages${channelParam}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -199,6 +270,10 @@ export function useConversations(): UseConversationsReturn {
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    hideEmpty,
+    setHideEmpty,
+    sortBy,
+    setSortBy,
     unreadCounts,
     sendMessage,
     markAsResolved,

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Phone, Search, Brain, Linkedin, BarChart3, Calendar } from 'lucide-react';
+import { TrendingUp, Phone, Search, Brain, Linkedin, BarChart3, Calendar, MessageCircle, Zap } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { getWalletUsageAnalytics } from '../../../sdk/features/billing/api';
 interface FeatureUsage {
@@ -58,30 +58,22 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
   };
   const getFeatureIcon = (icon: string) => {
     switch (icon) {
-      case 'phone':
-        return <Phone className="h-5 w-5" />;
-      case 'search':
-        return <Search className="h-5 w-5" />;
-      case 'linkedin':
-        return <Linkedin className="h-5 w-5" />;
-      case 'brain':
-        return <Brain className="h-5 w-5" />;
-      default:
-        return <BarChart3 className="h-5 w-5" />;
+      case 'phone':     return <MessageCircle className="h-5 w-5" />;
+      case 'search':    return <Search className="h-5 w-5" />;
+      case 'linkedin':  return <Linkedin className="h-5 w-5" />;
+      case 'brain':     return <Brain className="h-5 w-5" />;
+      case 'zap':       return <Zap className="h-5 w-5" />;
+      default:          return <BarChart3 className="h-5 w-5" />;
     }
   };
   const getFeatureColor = (icon: string) => {
     switch (icon) {
-      case 'phone':
-        return 'bg-blue-100 text-blue-600';
-      case 'search':
-        return 'bg-orange-100 text-orange-600';
-      case 'linkedin':
-        return 'bg-green-100 text-green-600';
-      case 'brain':
-        return 'bg-purple-100 text-purple-600';
-      default:
-        return 'bg-muted text-muted-foreground';
+      case 'phone':     return 'bg-blue-100 text-blue-600';
+      case 'search':    return 'bg-orange-100 text-orange-600';
+      case 'linkedin':  return 'bg-green-100 text-green-600';
+      case 'brain':     return 'bg-purple-100 text-purple-600';
+      case 'zap':       return 'bg-yellow-100 text-yellow-600';
+      default:          return 'bg-muted text-muted-foreground';
     }
   };
   if (loading) {

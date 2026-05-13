@@ -161,7 +161,7 @@ export function exportToCSV(
     "Cost",
     "Tags",
     "Analysis",
-    "Recording URL (GCP HTTPS)",
+    "Recording URL (HTTPS)",
     "Recording Proxy URL",
     "Batch ID",
   ];

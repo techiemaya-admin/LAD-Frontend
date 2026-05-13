@@ -7,14 +7,21 @@
  * Channel routing (handled by proxyToPythonService):
  *   channel=personal → LAD_backend  /api/whatsapp-conversations/conversations/templates
  *   channel=waba     → Python svc   /api/conversations/templates
+ *
+ * proxyToPythonService automatically:
+ *   1. Detects channel from query param or header
+ *   2. Routes personal → getBackendUrl() with path transformed to /api/whatsapp-conversations/...
+ *   3. Routes waba → getWABAServiceUrl() with path as-is (/api/conversations/...)
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-proxy';
+import { proxyToPythonService } from '../../utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), '/api/conversations/templates');
+  // proxyToPythonService detects channel automatically from query param or header
+  return proxyToPythonService(req, 'unused', '/api/conversations/templates');
 }
 
 export async function POST(req: NextRequest) {
-  return proxyToPythonService(req, getWhatsAppServiceUrl(), '/api/conversations/templates');
+  // proxyToPythonService detects channel automatically from query param or header
+  return proxyToPythonService(req, 'unused', '/api/conversations/templates');
 }

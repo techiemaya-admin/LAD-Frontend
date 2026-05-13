@@ -28,6 +28,7 @@ import {
   XCircle,
   History,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
@@ -279,25 +280,29 @@ export const AssignmentPanel = memo(function AssignmentPanel({
       {/* Current Assignment */}
       {assignment && assignment.is_active ? (
         <div className="bg-gradient-to-br from-primary/5 to-transparent p-4 rounded-lg border border-primary/10 space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Avatar className="h-10 w-10 flex-shrink-0 border border-border">
+                <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">
                   {assignedUser?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-sm font-bold truncate text-[#172560] leading-none mb-1">
                   {assignedUser?.name || 'Unknown User'}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground truncate leading-none">
                   {assignedUser?.email}
                 </p>
               </div>
             </div>
-            <Badge variant="default" className="ml-2">
-              Assigned
-            </Badge>
+            <div className="flex-shrink-0">
+              <Badge
+                className="bg-green-100 text-green-700 border-green-200 p-1.5 rounded-full shadow-xs"
+              >
+                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+              </Badge>
+            </div>
           </div>
 
           {/* Assignment details */}
@@ -357,14 +362,14 @@ export const AssignmentPanel = memo(function AssignmentPanel({
           {/* Action buttons */}
           <div className="flex gap-2 pt-2">
             <Button
-              variant="outline"
               size="sm"
-              className="flex-1 text-xs"
+              variant="outline"
+              className="flex-1 text-xs border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
               onClick={() => setShowUnassignDialog(true)}
               disabled={submitting}
             >
               <XCircle className="h-3 w-3 mr-1.5" />
-              Release
+              Release Conversation
             </Button>
           </div>
         </div>

@@ -426,7 +426,7 @@ export default function PlaygroundConfigView({
             )}
           </div>
           {loadingAgents ? (
-            <div className="h-11 flex items-center justify-center text-xs text-slate-400 italic bg-slate-50 rounded-xl border border-slate-100 animate-pulse">
+            <div className="h-11 flex items-center justify-center text-xs text-slate-400 italic bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 animate-pulse">
               Fetching available agents…
             </div>
           ) : (

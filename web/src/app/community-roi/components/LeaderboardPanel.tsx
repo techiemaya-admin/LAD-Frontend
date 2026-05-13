@@ -12,7 +12,7 @@ export default function LeaderboardPanel() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-64 bg-slate-50 rounded-2xl animate-pulse" />
+        <div className="h-64 bg-slate-50 dark:bg-slate-800 rounded-2xl animate-pulse" />
       </div>
     )
   }
@@ -34,7 +34,7 @@ export default function LeaderboardPanel() {
           <Trophy className="w-5 h-5 text-amber-500" />
           <h2 className="text-lg font-bold text-slate-800">Top Performers</h2>
         </div>
-        <ImportDataDialog />
+        {/* <ImportDataDialog /> */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

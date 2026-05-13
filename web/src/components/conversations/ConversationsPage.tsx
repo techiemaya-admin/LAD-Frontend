@@ -9,10 +9,12 @@ import { GroupChatWindow } from './GroupChatWindow';
 import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
+import { EmailChannelView } from './EmailChannelView';
+import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
-import { PanelLeft, FlaskConical } from 'lucide-react';
+import { PanelLeft, FlaskConical, X } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { ChannelIcon } from './ChannelIcon';
 import { cn } from '@/lib/utils';
@@ -22,7 +24,29 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 // ─────────────────────────────────────────────────────────────────────────────
 // Inner view — one instance per tab, fully independent hook + state
 // ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: 'personal' | 'waba'; onShowBroadcastModal?: () => void }) {
+function ChannelConversationView({ 
+  channel, 
+  onShowBroadcastModal,
+  visibleTabs,
+  activeTab,
+  setActiveTab,
+  isPlaygroundOpen,
+  setIsPlaygroundOpen,
+  isSidebarCollapsed,
+  setIsSidebarCollapsed,
+  isMobile
+}: { 
+  channel: 'personal' | 'waba'; 
+  onShowBroadcastModal?: () => void;
+  visibleTabs: { id: WaTab; label: string; sublabel: string }[];
+  activeTab: WaTab;
+  setActiveTab: (tab: WaTab) => void;
+  isPlaygroundOpen: boolean;
+  setIsPlaygroundOpen: (val: boolean) => void;
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (val: boolean) => void;
+  isMobile: boolean;
+}) {
   const queryClient = useQueryClient();
   const {
     conversations,
@@ -35,17 +59,28 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    hideEmpty,
+    setHideEmpty,
+    sortBy,
+    setSortBy,
     unreadCounts,
     sendMessage,
     markAsResolved,
     muteConversation,
+    loadMore,
+    isLoadingMore,
+    hasMore,
   } = useConversations({ channel });
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
+  const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
   const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
   const [groupMemberSelected, setGroupMemberSelected] = useState(false);
   const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [createGroupSelectedIds, setCreateGroupSelectedIds] = useState<string[]>([]);
 
   const handleSelectGroup = useCallback((group: ChatGroup) => {
     setActiveGroup(group);
@@ -63,6 +98,13 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
     setActiveGroup(null);
     setGroupMemberSelected(false);
     setGroupInfoAutoOpen(false);
+  }, []);
+
+  const handleGroupDeleted = useCallback(() => {
+    setActiveGroup(null);
+    setGroupMemberSelected(false);
+    setGroupInfoAutoOpen(false);
+    setGroupRefreshKey(k => k + 1); // force sidebar to reload groups list
   }, []);
 
   const handleSelectConversation = useCallback((id: string) => {
@@ -206,6 +248,18 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
               onGroupSelect={handleSelectGroup}
               onOpenGroupInfo={handleOpenGroupInfo}
               onShowBroadcastModal={onShowBroadcastModal}
+              onShowCreateGroupModal={(ids) => {
+                setCreateGroupSelectedIds(ids);
+                setShowCreateGroupModal(true);
+              }}
+              groupRefreshKey={groupRefreshKey}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
+              hideEmpty={hideEmpty}
+              onHideEmptyChange={setHideEmpty}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
             />
           </motion.div>
         )}
@@ -218,38 +272,105 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-50 bg-black/50 lg:hidden"
             onClick={toggleSidebar}
           >
             <motion.div
-              initial={{ x: -340 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -340 }}
-              transition={{ duration: 0.2 }}
-              className="w-[340px] h-full"
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="w-full h-full bg-card flex flex-col pt-14"
               onClick={(e) => e.stopPropagation()}
             >
-              <ConversationSidebar
-                conversations={typedConversations}
-                selectedId={selectedId}
-                onSelectConversation={(id) => {
-                  handleSelectConversation(id);
-                  setIsSidebarCollapsed(true);
-                }}
-                channelFilter={channelFilter}
-                onChannelFilterChange={setChannelFilter}
-                contextStatusFilter={contextStatusFilter}
-                onContextStatusFilterChange={setContextStatusFilter}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                unreadCounts={allUnreadCounts}
-                backendChannel={channel}
-                onBulkAction={handleBulkAction}
-                onRefresh={invalidate}
-                onGroupSelect={handleSelectGroup}
-                onOpenGroupInfo={handleOpenGroupInfo}
-                onShowBroadcastModal={onShowBroadcastModal}
-              />
+              {/* Mobile Sidebar Header with Tabs + Test AI */}
+              <div className="p-3 border-b border-border bg-card flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
+                  {visibleTabs.map(({ id, label, sublabel }) => (
+                    <button
+                      key={id}
+                      onClick={() => setActiveTab(id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap',
+                        activeTab === id
+                          ? 'text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-border'
+                      )}
+                      style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
+                    >
+                      <ChannelIcon
+                        channel={sublabel as any}
+                        size={14}
+                        overrideColor={activeTab === id ? '#ffffff' : undefined}
+                      />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mobile Test AI button */}
+                <Button
+                  variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    "flex-shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold gap-1.5",
+                    isPlaygroundOpen && "text-primary bg-primary/10"
+                  )}
+                  onClick={() => {
+                    setIsPlaygroundOpen(!isPlaygroundOpen);
+                    setIsSidebarCollapsed(true);
+                  }}
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Test AI
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'linkedin' ? (
+                  <LinkedInConversationView 
+                    visibleTabs={visibleTabs}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    onBack={() => setIsSidebarCollapsed(false)}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <ConversationSidebar
+                    conversations={typedConversations}
+                    selectedId={selectedId}
+                    onSelectConversation={(id) => {
+                      handleSelectConversation(id);
+                      setIsSidebarCollapsed(true);
+                    }}
+                    channelFilter={channelFilter}
+                    onChannelFilterChange={setChannelFilter}
+                    contextStatusFilter={contextStatusFilter}
+                    onContextStatusFilterChange={setContextStatusFilter}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    unreadCounts={allUnreadCounts}
+                    backendChannel={channel}
+                    onBulkAction={handleBulkAction}
+                    onRefresh={invalidate}
+                    onGroupSelect={handleSelectGroup}
+                    onOpenGroupInfo={handleOpenGroupInfo}
+                    onShowBroadcastModal={onShowBroadcastModal}
+                    onShowCreateGroupModal={(ids) => {
+                      setCreateGroupSelectedIds(ids);
+                      setShowCreateGroupModal(true);
+                    }}
+                    groupRefreshKey={groupRefreshKey}
+                    onLoadMore={loadMore}
+                    isLoadingMore={isLoadingMore}
+                    hasMore={hasMore}
+                    hideEmpty={hideEmpty}
+                    onHideEmptyChange={setHideEmpty}
+                    sortBy={sortBy}
+                    onSortByChange={setSortBy}
+                  />
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -271,6 +392,7 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           groupName={activeGroup.name}
           groupColor={activeGroup.color}
           onBack={handleBackFromGroup}
+          onGroupDeleted={handleGroupDeleted}
           autoOpenInfo={groupInfoAutoOpen}
           channel={channel}
         />
@@ -289,6 +411,14 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
           onExport={handleExport}
           onBlock={handleBlock}
           onDelete={handleDelete}
+          onBack={() => {
+            selectConversation('');
+            setIsSidebarCollapsed(false);
+          }}
+          onOpenAssignmentPanel={() => {
+            setContextPanelTab('assignment');
+            if (!isContextPanelOpen) setIsContextPanelOpen(true);
+          }}
         />
       )}
 
@@ -296,18 +426,39 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
       <AnimatePresence mode="wait">
         {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
           <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
+            initial={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0 } : { width: 320, opacity: 1 }}
+            exit={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="h-full flex-shrink-0 overflow-hidden hidden md:block"
+            className={cn(
+              "h-full flex-shrink-0 overflow-hidden",
+              "fixed inset-0 z-50 w-full lg:relative lg:inset-auto lg:z-0 lg:w-[320px] bg-background",
+              "pt-14 lg:pt-0"
+            )}
           >
             <ConversationContextPanel
               conversation={typedSelectedConversation}
               onClose={toggleContextPanel}
               backendChannel={channel}
+              defaultTab={contextPanelTab}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Broadcast Group Modal */}
+      <AnimatePresence>
+        {showCreateGroupModal && (
+          <CreateBroadcastGroupModal
+            open={showCreateGroupModal}
+            onOpenChange={setShowCreateGroupModal}
+            selectedIds={createGroupSelectedIds}
+            onSuccess={() => {
+              setGroupRefreshKey((prev) => prev + 1);
+              setCreateGroupSelectedIds([]);
+            }}
+            channel={channel}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -317,55 +468,135 @@ function ChannelConversationView({ channel, onShowBroadcastModal }: { channel: '
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba' | 'linkedin';
+type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
 
-const WA_TABS: { id: WaTab; label: string; sublabel: string }[] = [
-  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
-  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Check which WhatsApp channels are connected
+// Utility: Check which channels are connected — uses the same endpoints as
+// the Integrations settings page for consistency.
+// All checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
-async function getConnectedChannels(): Promise<{ personalConnected: boolean; wabaConnected: boolean }> {
-  try {
-    // Check Personal WhatsApp connections
-    const personalRes = await fetchWithTenant('/api/whatsapp-conversations/accounts');
-    const personalData = personalRes.ok ? await personalRes.json() : null;
-    const personalConnected = personalData?.accounts?.some((a: any) => a.status === 'connected') ?? false;
+interface ChannelConnectionStatus {
+  personal: boolean;
+  waba: boolean;
+  linkedin: boolean;
+  gmail: boolean;
+  gmailEmail: string | null;
+  outlook: boolean;
+  outlookEmail: string | null;
+  custom: boolean;
+  customEmail: string | null;
+}
 
-    // Check WABA connections by attempting to fetch conversations
-    // If the endpoint returns data without error, WABA is connected
-    const wabaRes = await fetchWithTenant('/api/whatsapp-conversations/conversations?channel=waba');
-    const wabaConnected = wabaRes.ok;
+async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
+  const [personalResult, wabaResult, linkedinResult, emailResult] = await Promise.allSettled([
+    // Personal WA
+    fetchWithTenant('/api/personal-whatsapp/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'connected');
+      })
+      .catch(() => false),
 
-    return { personalConnected, wabaConnected };
-  } catch (err) {
-    console.error('Error checking connected channels:', err);
-    return { personalConnected: false, wabaConnected: false };
-  }
+    // WA Business
+    fetchWithTenant('/api/whatsapp-conversations/admin/whatsapp-accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data ?? [];
+        return accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+      })
+      .catch(() => false),
+
+    // LinkedIn
+    fetchWithTenant('/api/campaigns/linkedin/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data?.data ?? data ?? [];
+        return accounts.some((a: any) =>
+          a.status === 'connected' || a.status === 'active' || a.is_connected === true
+        );
+      })
+      .catch(() => false),
+
+    // Gmail + Outlook + Custom SMTP (single status endpoint)
+    fetchWithTenant('/api/email-conversations/status')
+      .then(async (res) => {
+        const empty = { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null };
+        if (!res.ok) return empty;
+        const data = await res.json();
+        return {
+          gmail:        !!data?.gmail?.connected,
+          gmailEmail:   data?.gmail?.email   || null,
+          outlook:      !!data?.outlook?.connected,
+          outlookEmail: data?.outlook?.email || null,
+          custom:       !!data?.custom?.connected,
+          customEmail:  data?.custom?.email  || null,
+        };
+      })
+      .catch(() => ({ gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null })),
+  ]);
+
+  const emailStatus = emailResult.status === 'fulfilled'
+    ? emailResult.value as {
+        gmail: boolean; gmailEmail: string | null;
+        outlook: boolean; outlookEmail: string | null;
+        custom: boolean; customEmail: string | null;
+      }
+    : { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null };
+
+  return {
+    personal:     personalResult.status === 'fulfilled' ? (personalResult.value as boolean) : false,
+    waba:         wabaResult.status    === 'fulfilled' ? (wabaResult.value as boolean)    : false,
+    linkedin:     linkedinResult.status === 'fulfilled' ? (linkedinResult.value as boolean) : false,
+    gmail:        emailStatus.gmail,
+    gmailEmail:   emailStatus.gmailEmail,
+    outlook:      emailStatus.outlook,
+    outlookEmail: emailStatus.outlookEmail,
+    custom:       emailStatus.custom,
+    customEmail:  emailStatus.customEmail,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab based on connection status
-// Logic: If both connected → default to Personal, else default to whichever is connected
+// Determine default tab — prefer Personal WA, then WABA, then LinkedIn,
+// then Gmail, then Outlook
 // ─────────────────────────────────────────────────────────────────────────────
-function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTab {
-  // If both are connected, default to Personal WA
-  if (personalConnected && wabaConnected) {
-    return 'personal';
+function getDefaultTab(status: ChannelConnectionStatus): WaTab {
+  if (status.personal) return 'personal';
+  if (status.waba)     return 'waba';
+  if (status.linkedin) return 'linkedin';
+  if (status.gmail)    return 'gmail';
+  if (status.outlook)  return 'outlook';
+  if (status.custom)   return 'custom';
+  return 'personal'; // fallback (nothing connected)
+}
+
+// All possible tabs in display order
+const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
+  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
+  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
+  { id: 'gmail',    label: 'Gmail',         sublabel: 'gmail' },
+  { id: 'outlook',  label: 'Outlook',       sublabel: 'outlook' },
+  { id: 'custom',   label: 'Custom Email',  sublabel: 'custom_email' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Get brand color for tab
+// ─────────────────────────────────────────────────────────────────────────────
+function getTabColor(tabId: WaTab): string {
+  switch (tabId) {
+    case 'personal':  return '#25D366'; // WhatsApp green
+    case 'waba':      return '#128C7E'; // WhatsApp Business teal
+    case 'linkedin':  return '#0077B5'; // LinkedIn blue
+    case 'gmail':     return '#EA4335'; // Gmail red
+    case 'outlook':   return '#0078D4'; // Outlook blue
+    case 'custom':    return '#059669'; // Emerald — matches integration tile
   }
-  // If only Personal is connected
-  if (personalConnected) {
-    return 'personal';
-  }
-  // If only WABA is connected
-  if (wabaConnected) {
-    return 'waba';
-  }
-  // Fallback to Personal if neither is explicitly connected
-  return 'personal';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -374,35 +605,75 @@ function getDefaultTab(personalConnected: boolean, wabaConnected: boolean): WaTa
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-
-  // Load connection status on mount and set default tab
+  const [isMobile, setIsMobile] = useState(false);
+  // null = still loading; once resolved, only connected channels are shown
+  const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
   useEffect(() => {
-    (async () => {
-      const { personalConnected, wabaConnected } = await getConnectedChannels();
-      const defaultTab = getDefaultTab(personalConnected, wabaConnected);
-      setActiveTab(defaultTab);
-    })();
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Check which channels are connected on mount — all parallel requests
+  useEffect(() => {
+    getConnectedChannels().then((status) => {
+      setChannelStatus(status);
+      setActiveTab(getDefaultTab(status));
+    });
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Show only tabs whose channel is actively connected.
+  // While loading (null) render nothing so there's no flash of wrong tabs.
+  const visibleTabs = channelStatus
+    ? ALL_TABS.filter((t) => {
+        // Email tabs use separate boolean fields on the status object
+        if (t.id === 'gmail')   return channelStatus.gmail;
+        if (t.id === 'outlook') return channelStatus.outlook;
+        if (t.id === 'custom')  return channelStatus.custom;
+        return channelStatus[t.id as keyof ChannelConnectionStatus] === true;
+      })
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI toggle */}
+      {/* Top bar: WA channel tabs + AI toggle — now always visible */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
-        {/* Channel tabs */}
+        {/* Channel tabs — only connected channels are rendered */}
         <div className="flex items-center gap-1">
-          {WA_TABS.map(({ id, label, sublabel }) => (
+          {/* Loading skeleton while connection status is being resolved */}
+          {channelStatus === null && (
+            <>
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+            </>
+          )}
+          {visibleTabs.map(({ id, label, sublabel }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
                 'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
                 activeTab === id
-                  ? 'bg-slate-900 text-white shadow-sm'
+                  ? 'text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
+              style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
             >
-              <ChannelIcon channel={sublabel as any} size={12} />
+              <ChannelIcon
+                channel={sublabel as any}
+                size={16}
+                overrideColor={activeTab === id ? '#ffffff' : undefined}
+              />
               {label}
             </button>
           ))}
@@ -423,14 +694,43 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal'  && <ChannelConversationView channel="personal" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
-        {activeTab === 'waba'      && <ChannelConversationView channel="waba" onShowBroadcastModal={() => setShowBroadcastModal(true)} />}
+        {activeTab === 'personal' && (
+          <ChannelConversationView
+            channel="personal"
+            onShowBroadcastModal={() => setShowBroadcastModal(true)}
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
+        {activeTab === 'waba' && (
+          <ChannelConversationView
+            channel="waba"
+            onShowBroadcastModal={() => setShowBroadcastModal(true)}
+            visibleTabs={visibleTabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPlaygroundOpen={isPlaygroundOpen}
+            setIsPlaygroundOpen={setIsPlaygroundOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            isMobile={isMobile}
+          />
+        )}
         {activeTab === 'linkedin'  && <LinkedInConversationView />}
+        {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
+        {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
+        {activeTab === 'custom'    && <EmailChannelView provider="custom"  connectedEmail={channelStatus?.customEmail  ?? undefined} />}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}
       <AnimatePresence>
-        {showBroadcastModal && activeTab !== 'linkedin' && (
+        {showBroadcastModal && (activeTab === 'personal' || activeTab === 'waba') && (
           <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab as 'personal' | 'waba'} />
         )}
       </AnimatePresence>
@@ -459,12 +759,15 @@ export function ConversationsPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 interface BroadcastModalProps {
   onClose: () => void;
+  onSent?: () => void;
   activeTab: 'personal' | 'waba';
 }
 
-function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
+function BroadcastModal({ onClose, onSent, activeTab }: BroadcastModalProps) {
+  const queryClient = useQueryClient();
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({}); // group ID → conversation IDs
   const [contacts, setContacts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState('');
@@ -482,7 +785,29 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
         );
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json();
-          setGroups(groupsData.data || groupsData || []);
+          const groupsList = groupsData.data || groupsData || [];
+          setGroups(groupsList);
+
+          // Load members for each group
+          const membersMap: Record<string, string[]> = {};
+          for (const group of groupsList) {
+            try {
+              const membersRes = await fetchWithTenant(
+                `/api/whatsapp-conversations/chat-groups/${group.id}?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+              );
+              if (membersRes.ok) {
+                const memberData = await membersRes.json();
+                const conversationIds = (memberData.data?.conversations || memberData.conversations || [])
+                  .map((c: any) => c.id || c.conversation_id)
+                  .filter((id: any) => id);
+                membersMap[group.id] = conversationIds;
+              }
+            } catch (err) {
+              console.error(`Failed to load members for group ${group.id}:`, err);
+              membersMap[group.id] = [];
+            }
+          }
+          setGroupMembers(membersMap);
         }
 
         // Load contacts (from conversations)
@@ -521,23 +846,67 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
       setIsSending(true);
 
       // Send broadcast to selected recipients
-      for (const recipientId of selectedRecipients) {
-        await fetchWithTenant(
-          `/api/whatsapp-conversations/conversations/bulk`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'send-template',
-              ids: [recipientId],
-              template_id: selectedTemplate,
-              channel: activeTab === 'waba' ? 'waba' : 'personal',
-            }),
-          }
-        );
+      // Fetch template content for personalization
+      const template = templates.find((t) => t.id === selectedTemplate);
+      if (!template) {
+        alert('Template not found');
+        return;
       }
 
-      alert('Broadcast sent successfully!');
+      let sentCount = 0;
+      let failedCount = 0;
+
+      for (const recipientId of selectedRecipients) {
+        try {
+          // Fetch conversation/contact data for personalization
+          const convRes = await fetchWithTenant(
+            `/api/whatsapp-conversations/conversations/${recipientId}?channel=${activeTab === 'waba' ? 'waba' : 'personal'}`
+          );
+          const convData = convRes.ok ? await convRes.json() : {};
+          const contact = convData.data?.contact || convData.contact || {};
+
+          // Helper: derive first name from contact data
+          const derivedFirstName = contact.name?.trim().split(/\s+/)[0] ||
+                                  contact.contact_name?.trim().split(/\s+/)[0] ||
+                                  '';
+
+          // Personalize template content
+          let personalizedContent = template.content || '';
+          personalizedContent = personalizedContent
+            .replace(/\{\{name\}\}/gi, derivedFirstName)
+            .replace(/\{\{first_name\}\}/gi, derivedFirstName)
+            .replace(/\{\{contact_name\}\}/gi, contact.contact_name || '')
+            .replace(/\{\{email\}\}/gi, contact.email || '')
+            .replace(/\{\{phone\}\}/gi, contact.phone || '');
+
+          // Send personalized message
+          const sendRes = await fetchWithTenant(
+            `/api/whatsapp-conversations/conversations/${recipientId}/send-template`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: personalizedContent,
+                channel: activeTab === 'waba' ? 'waba' : 'personal',
+              }),
+            }
+          );
+
+          if (sendRes.ok) {
+            sentCount++;
+          } else {
+            failedCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to send to ${recipientId}:`, err);
+          failedCount++;
+        }
+      }
+
+      alert(`Broadcast sent! Sent: ${sentCount}, Failed: ${failedCount}`);
+      // Refresh conversation list so newly created conversations (e.g. for new contacts) appear
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      onSent?.();
       onClose();
     } catch (err) {
       console.error('Error sending broadcast:', err);
@@ -563,16 +932,17 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="fixed inset-x-4 top-1/2 z-50 transform -translate-y-1/2 max-w-md mx-auto bg-card rounded-lg shadow-xl border border-border md:inset-auto md:right-4 md:left-auto md:top-20 md:translate-y-0"
+        className="fixed inset-x-4 top-1/2 z-50 transform -translate-y-1/2 max-w-5xl w-full sm:w-[90vw] h-[90vh] mx-auto bg-card rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col"
       >
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Send Broadcast</h2>
             <button
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              title="Close"
+              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground opacity-70 transition-all hover:opacity-100 hover:bg-gray-100 focus:outline-hidden z-50"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
           </div>
 
@@ -612,12 +982,17 @@ function BroadcastModal({ onClose, activeTab }: BroadcastModalProps) {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedRecipients.includes(group.id)}
+                          checked={selectedRecipients.some((id) => groupMembers[group.id]?.includes(id))}
                           onChange={(e) => {
+                            const conversationIds = groupMembers[group.id] || [];
                             if (e.target.checked) {
-                              setSelectedRecipients([...selectedRecipients, group.id]);
+                              // Add all members of this group
+                              setSelectedRecipients([...new Set([...selectedRecipients, ...conversationIds])]);
                             } else {
-                              setSelectedRecipients(selectedRecipients.filter((id) => id !== group.id));
+                              // Remove all members of this group
+                              setSelectedRecipients(
+                                selectedRecipients.filter((id) => !conversationIds.includes(id))
+                              );
                             }
                           }}
                           className="rounded"

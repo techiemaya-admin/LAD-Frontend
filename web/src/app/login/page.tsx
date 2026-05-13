@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b1957] flex flex-col">
+    <div className="min-h-screen py-20 relative bg-gradient-to-b from-background via-background to-background flex flex-col">
       <main className="flex-1 flex items-start pt-8 md:pt-0 md:items-center justify-center">
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4 py-6 md:py-12">
           {/* Left: Hero / Illustration + marketing */}

@@ -9,8 +9,6 @@ import { useNetworkStats } from '@lad/frontend-features/community-roi';
 export default function SimpleAnalyticsCards() {
   const { data, isLoading, error } = useNetworkStats(true);
 
-  console.log('🟦 [SimpleAnalyticsCards] Component rendering', { hasData: !!data, isLoading, hasError: !!error });
-
   if (isLoading) {
     return (
       <div className="text-center p-8">
@@ -37,9 +35,6 @@ export default function SimpleAnalyticsCards() {
     );
   }
 
-  // Log full data structure
-  console.log('🟦 [SimpleAnalyticsCards] Full Data:', JSON.stringify(data, null, 2));
-
   // Extract values from nested data structure
   const members = data.connectivityAnalysis?.memberCount || 0;
   const meetings = data.networkBreakdown?.meetings || 0;
@@ -54,8 +49,6 @@ export default function SimpleAnalyticsCards() {
   
   // Last refresh date
   const refreshedAt = data.calculatedAt ? new Date(data.calculatedAt).toLocaleString() : 'Unknown';
-
-  console.log('🟦 [SimpleAnalyticsCards] ✅ Using REAL API values:', { members, meetings, referrals, density, avgConnectionsPerMember, avgRelationshipScore });
 
   return (
     <div className="space-y-4">
