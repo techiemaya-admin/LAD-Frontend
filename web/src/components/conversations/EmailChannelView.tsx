@@ -20,6 +20,7 @@ import {ImportLeadsDialog} from './ImportLeadsDialog';
 import {EmailTemplatePicker} from './EmailTemplatePicker';
 import ReactQuill from 'react-quill-new'; // Just add "-new"
 import 'react-quill-new/dist/quill.snow.css';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -558,6 +559,28 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
     const providerColor = PROVIDER_COLOR[provider];
     const providerLabel = PROVIDER_LABEL[provider];
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [isCruxModalOpen, setIsCruxModalOpen] = useState(false);
+    const [conversationCrux, setConversationCrux] = useState<string | null>(null);
+    const [isGeneratingCrux, setIsGeneratingCrux] = useState(false);
+
+    const handleGenerateCrux = async () => {
+        setIsGeneratingCrux(true);
+        setIsCruxModalOpen(true);
+        try {
+            const res = await fetch(`${API}/email-ai-crux/${contact.id}`, {
+                method: 'GET',
+                headers: {...authHeaders(), 'Content-Type': 'application/json'},
+            });
+            const result = await res.json();
+
+            setConversationCrux(result.crux);
+        } catch (error) {
+            console.error('Crux generation failed:', error);
+            toast.error('Failed to generate crux');
+        } finally {
+            setIsGeneratingCrux(false);
+        }
+    };
 
     const handleAIFollowup = async () => {
         if (!contact?.id) return;
@@ -787,6 +810,13 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                     </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                        onClick={handleGenerateCrux}
+                        className="p-2 hover:bg-[#F3F4F6] rounded-lg transition-colors text-[#64748B]"
+                        title="Generate Conversion Crux"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                    </button>
                     <button
                         onClick={loadThread}
                         title="Refresh thread"
@@ -1100,7 +1130,83 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                 </div>
 
             </div>
+            {/* --- AI INTELLIGENCE MODAL --- */}
+            <AnimatePresence>
+                {isCruxModalOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setIsCruxModalOpen(false)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden border border-slate-200"
+                        >
+                            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                                        <Sparkles className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-slate-800 text-xl tracking-tight">Lead AI Intelligence</h3>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Crux of the Conversation</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setIsCruxModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="p-10 bg-[#FDFDFF]">
+                                {isGeneratingCrux ? (
+                                    <div className="flex flex-col items-center justify-center py-12 gap-6">
+                                        <div className="relative">
+                                            <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                                            <Sparkles className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="font-black text-slate-800 text-sm animate-pulse mb-1 tracking-tight">Synthesizing Conversation History</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em] leading-loose">Extracting core objectives...</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                        <div className="bg-white border-2 border-indigo-50 p-8 rounded-3xl shadow-sm text-slate-700 leading-relaxed text-sm whitespace-pre-wrap">
+                                            {conversationCrux ? (
+                                                conversationCrux
+                                                    .replace(/<br\s*\/?>/gi, '\n') // Fix the breaks
+                                                    .split('\n')
+                                                    .map((line, i) => {
+                                                        // Check if line contains bold markers
+                                                        const parts = line.split(/(\*\*.*?\*\*)/g);
+                                                        return (
+                                                            <div key={i} className="mb-2">
+                                                                {parts.map((part, j) =>
+                                                                    part.startsWith('**') && part.endsWith('**')
+                                                                        ? <strong key={j} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>
+                                                                        : part
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
+                                            ) : (
+                                                "No significant history found."
+                                            )}
+                                        </div>
+                                        <div className="mt-8 flex items-center justify-between p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
         </div>
+
     );
 }
 
