@@ -158,7 +158,7 @@ interface InlineTemplatePickerProps {
     onClose: () => void;
 }
 
-function InlineTemplatePicker({onSelect, onClose,contact}: InlineTemplatePickerProps) {
+function InlineTemplatePicker({onSelect, onClose, contact}: InlineTemplatePickerProps) {
     const [templates, setTemplates] = useState<EmailTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -167,7 +167,7 @@ function InlineTemplatePicker({onSelect, onClose,contact}: InlineTemplatePickerP
     useEffect(() => {
         (async () => {
             try {
-                console.log("fetching inline templates>> "+contact.id);
+                console.log("fetching inline templates>> " + contact.id);
 
                 const res = await fetch(`${TEMPLATES_API}/${contact.id}`, {headers: authHeaders()});
                 const data = await res.json();
@@ -521,6 +521,7 @@ interface EmailComposePanelProps {
     onShowDetails: () => void;
     showDetails: boolean;
 }
+
 // Add this before your EmailComposePanel definition
 const Quill = typeof window !== 'undefined' ? require('react-quill-new').Quill : null;
 if (Quill) {
@@ -528,6 +529,7 @@ if (Quill) {
     // Using a simple SVG path for a paperclip
     icons['attachment'] = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`;
 }
+
 function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                            EmailComposePanelProps) {
     const ALLOWED_FORMATS = [
@@ -555,6 +557,29 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
 
     const providerColor = PROVIDER_COLOR[provider];
     const providerLabel = PROVIDER_LABEL[provider];
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+    const handleAIFollowup = async () => {
+        if (!contact?.id) return;
+        setIsGeneratingAI(true);
+        try {
+            const res = await fetch(`${API}/email-ai-followup/${contact.id}`, {
+                method: 'GET',
+                headers: {...authHeaders(), 'Content-Type': 'application/json'},
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                setSubject(result.subject || '');
+                // Wrap the body in the same div styling we used for templates
+                setBody(`<div style="font-family: sans-serif; line-height: 1.6;">${result.body_html || result.body}</div>`);
+            }
+        } catch (err) {
+            console.error("AI Followup failed", err);
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    };
     const uploadAttachmentToGCS = async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -953,7 +978,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                                     ['bold', 'italic', 'underline'],
                                     [{'header': [1, 2, 3, false]}], // Better way to show header options
                                     [{'list': 'ordered'}, {'list': 'bullet'}], // These are values of 'list'
-                                    ['link', 'image','attachment'],
+                                    ['link', 'image', 'attachment'],
                                     ['clean']
                                 ],
                                 handlers: {
@@ -983,7 +1008,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                                             }
                                         };
                                     },// CUSTOM ATTACHMENT HANDLER
-                                    attachment: function() {
+                                    attachment: function () {
                                         const input = document.createElement('input');
                                         input.setAttribute('type', 'file');
                                         input.setAttribute('multiple', 'true');
@@ -1041,6 +1066,20 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                                 {attachments.length}
             </span>
                         )}
+                        <Button
+                            variant="outline"
+                            onClick={handleAIFollowup}
+                            disabled={isGeneratingAI || sending}
+                            className="border-indigo-200 text-indigo-700  gap-2 shadow-sm"
+                            size="sm"
+                        >
+                            {isGeneratingAI ? (
+                                <Loader2 className="w-4 h-4 animate-spin"/>
+                            ) : (
+                                <Sparkles className="w-4 h-4 text-indigo-500"/>
+                            )}
+                            AI Followup
+                        </Button>
 
                         <Button
                             size="sm"
