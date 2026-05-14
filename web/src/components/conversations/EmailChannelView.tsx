@@ -66,7 +66,7 @@ interface EmailChannelViewProps {
 
 // const API            = 'https://lad-backend-develop-160078175457.us-central1.run.app/api/email-conversations';
 const API = 'http://localhost:3001/api/email-conversations';
-const TEMPLATES_API = '/api/campaigns/email-templates';
+const TEMPLATES_API = 'http://localhost:3001/api/email-templates';
 
 const PROVIDER_COLOR: Record<EmailProvider, string> = {
     gmail: '#EA4335',
@@ -158,7 +158,7 @@ interface InlineTemplatePickerProps {
     onClose: () => void;
 }
 
-function InlineTemplatePicker({onSelect, onClose}: InlineTemplatePickerProps) {
+function InlineTemplatePicker({onSelect, onClose,contact}: InlineTemplatePickerProps) {
     const [templates, setTemplates] = useState<EmailTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -167,7 +167,9 @@ function InlineTemplatePicker({onSelect, onClose}: InlineTemplatePickerProps) {
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch(`${TEMPLATES_API}?isActive=true`, {headers: authHeaders()});
+                console.log("fetching inline templates>> "+contact.id);
+
+                const res = await fetch(`${TEMPLATES_API}/${contact.id}`, {headers: authHeaders()});
                 const data = await res.json();
                 setTemplates(data.templates ?? data.data ?? []);
             } finally {
@@ -224,7 +226,10 @@ function InlineTemplatePicker({onSelect, onClose}: InlineTemplatePickerProps) {
                     filtered.map(tpl => (
                         <button
                             key={tpl.id}
-                            onClick={() => onSelect(tpl)}
+                            onClick={() => {
+                                console.log("Selected Template Data:", tpl); // Debugging
+                                onSelect(tpl);
+                            }}
                             className="w-full flex items-start gap-3 px-3 py-3 hover:bg-muted/40 transition-colors text-left border-b border-border/50 last:border-0"
                         >
                             <div
@@ -624,10 +629,14 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
 
     // ── Handlers ─────────────────────────────────────────────────────────────────
     const handleTemplateSelect = useCallback((tpl: EmailTemplate) => {
-        setSubject(tpl.subject);
-        setBody(tpl.body_html ?? tpl.body ?? '');
+        console.log("Applying template:", tpl.name, "Body:", tpl.body_html || tpl.body);
+
+        setSubject(tpl.subject || '');
+
+        // Fallback order: HTML -> Plain Text -> Empty String
+        setBody(tpl.body_html || tpl.body || '');
+
         setShowTemplate(false);
-        bodyRef.current?.focus();
     }, []);
 
     const handleSend = useCallback(async () => {
@@ -923,8 +932,8 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                     <input
                         className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/60"
                         placeholder="Email subject..."
-                        value={subject}
-                        onChange={e => setSubject(e.target.value)}
+                        value={subject || ''} // Fallback to empty string
+                        onChange={(e) => setSubject(e.target.value)}
                     />
                 </div>
 
@@ -1020,6 +1029,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                                     <InlineTemplatePicker
                                         onSelect={handleTemplateSelect}
                                         onClose={() => setShowTemplate(false)}
+                                        contact={contact}
                                     />
                                 )}
                             </div>
@@ -1037,7 +1047,7 @@ function EmailComposePanel({contact, provider, onShowDetails, showDetails}:
                             className="gap-1.5 h-8 text-xs ml-auto"
                             style={{backgroundColor: sent ? '#10b981' : providerColor, borderColor: 'transparent'}}
                             onClick={handleSend}
-                            disabled={sending || !subject.trim() || !body.trim() || !contact.email}
+                            disabled={sending || !subject?.trim() || !body?.trim() || !contact?.email}
                         >
                             {sent ? (
                                 <><Check className="h-3.5 w-3.5"/> Sent!</>

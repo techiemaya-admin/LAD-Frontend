@@ -660,3 +660,24 @@ body {
 .ql-editor a[href*="storage.googleapis.com"]:before {
   margin-right: 4px;
 }
+
+/* Ensure the editor content looks professional and spacious */
+.ql-editor {
+    white-space: pre-wrap !important; /* Preserves your database newlines */
+    line-height: 1.6 !important;     /* Adds breathing room between lines */
+    font-family: 'Inter', sans-serif !important;
+    color: #374151 !important;        /* Professional dark grey, not pure black */
+    min-height: 200px;
+    font-size: 14px;
+}
+
+/* Fixes the "clumsy" look of images and links */
+.ql-editor p {
+    margin-bottom: 12px !important;
+}
+
+.ql-editor img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 10px 0;
+}
