@@ -19,6 +19,7 @@
     "turbo": "^2.0.0"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.90.20"
   }
 }

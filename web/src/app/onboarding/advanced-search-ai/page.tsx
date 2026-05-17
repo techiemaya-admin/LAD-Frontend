@@ -6370,8 +6370,8 @@ function CheckpointFormInline({
     }, [emailTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // LinkedIn safe limits
-    const LINKEDIN_DAILY_LIMIT = 25; // safe daily connection request limit
-    const LINKEDIN_WEEKLY_LIMIT = 100; // safe weekly limit
+    const LINKEDIN_DAILY_LIMIT = 40; // safe daily connection request limit
+    const LINKEDIN_WEEKLY_LIMIT = 190; // safe weekly limit
 
     // Compute qualified leads count based on ICP threshold
     const qualifiedLeadCount = leads.filter(l => (l.icp_score ?? 0) >= (parseInt(icpThreshold) || 0)).length;
@@ -6383,8 +6383,13 @@ function CheckpointFormInline({
     const dailyCapacity = workingDays * LINKEDIN_DAILY_LIMIT;
     const weeklyCapacity = campaignWeeks * LINKEDIN_WEEKLY_LIMIT;
     const totalLinkedInCapacity = Math.min(dailyCapacity, weeklyCapacity);
-    const safeLeadsPerDay = Math.min(LINKEDIN_DAILY_LIMIT, Math.max(1, Math.floor(qualifiedLeadCount / Math.max(workingDays, 1))));
-    const exceedsLinkedInLimits = qualifiedLeadCount > totalLinkedInCapacity;
+    // Daily target = the qualified-lead count from prospecting, capped at LinkedIn's safe daily limit.
+    // The backend uses this as a per-day fetch target and continues paginating LinkedIn search via the
+    // saved cursor on each scheduled run, so the same number of NEW qualified leads is sourced every day.
+    // (Previously this was qualifiedLeadCount / workingDays, which spread an initial snapshot of leads
+    // across the campaign duration and made subsequent scheduled runs fetch only 1 lead/day.)
+    const safeLeadsPerDay = Math.min(LINKEDIN_DAILY_LIMIT, Math.max(1, qualifiedLeadCount));
+    const exceedsLinkedInLimits = qualifiedLeadCount > LINKEDIN_DAILY_LIMIT;
 
     const toggleAction = (a: string) => {
         const newActions = actions.includes(a) ? actions.filter(x => x !== a) : [...actions, a];
@@ -8052,18 +8057,18 @@ function CheckpointFormInline({
                             {['7', '14', '30', '60', '90'].map((d, i) => {
                                 const dNum = parseInt(d);
                                 const wd = Math.floor(dNum * 5 / 7);
-                                const wk = Math.ceil(dNum / 7);
-                                const cap = Math.min(wd * LINKEDIN_DAILY_LIMIT, wk * LINKEDIN_WEEKLY_LIMIT);
-                                const over = qualifiedLeadCount > cap;
+                                const perDay = Math.min(LINKEDIN_DAILY_LIMIT, Math.max(1, qualifiedLeadCount));
+                                const totalOverDuration = perDay * wd;
+                                const capped = qualifiedLeadCount > LINKEDIN_DAILY_LIMIT;
                                 return (
                                     <div key={d} onClick={() => setDays(d)} style={optStyle(days === d)}>
                                         <div style={numBadge(i + 1, days === d)}>{days === d ? '✓' : i + 1}</div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600 }}>{d} days</div>
-                                            <div style={{ fontSize: '11px', color: over ? '#b45309' : '#6b7280', marginTop: '2px' }}>
-                                                {over
-                                                    ? `Can process ~${cap} of ${qualifiedLeadCount} leads (${Math.min(LINKEDIN_DAILY_LIMIT, Math.max(1, Math.floor(qualifiedLeadCount / Math.max(wd, 1))))}/day)`
-                                                    : `${qualifiedLeadCount} leads fit within this window (~${Math.max(1, Math.ceil(qualifiedLeadCount / Math.max(wd, 1)))}/day)`}
+                                            <div style={{ fontSize: '11px', color: capped ? '#b45309' : '#6b7280', marginTop: '2px' }}>
+                                                {capped
+                                                    ? `Targets ${perDay}/day (capped from ${qualifiedLeadCount}; LinkedIn safe limit), ~${totalOverDuration} new leads over ${wd} working days`
+                                                    : `Targets ${perDay} new leads/day via pagination, ~${totalOverDuration} leads over ${wd} working days`}
                                             </div>
                                         </div>
                                     </div>
@@ -8075,14 +8080,14 @@ function CheckpointFormInline({
                                     style={{ width: '100%', border: '1px solid #e0eaf5', borderRadius: '10px', padding: '10px 14px', fontSize: '14px', outline: 'none', background: '#fafbff', fontFamily: 'inherit' }}
                                 />
                             </div>
-                            {/* Warning when selected duration can't fit all leads */}
+                            {/* Warning when prospect-time qualified count exceeds LinkedIn's safe daily limit */}
                             {exceedsLinkedInLimits && (
                                 <div style={{
                                     padding: '10px 14px', borderRadius: '10px', fontSize: '12px', lineHeight: 1.5,
                                     background: '#fef3c7', border: '1px solid #f59e0b', color: '#92400e', marginTop: '4px',
                                 }}>
-                                    <strong>LinkedIn limit warning:</strong> You have {qualifiedLeadCount} qualified leads but only ~{totalLinkedInCapacity} can be reached in {campaignDays} {campaignDays === 1 ? 'day' : 'days'} at {LINKEDIN_DAILY_LIMIT} actions/day.
-                                    Campaign will process {safeLeadsPerDay} leads/day. Consider extending the duration to {Math.max(2, Math.ceil(qualifiedLeadCount / LINKEDIN_DAILY_LIMIT * 7 / 5))} days or more.
+                                    <strong>LinkedIn safe-limit cap:</strong> Your ICP threshold matches {qualifiedLeadCount} leads, but LinkedIn's safe daily action limit is {LINKEDIN_DAILY_LIMIT}.
+                                    The campaign will source {safeLeadsPerDay} new qualified leads/day via pagination, totalling ~{safeLeadsPerDay * workingDays} over {workingDays} working days.
                                 </div>
                             )}
                         </div>

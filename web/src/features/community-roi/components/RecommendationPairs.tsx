@@ -125,14 +125,25 @@ const MemberOptionCard: React.FC<{ memberA: string; industryA?: string; options:
 // ── Week selector options ────────────────────────────────────────────────────
 const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
-/** Returns the upcoming Monday date for week N (week 1 = next Monday, etc.) */
-function getWeekMonday(weekNumber: number): string {
+/**
+ * Returns the Monday date label for week N.
+ * If the API attached a stored `week_start_date` (anchored to when the batch
+ * was generated), use that — that way the label doesn't shift forward as the
+ * calendar advances. Falls back to "next Monday from today" only when no
+ * stored date is available (e.g. very old data, fresh generation in flight).
+ */
+function getWeekMonday(weekNumber: number, storedISO?: string | null): string {
+  if (storedISO) {
+    return new Date(storedISO + 'T00:00:00Z').toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short', timeZone: 'UTC',
+    });
+  }
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const daysToNextMonday = (8 - dayOfWeek) % 7; // 0 if today is Monday
+  const dayOfWeek = today.getDay();
+  const daysToNextMonday = (8 - dayOfWeek) % 7;
   const monday = new Date(today);
   monday.setDate(today.getDate() + daysToNextMonday + (weekNumber - 1) * 7);
-  return monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); // e.g. "20 Apr"
+  return monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export const RecommendationPairs: React.FC = () => {
@@ -299,7 +310,7 @@ export const RecommendationPairs: React.FC = () => {
                 >
                   Week {w.week_number}
                   <span className={`ml-1.5 text-xs ${activeWeek === w.week_number ? 'text-indigo-200' : 'text-slate-400'}`}>
-                    · {getWeekMonday(w.week_number)}
+                    · {getWeekMonday(w.week_number, (w as any).week_start_date)}
                   </span>
                   <span className={`ml-1 text-xs ${activeWeek === w.week_number ? 'text-indigo-200' : 'text-slate-400'}`}>
                     ({w.pairs.length})

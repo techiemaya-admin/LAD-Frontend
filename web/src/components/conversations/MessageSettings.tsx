@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -149,13 +150,30 @@ export function MessageSettings() {
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="">
-        <DialogHeader>
-          <DialogTitle>Message Settings</DialogTitle>
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-md sm:w-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl"
+      >
+        <DialogHeader className="px-5 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 rounded-t-2xl">
+          <div className="flex items-center justify-between gap-4 w-full">
+            <DialogTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              Message Settings
+            </DialogTitle>
+            <DialogClose
+              className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </div>
         </DialogHeader>
-        <div className="space-y-5 py-2">
+
+        <div className="space-y-5 px-5 py-5 bg-white dark:bg-slate-900 rounded-b-2xl">
           <div className="flex items-center justify-between">
-            <Label htmlFor="mark-read" className="text-sm cursor-pointer">
+            <Label
+              htmlFor="mark-read"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
               Mark as read on open
             </Label>
             <Switch
@@ -166,7 +184,10 @@ export function MessageSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="confirm-send" className="text-sm cursor-pointer">
+            <Label
+              htmlFor="confirm-send"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
               Confirm before send
             </Label>
             <Switch
@@ -177,8 +198,11 @@ export function MessageSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="msg-delay" className="text-sm">
-              Message delay: {settings.messageDelay}s
+            <Label
+              htmlFor="msg-delay"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              Message delay: <span className="font-semibold text-slate-900 dark:text-slate-100">{settings.messageDelay}s</span>
             </Label>
             <input
               id="msg-delay"
@@ -188,22 +212,27 @@ export function MessageSettings() {
               step={1}
               value={settings.messageDelay}
               onChange={(e) => updateSetting('messageDelay', Number(e.target.value))}
-              className="w-full h-1.5 accent-primary"
+              className="w-full h-1.5 accent-primary cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
               <span>0s (instant)</span>
               <span>5s</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="inbound-debounce" className="text-sm">
-              Inbound debounce: {inboundDebounce}s
+            <Label
+              htmlFor="inbound-debounce"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200 flex items-center"
+            >
+              <span>
+                Inbound debounce: <span className="font-semibold text-slate-900 dark:text-slate-100">{inboundDebounce}s</span>
+              </span>
               {debounceSaving && (
-                <span className="ml-2 text-[10px] text-muted-foreground">saving…</span>
+                <span className="ml-2 text-[10px] text-slate-500 dark:text-slate-400">saving…</span>
               )}
             </Label>
-            <p className="text-[11px] text-muted-foreground leading-snug">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
               Time to wait after a customer message before generating a reply
               (helps coalesce typing bursts).
             </p>
@@ -216,14 +245,14 @@ export function MessageSettings() {
               value={inboundDebounce}
               disabled={!debounceLoaded}
               onChange={(e) => onInboundDebounceChange(Number(e.target.value))}
-              className="w-full h-1.5 accent-primary disabled:opacity-50"
+              className="w-full h-1.5 accent-primary disabled:opacity-50 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
               <span>0s (off)</span>
               <span>{INBOUND_DEBOUNCE_MAX}s</span>
             </div>
             {debounceError && (
-              <p className="text-[10px] text-destructive">{debounceError}</p>
+              <p className="text-[10px] text-red-600 dark:text-red-400">{debounceError}</p>
             )}
           </div>
         </div>

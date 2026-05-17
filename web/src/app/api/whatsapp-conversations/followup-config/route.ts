@@ -1,24 +1,19 @@
 /**
  * Follow-up Config Proxy
- * GET /api/whatsapp-conversations/followup-config → Node.js /api/personal-whatsapp/followup-config
- * PUT /api/whatsapp-conversations/followup-config → Node.js /api/personal-whatsapp/followup-config
+ * GET /api/whatsapp-conversations/followup-config → Python /api/followup-config
+ * PUT /api/whatsapp-conversations/followup-config → Python /api/followup-config
  *
- * Uses channel=backend so the proxy routes directly to Node.js LAD_backend
- * without path transformation.
+ * Routes to LAD-WABA-Comms (Python FastAPI) which persists the config to the
+ * tenant's followup_config JSONB table. The Node.js stub at
+ * /api/personal-whatsapp/followup-config does not persist — do not use it.
  */
 import { NextRequest } from 'next/server';
-import { proxyToPythonService, getBackendUrl } from '../utils/python-proxy';
-
-function withBackendChannel(req: NextRequest): NextRequest {
-  const url = new URL(req.url);
-  url.searchParams.set('channel', 'backend');
-  return new NextRequest(url, req);
-}
+import { proxyToPythonService, getWABAServiceUrl } from '../utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/followup-config');
+  return proxyToPythonService(req, getWABAServiceUrl(), '/api/followup-config');
 }
 
 export async function PUT(req: NextRequest) {
-  return proxyToPythonService(withBackendChannel(req), getBackendUrl(), '/api/personal-whatsapp/followup-config');
+  return proxyToPythonService(req, getWABAServiceUrl(), '/api/followup-config');
 }

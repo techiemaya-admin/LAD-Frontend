@@ -253,8 +253,8 @@ export const NavbarLogo = () => {
       href="/"
       className="relative z-20 mr-4 flex h-12 w-32 items-center space-x-2 px-2 py-1 text-sm font-normal text-black dark:text-white"
     >
-      <Image className="absolute hidden dark:block" src="/MrLAD-logo-white.svg" alt="LAD hero" fill />
-      <Image className="absolute block dark:hidden" src="/MrLAD-logo.svg" alt="LAD hero" fill />
+      <Image className="absolute hidden dark:block" src="/MrLAD-logo-white.svg" alt="LAD" fill />
+      <Image className="absolute block dark:hidden invert" src="/MrLAD-logo-white.svg" alt="LAD" fill />
     </Link>
   );
 };
