@@ -344,7 +344,7 @@ export default function NewHeroSection() {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-row gap-3 mb-8">
               <Link href="/onboarding">
                 <motion.button
                   whileHover={{ scale: 1.05 }}

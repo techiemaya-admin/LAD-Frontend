@@ -125,9 +125,40 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   const priorityOptions = useSelector(selectPriorities);
   const sourceOptions = useSelector(selectSources);
   const masterDataLoading = useSelector(selectMasterDataLoading);
-  // Get team members from Redux for assignee filter
   const teamMembers = useSelector(selectUsers);
   const usersLoading = useSelector(selectUsersLoading);
+
+  const effectiveSourceOptions = React.useMemo(() => {
+    // Only show the requested standard types as per requirements
+    return [
+      { key: 'linkedin', label: 'Linkedin' },
+      { key: 'voice_agent', label: 'Voice Agent' },
+      { key: 'website', label: 'Website' },
+    ];
+  }, []);
+
+  // Map expanded sources from store back to UI categories for the checkboxes
+  const uiSelectedSources = React.useMemo(() => {
+    const sources = filters?.sources || [];
+    const uiSources = new Set<string>();
+    const linkedinKeys = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'];
+    
+    sources.forEach(s => {
+      const lowerS = String(s).toLowerCase();
+      if (linkedinKeys.includes(lowerS)) {
+        uiSources.add('linkedin');
+      } else if (lowerS === 'voice_agent') {
+        uiSources.add('voice_agent');
+      } else if (lowerS === 'website') {
+        uiSources.add('website');
+      } else if (s && s !== 'unknown') {
+        uiSources.add(s);
+      }
+    });
+    
+    return Array.from(uiSources);
+  }, [filters?.sources]);
+
   // If master data is still loading or empty, show loading state
   const hasNoMasterData = statusOptions.length === 0 && priorityOptions.length === 0 && sourceOptions.length === 0;
   if (masterDataLoading || hasNoMasterData) {
@@ -145,7 +176,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     );
   }
   // Ensure filters has safe defaults
-  const safeFilters: PipelineActiveFilters = {
+  const safeFiltersWithDefaults: PipelineActiveFilters = {
     ...{
       stages: [],
       statuses: [],
@@ -168,13 +199,35 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
   ] : safeStages;
   const handleFilterChange = (field: keyof PipelineActiveFilters, value: string[] | { start: string | null; end: string | null }): void => {
     if (typeof onFiltersChange === 'function') {
-      onFiltersChange({ ...safeFilters, [field]: value });
+      let finalValue = value;
+      
+      // If we're filtering by source, expand the UI categories to include all DB keys
+      if (field === 'sources' && Array.isArray(value)) {
+        const expandedSources = new Set<string>();
+        const linkedinKeys = ['linkedin', 'linkedin_search', 'linkedin_campaign', 'inbound_upload', 'direct_contact'];
+        
+        value.forEach(v => {
+          if (v === 'linkedin') {
+            linkedinKeys.forEach(k => expandedSources.add(k));
+          } else if (v === 'voice_agent') {
+            expandedSources.add('voice_agent');
+          } else if (v === 'website') {
+            expandedSources.add('website');
+          } else {
+            expandedSources.add(v);
+          }
+        });
+        
+        finalValue = Array.from(expandedSources);
+      }
+      
+      onFiltersChange({ ...safeFiltersWithDefaults, [field]: finalValue });
     } else {
       logger.warn('[PipelineFilterDialog] onFiltersChange is not a function');
     }
   };
   const handleDateRangeChange = (field: 'start' | 'end', value: string): void => {
-    const currentRange = safeFilters.dateRange || { start: null, end: null };
+    const currentRange = safeFiltersWithDefaults.dateRange || { start: null, end: null };
     const nextRange = { ...currentRange, [field]: value || null };
 
     const start = nextRange.start;
@@ -185,13 +238,13 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
     }
 
     onFiltersChange({
-      ...safeFilters,
+      ...safeFiltersWithDefaults,
       dateRange: nextRange
     });
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[90vw] overflow-hidden flex flex-col p-0 max-h-[90vh]">
+      <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
@@ -209,7 +262,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
                 key: stage.key || String(stage.id),
                 label: stage.label || stage.name || String(stage.id)
               }))}
-              value={safeFilters.stages}
+              value={safeFiltersWithDefaults.stages}
               onChange={(value) => handleFilterChange('stages', value)}
               renderChip={(key) => {
                 const stage = testStages.find(s => (s.key || s.id) === key);
@@ -219,7 +272,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             <MultiSelect
               label="Statuses"
               options={Array.isArray(statusOptions) ? statusOptions.map(s => ({ key: s.key, label: s.label })) : []}
-              value={safeFilters.statuses}
+              value={safeFiltersWithDefaults.statuses}
               onChange={(value) => handleFilterChange('statuses', value)}
               renderChip={(key) => {
                 const statusOption = statusOptions.find(s => s.key === key);
@@ -229,7 +282,7 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             <MultiSelect
               label="Priorities"
               options={Array.isArray(priorityOptions) ? priorityOptions.map(p => ({ key: p.key, label: p.label })) : []}
-              value={safeFilters.priorities}
+              value={safeFiltersWithDefaults.priorities}
               onChange={(value) => handleFilterChange('priorities', value)}
               renderChip={(key) => {
                 const priorityOption = priorityOptions.find(p => p.key === key);
@@ -238,18 +291,18 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
             />
             <MultiSelect
               label="Sources"
-              options={Array.isArray(sourceOptions) ? sourceOptions.map(s => ({ key: s.key, label: s.label })) : []}
-              value={safeFilters.sources}
+              options={effectiveSourceOptions}
+              value={uiSelectedSources}
               onChange={(value) => handleFilterChange('sources', value)}
               renderChip={(key) => {
-                const sourceOption = sourceOptions.find(s => s.key === key);
+                const sourceOption = effectiveSourceOptions.find(s => s.key === key);
                 return sourceOption?.label || key;
               }}
             />
             <MultiSelect
               label="Assignees"
               options={Array.isArray(teamMembers) ? teamMembers.map(u => ({ key: String(u.id), label: u.name || String(u.id) })) : []}
-              value={Array.isArray(safeFilters.assignees) ? safeFilters.assignees : []}
+              value={Array.isArray(safeFiltersWithDefaults.assignees) ? safeFiltersWithDefaults.assignees : []}
               onChange={(value) => handleFilterChange('assignees', value)}
               disabled={usersLoading}
               renderChip={(key) => {
@@ -265,8 +318,8 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
                   <Input
                     id="start-date"
                     type="date"
-                    value={safeFilters.dateRange?.start || ''}
-                    max={safeFilters.dateRange?.end || undefined}
+                    value={safeFiltersWithDefaults.dateRange?.start || ''}
+                    max={safeFiltersWithDefaults.dateRange?.end || undefined}
                     onChange={(e) => handleDateRangeChange('start', e.target.value)}
                     className="w-full h-11 rounded-xl border-gray-200"
                   />
@@ -276,8 +329,8 @@ const PipelineFilterDialog: React.FC<PipelineFilterDialogProps> = ({
                   <Input
                     id="end-date"
                     type="date"
-                    value={safeFilters.dateRange?.end || ''}
-                    min={safeFilters.dateRange?.start || undefined}
+                    value={safeFiltersWithDefaults.dateRange?.end || ''}
+                    min={safeFiltersWithDefaults.dateRange?.start || undefined}
                     onChange={(e) => handleDateRangeChange('end', e.target.value)}
                     className="w-full h-11 rounded-xl border-gray-200"
                   />

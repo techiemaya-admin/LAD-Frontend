@@ -1064,7 +1064,7 @@ export function CallLogModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader>
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-full bg-orange-50 border border-orange-100 shadow-sm">
@@ -1074,7 +1074,7 @@ export function CallLogModal({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col flex-1 overflow-hidden px-8 py-6 space-y-6">
+        <div className="flex flex-col flex-1 overflow-hidden px-4 py-4 sm:px-8 sm:py-6 space-y-4 sm:space-y-6">
           {logLoading ? (
             <div className="flex-1 flex flex-col space-y-4">
               <div className="flex gap-2">
@@ -1149,24 +1149,24 @@ export function CallLogModal({
 
                 </TabsList>
 
-                <TabsContent value="lead" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                <TabsContent value="lead" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                   <LeadTab leadData={leadData} isLoading={leadLoading} />
                 </TabsContent>
 
                 {hasTranscripts && (
-                  <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="transcripts" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                     <TranscriptsTab segments={segments} />
                   </TabsContent>
                 )}
 
                 {hasAnalysis && (
-                  <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="analysis" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                     <AnalysisTab analysis={analysis} log={log} leadData={leadData} segments={segments} />
                   </TabsContent>
                 )}
 
                 {hasAnalysis && (
-                  <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="messages" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 rounded-2xl">
                     <MessagesTab messages={messages} />
                   </TabsContent>
                 )}

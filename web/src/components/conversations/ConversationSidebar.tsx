@@ -30,6 +30,7 @@ import {
   Calendar,
   Hash,
   AArrowDown,
+  LayoutTemplate,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -671,6 +672,17 @@ export const ConversationSidebar = memo(function ConversationSidebar({
               className="pl-9 h-9 bg-secondary/50"
             />
           </div>
+
+          {/* New Template Button — side-by-side with search bar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 flex-shrink-0 rounded-full hover:bg-muted"
+            onClick={() => setIsTemplatePickerOpen(true)}
+            title="New template"
+          >
+            <LayoutTemplate className="h-4 w-4" />
+          </Button>
           {/* Refresh button — re-fetches conversations from backend */}
           <Button
             variant="ghost"

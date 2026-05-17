@@ -168,7 +168,7 @@ export function MessageSettings() {
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 px-5 py-5 bg-white dark:bg-slate-900 rounded-b-2xl">
+        <div className="space-y-5 px-5 py-5 flex-1 overflow-y-auto bg-white dark:bg-slate-900 rounded-b-2xl">
           <div className="flex items-center justify-between">
             <Label
               htmlFor="mark-read"

@@ -233,4 +233,4 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
       </CardContent>
     </Card>
   );
-}
+}

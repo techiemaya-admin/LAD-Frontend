@@ -151,7 +151,7 @@ const AddStageDialog: React.FC<AddStageDialogProps> = ({
           </div>
         </div>
 
-        <DialogActions>
+        <DialogActions className="px-8 pb-8 pt-4">
           <Button
             onClick={handleSubmit}
             disabled={loading}

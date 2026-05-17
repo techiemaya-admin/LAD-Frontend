@@ -126,4 +126,4 @@ export const enhanceLeadWithLabels = (lead: Lead | null | undefined, stages: Sta
  */
 export const enhanceLeadsWithLabels = (leads: Lead[] = [], stages: StageOption[] = []): Lead[] => {
   return leads.map(lead => enhanceLeadWithLabels(lead, stages));
-};
+};
