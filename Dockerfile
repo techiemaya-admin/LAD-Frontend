@@ -18,8 +18,11 @@ RUN npm ci --ignore-scripts
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# npm workspaces installs direct workspace deps under web/node_modules and
+# sdk/node_modules; only transitive deps hoist to root. All three must be copied.
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 
 # Copy source code
 COPY . .

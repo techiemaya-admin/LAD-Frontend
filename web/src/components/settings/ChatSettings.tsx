@@ -818,11 +818,12 @@ export function ChatSettings() {
   return (
     <div className="space-y-6 relative">
       {/* ── Sticky "Test in Playground" button ─────────────────────── */}
-      <div className="sticky top-2 z-10 flex justify-end pointer-events-none">
+      {/* ── Test in Playground button ─────────────────────── */}
+      <div className="flex justify-end mb-2">
         <button
           type="button"
           onClick={() => setPlaygroundOpen(true)}
-          className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-lg shadow-lg hover:bg-violet-700 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl shadow-md hover:bg-[#0B1957]/90 transition-all active:scale-95"
           title="Open the AI Playground to test your prompts, knowledge base, and shareable assets"
         >
           <FlaskConical className="h-4 w-4" />
@@ -843,8 +844,8 @@ export function ChatSettings() {
         </div>
 
         {/* Channel tabs */}
-        <div className="border-b border-gray-100 px-6 overflow-hidden">
-          <div className="flex overflow-x-auto whitespace-nowrap gap-1 -mb-px no-scrollbar">
+        <div className="border-b border-gray-100 overflow-x-auto hide-scrollbar">
+          <div className="flex gap-1 -mb-px px-6 min-w-max flex-nowrap">
             {CHANNELS.map((ch) => (
               <button
                 key={ch.id}
@@ -1651,7 +1652,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveBehaviour}
               disabled={savingBehaviour}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
             >
               {savingBehaviour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Behaviour
@@ -1749,7 +1750,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveCampaign}
               disabled={savingSettings}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
             >
               {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Campaign Settings
@@ -1791,8 +1792,8 @@ export function ChatSettings() {
           </div>
 
           {/* Stage timing table */}
-          <div className="border border-gray-100 rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="border border-gray-100 rounded-lg overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-32">Stage</th>
@@ -1842,9 +1843,15 @@ export function ChatSettings() {
                           value={stage.template_name || ''}
                           disabled={!followupConfig.enabled || !stage.enabled || loadingTemplates}
                           onChange={(e) => updateStage(key, 'template_name', e.target.value)}
-                          className={`w-full px-2 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-40 disabled:bg-gray-50 ${
-                            templateMissing ? 'border-red-300' : 'border-gray-200'
+                          className={`w-full pl-3 pr-10 py-2 text-sm border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-40 disabled:bg-gray-50 transition-all appearance-none ${
+                            templateMissing ? 'border-red-300 text-red-900' : 'border-gray-200'
                           }`}
+                          style={{
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.5rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.5em 1.5em'
+                          }}
                           title={
                             needsTemplate
                               ? 'Required: Meta blocks free-text replies after 24 h'
@@ -1859,7 +1866,7 @@ export function ChatSettings() {
                                 : '— AI-generated (within 24 h) —'}
                           </option>
                           {approvedTemplates.map((t) => (
-                            <option key={t.name} value={t.name}>
+                            <option key={`${t.name}-${t.language}`} value={t.name}>
                               {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                             </option>
                           ))}
@@ -1950,9 +1957,15 @@ export function ChatSettings() {
                           ),
                         }))
                       }
-                      className={`w-full px-2 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 ${
+                      className={`w-full pl-3 pr-10 py-2 text-sm border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all appearance-none ${
                         !reminder.template_name ? 'border-red-300' : 'border-gray-200'
                       }`}
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                        backgroundPosition: 'right 0.5rem center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '1.5em 1.5em'
+                      }}
                     >
                       <option value="">
                         {loadingTemplates
@@ -1960,7 +1973,7 @@ export function ChatSettings() {
                           : '— Pick a template (required) —'}
                       </option>
                       {approvedTemplates.map((t) => (
-                        <option key={t.name} value={t.name}>
+                        <option key={`${t.name}-${t.language}`} value={t.name}>
                           {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                         </option>
                       ))}
@@ -2028,7 +2041,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveFollowup}
               disabled={savingFollowup}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
             >
               {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Follow-up Settings
@@ -2106,7 +2119,7 @@ export function ChatSettings() {
             <button
               onClick={handleSaveLinkedinAutomation}
               disabled={savingLinkedinAutomation}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
             >
               {savingLinkedinAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save LinkedIn Settings
@@ -2122,10 +2135,10 @@ export function ChatSettings() {
       {playgroundOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/30"
+            className="fixed inset-0 z-[100] bg-black/30"
             onClick={() => setPlaygroundOpen(false)}
           />
-          <div className="fixed top-0 right-0 z-50 h-full w-full sm:w-[480px] bg-background shadow-2xl">
+          <div className="fixed top-0 right-0 z-[110] h-full w-full sm:w-[480px] bg-background shadow-2xl">
             <AIPlayground onClose={() => setPlaygroundOpen(false)} />
           </div>
         </>

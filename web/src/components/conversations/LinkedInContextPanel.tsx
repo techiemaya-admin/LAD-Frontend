@@ -234,7 +234,10 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
   const headlineDisplay = contact.headline?.replace(/\s+/g, ' ').trim();
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-border w-[340px]">
+    <div className={cn(
+      "flex flex-col h-full bg-white border-l border-border w-full sm:w-[340px] flex-shrink-0",
+      "fixed inset-y-0 right-0 z-50 lg:static lg:z-0 lg:flex"
+    )}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <h3 className="text-sm font-semibold text-slate-800">Contact Details</h3>

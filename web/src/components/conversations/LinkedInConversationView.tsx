@@ -13,7 +13,7 @@
  *   active   → automated follow-up sent     → chat enabled
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, RefreshCw, Loader2, MessageSquare, Linkedin, Clock, CheckCircle, Zap, Lock, ChevronLeft } from 'lucide-react';
+import { Send, RefreshCw, Loader2, MessageSquare, Linkedin, Clock, CheckCircle, Zap, Lock, ChevronLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,11 @@ const STATUS_CONFIG: Record<ConnectionStatus, {
     icon:       <CheckCircle className="w-3 h-3" />,
     dotClass:   'bg-amber-400',
     badgeClass: 'bg-amber-50 text-amber-700',
-    bannerText: 'Connection accepted! Chat will be enabled after the automated follow-up is sent.',
+    // Empty — chat is now unlocked immediately on acceptance. Sending any
+    // message records CONTACTED on the backend, which cancels the workflow
+    // scheduler's automated follow-up so there's no duplicate. The
+    // FollowupComposer above the chat still offers AI/template shortcuts.
+    bannerText: '',
   },
   active: {
     label:      'Active',
@@ -444,9 +448,18 @@ export function LinkedInConversationView({
     setMessages(prev => [...prev, tempMsg]);
 
     try {
+      // Pass campaign_id + lead_id when known so the backend can record
+      // CONTACTED in campaign_analytics on a successful send. That marker
+      // cancels the workflow scheduler's automated follow-up so the lead
+      // never gets a duplicate auto-message after the user has already
+      // engaged in chat manually.
       const res  = await fetchWithTenant(li(`${API_BASE}/conversations/${selectedId}/messages`), {
         method: 'POST',
-        body:   JSON.stringify({ content: text }),
+        body:   JSON.stringify({
+          content: text,
+          campaign_id: selectedConv.campaign_id || undefined,
+          lead_id:     selectedConv.lead_id     || undefined,
+        }),
       });
       const json = await res.json();
       if (json.success && json.data) {
@@ -511,20 +524,29 @@ export function LinkedInConversationView({
 
 
         {/* Header - hidden on mobile as parent provides account tabs */}
-        <div className="hidden lg:flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2 px-4 py-3 border-b border-border bg-card">
+          <div className="flex items-center gap-2 mr-2">
             <Linkedin className="w-4 h-4 text-blue-600" />
-            <span className="font-semibold text-sm text-slate-800">LinkedIn</span>
-            {conversations.length > 0 && (
-              <span className="text-xs text-slate-400">({conversations.length})</span>
-            )}
+            <span className="font-semibold text-sm text-slate-800 whitespace-nowrap">LinkedIn</span>
           </div>
+
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search conversations..."
+              className="pl-9 h-9 bg-secondary/50 border-none shadow-none focus-visible:ring-1"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-8 w-8 rounded-full"
             onClick={loadConversations}
             disabled={loadingConvs}
+            title="Refresh"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', loadingConvs && 'animate-spin')} />
           </Button>
@@ -546,7 +568,7 @@ export function LinkedInConversationView({
               )}
               title="Show all conversations"
             >
-              All ({conversations.length})
+              All
             </button>
 
             {pendingCount > 0 && (
@@ -597,15 +619,6 @@ export function LinkedInConversationView({
           </div>
         )}
 
-        {/* Search */}
-        <div className="px-3 py-2 border-b border-border">
-          <Input
-            placeholder="Search conversations…"
-            className="h-8 text-xs"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
@@ -842,7 +855,7 @@ export function LinkedInConversationView({
         </div>
 
         {/* Right-side Contact Details panel — only when a conversation is open */}
-        {selectedConv && contextPanelOpen && !isMobile && (
+        {selectedConv && contextPanelOpen && (
           <LinkedInContextPanel
             conversation={{
               id:                selectedConv.id,

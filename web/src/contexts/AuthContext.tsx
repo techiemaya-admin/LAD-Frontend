@@ -32,6 +32,7 @@ interface AuthContextType {
   logout: () => void;
   getToken: () => Promise<string | null>;
   hasFeature: (featureKey: string) => boolean;
+  refreshUser: (newUser: User) => void;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -132,6 +133,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getToken = async (): Promise<string | null> => {
     return token;
   };
+  // Sync AuthContext with a user payload that was already fetched elsewhere
+  // (e.g. by Login.tsx via authService.getCurrentUser). Avoids a duplicate
+  // /api/auth/me call while ensuring the sidebar and feature checks see the
+  // user immediately after login instead of only after a page refresh.
+  const refreshUser = (newUser: User) => {
+    setUser(newUser);
+    safeStorage.setItem('auth', JSON.stringify({
+      user: newUser,
+      isAuthenticated: true,
+      theme: 'light',
+    }));
+    safeStorage.setItem('user', JSON.stringify(newUser));
+  };
   // Feature checking based on user capabilities and tenant features
   const hasFeature = (featureKey: string): boolean => {
     if (!user) {
@@ -152,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     getToken,
     hasFeature,
+    refreshUser,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

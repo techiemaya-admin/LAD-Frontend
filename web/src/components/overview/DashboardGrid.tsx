@@ -43,6 +43,7 @@ import { VoiceAgentsWidget } from './widgets/VoiceAgentsWidget';
 import { AIInsightsWidget } from './widgets/AIInsightsWidget';
 import { QuickActionsWidget } from './widgets/QuickActionsWidget';
 import { CalendarWidget } from './widgets/CalendarWidget';
+import { BroadcastPerformanceWidget } from './widgets/BroadcastPerformanceWidget';
 // Utilities
 import { cn } from '@/lib/utils';
 import {
@@ -474,6 +475,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadi
         return <QuickActionsWidget id={widgetId} />;
       case 'calendar':
         return <CalendarWidget id={widgetId} />;
+      case 'broadcast-performance':
+        return <BroadcastPerformanceWidget id={widgetId} />;
       default:
         return <div className="widget-card h-full flex items-center justify-center text-muted-foreground">Unknown widget</div>;
     }

@@ -9,6 +9,7 @@ import {
   Save,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   FlaskConical,
   Bot,
   User,
@@ -436,22 +437,32 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="fixed right-0 top-0 h-full w-full sm:w-[480px] z-50 flex flex-col bg-background border-l border-border shadow-2xl"
+      className="fixed right-0 top-0 h-full w-full sm:w-[480px] z-[110] flex flex-col bg-background border-l border-border shadow-2xl"
     >
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-2">
-          <FlaskConical className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-sm">AI Playground</h2>
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {settings?.ai_model || "claude-sonnet-4-6"}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-card shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 sm:hidden -ml-2 text-muted-foreground hover:text-foreground"
+          onClick={onClose}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <FlaskConical className="h-5 w-5 text-[#0B1957] shrink-0" />
+          <h2 className="font-semibold text-sm truncate">AI Playground</h2>
+          <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden xs:inline-block">
+            {settings?.ai_model || "claude-sonnet"}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadConfig} title="Reload config">
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 hidden sm:inline-flex" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
