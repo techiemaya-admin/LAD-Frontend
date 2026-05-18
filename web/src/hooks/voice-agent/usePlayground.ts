@@ -15,6 +15,30 @@ function minsLeft(startMs: number): number {
   return Math.max(0, Math.ceil((HOLD_TIMEOUT_MS - elapsed) / 60000));
 }
 
+/** Read the auth JWT from cookie (primary) or localStorage (fallback). */
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split("=");
+    if (rawName?.trim() === "token") {
+      return decodeURIComponent(rawValueParts.join("=") || "");
+    }
+  }
+  try {
+    const stored = localStorage.getItem("token");
+    if (stored) return stored;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 /* ──────────────────────────────────────────────────────────────────
    TYPES
    ────────────────────────────────────────────────────────────────── */
@@ -239,7 +263,7 @@ export function usePlayground({
     try {
       const resp = await fetch(`${workerUrl}/playground-agents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
       if (!resp.ok)
@@ -335,7 +359,7 @@ export function usePlayground({
     try {
       const resp = await fetch(`${workerUrl}/playground-init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
 
