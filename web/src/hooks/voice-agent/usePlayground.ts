@@ -304,7 +304,6 @@ export function usePlayground({
       const resp = await fetch(`${workerUrl}/playground-agents`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
       if (!resp.ok)
@@ -401,7 +400,6 @@ export function usePlayground({
       const resp = await fetch(`${workerUrl}/playground-init`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
