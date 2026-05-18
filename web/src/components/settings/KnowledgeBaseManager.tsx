@@ -19,8 +19,8 @@ interface KnowledgeBaseManagerProps {
 export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBaseManagerProps) {
   const { user } = useAuth();
   const { tenantId: contextTenantId } = useTenant();
-  const effectiveTenantId = tenantId || contextTenantId || (user as any)?.tenantId || "";
-  const effectiveUserId = userId || (user as any)?.uid || (user as any)?.id || "";
+  const effectiveTenantId = tenantId || contextTenantId || (user as any)?.tenantId || process.env.NEXT_PUBLIC_PLAYGROUND_TENANT_ID || "";
+  const effectiveUserId = userId || (user as any)?.uid || (user as any)?.id || process.env.NEXT_PUBLIC_PLAYGROUND_USER_ID || "";
   const rag = useKnowledgeBase(effectiveTenantId, effectiveUserId);
   
   // State for Create Store

@@ -80,7 +80,8 @@
     "svix": "^1.81.0",
     "sweetalert2": "^11.26.2",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "wavesurfer.js": "^7.12.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
