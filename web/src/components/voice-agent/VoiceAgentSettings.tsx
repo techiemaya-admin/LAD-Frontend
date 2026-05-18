@@ -8,6 +8,8 @@ import { AgentSelector } from './AgentSelector';
 import { AgentForm } from './AgentForm';
 import { FormSkeleton } from './FormSkeleton';
 import { SidebarSkeleton } from './SidebarSkeleton';
+import { VoiceLibrary } from './VoiceLibrary';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentPlaygroundModal } from './AgentPlaygroundModal';
 import { Sparkles } from 'lucide-react';
 
@@ -385,45 +387,61 @@ export function VoiceAgentSettings() {
   return (
     <div className="min-h-screen p-2 md:p-2 lg:p-2">
       <div className="mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          {/* Sidebar - Agent Selector */}
-          <aside className="w-full min-w-0 max-w-none lg:w-[320px] lg:flex-none lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-            {isLoadingAgents ? (
-              <SidebarSkeleton />
-            ) : (
-              <AgentSelector
-                agents={agents}
-                selectedAgentId={selectedAgentId}
-                onSelectAgent={handleSelectAgent}
-                onOpenPlayground={() => setIsPlaygroundOpen(true)}
-                isLoading={isLoadingAgents}
-              />
-            )}
-          </aside>
+        <Tabs defaultValue="agents" className="w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold font-display">Voice Agents Workspace</h1>
+            <TabsList>
+              <TabsTrigger value="agents">Agent Configuration</TabsTrigger>
+              <TabsTrigger value="library">Voice Library</TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* Main Content - Agent Form */}
-          <main ref={formRef}>
-            {isLoadingAgent ? (
-              <FormSkeleton />
-            ) : (
-              <AgentForm
-                formData={formData}
-                errors={errors}
-                isDirty={isDirty}
-                isValid={isValid}
-                isSaving={isSaving}
-                isEditMode={!!selectedAgentId}
-                voiceSampleUrl={selectedAgentVoiceSampleUrl}
-                voices={voices}
-                isLoadingVoices={isLoadingVoices}
-                onUpdateField={updateField}
-                onSave={handleSave}
-                onReset={handleReset}
-                getCharCount={getCharCount}
-              />
-            )}
-          </main>
-        </div>
+          <TabsContent value="agents" className="mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+              {/* Sidebar - Agent Selector */}
+              <aside className="w-full min-w-0 max-w-none lg:w-[320px] lg:flex-none lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+                {isLoadingAgents ? (
+                  <SidebarSkeleton />
+                ) : (
+                  <AgentSelector
+                    agents={agents}
+                    selectedAgentId={selectedAgentId}
+                    onSelectAgent={handleSelectAgent}
+                    onOpenPlayground={() => setIsPlaygroundOpen(true)}
+                    isLoading={isLoadingAgents}
+                  />
+                )}
+              </aside>
+
+              {/* Main Content - Agent Form */}
+              <main ref={formRef}>
+                {isLoadingAgent ? (
+                  <FormSkeleton />
+                ) : (
+                  <AgentForm
+                    formData={formData}
+                    errors={errors}
+                    isDirty={isDirty}
+                    isValid={isValid}
+                    isSaving={isSaving}
+                    isEditMode={!!selectedAgentId}
+                    voiceSampleUrl={selectedAgentVoiceSampleUrl}
+                    voices={voices}
+                    isLoadingVoices={isLoadingVoices}
+                    onUpdateField={updateField}
+                    onSave={handleSave}
+                    onReset={handleReset}
+                    getCharCount={getCharCount}
+                  />
+                )}
+              </main>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="library" className="mt-0">
+            <VoiceLibrary voices={voices} setVoices={setVoices} />
+          </TabsContent>
+        </Tabs>
       </div>
       <AgentPlaygroundModal 
         isOpen={isPlaygroundOpen} 

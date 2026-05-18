@@ -1,0 +1,15 @@
+feat(playground): integrate sandboxed voice agent playground
+
+This introduces a sandboxed 'Playground' directly within the 'Make a Call' workflow, allowing users to test voice agents in real-time without consuming production SIP trunks. Architecture follows strict LAD Developer Guide (files < 400 lines, robust separation of concerns).
+
+File Explanations:
+- `package.json` / `package-lock.json`: Added LiveKit SDKs (`livekit-client`, `@livekit/components-react`) for WebRTC audio streaming.
+- `.gitignore`: Added exclusion for local-only `src/app/test-playground/`.
+- `public/logo.png`: Swapped with a lightweight optimized version (5KB vs 2.5MB).
+- `make-call-content.tsx`: Injected "VOAG Playground" button; resolves active `tenantId` & `userId` from backend and forwards them down.
+- `AgentPlaygroundModal.tsx`: Thin wrapper converting the Playground into a Radix UI dialog.
+- `Playground.tsx`: Main lean view router cleanly rendering pre-call views vs the in-call `LiveKitRoom` component.
+- `PlaygroundConfigView.tsx`: Extracted pre-call UI (Welcome, Config toggles, Agent Selector, Coming Soon placeholder).
+- `usePlayground.ts`: Extracted state management custom hook, orchestrating worker hold lifecycles, 45-min timeouts, and agent fetching via `tenantId`.
+- `agents-ui` / `playground.css`: Local components handling the LADS-branded audio visualizer aesthetics.
+- `lad_developer_guide_rules`: Restored documentation reference for LAD frontend compliance.

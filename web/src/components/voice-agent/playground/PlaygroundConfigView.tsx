@@ -9,6 +9,13 @@ import { X, Sparkles, PlusCircle, ArrowLeft, Wand2, Settings2, Loader2 } from "l
 import { motion, AnimatePresence } from "framer-motion";
 import type { AgentOption } from "@/hooks/voice-agent/usePlayground";
 
+import { AgentBuilderTextInput } from "./builder-steps/AgentBuilderTextInput";
+import { AgentBuilderMCQ } from "./builder-steps/AgentBuilderMCQ";
+import { AgentBuilderSummary } from "./builder-steps/AgentBuilderSummary";
+import { AgentBuilderBlank } from "./builder-steps/AgentBuilderBlank";
+import { AgentBuilderMultiSelect } from "./builder-steps/AgentBuilderMultiSelect";
+import { BuilderData } from "@/hooks/voice-agent/usePlayground";
+
 interface PlaygroundConfigViewProps {
   onClose?: () => void;
   onBack: () => void;
@@ -16,6 +23,8 @@ interface PlaygroundConfigViewProps {
   onStartTesting: () => void;
   onStartDirectConfig: () => void;
   onStartGuidedJourney: () => void;
+  advanceBuilderStep: (userInput?: string | string[], action?: string) => void;
+  builderData?: BuilderData | null;
   isHolding: boolean;
   reloading: boolean;
   timerDisplay: string;
@@ -33,7 +42,9 @@ interface PlaygroundConfigViewProps {
   setEnableCallLog: (val: boolean) => void;
   connecting: boolean;
   startCall: () => Promise<void>;
-  step: "welcome" | "config" | "create-selection" | "guided-journey";
+  step: 
+    | "welcome" | "config" | "create-selection" | "guided-journey"
+    | "builder-text" | "builder-mcq-few" | "builder-mcq-many" | "builder-summary" | "builder-blank";
 }
 
 /* Shared UI fragments */
@@ -107,6 +118,8 @@ export default function PlaygroundConfigView({
   onStartTesting,
   onStartDirectConfig,
   onStartGuidedJourney,
+  advanceBuilderStep,
+  builderData,
   isHolding,
   reloading,
   timerDisplay,
@@ -130,11 +143,9 @@ export default function PlaygroundConfigView({
   const ThinkingIndicator = () => {
     const [index, setIndex] = React.useState(0);
     const steps = [
-      "Analyzing requirements...",
-      "Drafting agent persona...",
-      "Optimizing system prompts...",
-      "Structuring knowledge base...",
-      "Finalizing configuration..."
+      "Waking up Mr. LADs...",
+      "Mr. LADs is loading your business info...",
+      "Using your existing info with Mr. LADs..."
     ];
 
     React.useEffect(() => {
@@ -208,6 +219,52 @@ export default function PlaygroundConfigView({
         </div>
       </div>
     );
+  }
+
+  /* ── BUILDER SCENARIOS (Demo Flow) ── */
+  if (step === "builder-text") {
+    return <AgentBuilderTextInput onClose={onClose} onNext={advanceBuilderStep} question={builderData?.question || "Provide input"} />;
+  }
+
+  if (step === "builder-mcq-few") {
+    return <AgentBuilderMCQ 
+      onClose={onClose}
+      onNext={advanceBuilderStep}
+      question={builderData?.question || ""}
+      options={builderData?.options || []}
+    />;
+  }
+
+  if (step === "builder-mcq-many") {
+    return <AgentBuilderMCQ 
+      onClose={onClose}
+      onNext={advanceBuilderStep}
+      question={builderData?.question || ""}
+      options={builderData?.options || []}
+    />;
+  }
+
+  if (step === "builder-mcq-multi") {
+    return <AgentBuilderMultiSelect 
+      onClose={onClose}
+      onNext={advanceBuilderStep}
+      question={builderData?.question || ""}
+      options={builderData?.options || []}
+    />;
+  }
+
+  if (step === "builder-summary") {
+    return <AgentBuilderSummary
+      onClose={onClose}
+      onNext={advanceBuilderStep}
+      title={builderData?.question || "Summary"}
+      description={builderData?.description || ""}
+      blocks={builderData?.blocks || []}
+    />;
+  }
+
+  if (step === "builder-blank") {
+     return <AgentBuilderBlank onClose={onClose} onNext={advanceBuilderStep} htmlContent={builderData?.htmlContent || ""} />;
   }
 
   /* ── CREATE SELECTION SCREEN ── */

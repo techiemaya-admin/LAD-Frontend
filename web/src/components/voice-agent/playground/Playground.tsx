@@ -116,6 +116,8 @@ export default function Playground({
         onStartTesting={pg.startTesting}
         onStartDirectConfig={pg.startDirectConfig}
         onStartGuidedJourney={pg.startGuidedJourney}
+        advanceBuilderStep={pg.advanceBuilderStep}
+        builderData={pg.builderData}
         isHolding={pg.isHolding}
         reloading={pg.reloading}
         timerDisplay={pg.timerDisplay}
@@ -185,6 +187,14 @@ function AgentUI() {
   } else if (state === "listening" || state === "thinking") {
     activeTranscript = latestUserText;
     transcriptSpeaker = "You";
+  }
+
+  // Truncate to the last 30 words to prevent pushing the hangup button off screen
+  if (activeTranscript) {
+    const words = activeTranscript.split(/\s+/);
+    if (words.length > 30) {
+      activeTranscript = "..." + words.slice(-30).join(" ");
+    }
   }
 
   return (

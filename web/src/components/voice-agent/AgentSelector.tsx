@@ -58,9 +58,11 @@ export function AgentSelector({
         <p className="text-sm text-muted-foreground ml-7">Select or create an agent</p>
       </div>
 
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex flex-col gap-3">
-        {/* Row 1: Search Bar */}
-        <div className="relative w-full">
+      {/* Merged: develop's compact single search-and-action row, with HEAD's
+          VOAG Playground button kept beside "New Agent" so the feature isn't
+          lost when the create-row got collapsed into the search row. */}
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[150px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -83,31 +85,27 @@ export function AgentSelector({
             </button>
           )}
         </div>
-
-        {/* Row 2: Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => onSelectAgent(null)}
-            className={cn(
-              "flex-1 justify-center gap-2 h-10 transition-all duration-200 font-medium px-2 sm:px-3",
-              selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
-            )}
-            variant={selectedAgentId === null ? "default" : "outline"}
-            size="sm"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="whitespace-nowrap">New Agent</span>
-          </Button>
-          <Button
-            onClick={onOpenPlayground}
-            variant="outline"
-            size="sm"
-            className="flex-1 justify-center gap-2 h-10 font-medium px-2 sm:px-3 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="whitespace-nowrap">VOAG Playground</span>
-          </Button>
-        </div>
+        <Button
+          onClick={() => onSelectAgent(null)}
+          className={cn(
+            "justify-start gap-2 h-10 transition-all duration-200 font-medium shrink-0 px-2 sm:px-3",
+            selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
+          )}
+          variant={selectedAgentId === null ? "default" : "outline"}
+          size="sm"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="whitespace-nowrap">New Agent</span>
+        </Button>
+        <Button
+          onClick={onOpenPlayground}
+          variant="outline"
+          size="sm"
+          className="justify-start gap-2 h-10 font-medium shrink-0 px-2 sm:px-3 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span className="whitespace-nowrap hidden md:inline">VOAG Playground</span>
+        </Button>
       </div>
 
       {/* Agent List */}
@@ -130,7 +128,7 @@ export function AgentSelector({
             </div>
           ) : (
             filteredAgents.map((agent, index) => {
-              const agentId = agent.id || agent.agent_id;
+              const agentId = agent.id || agent.agent_id || `fallback-agent-${index}`;
               const agentName = agent.name || agent.agent_name || 'Unnamed Agent';
               const isSelected = selectedAgentId === agentId;
               const status = agent.status ? statusConfig[agent.status as AgentStatus] : statusConfig['active'];
@@ -141,7 +139,7 @@ export function AgentSelector({
               return (
                 <button
                   key={agentId}
-                  onClick={() => onSelectAgent(agentId || '')}
+                  onClick={() => onSelectAgent(agentId)}
                   className={cn(
                     "w-full text-left rounded-lg md:rounded-xl transition-all duration-300 border-2",
                     "hover:shadow-lg hover:border-primary/50 hover:scale-[1.01] md:hover:scale-[1.02]",
