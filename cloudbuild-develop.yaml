@@ -111,7 +111,12 @@ substitutions:
   _ENV: 'development'
   _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-160078175457.us-central1.run.app'
+  # NOTE: lad-waba-comms-develop runs in asia-south1 (not us-central1). The
+  # previous us-central1 URL pointed to a stale, abandoned revision (May 12)
+  # that lacks newer endpoints like /api/broadcasts/template-stats — the
+  # frontend's WhatsApp proxy was 404-ing because of it. The asia-south1
+  # service is the live develop deployment.
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app'
   # Voice playground worker (Vapi/voice-agent dev environment)
   _PLAYGROUND_WORKER_URL: 'https://voag-dev-playground-worker-160078175457.asia-south1.run.app'
   _PLAYGROUND_TENANT_ID: '926070b5-189b-4682-9279-ea10ca090b84'
