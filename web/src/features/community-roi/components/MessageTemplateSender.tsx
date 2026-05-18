@@ -533,7 +533,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                 const isSelected = selectedTemplate?.name === t.name;
                 return (
                   <button
-                    key={t.name}
+                    key={`${t.name}-${t.language ?? ''}`}
                     onClick={() => setSelectedTemplate(t)}
                     className={`w-full text-left p-4 border rounded-xl transition ${
                       isSelected

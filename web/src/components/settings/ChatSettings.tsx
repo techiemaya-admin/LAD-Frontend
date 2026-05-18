@@ -1866,7 +1866,7 @@ export function ChatSettings() {
                                 : '— AI-generated (within 24 h) —'}
                           </option>
                           {approvedTemplates.map((t) => (
-                            <option key={t.name} value={t.name}>
+                            <option key={`${t.name}-${t.language}`} value={t.name}>
                               {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                             </option>
                           ))}
@@ -1973,7 +1973,7 @@ export function ChatSettings() {
                           : '— Pick a template (required) —'}
                       </option>
                       {approvedTemplates.map((t) => (
-                        <option key={t.name} value={t.name}>
+                        <option key={`${t.name}-${t.language}`} value={t.name}>
                           {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                         </option>
                       ))}
