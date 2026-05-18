@@ -11,6 +11,7 @@ import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
 import { EmailChannelView } from './EmailChannelView';
 import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
+import { WABusinessView } from './WABusinessView';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
@@ -687,6 +688,10 @@ export function ConversationsPage() {
 
       {/* Channel views — only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
+      {channelStatus === null ? (
+          <div className="flex-1 bg-background" />
+        ) : (
+          <>
         {activeTab === 'personal' && (
           <ChannelConversationView
             channel="personal"
@@ -702,23 +707,17 @@ export function ConversationsPage() {
           />
         )}
         {activeTab === 'waba' && (
-          <ChannelConversationView
-            channel="waba"
-            onShowBroadcastModal={() => setShowBroadcastModal(true)}
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            setIsPlaygroundOpen={setIsPlaygroundOpen}
+          <WABusinessView
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
-            isMobile={isMobile}
           />
         )}
         {activeTab === 'linkedin'  && <LinkedInConversationView />}
         {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
         {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
         {activeTab === 'custom'    && <EmailChannelView provider="custom"  connectedEmail={channelStatus?.customEmail  ?? undefined} />}
+        </>
+        )}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}
