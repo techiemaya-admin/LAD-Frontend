@@ -344,7 +344,7 @@ export default function NewHeroSection() {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-row gap-3 mb-8">
               <Link href="/onboarding">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -365,28 +365,32 @@ export default function NewHeroSection() {
             </div>
 
             {/* Stats */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">10x</p>
-                  <p className="text-sm text-muted-foreground">Faster Closures</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Target className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">95%</p>
-                  <p className="text-sm text-muted-foreground">Success Rate</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">24/7</p>
-                  <p className="text-sm text-muted-foreground">AI Availability</p>
-                </div>
-              </div>
+            <div className="pt-6 mt-2 border-t border-border/60 grid grid-cols-3 gap-4 sm:gap-6">
+              {[
+                { Icon: Zap, value: '10x', label: 'Faster Closures' },
+                { Icon: Target, value: '95%', label: 'Success Rate' },
+                { Icon: Clock, value: '24/7', label: 'AI Availability' },
+              ].map(({ Icon, value, label }, i) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1, duration: 0.5, ease: 'easeOut' }}
+                  className="group flex flex-col items-start gap-3"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15 transition-all duration-300 group-hover:bg-primary/15 group-hover:ring-primary/30 group-hover:scale-105">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none bg-gradient-to-br from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                      {value}
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wide">
+                      {label}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 

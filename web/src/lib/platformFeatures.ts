@@ -76,4 +76,4 @@ export const UTILITY_QUESTIONS = {
   },
 };
 export type Platform = keyof typeof PLATFORM_FEATURES;
-export type PlatformFeature = typeof PLATFORM_FEATURES[Platform][number];
+export type PlatformFeature = typeof PLATFORM_FEATURES[Platform][number];

@@ -23,6 +23,8 @@ import {
   Goal,
   LayoutTemplate,
   Palette,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -105,10 +107,42 @@ export function Sidebar() {
   // AuthContext when present and overlay Redux fields as a fallback.
   const user = useMemo(() => ({ ...(reduxUser || {}), ...(authUser || {}) }), [authUser, reduxUser]);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Hover-expand state. Suppressed when `isPinned` is true (then we stay
+  // expanded regardless of cursor position).
+  const [isHovered,   setIsHovered]   = useState(false);
+  // Persisted user preference — when true, the sidebar stays expanded
+  // permanently and the hover behaviour is disabled.
+  const [isPinned,    setIsPinned]    = useState(false);
+  // Effective expanded flag the rest of the file already consumes.
+  const isExpanded = isPinned || isHovered;
   const [displayName, setDisplayName] = useState("User");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Load + persist pin preference (localStorage). Runs after hydration so
+  // SSR HTML matches the initial client render (always unpinned on first
+  // paint) and then upgrades to the saved value.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('sidebar.pinned');
+      if (saved === '1') setIsPinned(true);
+    } catch { /* localStorage blocked — fine, default is unpinned */ }
+  }, []);
+  const togglePinned = () => {
+    setIsPinned(prev => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('sidebar.pinned', next ? '1' : '0');
+        // Notify the app-shell (or any other listener) so the main content
+        // can reflow to ml-64 (pinned) vs ml-16 (collapsed default).
+        window.dispatchEvent(new CustomEvent('sidebar:pinned-changed', { detail: { pinned: next } }));
+      } catch { /* ignore */ }
+      // Also drop the hover state when unpinning so the sidebar collapses
+      // immediately rather than waiting for the mouse to leave.
+      if (!next) setIsHovered(false);
+      return next;
+    });
+  };
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
   // Education vertical context
@@ -163,16 +197,6 @@ export function Sidebar() {
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",
       requiredFeature: "campaigns",
-      children: [
-        {
-          href: "/campaigns/templates",
-          label: "Templates",
-          icon: LayoutTemplate,
-          details: "Create and manage email templates for your campaigns.",
-          requiredCapability: "view_campaigns",
-          requiredFeature: "campaigns",
-        },
-      ],
     },
     {
       href: "/conversations",
@@ -181,6 +205,16 @@ export function Sidebar() {
       details: "View and manage your social media conversations.",
       requiredCapability: "view_conversations",
       requiredFeature: "conversations",
+      children: [
+        {
+          href: "/campaigns/templates",
+          label: "Templates",
+          icon: LayoutTemplate,
+          details: "Create and manage message templates for conversations and broadcasts.",
+          requiredCapability: "view_conversations",
+          requiredFeature: "conversations",
+        },
+      ],
     },
     {
       href: "/community-roi",
@@ -285,7 +319,7 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
+          "md:hidden fixed inset-y-0 left-0 w-[70%] bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -313,34 +347,67 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
-          {nav.map((n) => {
-            const Icon = n.icon;
-            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
-            const hasChildren = n.children && n.children.length > 0;
-            
+          {(() => {
+            // Build the set of every URL claimed as a "child" anywhere in the
+            // nav tree so a top-level item never lights up when the current
+            // pathname is actually owned by another section.
+            // Example: Templates lives at /campaigns/templates but is now a
+            // child of Conversations — without this guard, Campaigns would
+            // greedily match /campaigns/* and double-highlight.
+            const ownedChildHrefs = new Set<string>(
+              nav.flatMap(p => p.children?.map(c => c.href) ?? [])
+            );
+            const pathBelongsToChild = (href: string) =>
+              Array.from(ownedChildHrefs).some(c =>
+                href === c || href.startsWith(c + '/')
+              );
+            return nav.map((n) => {
+              const Icon = n.icon;
+              const ownChildHrefs = new Set((n.children ?? []).map(c => c.href));
+              const matchesOwnRoute = pathname === n.href || pathname.startsWith(n.href + '/');
+              // If the current path is claimed by a child of a DIFFERENT
+              // parent, don't treat this item as self-active.
+              const pathOwnedByOtherChild = pathBelongsToChild(pathname) &&
+                !Array.from(ownChildHrefs).some(c =>
+                  pathname === c || pathname.startsWith(c + '/')
+                );
+              const selfActive = matchesOwnRoute && !pathOwnedByOtherChild;
+              const hasChildren = n.children && n.children.length > 0;
+              const childOnPath = hasChildren && n.children!.some(c =>
+                pathname === c.href || pathname.startsWith(c.href + '/')
+              );
+            // `selfActive` = this row IS the current page; `childOnPath` =
+            // a sub-item is current. They drive different styling now, so we
+            // no longer combine them into one boolean.
+
             return (
               <div key={n.href} className="relative group/mob">
                 <NavLink
                   href={n.href}
                   className={cn(
                     "relative flex items-center rounded-xl overflow-visible px-3 h-12",
-                    isActive
+                    selfActive
                       ? "bg-primary/90 text-white shadow-lg"
-                      : "hover:bg-white/10 text-sidebar-foreground",
+                      : childOnPath
+                        ? "bg-primary/10 text-sidebar-foreground"  // softer "section-active" hint, visible on light & dark
+                        : "hover:bg-white/10 text-sidebar-foreground",
                   )}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      isActive ? "text-white" : "text-sidebar-foreground",
+                      // Only the fully-active parent gets the white icon —
+                      // section-active keeps dark icon for legibility on
+                      // light-background sidebars.
+                      selfActive ? "text-white" : "text-sidebar-foreground",
                     )}
                   />
                   <span className="ml-3 text-sm font-medium">{n.label}</span>
                 </NavLink>
-                
+
                 {hasChildren && (
-                  <div className="pl-10 space-y-0.5 mt-1">
+                  <div className="pl-10 space-y-0.5 mt-1 border-l-2 border-white/10 ml-4">
                     {n.children.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
@@ -349,9 +416,9 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "flex items-center rounded-xl px-3 h-10 transition-all",
+                            "relative flex items-center rounded-xl px-3 h-10 transition-all ml-1",
                             childActive
-                              ? "bg-primary/80 text-white"
+                              ? "bg-primary/80 text-white shadow-md before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:-translate-x-[18px] before:h-5 before:w-0.5 before:bg-primary before:rounded-full"
                               : "hover:bg-white/10 text-sidebar-foreground/70",
                           )}
                           onClick={() => setIsMobileMenuOpen(false)}
@@ -365,7 +432,8 @@ export function Sidebar() {
                 )}
               </div>
             );
-          })}
+          });
+          })()}
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
@@ -458,8 +526,8 @@ export function Sidebar() {
           "overflow-hidden fixed left-0 top-0 z-50",
           isExpanded ? "w-64" : "w-16",
         )}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => { if (!isPinned) setIsHovered(false); }}
       >
         {/* Logo */}
         <div
@@ -483,12 +551,59 @@ export function Sidebar() {
             }}
           />
         </div>
+
+        {/* Pin toggle — keeps the sidebar permanently expanded.
+            Only shown when the sidebar is expanded (otherwise it would
+            overflow the 16px-wide rail) and only on md+ (mobile uses the
+            burger menu and doesn't need a pin). */}
+        {isExpanded && (
+          <button
+            type="button"
+            onClick={togglePinned}
+            aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+            title={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+            className={cn(
+              "absolute top-3 right-3 z-20 rounded-full p-1.5",
+              "transition-all duration-200 ease-out",
+              "hover:scale-110 active:scale-95",
+              isPinned
+                ? "bg-primary/90 text-white shadow-md hover:bg-primary"
+                : "bg-white/70 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 border border-slate-200/70 dark:border-white/10",
+            )}
+          >
+            {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </button>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
-          {nav.map((n) => {
-            const Icon = n.icon;
-            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
-            const hasChildren = n.children && n.children.length > 0;
+          {(() => {
+            // Set of every URL claimed as a child anywhere in the nav tree —
+            // prevents a top-level item from greedily lighting up when the
+            // current pathname belongs to another section's sub-item.
+            const ownedChildHrefs = new Set<string>(
+              nav.flatMap(p => p.children?.map(c => c.href) ?? [])
+            );
+            const pathBelongsToChild = (href: string) =>
+              Array.from(ownedChildHrefs).some(c =>
+                href === c || href.startsWith(c + '/')
+              );
+            return nav.map((n) => {
+              const Icon = n.icon;
+              const ownChildHrefs = new Set((n.children ?? []).map(c => c.href));
+              const matchesOwnRoute = pathname === n.href || pathname.startsWith(n.href + '/');
+              const pathOwnedByOtherChild = pathBelongsToChild(pathname) &&
+                !Array.from(ownChildHrefs).some(c =>
+                  pathname === c || pathname.startsWith(c + '/')
+                );
+              const selfActive = matchesOwnRoute && !pathOwnedByOtherChild;
+              const hasChildren = n.children && n.children.length > 0;
+              const childOnPath = hasChildren && n.children!.some(c =>
+                pathname === c.href || pathname.startsWith(c.href + '/')
+              );
+            // `selfActive` = this row IS the current page; `childOnPath` =
+            // a sub-item is current. They drive different styling now, so we
+            // no longer combine them into one boolean.
             return (
               <div key={n.href} className="relative group">
                 <NavLink
@@ -502,14 +617,16 @@ export function Sidebar() {
                       : "h-12 w-12 mx-auto justify-center",
                   )}
                 >
-                  {/* Active / hover glass background */}
+                  {/* Active / section-active / hover glass background */}
                   <div
                     className={cn(
                       "absolute inset-0 z-0 rounded-2xl",
                       "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
-                      isActive
+                      selfActive
                         ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-                        : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]",
+                        : childOnPath
+                          ? "bg-primary/10 backdrop-blur-sm"  // soft tint — works on light & dark
+                          : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]",
                     )}
                   />
                   {/* Icon wrapper */}
@@ -527,12 +644,15 @@ export function Sidebar() {
                     <Icon
                       className={cn(
                         "h-5 w-5 transition-colors duration-300 relative z-10",
-                        isActive
+                        // Only flip to white when this row is THE active page.
+                        // section-active (childOnPath) keeps the dark icon so
+                        // the parent label stays legible on light themes.
+                        selfActive
                           ? "text-white"
                           : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
                       style={
-                        !isActive ? { color: undefined } : undefined
+                        !selfActive ? { color: undefined } : undefined
                       }
                     />
                   </div>
@@ -542,7 +662,7 @@ export function Sidebar() {
                       className={cn(
                         "relative z-10 text-sm font-medium whitespace-nowrap ml-3",
                         "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
-                        isActive
+                        selfActive
                           ? "text-white group-hover:text-white"
                           : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
@@ -599,8 +719,18 @@ export function Sidebar() {
                     )}
                   </div>
                 ) : hasChildren ? (
-                  /* Expanded sidebar: children slide in below parent on hover */
-                  <div className="overflow-hidden max-h-0 group-hover:max-h-40 transition-all duration-300 ease-in-out pl-10 pr-2 mt-0.5 space-y-0.5">
+                  /* Expanded sidebar: children slide in below parent on hover.
+                     If a child is the current route, force the section open so
+                     the active sub-item stays visible without hovering. */
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out pr-2 mt-0.5 space-y-0.5",
+                      "pl-7 ml-3 border-l-2 border-white/10",  // vertical guide rail
+                      childOnPath
+                        ? "max-h-40"
+                        : "max-h-0 group-hover:max-h-40",
+                    )}
+                  >
                     {n.children!.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
@@ -609,10 +739,10 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "relative flex items-center rounded-xl h-10 px-3",
+                            "relative flex items-center rounded-xl h-10 px-3 ml-1",
                             "transition-all duration-200",
                             childActive
-                              ? "bg-primary/90 text-white"
+                              ? "bg-primary/90 text-white shadow-md before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:-translate-x-[18px] before:h-5 before:w-0.5 before:bg-primary before:rounded-full"
                               : "hover:bg-white/10 dark:hover:bg-white/5 text-gray-900 dark:text-gray-300",
                           )}
                         >
@@ -629,7 +759,8 @@ export function Sidebar() {
                 ) : null}
               </div>
             );
-          })}
+          });
+          })()}
         </nav>
         {/* User Profile Inline Section */}
         <div className="border-t border-sidebar-border mt-auto">

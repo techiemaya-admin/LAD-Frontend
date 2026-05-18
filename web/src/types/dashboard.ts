@@ -1,5 +1,5 @@
 // Widget types and configuration
-export type WidgetType = 
+export type WidgetType =
   | 'calls-today'
   | 'answer-rate'
   | 'calls-monthly'
@@ -9,13 +9,15 @@ export type WidgetType =
   | 'calendar'
   | 'ai-insights'
   | 'voice-agents'
-  | 'quick-actions';
-export type WidgetCategory = 
+  | 'quick-actions'
+  | 'broadcast-performance';
+export type WidgetCategory =
   | 'analytics'
   | 'voice-agent'
   | 'credits'
   | 'calendar'
-  | 'ai-insights';
+  | 'ai-insights'
+  | 'whatsapp';
 export interface WidgetConfig {
   id: string;
   type: WidgetType;
@@ -165,6 +167,17 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     defaultSize: { w: 4, h: 2 },
     minSize: { w: 3, h: 2 },
   },
+  'broadcast-performance': {
+    id: 'broadcast-performance',
+    type: 'broadcast-performance',
+    title: 'Broadcast Performance',
+    description: 'Read / delivered / sent / failed breakdown per WhatsApp broadcast template',
+    category: 'whatsapp',
+    icon: 'MessageSquare',
+    defaultSize: { w: 12, h: 3 },
+    minSize: { w: 6, h: 3 },
+    maxSize: { w: 12, h: 5 },
+  },
 };
 // Widget categories for the library
 export const WIDGET_CATEGORIES: { id: WidgetCategory; label: string; icon: string }[] = [
@@ -173,17 +186,19 @@ export const WIDGET_CATEGORIES: { id: WidgetCategory; label: string; icon: strin
   { id: 'credits', label: 'Credits & Usage', icon: 'CreditCard' },
   { id: 'calendar', label: 'Calendar & Scheduling', icon: 'Calendar' },
   { id: 'ai-insights', label: 'AI Insights', icon: 'Brain' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: 'MessageSquare' },
 ];
 // Default dashboard layout
 export const DEFAULT_LAYOUT: WidgetLayoutItem[] = [
   { i: 'calls-today-1', x: 0, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
   { i: 'answer-rate-1', x: 4, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
   { i: 'calls-monthly-1', x: 8, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
-  { i: 'calls-chart-1', x: 0, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'voice-agents-1', x: 6, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'credits-overview-1', x: 0, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'latest-calls-1', x: 6, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'calendar-1', x: 0, y: 10, w: 12, h: 5, minW: 4, minH: 4 },
+  { i: 'broadcast-performance-1', x: 0, y: 2, w: 12, h: 3, minW: 6, minH: 3 },
+  { i: 'calls-chart-1', x: 0, y: 5, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'voice-agents-1', x: 6, y: 5, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'credits-overview-1', x: 0, y: 9, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'latest-calls-1', x: 6, y: 9, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'calendar-1', x: 0, y: 13, w: 12, h: 5, minW: 4, minH: 4 },
 ];
 // Helper to extract widget type from layout item id
 export const getWidgetTypeFromId = (id: string): WidgetType | null => {
@@ -196,4 +211,4 @@ export const getWidgetTypeFromId = (id: string): WidgetType | null => {
 // Generate unique widget id
 export const generateWidgetId = (type: WidgetType): string => {
   return `${type}-${Date.now()}`;
-};
+};

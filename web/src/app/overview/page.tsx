@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#000724]">
-      <main className="min-h-screen bg-gray-50 dark:bg-[#0a0e1f] p-4 sm:p-6">
+      <main className="min-h-screen bg-white md:bg-gray-50 dark:bg-[#0a0e1f] p-4 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

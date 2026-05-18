@@ -186,6 +186,21 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: 'dashboard-storage',
+      // Bump this whenever DEFAULT_LAYOUT changes and we need existing users
+      // (who have a persisted layout in localStorage) to pick it up.
+      //
+      // v1: introduced the `broadcast-performance` widget (appended missing
+      //     widget types to the end of user layouts — non-destructive).
+      // v2: hard-reset to DEFAULT_LAYOUT so existing users get the new
+      //     Broadcast Performance widget at its intended slot (y=2, under
+      //     the stat cards) rather than buried at the bottom from the v1
+      //     append. Custom widget reorderings are lost — acceptable trade
+      //     while the dashboard layout is still settling.
+      version: 2,
+      migrate: (persistedState: any, _version: number) => {
+        if (!persistedState) return persistedState;
+        return { ...persistedState, layout: DEFAULT_LAYOUT };
+      },
       partialize: (state) => ({
         userId: state.userId,
         layout: state.layout,

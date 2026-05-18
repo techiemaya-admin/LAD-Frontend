@@ -11,11 +11,13 @@ import {
   clearError,
 } from "@/store/slices/authSlice";
 import authService from "@/services/authService";
+import { useAuth } from "@/contexts/AuthContext";
 import { validateEmail, validatePassword } from "../../utils/validation";
 type RootState = any;
 
 const Login: React.FC = () => {
   const dispatch = useDispatch();
+  const { refreshUser } = useAuth();
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +73,9 @@ const Login: React.FC = () => {
       await authService.login(formData);
       const user = await authService.getCurrentUser();
       dispatch(loginSuccess(user));
+      // AuthContext otherwise stays null until a full page refresh, leaving the
+      // sidebar empty (nav items + display name) on the first post-login render.
+      refreshUser(user as any);
       // Honour redirect_url param (e.g. /tenant/onboard/new for super-admin)
       // Fall back to default dashboard for all other users
       router.push(redirectUrl);

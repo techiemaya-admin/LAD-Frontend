@@ -86,7 +86,7 @@ export function ImportDataDialog() {
           Import Data
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="">
         <DialogHeader>
           <DialogTitle>Import Excel Data</DialogTitle>
           <DialogDescription>
@@ -137,9 +137,6 @@ export function ImportDataDialog() {
         </div>
 
         <DialogFooter className="sm:justify-end">
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={uploading}>
-            Cancel
-          </Button>
           <Button type="button" onClick={handleUpload} disabled={!file || uploading}>
             {uploading ? (
               <>

@@ -53,16 +53,16 @@ interface User {
 }
 
 const PAGE_CAPABILITIES = [
-  { key: 'view_overview', label: 'View Overview' },
-  { key: 'view_conversations', label: 'View Conversations' },
-  { key: 'view_followup', label: 'View Follow-up' },
-  { key: 'view_community_roi', label: 'View Community ROI' },
-  { key: 'view_scraper', label: 'View Scraper' },
-  { key: 'view_make_call', label: 'View Make a Call' },
-  { key: 'view_call_logs', label: 'View Call Logs' },
-  { key: 'view_pipeline', label: 'View Pipeline' },
-  { key: 'view_pricing', label: 'View Pricing' },
-  { key: 'view_settings', label: 'View Settings' },
+  { key: 'view_overview', label: 'Overview' },
+  { key: 'view_conversations', label: 'Conversations' },
+  { key: 'view_followup', label: 'Follow-up' },
+  { key: 'view_community_roi', label: 'Community ROI' },
+  { key: 'view_scraper', label: 'Scraper' },
+  { key: 'view_make_call', label: 'Make a Call' },
+  { key: 'view_call_logs', label: 'Call Logs' },
+  { key: 'view_pipeline', label: 'Pipeline' },
+  { key: 'view_pricing', label: 'Pricing' },
+  { key: 'view_settings', label: 'Settings' },
 ];
 
 const ROLE_OPTIONS = [
@@ -393,7 +393,7 @@ export const TeamManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+                        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                           {PAGE_CAPABILITIES.map(page => {
                             const isChecked = user.capabilities?.includes(page.key);
                             return (
@@ -466,7 +466,7 @@ export const TeamManagement: React.FC = () => {
       {/* Add User Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
-          <DialogHeader>
+          <DialogHeader className="px-8 pt-6">
             <DialogTitle>Add Team Member</DialogTitle>
           </DialogHeader>
 
@@ -558,7 +558,7 @@ export const TeamManagement: React.FC = () => {
                   </button>
 
                   {showCapabilitiesDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-[60] max-h-60 overflow-y-auto p-2">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-[60] max-h-60 overflow-y-auto p-2 custom-scrollbar">
                       {PAGE_CAPABILITIES.map(page => (
                         <label key={page.key} className="flex items-center px-3 py-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors group">
                           <input
@@ -606,7 +606,7 @@ export const TeamManagement: React.FC = () => {
             </div>
           </div>
 
-          <DialogActions>
+          <DialogActions className="px-8 pb-8 pt-4">
             <Button
               onClick={handleAddUser}
               disabled={loading || !newUser.name || !newUser.email || !newUser.password}

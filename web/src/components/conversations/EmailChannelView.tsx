@@ -10,7 +10,7 @@ import {
   Tag, Clock, Building2, AtSign, CheckSquare, Square,
   AlertCircle, Info, MoreVertical, Bold, Italic, Link2,
   Image as ImageIcon, Smile, Star, Archive, CornerUpLeft,
-  PanelRightClose, PanelRightOpen, Hash,
+  PanelRightClose, PanelRightOpen, Hash, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1633,14 +1633,38 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
 
         {/* Contacts section */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Contacts ({contacts.length})
-            </span>
+          <div className="px-4 pt-3 pb-2 flex items-center gap-2 flex-shrink-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search contacts..."
+                value={contactSearch}
+                onChange={e => setContactSearch(e.target.value)}
+                className="h-8 text-xs pl-8 bg-secondary/50 border-none shadow-none"
+              />
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => {
+                if (selectedIds.size > 0) setShowBulkSend(true);
+                else {
+                  // If no selection, maybe just show a hint or open picker for all?
+                  // For now, let's assume it opens the picker.
+                  setShowBulkSend(true);
+                }
+              }}
+              title="Send template"
+            >
+              <LayoutTemplate className="h-4 w-4" />
+            </Button>
+
             {selectionMode && (
               <button
                 onClick={exitSelectionMode}
-                className="text-[11px] text-primary hover:underline"
+                className="text-[10px] text-primary hover:underline font-medium whitespace-nowrap"
               >
                 Cancel
               </button>
@@ -1654,18 +1678,6 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
             </p>
           )}
 
-          {/* Contact search */}
-          <div className="px-3 pb-2 flex-shrink-0">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                value={contactSearch}
-                onChange={e => setContactSearch(e.target.value)}
-                className="h-8 text-xs pl-8"
-              />
-            </div>
-          </div>
 
           {/* Contact list */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">

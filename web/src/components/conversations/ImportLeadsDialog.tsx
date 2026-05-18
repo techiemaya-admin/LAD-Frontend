@@ -216,11 +216,13 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
+    total: number;
     imported: number;
     conversations: number;
     conversationIds?: string[];
-    errors: { name: string; error: string }[];
-    skipped: { name: string; reason: string }[];
+    errors: { name: string; phone?: string; error: string }[];
+    skipped: { name: string; phone?: string; reason: string }[];
+    duplicates: { name: string; phone?: string; reason: string }[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
@@ -664,19 +666,22 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           } else {
             setImportResult({
               success: true,
+              total: validLeads.length,
               imported: data.data.imported ?? validLeads.length,
               conversations: 0,
               errors: (data.data.errors || []).map((e: any) => ({ name: e.name || e.email || 'Contact', error: e.error })),
               skipped: data.data.skipped ? [{ name: `${data.data.skipped} contact(s)`, reason: 'missing name or email' }] : [],
+              duplicates: [],
               conversationIds: [],
             });
           }
         } else {
           if (!runInBackground) {
             setImportResult({
-              success: false, imported: 0, conversations: 0,
+              success: false, total: validLeads.length, imported: 0, conversations: 0,
               errors: [{ name: 'Import', error: data.error || data.detail || 'Unknown error' }],
               skipped: [],
+              duplicates: [],
             });
           }
         }
@@ -712,28 +717,32 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         } else {
           setImportResult({
             success: true,
+            total: data.data.total ?? validLeads.length,
             imported: data.data.imported,
             conversations: data.data.conversations_created,
             errors: data.data.errors || [],
             skipped: data.data.skipped || [],
+            duplicates: data.data.duplicates || [],
             conversationIds: data.data.conversation_ids || [],
           });
         }
       } else {
         if (!runInBackground) {
           setImportResult({
-            success: false, imported: 0, conversations: 0,
+            success: false, total: validLeads.length, imported: 0, conversations: 0,
             errors: [{ name: 'Import', error: data.error || 'Unknown error' }],
             skipped: [],
+            duplicates: [],
           });
         }
       }
     } catch (err) {
       if (!runInBackground) {
         setImportResult({
-          success: false, imported: 0, conversations: 0,
+          success: false, total: validLeads.length, imported: 0, conversations: 0,
           errors: [{ name: 'Import', error: String(err) }],
           skipped: [],
+          duplicates: [],
         });
       }
     } finally {
@@ -1062,36 +1071,76 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
                   <Check className="h-4 w-4 mt-0.5 shrink-0" />
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-2 min-w-0 w-full">
                     <span className="block">
-                      Imported <strong>{importResult.imported}</strong> lead{importResult.imported !== 1 ? 's' : ''},{' '}
-                      created <strong>{importResult.conversations}</strong> conversation{importResult.conversations !== 1 ? 's' : ''}
+                      <strong>{importResult.imported}</strong> of <strong>{importResult.total}</strong> lead{importResult.total !== 1 ? 's' : ''} imported
+                      {importResult.conversations > 0 && (
+                        <> — <strong>{importResult.conversations}</strong> new conversation{importResult.conversations !== 1 ? 's' : ''} created</>
+                      )}
+                      {importResult.duplicates.length > 0 && (
+                        <>, <strong>{importResult.duplicates.length}</strong> linked to existing</>
+                      )}
                     </span>
-                    {importResult.skipped.length > 0 && (
-                      <details className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                        <summary className="cursor-pointer font-medium select-none">
-                          ⚠ {importResult.skipped.length} record{importResult.skipped.length !== 1 ? 's' : ''} skipped (no phone number)
-                        </summary>
-                        <ul className="mt-1.5 space-y-0.5 max-h-28 overflow-y-auto">
-                          {importResult.skipped.map((s, i) => (
-                            <li key={i} className="flex items-start gap-1.5">
-                              <span className="shrink-0 text-amber-500">·</span>
-                              <span><strong>{s.name}</strong> — {s.reason}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
+
+                    {(importResult.skipped.length > 0 || importResult.errors.length > 0) && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                        <p className="font-semibold mb-1.5">
+                          {importResult.skipped.length + importResult.errors.length} number{(importResult.skipped.length + importResult.errors.length) !== 1 ? 's were' : ' was'} excluded
+                        </p>
+                        {importResult.skipped.length > 0 && (
+                          <details open className="mb-1">
+                            <summary className="cursor-pointer font-medium select-none">
+                              ⚠ {importResult.skipped.length} skipped (validation)
+                            </summary>
+                            <ul className="mt-1 ml-3 space-y-0.5 max-h-32 overflow-y-auto">
+                              {importResult.skipped.map((s, i) => (
+                                <li key={i} className="flex items-start gap-1.5">
+                                  <span className="shrink-0 text-amber-500">·</span>
+                                  <span className="break-all">
+                                    <strong>{s.name}</strong>
+                                    {s.phone ? <span className="text-amber-700/80"> ({s.phone})</span> : null}
+                                    {' — '}{s.reason}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                        {importResult.errors.length > 0 && (
+                          <details open className="text-red-700">
+                            <summary className="cursor-pointer font-medium select-none">
+                              ✕ {importResult.errors.length} failed (error)
+                            </summary>
+                            <ul className="mt-1 ml-3 space-y-0.5 max-h-32 overflow-y-auto">
+                              {importResult.errors.map((e, i) => (
+                                <li key={i} className="flex items-start gap-1.5">
+                                  <span className="shrink-0 text-red-400">·</span>
+                                  <span className="break-all">
+                                    <strong>{e.name}</strong>
+                                    {e.phone ? <span className="text-red-600/80"> ({e.phone})</span> : null}
+                                    {' — '}{e.error}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
                     )}
-                    {importResult.errors.length > 0 && (
-                      <details className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+
+                    {importResult.duplicates.length > 0 && (
+                      <details className="rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-800">
                         <summary className="cursor-pointer font-medium select-none">
-                          ✕ {importResult.errors.length} record{importResult.errors.length !== 1 ? 's' : ''} failed
+                          ℹ {importResult.duplicates.length} already existed — linked to existing conversation{importResult.duplicates.length !== 1 ? 's' : ''}
                         </summary>
-                        <ul className="mt-1.5 space-y-0.5 max-h-28 overflow-y-auto">
-                          {importResult.errors.map((e, i) => (
+                        <ul className="mt-1 ml-3 space-y-0.5 max-h-32 overflow-y-auto">
+                          {importResult.duplicates.map((d, i) => (
                             <li key={i} className="flex items-start gap-1.5">
-                              <span className="shrink-0 text-red-400">·</span>
-                              <span><strong>{e.name}</strong> — {e.error}</span>
+                              <span className="shrink-0 text-blue-500">·</span>
+                              <span className="break-all">
+                                <strong>{d.name}</strong>
+                                {d.phone ? <span className="text-blue-700/80"> ({d.phone})</span> : null}
+                              </span>
                             </li>
                           ))}
                         </ul>

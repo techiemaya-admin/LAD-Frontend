@@ -130,4 +130,4 @@ export default function Screen0Greeting() {
       )}
     </div>
   );
-}
+}
