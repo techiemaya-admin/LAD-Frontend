@@ -78,7 +78,7 @@ function TextWithLinks({ text, className }: { text: string; className?: string }
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline break-all"
+              className="text-[#68a4f6] hover:underline break-all"
             >
               {url}
             </a>
@@ -400,10 +400,26 @@ export const MessageBubble = memo(function MessageBubble({
       {/* ── Message bubble ── */}
       <div
         className={cn(
-          'max-w-[72%] px-3 py-[6px] shadow-sm',
+          'max-w-[72%] px-3 py-[6px] shadow-sm flex flex-col',
           isOutgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming'
         )}
       >
+        {/* Reply Block */}
+        {(message as any).quotedMessage && (
+          <div
+            className={cn(
+              "mb-1.5 p-2 rounded-md border-l-[3px] border-[#68a4f6] text-[13px] relative overflow-hidden flex flex-col cursor-pointer",
+              isOutgoing ? "bg-[#1e3d2e]" : "bg-[#242626]"
+            )}
+          >
+            <span className="font-semibold text-[#68a4f6] mb-0.5">
+              {(message as any).quotedMessage.sender || 'You'}
+            </span>
+            <span className="text-[#a4a5a5] line-clamp-3 wa-msg-text">
+              {(message as any).quotedMessage.content}
+            </span>
+          </div>
+        )}
         {/* Sender label for human-agent messages */}
         {isHumanAgent && (
           <p className="text-[10px] font-semibold text-violet-400 mb-0.5 uppercase tracking-wide">
@@ -447,8 +463,7 @@ export const MessageBubble = memo(function MessageBubble({
         >
           <span
             className={cn(
-              'wa-msg-time',
-              isOutgoing ? 'text-white/60' : 'text-[#667781]'
+             'wa-msg-time text-[#a4a5a5]'
             )}
           >
             {format(timestamp, 'h:mm a')}
@@ -458,10 +473,10 @@ export const MessageBubble = memo(function MessageBubble({
               className={cn(
                 'h-3 w-3',
                 status === 'read'
-                  ? 'text-blue-300'
+                   ? 'text-[#68a4f6]'
                   : status === 'failed'
                   ? 'text-red-400'
-                  : 'text-white/50'
+                  : 'text-[#a4a5a5]'
               )}
             />
           )}
