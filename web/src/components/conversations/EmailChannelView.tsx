@@ -66,8 +66,9 @@ interface EmailChannelViewProps {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // const API            = 'https://lad-backend-develop-160078175457.us-central1.run.app/api/email-conversations';
-const API = 'http://localhost:3001/api/email-conversations';
-const TEMPLATES_API = 'http://localhost:3001/api/email-templates';
+const url = process.env.NEXT_PUBLIC_BACKEND_SETTINGS_URL || process.env.NEXT_PUBLIC_BACKEND_URL
+const API = url + '/api/email-conversations';
+const TEMPLATES_API = url + '/api/email-templates';
 
 const PROVIDER_COLOR: Record<EmailProvider, string> = {
     gmail: '#EA4335',

@@ -27,6 +27,7 @@ class ApiClient {
 
     // Server-side resolution is environment-driven and avoids hardcoded deployment URLs.
     const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_SETTINGS_URL ||
       process.env.BACKEND_INTERNAL_URL ||
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||

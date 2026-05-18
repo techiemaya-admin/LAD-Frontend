@@ -11,6 +11,7 @@
 
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '../../shared/apiClient';
+import { apiClientEmail } from '../email-accounts/api-client';
 import type {
   EmailStatusResponse,
   ConnectedSender,
@@ -38,8 +39,8 @@ export const emailAccountKeys = {
 
 /** Start Google OAuth flow — returns the consent URL */
 export async function startGoogleOAuth(frontendId = 'settings'): Promise<OAuthStartResponse> {
-  const res = await apiClient.post<OAuthStartResponse>(
-    '/api/social-integration/email/google/start',
+  const res = await apiClientEmail.post<OAuthStartResponse>(
+    `/api/social-integration/email/google/start`,
     { frontend_id: frontendId }
   );
   return res.data;
@@ -47,8 +48,9 @@ export async function startGoogleOAuth(frontendId = 'settings'): Promise<OAuthSt
 
 /** Get Google connection status for the current user */
 export async function getGoogleStatus(): Promise<EmailStatusResponse> {
-  const res = await apiClient.post<EmailStatusResponse>(
-    '/api/social-integration/email/google/status',
+
+  const res = await apiClientEmail.post<EmailStatusResponse>(
+    `/api/social-integration/email/google/status`,
     {}
   );
   return res.data;
@@ -56,7 +58,7 @@ export async function getGoogleStatus(): Promise<EmailStatusResponse> {
 
 /** Disconnect Google account */
 export async function disconnectGoogle(): Promise<{ success: boolean; message: string }> {
-  const res = await apiClient.post('/api/social-integration/email/google/disconnect', {});
+  const res = await apiClientEmail.post(`/api/social-integration/email/google/disconnect`, {});
   return res.data;
 }
 

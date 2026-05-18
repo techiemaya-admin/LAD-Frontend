@@ -8,5 +8,5 @@ export const getApiBaseUrl = (): string => {
 
 
 export const getApiBaseUrlForLocal = (): string => {
-  return 'http://localhost:3001';
+  return process.env.NEXT_PUBLIC_BACKEND_SETTINGS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
 };

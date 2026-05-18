@@ -229,7 +229,14 @@ export const IntegrationsSettings: React.FC = () => {
       // Google
       setStatus('google', 'loading');
       try {
-        const res = await fetchWithTenant('/api/social-integration/email/google/status', { method: 'POST' });
+        const backendUrl =
+            process.env.NEXT_PUBLIC_BACKEND_SETTINGS_URL ||
+            process.env.BACKEND_INTERNAL_URL ||
+            process.env.BACKEND_URL ||
+            process.env.NEXT_PUBLIC_BACKEND_URL ||
+            process.env.NEXT_PUBLIC_API_URL;
+
+        const res = await fetchWithTenant(`${backendUrl}/api/social-integration/email/google/status`, { method: 'POST' });
         if (!res.ok) { setStatus('google', 'disconnected'); }
         else {
           const data = await res.json();

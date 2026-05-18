@@ -523,7 +523,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
       .catch(() => false),
 
     // Gmail + Outlook + Custom SMTP (single status endpoint)
-    fetchWithTenant('/api/email-conversations/status')
+    fetchWithTenant(`${process.env.NEXT_PUBLIC_BACKEND_SETTINGS_URL}/api/email-conversations/status`)
       .then(async (res) => {
         const empty = { gmail: false, gmailEmail: null, outlook: false, outlookEmail: null, custom: false, customEmail: null };
         if (!res.ok) return empty;
