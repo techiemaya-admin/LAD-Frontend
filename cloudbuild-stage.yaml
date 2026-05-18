@@ -119,7 +119,12 @@ substitutions:
   _API_URL: 'https://lad-backend-stage-344049867257.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-stage-344049867257.us-central1.run.app'
   _CONVERSATION_SERVICE_URL: 'https://bni-conversation-service-stage-344049867257.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-stage-344049867257.us-central1.run.app'
+  # NOTE: lad-waba-comms-stage runs in asia-south1 (not us-central1). The
+  # us-central1 service (lad-waba-comms-stage) is stale — last revision was
+  # deployed 2026-05-12 and lacks newer endpoints like /api/broadcasts/*,
+  # which causes 404s in the deployed frontend's WhatsApp proxy. The
+  # asia-south1 service (lad-waba-comms-stage-asia) is the live deployment.
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-stage-asia-344049867257.asia-south1.run.app'
   # Voice playground worker (Vapi/voice-agent — currently using dev environment)
   _PLAYGROUND_WORKER_URL: 'https://voag-dev-playground-worker-160078175457.asia-south1.run.app'
   _PLAYGROUND_TENANT_ID: '926070b5-189b-4682-9279-ea10ca090b84'
