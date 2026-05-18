@@ -57,7 +57,18 @@ class CommunityROIApiClient {
     // e.g. new URL('/foo', 'http://host/api/community-roi') → http://host/foo  (WRONG)
     // Fix: strip leading slash from path, ensure base ends with '/'
     const normalizedBase = this.baseURL.endsWith('/') ? this.baseURL : `${this.baseURL}/`;
-    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+
+    // Dedupe redundant `/api/community-roi` prefix on the path. The baseURL
+    // already includes that prefix, but some call sites also hard-code it
+    // via api.ts's API_PREFIX. Without this strip the URL becomes
+    // `/api/community-roi/api/community-roi/…` → 404/500.
+    if (normalizedPath.startsWith('api/community-roi/')) {
+      normalizedPath = normalizedPath.slice('api/community-roi/'.length);
+    } else if (normalizedPath === 'api/community-roi') {
+      normalizedPath = '';
+    }
+
     const url = new URL(normalizedPath, normalizedBase);
 
     // Add query parameters

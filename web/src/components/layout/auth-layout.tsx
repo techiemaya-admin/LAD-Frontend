@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
 import { Sidebar } from "../sidebar";
+import { HeaderLoader } from "./HeaderLoader";
 export default function AuthLayout({
   children,
 }: {
@@ -13,6 +14,7 @@ export default function AuthLayout({
   return (
     <div className="flex h-screen bg-white md:bg-background">
       <Sidebar />
+      <HeaderLoader />
       <main className="flex-1 overflow-y-auto overflow-x-hidden ml-0 md:ml-16 pt-14 md:pt-0">
         {children}
       </main>

@@ -364,23 +364,33 @@ export default function NewHeroSection() {
               </motion.button>
             </div>
 
-            {/* Stats Row */}
-            <div className="flex flex-row justify-between items-start gap-2 sm:gap-6 mt-8">
-              <div className="flex flex-col items-center text-center flex-1">
-                <Zap className="w-5 h-5 text-primary mb-2" />
-                <p className="font-bold text-foreground text-lg md:text-xl">10x</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">Faster Closures</p>
-              </div>
-              <div className="flex flex-col items-center text-center flex-1">
-                <Target className="w-5 h-5 text-primary mb-2" />
-                <p className="font-bold text-foreground text-lg md:text-xl">95%</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">Success Rate</p>
-              </div>
-              <div className="flex flex-col items-center text-center flex-1">
-                <Clock className="w-5 h-5 text-primary mb-2" />
-                <p className="font-bold text-foreground text-lg md:text-xl">24/7</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-tight font-semibold">AI Availability</p>
-              </div>
+            {/* Stats */}
+            <div className="pt-6 mt-2 border-t border-border/60 grid grid-cols-3 gap-4 sm:gap-6">
+              {[
+                { Icon: Zap, value: '10x', label: 'Faster Closures' },
+                { Icon: Target, value: '95%', label: 'Success Rate' },
+                { Icon: Clock, value: '24/7', label: 'AI Availability' },
+              ].map(({ Icon, value, label }, i) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1, duration: 0.5, ease: 'easeOut' }}
+                  className="group flex flex-col items-start gap-3"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15 transition-all duration-300 group-hover:bg-primary/15 group-hover:ring-primary/30 group-hover:scale-105">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none bg-gradient-to-br from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                      {value}
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wide">
+                      {label}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 
