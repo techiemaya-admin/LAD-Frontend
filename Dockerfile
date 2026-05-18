@@ -12,7 +12,7 @@ COPY web/package*.json ./web/
 COPY sdk/package*.json ./sdk/
 
 # Install dependencies using npm workspaces (resolves SDK as workspace package)
-RUN npm install --ignore-scripts
+RUN npm ci --ignore-scripts
 
 # Rebuild the source code only when needed
 FROM base AS builder
