@@ -27,7 +27,7 @@ import {
 import { useListMembers } from '@lad/frontend-features/community-roi'
 import SimpleAnalyticsCards from '@/features/community-roi/components/SimpleAnalyticsCards'
 import RelationshipHeatmap, { RelationshipHeatmapWithRecommendations } from '@/features/community-roi/components/RelationshipHeatmap'
-import { BroadcastPerformance } from '@/features/community-roi/components/BroadcastPerformance'
+import { BroadcastPerformanceContainer } from '@/features/community-roi/components/BroadcastPerformanceContainer'
 import { AuditLogPanel } from '@/features/community-roi/components/AuditLogPanel'
 import MemberProfileView from './components/MemberProfileView'
 import LeaderboardPanel from './components/LeaderboardPanel'
@@ -329,7 +329,7 @@ export default function CommunityROIDashboard() {
               </div>
 
               {/* Broadcast Performance — per-template delivery & read-rate */}
-              <BroadcastPerformance />
+              <BroadcastPerformanceContainer />
 
               {/* Unified Audit Log — who changed what across the BNI flow */}
               <AuditLogPanel />
