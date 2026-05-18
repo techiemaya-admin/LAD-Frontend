@@ -223,7 +223,7 @@ export default function PlaygroundConfigView({
 
   /* ── BUILDER SCENARIOS (Demo Flow) ── */
   if (step === "builder-text") {
-    return <AgentBuilderTextInput onClose={onClose} onNext={advanceBuilderStep} question={builderData?.question || "Provide input"} />;
+    return <AgentBuilderTextInput onClose={onClose} onNext={advanceBuilderStep} question={builderData?.question || "Provide input"} description={builderData?.description || ""} />;
   }
 
   if (step === "builder-mcq-few") {
@@ -231,6 +231,7 @@ export default function PlaygroundConfigView({
       onClose={onClose}
       onNext={advanceBuilderStep}
       question={builderData?.question || ""}
+      description={builderData?.description || ""}
       options={builderData?.options || []}
     />;
   }
@@ -240,6 +241,7 @@ export default function PlaygroundConfigView({
       onClose={onClose}
       onNext={advanceBuilderStep}
       question={builderData?.question || ""}
+      description={builderData?.description || ""}
       options={builderData?.options || []}
     />;
   }
@@ -249,6 +251,7 @@ export default function PlaygroundConfigView({
       onClose={onClose}
       onNext={advanceBuilderStep}
       question={builderData?.question || ""}
+      description={builderData?.description || ""}
       options={builderData?.options || []}
     />;
   }

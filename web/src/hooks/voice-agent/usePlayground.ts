@@ -469,11 +469,18 @@ export function usePlayground({
              htmlContent: data.htmlContent,
              blocks: data.blocks
           });
-      }).catch(err => console.error("Failed to init builder session:", err));
-
-      demoTimerRef.current = setTimeout(() => {
-         setStep((prev) => prev === "guided-journey" ? "builder-text" : prev);
-      }, 7000); // Wait 7 seconds on the transition animation, then advance.
+          
+          if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
+          demoTimerRef.current = setTimeout(() => {
+             setStep(data.step as PlaygroundStep);
+          }, 1000);
+      }).catch(err => {
+          console.error("Failed to init builder session:", err);
+          if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
+          demoTimerRef.current = setTimeout(() => {
+             setStep((prev) => prev === "guided-journey" ? "builder-text" : prev);
+          }, 1000);
+      });
     },
     advanceBuilderStep: async (userInput?: string | string[], action?: string) => {
        if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
@@ -515,10 +522,11 @@ export function usePlayground({
               htmlContent: data.htmlContent,
               blocks: data.blocks
            });
+           console.log("[Playground] Builder data set with question:", data.question, "description:", data.description, "step:", data.step);
 
            demoTimerRef.current = setTimeout(() => {
                setStep(data.step as PlaygroundStep);
-           }, 7000);
+           }, 1000);
 
        } catch (err) {
            console.error("Builder fetch failed:", err);

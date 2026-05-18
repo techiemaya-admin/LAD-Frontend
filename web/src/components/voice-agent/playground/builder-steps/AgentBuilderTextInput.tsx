@@ -4,11 +4,13 @@ import { X, Sparkles } from "lucide-react";
 
 export function AgentBuilderTextInput({
   question = "Enter your business's name.",
+  description = "",
   showSkip = true,
   onClose,
   onNext,
 }: {
   question?: string;
+  description?: string;
   showSkip?: boolean;
   onClose?: () => void;
   onNext?: (val?: string, action?: string) => void;
@@ -37,6 +39,11 @@ export function AgentBuilderTextInput({
          <h2 className="text-xl md:text-2xl font-bold text-[#0b1957] text-center leading-snug">
             {question}
          </h2>
+         {description && (
+           <p className="mt-4 text-sm text-slate-500 text-center leading-relaxed">
+             {description}
+           </p>
+         )}
       </div>
 
       <div className="w-full flex flex-col mt-auto pb-4 pt-2 bg-gradient-to-t from-white via-white to-transparent relative z-20">
