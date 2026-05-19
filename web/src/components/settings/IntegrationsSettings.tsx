@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, X } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
@@ -25,6 +26,10 @@ interface IntegrationCard {
   iconBg: string;
   category: string;
   comingSoon?: boolean;
+  // When set, clicking the card navigates to this URL instead of
+  // setActiveView(id). Used for integrations that own a dedicated page
+  // (e.g. Instagram has its own /instagram management surface).
+  route?: string;
 }
 
 const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'whatsapp-personal', 'google', 'microsoft']);
@@ -57,6 +62,40 @@ const INTEGRATIONS: IntegrationCard[] = [
     ),
     iconBg: 'bg-green-50',
     category: 'Messaging',
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    description: 'Connect Instagram for AI-powered DMs, comments, and lead capture.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <defs>
+          <radialGradient id="ig-grad" cx="0.3" cy="1.1" r="1">
+            <stop offset="0" stopColor="#fdf497" />
+            <stop offset="0.05" stopColor="#fdf497" />
+            <stop offset="0.45" stopColor="#fd5949" />
+            <stop offset="0.6" stopColor="#d6249f" />
+            <stop offset="0.9" stopColor="#285AEB" />
+          </radialGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ig-grad)" />
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.6" />
+        <circle cx="17.6" cy="6.4" r="1.1" fill="#fff" />
+      </svg>
+    ),
+    iconBg: 'bg-pink-50',
+    category: 'Social',
+    // Land on the Accounts tab — same parity as clicking the WhatsApp tile
+    // which opens the tenant onboarding form right away.
+    route: '/instagram/settings?tab=accounts',
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
+    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
+    iconBg: 'bg-blue-50',
+    category: 'Social',
   },
   {
     id: 'google',
@@ -95,14 +134,6 @@ const INTEGRATIONS: IntegrationCard[] = [
     icon: <Server className="h-6 w-6 text-emerald-600" />,
     iconBg: 'bg-emerald-50',
     category: 'Email & Calendar',
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
-    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
-    iconBg: 'bg-blue-50',
-    category: 'Social',
   },
   {
     id: 'gohighlevel',
@@ -156,6 +187,7 @@ const INTEGRATIONS: IntegrationCard[] = [
 type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
+  const router = useRouter();
   const { tenantId } = useTenant();
   const { data: creditsData } = useCreditsBalance();
   const availableCredits = creditsData?.availableBalance ?? creditsData?.balance ?? null;
@@ -247,6 +279,23 @@ export const IntegrationsSettings: React.FC = () => {
           setStatus('microsoft', data?.connected ? 'connected' : 'disconnected');
         }
       } catch { setStatus('microsoft', 'disconnected'); }
+
+      // Instagram — hits the standalone LAD-Instagram-Comms service via
+      // the Next.js proxy. "Connected" = at least one active (non-deleted)
+      // account row, regardless of provider (meta or unipile).
+      setStatus('instagram', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/instagram-conversations/accounts');
+        if (!res.ok) { setStatus('instagram', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+          const connected = accounts.some(
+            (a: any) => (a.status ?? 'active') !== 'inactive' && !a.is_deleted,
+          );
+          setStatus('instagram', connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('instagram', 'disconnected'); }
 
       // LinkedIn
       setStatus('linkedin', 'loading');
@@ -597,7 +646,12 @@ export const IntegrationsSettings: React.FC = () => {
                       : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
                   }`}
                   onClick={() => {
-                    if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
+                    if (integration.comingSoon || isLocked) return;
+                    if (integration.route) {
+                      router.push(integration.route);
+                    } else {
+                      setActiveView(integration.id);
+                    }
                   }}
                 >
                   {integration.comingSoon && (

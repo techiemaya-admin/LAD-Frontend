@@ -113,6 +113,10 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+  // Optional intent mapping — when set, the bot's intent classifier will
+  // auto-apply this label on inbound messages classified as that intent.
+  // '' means "manual label only — never auto-applied".
+  const [newLabelIntent, setNewLabelIntent] = useState<'' | 'book' | 'cancel' | 'reschedule' | 'info'>('');
 
   // Business profile state
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
@@ -279,18 +283,31 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
+    // metadata is JSONB on the server. We only set `intent` when the
+    // operator picked one — leaving it absent (not "") keeps the row
+    // free of an empty-string match condition the auto-classifier
+    // would otherwise pick up.
+    const metadata: Record<string, string> = {};
+    if (newLabelIntent) {
+      metadata.intent = newLabelIntent;
+    }
     try {
       const res = await fetchWithTenant(`${LABELS_API}?channel=${backendChannel}`, {
         method: 'POST',
-        body: JSON.stringify({ name: newLabelName.trim(), color: newLabelColor }),
+        body: JSON.stringify({
+          name: newLabelName.trim(),
+          color: newLabelColor,
+          metadata,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setAllLabels((prev) => [...prev, data.data]);
         setNewLabelName('');
+        setNewLabelIntent('');
       }
     } catch {}
-  }, [newLabelName, newLabelColor, backendChannel]);
+  }, [newLabelName, newLabelColor, newLabelIntent, backendChannel]);
 
   // ── Note actions ──────────────────────────────────────────────
 
@@ -459,6 +476,28 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   <Button size="sm" className="h-7 text-xs px-2" onClick={createLabel}>
                     Add
                   </Button>
+                </div>
+                {/* Optional: tie this label to what the AI hears from the
+                    customer. When the AI detects the chosen request type
+                    on any inbound message, this label is added to the
+                    conversation automatically. Leave on "Manual only"
+                    for labels operators apply by hand. */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    Auto-apply when AI detects:
+                  </span>
+                  <select
+                    value={newLabelIntent}
+                    onChange={(e) => setNewLabelIntent(e.target.value as typeof newLabelIntent)}
+                    className="h-7 text-xs flex-1 rounded border border-input bg-background px-2"
+                    title="Whenever the AI detects the chosen request type in an inbound message, this label is automatically added to the conversation."
+                  >
+                    <option value="">Manual only (no auto-apply)</option>
+                    <option value="book">Booking request</option>
+                    <option value="cancel">Cancellation request</option>
+                    <option value="reschedule">Reschedule request</option>
+                    <option value="info">Question or info inquiry</option>
+                  </select>
                 </div>
               </div>
             )}
