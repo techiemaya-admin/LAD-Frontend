@@ -40,23 +40,23 @@ export const InstagramAutomations: React.FC = () => {
   }, [tab]);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <header className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Instagram Automations</h1>
-          <p className="mt-1 text-sm text-white/60">
+          <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">
             ManyChat-parity automations — trigger rules, multi-step flows, FAQ answers, coupon distribution, lead magnet delivery.
           </p>
         </header>
 
-        <nav className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-white/5 p-1 sm:grid-cols-5">
+        <nav className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-1 sm:grid-cols-5">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
-                  active ? 'bg-white text-neutral-900' : 'text-white/70 hover:bg-white/5'
+                  active ? 'bg-white text-neutral-900' : 'text-neutral-700 dark:text-white/70 hover:bg-neutral-100 dark:hover:bg-white/5'
                 }`}>
                 <Icon className="h-4 w-4" /> {t.label}
               </button>
@@ -64,7 +64,7 @@ export const InstagramAutomations: React.FC = () => {
           })}
         </nav>
 
-        <p className="mb-4 text-sm text-white/50">
+        <p className="mb-4 text-sm text-neutral-500 dark:text-white/50">
           {TABS.find((t) => t.id === tab)?.blurb}
         </p>
 
@@ -87,24 +87,24 @@ const ErrorBanner: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const Loader: React.FC = () => (
-  <div className="flex items-center gap-2 py-6 text-sm text-white/60">
+  <div className="flex items-center gap-2 py-6 text-sm text-neutral-600 dark:text-white/60">
     <Loader2 className="h-4 w-4 animate-spin" /> Loading…
   </div>
 );
 
 const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="rounded-2xl border border-white/10 bg-neutral-900 p-6">
+  <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-neutral-900 p-6">
     <h2 className="mb-5 text-xl font-semibold">{title}</h2>
     {children}
   </div>
 );
 
 const inputClass =
-  'w-full rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white placeholder-white/30 outline-none focus:border-white/30';
+  'w-full rounded-md border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 px-2 py-1.5 text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-white/30 outline-none focus:border-neutral-400 dark:focus:border-white/30';
 
 const Field: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({ label, className, children }) => (
   <label className={`block ${className || ''}`}>
-    <div className="mb-1 text-xs text-white/60">{label}</div>
+    <div className="mb-1 text-xs text-neutral-600 dark:text-white/60">{label}</div>
     {children}
   </label>
 );
@@ -179,7 +179,7 @@ const AutomationsPanel: React.FC = () => {
       {showCreate && <AutomationForm onCancel={() => setShowCreate(false)} onSubmit={onCreate} />}
       <div className="space-y-3">
         {items.map((a) => (
-          <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={a.id} className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -187,21 +187,21 @@ const AutomationsPanel: React.FC = () => {
                   <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-xs text-violet-200">{a.trigger_type}</span>
                   <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-200">{a.action_type}</span>
                 </div>
-                <div className="mt-1 text-xs text-white/50">
+                <div className="mt-1 text-xs text-neutral-500 dark:text-white/50">
                   Fired {a.triggered_count || 0}× · priority {a.priority}
                 </div>
-                <details className="mt-2 text-xs text-white/60">
+                <details className="mt-2 text-xs text-neutral-600 dark:text-white/60">
                   <summary className="cursor-pointer">trigger_config</summary>
-                  <pre className="mt-1 overflow-auto rounded bg-black/40 p-2 text-[11px]">{JSON.stringify(a.trigger_config, null, 2)}</pre>
+                  <pre className="mt-1 overflow-auto rounded bg-neutral-100 dark:bg-black/40 p-2 text-[11px]">{JSON.stringify(a.trigger_config, null, 2)}</pre>
                 </details>
-                <details className="mt-1 text-xs text-white/60">
+                <details className="mt-1 text-xs text-neutral-600 dark:text-white/60">
                   <summary className="cursor-pointer">action_config</summary>
-                  <pre className="mt-1 overflow-auto rounded bg-black/40 p-2 text-[11px]">{JSON.stringify(a.action_config, null, 2)}</pre>
+                  <pre className="mt-1 overflow-auto rounded bg-neutral-100 dark:bg-black/40 p-2 text-[11px]">{JSON.stringify(a.action_config, null, 2)}</pre>
                 </details>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Toggle checked={a.is_active} onChange={(v) => onToggle(a.id, v)} />
-                <button onClick={() => onDelete(a.id)} className="rounded p-1.5 text-white/40 hover:bg-white/5 hover:text-red-300">
+                <button onClick={() => onDelete(a.id)} className="rounded p-1.5 text-neutral-400 dark:text-white/40 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-red-300">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -236,7 +236,7 @@ const AutomationForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Pro
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="mb-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
       <h4 className="mb-3 text-sm font-medium">New automation</h4>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></Field>
@@ -256,7 +256,7 @@ const AutomationForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Pro
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md border border-white/20 px-3 py-1.5 text-sm">Cancel</button>
+        <button onClick={onCancel} className="rounded-md border border-neutral-300 dark:border-white/20 px-3 py-1.5 text-sm">Cancel</button>
         <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-50">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save
         </button>
@@ -297,26 +297,26 @@ const FlowsPanel: React.FC = () => {
       {showCreate && <FlowForm onCancel={() => setShowCreate(false)} onSubmit={onCreate} />}
       <div className="space-y-3">
         {items.map((f) => (
-          <div key={f.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={f.id} className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="text-base font-medium">{f.name}</h4>
-                {f.description && <p className="mt-1 text-sm text-white/60">{f.description}</p>}
-                <div className="mt-1 text-xs text-white/50">
+                {f.description && <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">{f.description}</p>}
+                <div className="mt-1 text-xs text-neutral-500 dark:text-white/50">
                   {(f.nodes || []).length} nodes · start: {f.start_node_id || '—'}
                 </div>
-                <details className="mt-2 text-xs text-white/60">
+                <details className="mt-2 text-xs text-neutral-600 dark:text-white/60">
                   <summary className="cursor-pointer">nodes</summary>
-                  <pre className="mt-1 overflow-auto rounded bg-black/40 p-2 text-[11px]">{JSON.stringify(f.nodes, null, 2)}</pre>
+                  <pre className="mt-1 overflow-auto rounded bg-neutral-100 dark:bg-black/40 p-2 text-[11px]">{JSON.stringify(f.nodes, null, 2)}</pre>
                 </details>
-                <details className="mt-1 text-xs text-white/60">
+                <details className="mt-1 text-xs text-neutral-600 dark:text-white/60">
                   <summary className="cursor-pointer">edges</summary>
-                  <pre className="mt-1 overflow-auto rounded bg-black/40 p-2 text-[11px]">{JSON.stringify(f.edges, null, 2)}</pre>
+                  <pre className="mt-1 overflow-auto rounded bg-neutral-100 dark:bg-black/40 p-2 text-[11px]">{JSON.stringify(f.edges, null, 2)}</pre>
                 </details>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Toggle checked={f.is_active} onChange={(v) => onToggle(f.id, v)} />
-                <button onClick={() => onDelete(f.id)} className="rounded p-1.5 text-white/40 hover:bg-white/5 hover:text-red-300">
+                <button onClick={() => onDelete(f.id)} className="rounded p-1.5 text-neutral-400 dark:text-white/40 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-red-300">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -353,7 +353,7 @@ const FlowForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise<v
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="mb-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
       <h4 className="mb-3 text-sm font-medium">New flow</h4>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></Field>
@@ -364,7 +364,7 @@ const FlowForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise<v
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md border border-white/20 px-3 py-1.5 text-sm">Cancel</button>
+        <button onClick={onCancel} className="rounded-md border border-neutral-300 dark:border-white/20 px-3 py-1.5 text-sm">Cancel</button>
         <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-50">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save flow
         </button>
@@ -404,23 +404,23 @@ const FaqPanel: React.FC = () => {
       {showCreate && <FaqForm onCancel={() => setShowCreate(false)} onSubmit={onCreate} />}
       <div className="space-y-3">
         {items.map((e) => (
-          <div key={e.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={e.id} className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h4 className="text-base font-medium">{e.question}</h4>
-                <p className="mt-1 text-sm text-white/70">{e.answer}</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-white/70">{e.answer}</p>
                 {Array.isArray(e.keywords) && e.keywords.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {e.keywords.map((k: string) => (
-                      <span key={k} className="rounded bg-white/10 px-1.5 py-0.5 text-[11px]">{k}</span>
+                      <span key={k} className="rounded bg-neutral-200 dark:bg-white/10 px-1.5 py-0.5 text-[11px]">{k}</span>
                     ))}
                   </div>
                 )}
-                <div className="mt-2 text-xs text-white/50">Served {e.use_count}×</div>
+                <div className="mt-2 text-xs text-neutral-500 dark:text-white/50">Served {e.use_count}×</div>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Toggle checked={e.is_active} onChange={(v) => onToggle(e.id, v)} />
-                <button onClick={() => onDelete(e.id)} className="rounded p-1.5 text-white/40 hover:bg-white/5 hover:text-red-300">
+                <button onClick={() => onDelete(e.id)} className="rounded p-1.5 text-neutral-400 dark:text-white/40 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-red-300">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -453,7 +453,7 @@ const FaqForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise<vo
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="mb-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
       <h4 className="mb-3 text-sm font-medium">New FAQ entry</h4>
       <div className="grid gap-3">
         <Field label="Question"><input value={question} onChange={(e) => setQuestion(e.target.value)} className={inputClass} placeholder="How much does the course cost?" /></Field>
@@ -463,7 +463,7 @@ const FaqForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise<vo
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md border border-white/20 px-3 py-1.5 text-sm">Cancel</button>
+        <button onClick={onCancel} className="rounded-md border border-neutral-300 dark:border-white/20 px-3 py-1.5 text-sm">Cancel</button>
         <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-50">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save
         </button>
@@ -507,15 +507,15 @@ const CouponsPanel: React.FC = () => {
       {showCreate && <CouponForm onCancel={() => setShowCreate(false)} onSubmit={onCreate} />}
       <div className="space-y-3">
         {batches.map((b) => (
-          <div key={b.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={b.id} className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
             <div className="flex flex-wrap items-center gap-3">
               <h4 className="text-base font-medium">{b.name}</h4>
               {b.discount_text && <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-200">{b.discount_text}</span>}
-              <span className="ml-auto text-xs text-white/50">
+              <span className="ml-auto text-xs text-neutral-500 dark:text-white/50">
                 {b.issued_count}/{b.total_codes} issued · {b.redeemed_count} redeemed
               </span>
             </div>
-            {b.description && <p className="mt-1 text-sm text-white/60">{b.description}</p>}
+            {b.description && <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">{b.description}</p>}
           </div>
         ))}
         {!loading && batches.length === 0 && !showCreate && <Empty label="No coupon batches yet." />}
@@ -542,7 +542,7 @@ const CouponForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="mb-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
       <h4 className="mb-3 text-sm font-medium">New coupon batch</h4>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Summer 15% off" /></Field>
@@ -554,7 +554,7 @@ const CouponForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md border border-white/20 px-3 py-1.5 text-sm">Cancel</button>
+        <button onClick={onCancel} className="rounded-md border border-neutral-300 dark:border-white/20 px-3 py-1.5 text-sm">Cancel</button>
         <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-50">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save batch
         </button>
@@ -593,15 +593,15 @@ const LeadMagnetsPanel: React.FC = () => {
       {showCreate && <LeadMagnetForm onCancel={() => setShowCreate(false)} onSubmit={onCreate} />}
       <div className="space-y-3">
         {items.map((m) => (
-          <div key={m.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={m.id} className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="text-base font-medium">{m.name}</h4>
-                {m.description && <p className="mt-1 text-sm text-white/60">{m.description}</p>}
-                {m.file_url && <p className="mt-1 text-xs text-white/40 break-all">URL: {m.file_url}</p>}
-                <div className="mt-2 text-xs text-white/50">Delivered {m.delivered_count}×</div>
+                {m.description && <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">{m.description}</p>}
+                {m.file_url && <p className="mt-1 text-xs text-neutral-400 dark:text-white/40 break-all">URL: {m.file_url}</p>}
+                <div className="mt-2 text-xs text-neutral-500 dark:text-white/50">Delivered {m.delivered_count}×</div>
               </div>
-              <button onClick={() => onDelete(m.id)} className="rounded p-1.5 text-white/40 hover:bg-white/5 hover:text-red-300">
+              <button onClick={() => onDelete(m.id)} className="rounded p-1.5 text-neutral-400 dark:text-white/40 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-red-300">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -636,7 +636,7 @@ const LeadMagnetForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Pro
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="mb-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 p-4">
       <h4 className="mb-3 text-sm font-medium">New lead magnet</h4>
       <div className="grid gap-3">
         <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></Field>
@@ -647,7 +647,7 @@ const LeadMagnetForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Pro
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md border border-white/20 px-3 py-1.5 text-sm">Cancel</button>
+        <button onClick={onCancel} className="rounded-md border border-neutral-300 dark:border-white/20 px-3 py-1.5 text-sm">Cancel</button>
         <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-50">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save
         </button>
@@ -659,7 +659,7 @@ const LeadMagnetForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Pro
 // ── tiny shared bits ────────────────────────────────────────────────────────
 
 const Empty: React.FC<{ label: string }> = ({ label }) => (
-  <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-sm text-white/50">
+  <div className="rounded-xl border border-dashed border-neutral-200 dark:border-white/10 p-8 text-center text-sm text-neutral-500 dark:text-white/50">
     {label}
   </div>
 );
@@ -667,7 +667,7 @@ const Empty: React.FC<{ label: string }> = ({ label }) => (
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => (
   <label className="relative inline-flex h-5 w-9 cursor-pointer items-center">
     <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-    <span className="absolute inset-0 rounded-full bg-white/15 transition peer-checked:bg-emerald-500" />
+    <span className="absolute inset-0 rounded-full bg-neutral-300 dark:bg-white/15 transition peer-checked:bg-emerald-500" />
     <span className="absolute left-0.5 h-4 w-4 transform rounded-full bg-white transition peer-checked:translate-x-4" />
   </label>
 );
