@@ -19,7 +19,15 @@ const COLOR_OPTIONS = [
   '#06b6d4', '#3b82f6', '#64748b', '#78716c',
 ];
 
-const API_BASE = '/api/whatsapp-conversations/chat-groups';
+const API_BASE_WABA = '/api/whatsapp-conversations/chat-groups';
+const API_BASE_INSTAGRAM = '/api/instagram-conversations/chat-groups';
+// Instagram routes go through a different Next.js proxy (LAD-Instagram-Comms
+// service on :8002). For 'personal' and 'waba' we keep the historical WABA
+// proxy URL — the WABA Python service handles both channels via a query param.
+function pickApiBase(channel: CreateBroadcastGroupModalProps['channel']): string {
+  if (channel === 'instagram') return API_BASE_INSTAGRAM;
+  return API_BASE_WABA;
+}
 
 function authHeaders(): Record<string, string> {
   return {
@@ -33,7 +41,7 @@ interface CreateBroadcastGroupModalProps {
   onOpenChange: (open: boolean) => void;
   selectedIds: string[];
   onSuccess?: () => void;
-  channel?: 'personal' | 'waba';
+  channel?: 'personal' | 'waba' | 'instagram';
 }
 
 export function CreateBroadcastGroupModal({
@@ -57,6 +65,8 @@ export function CreateBroadcastGroupModal({
     if (!open) return;
 
     setGroupsLoading(true);
+    // Instagram service uses a dedicated proxy, no channel query param.
+    const API_BASE = pickApiBase(channel);
     const channelParam = channel === 'personal' ? '?channel=personal' : '';
     fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() })
       .then((r) => r.json())
@@ -84,6 +94,7 @@ export function CreateBroadcastGroupModal({
     setError('');
 
     try {
+      const API_BASE = pickApiBase(channel);
       const channelParam = channel === 'personal' ? '?channel=personal' : '';
       const groupsToAddTo: string[] = [];
 

@@ -152,6 +152,66 @@ export async function proxyPost<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
+/** GET via Next.js API proxy — relative URL, no BACKEND_URL base. */
+export async function proxyGet<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const res = await loadingFetch(p, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'include',
+    headers: { ...authHeaders() },
+    signal: options?.signal,
+  });
+  if (!res.ok) {
+    let msg = `GET ${path} ${res.status}`;
+    try {
+      const errorData = await res.json();
+      msg = errorData.message || errorData.error || msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/** PATCH via Next.js API proxy — relative URL, no BACKEND_URL base. */
+export async function proxyPatch<T>(path: string, body: any): Promise<T> {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const res = await loadingFetch(p, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = `PATCH ${path} ${res.status}`;
+    try {
+      const errorData = await res.json();
+      msg = errorData.message || errorData.error || msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/** DELETE via Next.js API proxy — relative URL, no BACKEND_URL base. */
+export async function proxyDelete<T>(path: string): Promise<T> {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const res = await loadingFetch(p, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) {
+    let msg = `DELETE ${path} ${res.status}`;
+    try {
+      const errorData = await res.json();
+      msg = errorData.message || errorData.error || msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   const p = path.startsWith("/") ? path : `/${path}`;
   const res = await loadingFetch(`${API_BASE}${p}`, {
