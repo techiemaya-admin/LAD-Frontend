@@ -439,9 +439,14 @@ export function ChatSettings() {
   >([]);
 
   // LinkedIn automation settings
-  const [linkedinAutomation, setLinkedinAutomation] = useState({
+  const [linkedinAutomation, setLinkedinAutomation] = useState<{
+    auto_like_posts: boolean;
+    auto_comment_posts: boolean;
+    ai_agent_reply_delay_seconds: number;
+  }>({
     auto_like_posts: false,
     auto_comment_posts: false,
+    ai_agent_reply_delay_seconds: 0,
   });
   const [savingLinkedinAutomation, setSavingLinkedinAutomation] = useState(false);
 
@@ -474,9 +479,11 @@ export function ChatSettings() {
         setChatSettings(s);
         setFollowupConfig(f);
         if (liSettings?.success && liSettings.data) {
+          const rawDelay = Number(liSettings.data.ai_agent_reply_delay_seconds);
           setLinkedinAutomation({
-            auto_like_posts:    !!liSettings.data.auto_like_posts,
-            auto_comment_posts: !!liSettings.data.auto_comment_posts,
+            auto_like_posts:              !!liSettings.data.auto_like_posts,
+            auto_comment_posts:           !!liSettings.data.auto_comment_posts,
+            ai_agent_reply_delay_seconds: Number.isFinite(rawDelay) ? Math.max(0, Math.min(300, rawDelay)) : 0,
           });
         }
         if (liFollowup?.success && liFollowup.data) {
@@ -2168,6 +2175,37 @@ export function ChatSettings() {
                   <ToggleLeft className="h-6 w-6 text-gray-300" />
                 )}
               </button>
+            </div>
+
+            {/* AI Agent reply delay */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">AI Agent Reply Delay</p>
+                  <p className="text-xs text-gray-500">
+                    Hold the AI&apos;s reply for this many seconds before sending — makes the response feel more human. 0 = instant.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={300}
+                  step={1}
+                  value={linkedinAutomation.ai_agent_reply_delay_seconds}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setLinkedinAutomation((prev) => ({
+                      ...prev,
+                      ai_agent_reply_delay_seconds: Number.isFinite(v) ? Math.max(0, Math.min(300, v)) : 0,
+                    }));
+                  }}
+                  className="w-20 px-2 py-1.5 border border-gray-200 rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <span className="text-xs text-gray-500 w-8">sec</span>
+              </div>
             </div>
           </div>
 

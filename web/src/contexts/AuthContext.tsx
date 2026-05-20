@@ -146,16 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     safeStorage.setItem('user', JSON.stringify(newUser));
   };
-  // Feature checking based on user capabilities and tenant features
+  // Tenant feature check. tenant_features is the entitlement gate — a feature
+  // is available to a user only if it's enabled for their tenant, regardless
+  // of role (owner/admin included). User-level capabilities are a separate
+  // axis for within-tenant access and must not bypass the tenant gate here.
   const hasFeature = (featureKey: string): boolean => {
-    if (!user) {
-      return false;
-    }
-    // Check both capabilities and tenant features
-    const userCapabilities = user.capabilities || [];
+    if (!user) return false;
     const userTenantFeatures = user.tenantFeatures || [];
-    // Feature can be enabled via either capabilities or tenant features
-    return userCapabilities.includes(featureKey) || userTenantFeatures.includes(featureKey);
+    return userTenantFeatures.includes(featureKey);
   };
   const value = {
     user,

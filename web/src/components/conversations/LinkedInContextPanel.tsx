@@ -211,16 +211,20 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
     setAgentSaving(true);
     setAgentEnabled(next);   // optimistic
     try {
-      // Read current values then PUT — backend expects all flags
+      // Read CURRENT values then PUT — backend expects every field we want to
+      // keep. If we omit a field here, the backend's clamp logic resets it
+      // (e.g. ai_agent_reply_delay_seconds would silently flip back to 0
+      // every time the user toggles the agent on/off from this panel).
       const cur = await fetch('/api/social-integration/linkedin/automation-settings').then(r => r.json()).catch(() => ({}));
       const data = cur?.data || {};
       await fetch('/api/social-integration/linkedin/automation-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          auto_like_posts:    !!data.auto_like_posts,
-          auto_comment_posts: !!data.auto_comment_posts,
-          ai_agent_enabled:   next,
+          auto_like_posts:                !!data.auto_like_posts,
+          auto_comment_posts:             !!data.auto_comment_posts,
+          ai_agent_enabled:               next,
+          ai_agent_reply_delay_seconds:   Number(data.ai_agent_reply_delay_seconds) || 0,
         }),
       });
     } catch {
