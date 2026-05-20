@@ -679,7 +679,7 @@ function LikesUnavailableModal({ onClose }: { onClose: () => void }): JSX.Elemen
           <span className="mx-1 inline-flex rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-900 dark:bg-white/10 dark:text-white">
             Direct sign-in
           </span>
-          (Instagram credentials / cookies, routed through Unipile). Your other
+          (Instagram credentials / cookies). Your other
           AI features (Replies, Comments) work normally on Meta.
         </p>
         <p className="mt-3 text-xs text-neutral-500 dark:text-white/50">
