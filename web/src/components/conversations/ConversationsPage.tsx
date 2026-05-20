@@ -71,6 +71,8 @@ function ChannelConversationView({
     loadMore,
     isLoadingMore,
     hasMore,
+    selectedLabelIds,
+    setSelectedLabelIds,
   } = useConversations({ channel });
 
 
@@ -261,6 +263,8 @@ function ChannelConversationView({
               onHideEmptyChange={setHideEmpty}
               sortBy={sortBy}
               onSortByChange={setSortBy}
+              selectedLabelIds={selectedLabelIds}
+              onLabelFilterChange={setSelectedLabelIds}
             />
           </motion.div>
         )}
@@ -369,6 +373,8 @@ function ChannelConversationView({
                     onHideEmptyChange={setHideEmpty}
                     sortBy={sortBy}
                     onSortByChange={setSortBy}
+                    selectedLabelIds={selectedLabelIds}
+                    onLabelFilterChange={setSelectedLabelIds}
                   />
                 )}
               </div>

@@ -34,6 +34,7 @@ import {
   type ColumnSizingState,
 } from '@tanstack/react-table';
 import type { Campaign, CampaignStatus } from '@lad/frontend-features/campaigns';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getStatusColor, renderActionChips } from './campaignUtils';
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -58,25 +59,26 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   // Local filter states
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
-  
+  // Campaign lists per tenant are small (<100) so we filter client-side, but
+  // debounce so the .filter() doesn't run on every keystroke.
+  const debouncedSearch = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
+
   // Filter campaigns based on local state
   const filteredCampaigns = React.useMemo(() => {
     let filtered = campaigns || [];
-    
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(campaign => 
-        campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (debouncedSearch) {
+      filtered = filtered.filter(campaign =>
+        campaign.name.toLowerCase().includes(debouncedSearch)
       );
     }
-    
-    // Apply status filter
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter(campaign => campaign.status === statusFilter);
     }
-    
+
     return filtered;
-  }, [campaigns, searchQuery, statusFilter]);
+  }, [campaigns, debouncedSearch, statusFilter]);
 
   const getStatusIconComponent = (status: CampaignStatus) => {
     switch (status) {

@@ -50,6 +50,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Selected label-filter set (UUID strings). Empty = no label filter.
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   // List-shaping controls. Defaults preserve previous behaviour: show
   // everything, sorted by most-recent activity. Both flow through to the
   // server so pagination and totals respect the user's choice.
@@ -66,7 +68,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
     hide_empty: hideEmpty || undefined,
     sort_by: sortBy !== 'date' ? sortBy : undefined,
-  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy]);
+    label_ids: selectedLabelIds.length > 0 ? selectedLabelIds : undefined,
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy, selectedLabelIds]);
 
   // Infinite query for incremental conversation loading (20 at a time)
   const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
@@ -205,6 +208,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    selectedLabelIds,
+    setSelectedLabelIds,
     hideEmpty,
     setHideEmpty,
     sortBy,

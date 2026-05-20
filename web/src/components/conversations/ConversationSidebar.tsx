@@ -31,6 +31,7 @@ import {
   Hash,
   AArrowDown,
   LayoutTemplate,
+  Tag,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 
 interface ContextStatusOption {
@@ -94,6 +96,9 @@ interface ConversationSidebarProps {
   /** Active sort order for the conversation list. */
   sortBy?: 'date' | 'message_count' | 'name';
   onSortByChange?: (sortBy: 'date' | 'message_count' | 'name') => void;
+  /** Server-side label filter — UUID list. Empty = no filter. */
+  selectedLabelIds?: string[];
+  onLabelFilterChange?: (ids: string[]) => void;
 }
 
 // LinkedIn is omitted here — it now has its own top-level tab in ConversationsPage.
@@ -172,7 +177,36 @@ export const ConversationSidebar = memo(function ConversationSidebar({
   onHideEmptyChange,
   sortBy = 'date',
   onSortByChange,
+  selectedLabelIds = [],
+  onLabelFilterChange,
 }: ConversationSidebarProps) {
+  // Tenant's label library — loaded once for the filter dropdown. Kept here
+  // (rather than in the parent) so the sidebar is self-contained: callers
+  // only pass the selected ids back/forth.
+  const [allLabels, setAllLabels] = useState<Array<{ id: string; name: string; color: string }>>([]);
+  useEffect(() => {
+    if (!onLabelFilterChange) return; // parent didn't opt in to label filtering
+    let cancelled = false;
+    fetchWithTenant('/api/whatsapp-conversations/labels')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data?.labels) ? data.labels : [];
+        setAllLabels(rows.map((l: any) => ({ id: String(l.id), name: l.name, color: l.color || '#808080' })));
+      })
+      .catch(() => {/* sidebar still works without the filter */});
+    return () => { cancelled = true; };
+  }, [onLabelFilterChange]);
+
+  const toggleLabelFilter = useCallback((id: string) => {
+    if (!onLabelFilterChange) return;
+    onLabelFilterChange(
+      selectedLabelIds.includes(id)
+        ? selectedLabelIds.filter((x) => x !== id)
+        : [...selectedLabelIds, id],
+    );
+  }, [selectedLabelIds, onLabelFilterChange]);
+
   const [contextStatuses, setContextStatuses] = useState<ContextStatusOption[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -788,6 +822,56 @@ export const ConversationSidebar = memo(function ConversationSidebar({
                 {hideEmpty ? 'Hiding empty' : 'Hide empty'}
               </span>
             </Button>
+          )}
+
+          {/* Label filter — only shown when the parent wired the callback. */}
+          {onLabelFilterChange && allLabels.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={selectedLabelIds.length > 0 ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5 flex-shrink-0"
+                  title="Filter by label"
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">
+                    {selectedLabelIds.length > 0
+                      ? `${selectedLabelIds.length} label${selectedLabelIds.length === 1 ? '' : 's'}`
+                      : 'Labels'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Filter by label</span>
+                  {selectedLabelIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onLabelFilterChange([])}
+                      className="text-[10px] text-muted-foreground hover:text-foreground"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {allLabels.map((l) => (
+                  <DropdownMenuCheckboxItem
+                    key={l.id}
+                    checked={selectedLabelIds.includes(l.id)}
+                    onCheckedChange={() => toggleLabelFilter(l.id)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0"
+                      style={{ backgroundColor: l.color }}
+                    />
+                    <span className="truncate">{l.name}</span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       )}

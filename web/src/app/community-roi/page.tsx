@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 
 import { useListMembers } from '@lad/frontend-features/community-roi'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import SimpleAnalyticsCards from '@/features/community-roi/components/SimpleAnalyticsCards'
 import RelationshipHeatmap, { RelationshipHeatmapWithRecommendations } from '@/features/community-roi/components/RelationshipHeatmap'
 import { BroadcastPerformanceContainer } from '@/features/community-roi/components/BroadcastPerformanceContainer'
@@ -100,7 +101,12 @@ export default function CommunityROIDashboard() {
 
   // Get tenant ID from environment or props (without Redux dependency)
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || '';
-  const { data: members, isLoading: membersLoading } = useListMembers({ tenantId })
+  // Server-side member search: debounce so each keystroke doesn't refetch.
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
+  const { data: members, isLoading: membersLoading } = useListMembers({
+    tenantId,
+    search: debouncedSearch || undefined,
+  })
 
   const communities = [
     { id: 'BNI', name: 'BNI Rising Phoenix', icon: Building2, logo: '/assets/community-logos/bni-logo.svg', color: 'text-red-600', bg: 'bg-red-50' },
@@ -108,9 +114,8 @@ export default function CommunityROIDashboard() {
     // { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
 
-  const filteredMembers = Array.isArray(members) 
-    ? members.filter((m: any) => (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : []
+  // Server now returns only the matching subset — no client-side filter needed.
+  const filteredMembers = Array.isArray(members) ? members : []
 
   return (
     <>
