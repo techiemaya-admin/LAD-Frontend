@@ -25,7 +25,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import {
   Search, MessageCircleMore, Loader2, ImageIcon, Mic, Heart,
   Bot, User, MessageSquareReply, Target, Megaphone, X, RefreshCw,
-  Send, Smile, Users as UsersIcon,
+  Send, Smile, Users as UsersIcon, Check, CheckCheck, AlertCircle,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -67,9 +67,23 @@ interface InstagramMessage {
 const LIST_API = '/api/instagram-conversations/conversations';
 const BACKFILL_API = '/api/instagram-conversations/conversations/backfill';
 
-// Instagram's gradient is the same in both themes — it's the brand color.
-const INSTAGRAM_GRADIENT =
+// Two Instagram gradients, kept distinct on purpose:
+//
+//   INSTAGRAM_BRAND_GRADIENT — the iconic yellow→pink→purple rainbow used by
+//     the Instagram *logo*. Reserved for brand surfaces (avatar fallbacks,
+//     empty-state icon ring, unread badges, the AI toggle pill). Same value
+//     in both themes because the brand color doesn't dark-mode-swap.
+//
+//   INSTAGRAM_CHAT_BLUE_GRADIENT — the blue→indigo gradient real Instagram
+//     uses on the *outgoing chat bubble* and the *send button* inside DMs.
+//     Same value in both themes for the same reason.
+//
+// We previously used the brand rainbow on chat bubbles, which made them
+// look orange/pink — nothing like the actual Instagram chat UI.
+const INSTAGRAM_BRAND_GRADIENT =
   'linear-gradient(135deg, #FEDA77 0%, #F58529 25%, #DD2A7B 50%, #8134AF 75%, #515BD4 100%)';
+const INSTAGRAM_CHAT_BLUE_GRADIENT =
+  'linear-gradient(135deg, #4F86FF 0%, #5B47FB 60%, #4F5BD5 100%)';
 
 interface Palette {
   bg: string;          // main surface (chat panel)
@@ -79,7 +93,8 @@ interface Palette {
   muted: string;       // secondary text + icons
   incomingBg: string;  // incoming bubble + active list row + input fill
   hoverBg: string;     // hover background on icon buttons
-  outgoingGradient: string;
+  outgoingGradient: string;  // brand rainbow — avatars, badges, brand-y CTAs
+  outgoingBubble: string;    // Instagram chat-blue — outgoing message + send btn
 }
 
 const DARK_PALETTE: Palette = {
@@ -90,7 +105,8 @@ const DARK_PALETTE: Palette = {
   muted: '#A8A8A8',
   incomingBg: '#262626',
   hoverBg: '#1A1A1A',
-  outgoingGradient: INSTAGRAM_GRADIENT,
+  outgoingGradient: INSTAGRAM_BRAND_GRADIENT,
+  outgoingBubble: INSTAGRAM_CHAT_BLUE_GRADIENT,
 };
 
 // Light mode follows Instagram's actual web app in light mode.
@@ -102,7 +118,8 @@ const LIGHT_PALETTE: Palette = {
   muted: '#8E8E8E',
   incomingBg: '#EFEFEF',
   hoverBg: '#FAFAFA',
-  outgoingGradient: INSTAGRAM_GRADIENT,
+  outgoingGradient: INSTAGRAM_BRAND_GRADIENT,
+  outgoingBubble: INSTAGRAM_CHAT_BLUE_GRADIENT,
 };
 
 const PaletteContext = createContext<Palette>(DARK_PALETTE);
@@ -598,21 +615,34 @@ function InstagramConversationViewInner(): JSX.Element {
                   No messages yet.
                 </div>
               )}
-              {!msgLoading && !msgError && messages.map((m, i) => {
-                const prev = i > 0 ? messages[i - 1] : null;
-                const next = i < messages.length - 1 ? messages[i + 1] : null;
-                return (
-                  <MessageBubble
-                    key={m.id}
-                    message={m}
-                    prevSameSender={!!prev && prev.role === m.role}
-                    nextSameSender={!!next && next.role === m.role}
-                    conversationId={activeId}
-                    onReact={reactToMessage}
-                    onUnreact={unreactToMessage}
-                  />
-                );
-              })}
+              {!msgLoading && !msgError && (() => {
+                // Find index of the LAST outgoing message — only that one gets
+                // the "Sent / Read / Failed" status line, matching Instagram's
+                // pattern of showing delivery state on the most recent send.
+                let lastOutgoingIdx = -1;
+                for (let i = messages.length - 1; i >= 0; i -= 1) {
+                  if (messages[i].role === 'assistant') {
+                    lastOutgoingIdx = i;
+                    break;
+                  }
+                }
+                return messages.map((m, i) => {
+                  const prev = i > 0 ? messages[i - 1] : null;
+                  const next = i < messages.length - 1 ? messages[i + 1] : null;
+                  return (
+                    <MessageBubble
+                      key={m.id}
+                      message={m}
+                      prevSameSender={!!prev && prev.role === m.role}
+                      nextSameSender={!!next && next.role === m.role}
+                      isLastOutgoing={i === lastOutgoingIdx}
+                      conversationId={activeId}
+                      onReact={reactToMessage}
+                      onUnreact={unreactToMessage}
+                    />
+                  );
+                });
+              })()}
             </div>
 
             {/* Composer — send a free-form DM to the active thread. */}
@@ -880,7 +910,7 @@ function Composer({
           disabled={disabled}
           aria-label="Send"
           className="h-9 w-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-40"
-          style={{ background: palette.outgoingGradient, color: '#fff' }}
+          style={{ background: palette.outgoingBubble, color: '#fff' }}
         >
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1124,7 +1154,7 @@ function BroadcastModal({ onClose }: { onClose: () => void }): JSX.Element {
             onClick={start}
             disabled={!groupId || !text.trim() || sending || !selectedGroup}
             className="px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
-            style={{ background: palette.outgoingGradient, color: '#fff' }}
+            style={{ background: palette.outgoingBubble, color: '#fff' }}
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Send broadcast
@@ -1164,6 +1194,7 @@ function MessageBubble({
   message,
   prevSameSender,
   nextSameSender,
+  isLastOutgoing,
   conversationId,
   onReact,
   onUnreact,
@@ -1171,6 +1202,7 @@ function MessageBubble({
   message: InstagramMessage;
   prevSameSender: boolean;
   nextSameSender: boolean;
+  isLastOutgoing: boolean;
   conversationId: string | null;
   onReact: (messageId: string, reaction: string) => void;
   onUnreact: (messageId: string) => void;
@@ -1185,6 +1217,22 @@ function MessageBubble({
   const hasAttachment = ['image', 'audio', 'video'].includes(attachmentType);
   const reaction = (meta.reaction || '') as string;
   const reactionBy = (meta.reaction_by || '') as string;
+  // Delivery status — only meaningful for outgoing messages.
+  //   • metadata.read_at        → 'read' (set by the messaging_read webhook)
+  //   • metadata.last_error or  → 'failed'
+  //     message_status='failed'
+  //   • external_message_id     → 'sent' (Meta accepted the send)
+  //   • otherwise (no mid yet)  → 'sending'
+  const messageStatus = String((meta as Record<string, unknown>).message_status || '');
+  const readAt = (meta.read_at || meta.seen_at) as string | undefined;
+  const sentAt = (meta.sent_at as string | undefined) || message.created_at;
+  const lastError = meta.last_error as string | undefined;
+  const deliveryState: 'sending' | 'sent' | 'read' | 'failed' = (() => {
+    if (messageStatus === 'failed' || lastError) return 'failed';
+    if (readAt) return 'read';
+    if (message.external_message_id) return 'sent';
+    return 'sending';
+  })();
 
   if (isSystem) {
     return (
@@ -1207,8 +1255,11 @@ function MessageBubble({
     return `${prevSameSender ? tight : r} ${r} ${r} ${nextSameSender ? tight : r}`;
   })();
 
+  // Outgoing bubbles use Instagram's chat-blue gradient (matches real Instagram
+  // DM "sent" bubbles in both light and dark mode). Incoming stays on the
+  // theme-aware neutral.
   const bubbleStyle = isOutgoing
-    ? { background: palette.outgoingGradient, color: '#fff', borderRadius: radius }
+    ? { background: palette.outgoingBubble, color: '#fff', borderRadius: radius }
     : { backgroundColor: palette.incomingBg, color: palette.text, borderRadius: radius };
 
   // Inline media: actually render the image / audio / video, falling back to a
@@ -1294,7 +1345,98 @@ function MessageBubble({
             ❤️
           </button>
         )}
+
+        {/* Footer: timestamp on every "last-of-group" bubble, plus delivery
+            status text on the very last outgoing bubble. Matches Instagram's
+            pattern of only attaching a status line to the most recent send. */}
+        {!nextSameSender && (
+          <BubbleFooter
+            isOutgoing={isOutgoing}
+            sentAt={sentAt}
+            showStatus={isOutgoing && isLastOutgoing}
+            deliveryState={deliveryState}
+            readAt={readAt}
+            lastError={lastError}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+// Tiny formatter for "12:34 PM"-style time. Falls back to empty on bad input.
+function formatBubbleTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+// Bubble footer: timestamp + (optional) delivery status. Lives below the
+// rounded bubble, aligned to the bubble's side (right for outgoing, left for
+// incoming). The status text/icon is only rendered for the most recent
+// outgoing message — Instagram only "shows seen" once per conversation, not
+// per bubble.
+function BubbleFooter({
+  isOutgoing,
+  sentAt,
+  showStatus,
+  deliveryState,
+  readAt,
+  lastError,
+}: {
+  isOutgoing: boolean;
+  sentAt: string | null | undefined;
+  showStatus: boolean;
+  deliveryState: 'sending' | 'sent' | 'read' | 'failed';
+  readAt: string | undefined;
+  lastError: string | undefined;
+}): JSX.Element | null {
+  const palette = usePalette();
+  const timeStr = formatBubbleTime(sentAt);
+  if (!timeStr && !showStatus) return null;
+
+  // "Seen at HH:MM" if we have a read timestamp; otherwise just the state name.
+  const statusLabel = (() => {
+    if (!showStatus) return '';
+    switch (deliveryState) {
+      case 'sending': return 'Sending…';
+      case 'sent':    return 'Sent';
+      case 'read':    return readAt ? `Seen ${formatBubbleTime(readAt)}` : 'Seen';
+      case 'failed':  return lastError ? `Failed — ${lastError}` : 'Failed';
+      default:        return '';
+    }
+  })();
+
+  const statusColor = deliveryState === 'failed' ? '#FF6B6B' : palette.muted;
+
+  const StatusIcon = (() => {
+    if (!showStatus) return null;
+    switch (deliveryState) {
+      case 'sending': return <Loader2 className="h-3 w-3 animate-spin" />;
+      case 'sent':    return <Check className="h-3 w-3" />;
+      case 'read':    return <CheckCheck className="h-3 w-3" style={{ color: '#4F86FF' }} />;
+      case 'failed':  return <AlertCircle className="h-3 w-3" />;
+      default:        return null;
+    }
+  })();
+
+  return (
+    <div
+      className="mt-1 flex items-center gap-1 text-[10px] leading-tight"
+      style={{
+        color: statusColor,
+        justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
+      }}
+    >
+      {timeStr && <span>{timeStr}</span>}
+      {showStatus && (
+        <>
+          {timeStr && <span aria-hidden="true">·</span>}
+          {StatusIcon}
+          <span>{statusLabel}</span>
+        </>
+      )}
     </div>
   );
 }
