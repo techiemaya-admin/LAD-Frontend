@@ -257,9 +257,25 @@ export const InstagramTenantOnboarding: React.FC = () => {
     [form, canSubmit, submitting, load],
   );
 
+  // Modal state for the "AI Likes unavailable on Meta" explanation. We open
+  // this instead of toggling when an operator clicks AI Likes on a Meta
+  // account — Meta's official Graph API has no comment-like endpoint, so
+  // turning it on would just silently do nothing.
+  const [likesUnavailableOpen, setLikesUnavailableOpen] = useState(false);
+
   const handleToggleAi = useCallback(
     async (account: InstagramAccount, field: 'ai_replies_enabled' | 'ai_comments_enabled' | 'ai_likes_enabled') => {
       const next = !account[field];
+
+      // Hard gate: AI Likes is unsupported on Meta-provider accounts because
+      // Meta's Instagram Graph API exposes no comment-like endpoint. Show
+      // the explainer modal and bail without touching the toggle. We only
+      // gate the ENABLE direction — turning a stuck-on toggle OFF still works.
+      if (field === 'ai_likes_enabled' && next === true && account.provider === 'meta') {
+        setLikesUnavailableOpen(true);
+        return;
+      }
+
       // Optimistic
       setAccounts((rows) => rows.map((a) => (a.id === account.id ? { ...a, [field]: next } : a)));
       const result = await patchAccount(account.id, { [field]: next });
@@ -386,6 +402,8 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     label="AI Likes"
                     enabled={a.ai_likes_enabled}
                     onToggle={() => handleToggleAi(a, 'ai_likes_enabled')}
+                    unavailable={a.provider === 'meta' && !a.ai_likes_enabled}
+                    unavailableTitle="AI Likes isn't supported via Meta's official API — only available with direct sign-in (Unipile)."
                   />
                 </div>
               </li>
@@ -621,11 +639,66 @@ export const InstagramTenantOnboarding: React.FC = () => {
           </div>
         </form>
       </section>
+
+      {/* Explainer modal — fires when an operator clicks "AI Likes" on a
+          Meta-connected account. Meta's Instagram Graph API has no comment-
+          like endpoint; only Unipile-provider accounts can auto-like. */}
+      {likesUnavailableOpen && (
+        <LikesUnavailableModal onClose={() => setLikesUnavailableOpen(false)} />
+      )}
     </div>
   );
 };
 
 // ── Sub-components ──────────────────────────────────────────────────────────
+
+function LikesUnavailableModal({ onClose }: { onClose: () => void }): JSX.Element {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-md w-full rounded-2xl border bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900"
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-amber-500" />
+          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+            AI Likes isn&apos;t available with Meta sign-in
+          </h3>
+        </div>
+        <p className="text-sm leading-relaxed text-neutral-600 dark:text-white/70">
+          Meta&apos;s official Instagram Graph API doesn&apos;t expose a way to
+          like comments on your posts — it&apos;s a documented limitation, not
+          something we can work around.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-white/70">
+          AI Likes is only supported on accounts connected via
+          <span className="mx-1 inline-flex rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-900 dark:bg-white/10 dark:text-white">
+            Direct sign-in
+          </span>
+          (Instagram credentials / cookies, routed through Unipile). Your other
+          AI features (Replies, Comments) work normally on Meta.
+        </p>
+        <p className="mt-3 text-xs text-neutral-500 dark:text-white/50">
+          To enable AI Likes for this account, reconnect it using the Direct
+          sign-in option in the onboarding form below.
+        </p>
+        <div className="mt-5 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Field({
   label,
@@ -723,11 +796,30 @@ function AiToggleChip({
   label,
   enabled,
   onToggle,
+  unavailable,
+  unavailableTitle,
 }: {
   label: string;
   enabled: boolean;
   onToggle: () => void;
+  // When true, the chip renders dimmed with a strikethrough and a tooltip
+  // (the click still fires onToggle so we can open an explainer modal).
+  unavailable?: boolean;
+  unavailableTitle?: string;
 }): JSX.Element {
+  if (unavailable) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        title={unavailableTitle}
+        className="flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-400 line-through hover:bg-neutral-200 dark:border-white/10 dark:bg-white/5 dark:text-white/30 dark:hover:bg-white/10"
+      >
+        <Power className="h-3 w-3" />
+        {label}: unavailable
+      </button>
+    );
+  }
   return (
     <button
       type="button"

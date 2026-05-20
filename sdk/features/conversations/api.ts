@@ -189,6 +189,9 @@ export async function getConversations(
   // List-shaping params (default to "false" / "date" on the backend if omitted).
   if (rest.hide_empty) params.hide_empty = 'true';
   if (rest.sort_by) params.sort_by = rest.sort_by;
+  if (rest.label_ids && rest.label_ids.length > 0) {
+    params.label_ids = rest.label_ids.join(',');
+  }
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
@@ -231,6 +234,9 @@ export async function getConversationsPage(
   if (rest.context_status) params.context_status = rest.context_status;
   if (rest.hide_empty) params.hide_empty = 'true';
   if (rest.sort_by) params.sort_by = rest.sort_by;
+  if (rest.label_ids && rest.label_ids.length > 0) {
+    params.label_ids = rest.label_ids.join(',');
+  }
 
   const response = await proxyClient.get<{
     success: boolean;
