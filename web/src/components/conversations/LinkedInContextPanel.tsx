@@ -211,22 +211,88 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
     setAgentSaving(true);
     setAgentEnabled(next);   // optimistic
     try {
-      // Read current values then PUT — backend expects all flags
+      // Read CURRENT values then PUT — backend expects every field we want to
+      // keep. If we omit a field here, the backend's clamp logic resets it
+      // (e.g. ai_agent_reply_delay_seconds would silently flip back to 0
+      // every time the user toggles the agent on/off from this panel).
       const cur = await fetch('/api/social-integration/linkedin/automation-settings').then(r => r.json()).catch(() => ({}));
       const data = cur?.data || {};
       await fetch('/api/social-integration/linkedin/automation-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          auto_like_posts:    !!data.auto_like_posts,
-          auto_comment_posts: !!data.auto_comment_posts,
-          ai_agent_enabled:   next,
+          auto_like_posts:                !!data.auto_like_posts,
+          auto_comment_posts:             !!data.auto_comment_posts,
+          ai_agent_enabled:               next,
+          ai_agent_reply_delay_seconds:   Number(data.ai_agent_reply_delay_seconds) || 0,
         }),
       });
     } catch {
       setAgentEnabled(!next); // revert on error
     } finally {
       setAgentSaving(false);
+    }
+  };
+
+  // ── Per-lead follow-up pause toggle ─────────────────────────────────────
+  // Reads/writes campaign_leads.lead_data.linkedin_followups_paused. When the
+  // user pauses, the backend immediately cancels any queued follow-up rows.
+  const [followupPaused, setFollowupPaused] = useState<boolean | null>(null);
+  const [followupPendingCount, setFollowupPendingCount] = useState<number>(0);
+  const [followupSaving, setFollowupSaving] = useState(false);
+  const followupSupported = !!(conversation.campaign_id && conversation.lead_id);
+
+  useEffect(() => {
+    if (!followupSupported) {
+      setFollowupPaused(false);
+      setFollowupPendingCount(0);
+      return;
+    }
+    const q = new URLSearchParams({
+      campaign_id: String(conversation.campaign_id),
+      lead_id:     String(conversation.lead_id),
+    });
+    fetch(`${API_BASE}/conversations/${encodeURIComponent(conversation.id)}/followup-status?${q.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success) {
+          setFollowupPaused(d.data?.paused === true);
+          setFollowupPendingCount(d.data?.pending_count || 0);
+        } else {
+          setFollowupPaused(false);
+        }
+      })
+      .catch(() => setFollowupPaused(false));
+  }, [conversation.id, conversation.campaign_id, conversation.lead_id, followupSupported]);
+
+  const toggleFollowupPause = async () => {
+    if (followupPaused === null || !followupSupported) return;
+    const next = !followupPaused;
+    setFollowupSaving(true);
+    setFollowupPaused(next); // optimistic
+    try {
+      const r = await fetch(`${API_BASE}/conversations/${encodeURIComponent(conversation.id)}/followup-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paused:      next,
+          campaign_id: conversation.campaign_id,
+          lead_id:     conversation.lead_id,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d?.success) {
+        // When pausing, backend reports how many queued rows were cancelled
+        if (next && typeof d.data?.cancelled_pending === 'number') {
+          setFollowupPendingCount(0);
+        }
+      } else {
+        setFollowupPaused(!next); // revert on backend error
+      }
+    } catch {
+      setFollowupPaused(!next);
+    } finally {
+      setFollowupSaving(false);
     }
   };
 
@@ -434,6 +500,49 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             Tenant-wide setting (Settings → Chat → LinkedIn).
           </p>
         </div>
+
+        {/* Per-lead follow-up pause toggle */}
+        {followupSupported && (
+          <div className="px-4 py-4 border-b border-border">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800">Auto Follow-ups</p>
+                  <p className="text-[10px] text-slate-500 truncate">
+                    {followupPaused
+                      ? 'Paused for this lead'
+                      : followupPendingCount > 0
+                        ? `${followupPendingCount} queued · sends via agent prompt`
+                        : 'On — sends via agent prompt'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!followupPaused}
+                onClick={toggleFollowupPause}
+                disabled={followupPaused === null || followupSaving}
+                className={cn(
+                  'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
+                  !followupPaused ? 'bg-amber-500' : 'bg-slate-300',
+                  followupSaving && 'opacity-60'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-4 w-4 mt-0.5 ml-0.5 rounded-full bg-white transition-transform',
+                    !followupPaused && 'translate-x-4'
+                  )}
+                />
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-400">
+              Pause to stop the scheduled 4-touch sequence for this lead only. The live AI agent still replies to inbound messages.
+            </p>
+          </div>
+        )}
 
         {/* Tabs: Assignment | Notes | Internal */}
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="px-4 py-4">

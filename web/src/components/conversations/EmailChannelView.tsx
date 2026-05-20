@@ -13,6 +13,7 @@ import {
   PanelRightClose, PanelRightOpen, Hash, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@lad/shared/storage';
@@ -1359,9 +1360,11 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingGroups, setLoadingGroups]     = useState(true);
 
-  // Search
+  // Search — debounced so each keystroke doesn't refetch.
   const [contactSearch, setContactSearch] = useState('');
   const [groupSearch, setGroupSearch]     = useState('');
+  const debouncedContactSearch = useDebouncedValue(contactSearch.trim(), 300);
+  const debouncedGroupSearch   = useDebouncedValue(groupSearch.trim(), 300);
 
   // Selection
   const [activeContact, setActiveContact]   = useState<EmailContact | null>(null);
@@ -1399,10 +1402,11 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
     }
   }, []);
 
-  const loadGroups = useCallback(async () => {
+  const loadGroups = useCallback(async (search = '') => {
     setLoadingGroups(true);
     try {
-      const res = await fetch(`${API}/groups?channel=${provider}`, { headers: authHeaders() });
+      const qs = new URLSearchParams({ channel: provider, ...(search ? { search } : {}) });
+      const res = await fetch(`${API}/groups?${qs}`, { headers: authHeaders() });
       const data = await res.json();
       if (data.success) setGroups(data.data || []);
     } finally {
@@ -1410,7 +1414,9 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
     }
   }, [provider]);
 
-  useEffect(() => { loadContacts(); loadGroups(); }, [loadContacts, loadGroups, groupRefreshKey]);
+  // Refetch when the debounced search changes (server-side filtering).
+  useEffect(() => { loadContacts(debouncedContactSearch); }, [loadContacts, debouncedContactSearch]);
+  useEffect(() => { loadGroups(debouncedGroupSearch);   }, [loadGroups,   debouncedGroupSearch, groupRefreshKey]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -1462,20 +1468,10 @@ export function EmailChannelView({ provider, connectedEmail }: EmailChannelViewP
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  const filteredContacts = useMemo(() =>
-    contacts.filter(c =>
-      !contactSearch ||
-      (c.contact_name || '').toLowerCase().includes(contactSearch.toLowerCase()) ||
-      (c.email || '').toLowerCase().includes(contactSearch.toLowerCase()) ||
-      (c.company || '').toLowerCase().includes(contactSearch.toLowerCase()),
-    ),
-    [contacts, contactSearch],
-  );
-
-  const filteredGroups = useMemo(() =>
-    groups.filter(g => !groupSearch || g.name.toLowerCase().includes(groupSearch.toLowerCase())),
-    [groups, groupSearch],
-  );
+  // Server returns the matching subset directly (see loadContacts / loadGroups
+  // above) — no client-side filter needed.
+  const filteredContacts = contacts;
+  const filteredGroups   = groups;
 
   const selectedContacts = useMemo(() =>
     contacts.filter(c => selectedIds.has(c.id)),

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
@@ -25,6 +26,10 @@ interface IntegrationCard {
   iconBg: string;
   category: string;
   comingSoon?: boolean;
+  // When set, clicking the card navigates to this URL instead of
+  // setActiveView(id). Used for integrations that own a dedicated page
+  // (e.g. Instagram has its own /instagram management surface).
+  route?: string;
 }
 
 const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'whatsapp-personal', 'google', 'microsoft']);
@@ -57,6 +62,40 @@ const INTEGRATIONS: IntegrationCard[] = [
     ),
     iconBg: 'bg-green-50',
     category: 'Messaging',
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    description: 'Connect Instagram for AI-powered DMs, comments, and lead capture.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <defs>
+          <radialGradient id="ig-grad" cx="0.3" cy="1.1" r="1">
+            <stop offset="0" stopColor="#fdf497" />
+            <stop offset="0.05" stopColor="#fdf497" />
+            <stop offset="0.45" stopColor="#fd5949" />
+            <stop offset="0.6" stopColor="#d6249f" />
+            <stop offset="0.9" stopColor="#285AEB" />
+          </radialGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ig-grad)" />
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.6" />
+        <circle cx="17.6" cy="6.4" r="1.1" fill="#fff" />
+      </svg>
+    ),
+    iconBg: 'bg-pink-50',
+    category: 'Social',
+    // Land on the Accounts tab — same parity as clicking the WhatsApp tile
+    // which opens the tenant onboarding form right away.
+    route: '/instagram/settings?tab=accounts',
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
+    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
+    iconBg: 'bg-blue-50',
+    category: 'Social',
   },
   {
     id: 'google',
@@ -97,14 +136,6 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Email & Calendar',
   },
   {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
-    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
-    iconBg: 'bg-blue-50',
-    category: 'Social',
-  },
-  {
     id: 'gohighlevel',
     name: 'GoHighLevel',
     description: 'Connect GoHighLevel CRM to sync contacts, deals, and automate workflows.',
@@ -136,6 +167,15 @@ const INTEGRATIONS: IntegrationCard[] = [
     comingSoon: false,
   },
   {
+    id: 'routemagic',
+    name: 'Route Magic',
+    description: 'Connect Route Magic ERP to sync customers as leads and create sale orders from WhatsApp.',
+    icon: <Truck className="h-6 w-6 text-emerald-700" />,
+    iconBg: 'bg-emerald-50',
+    category: 'CRM',
+    comingSoon: false,
+  },
+  {
     id: 'slack',
     name: 'Slack',
     description: 'Receive real-time business updates and notifications in your workspace.',
@@ -156,6 +196,7 @@ const INTEGRATIONS: IntegrationCard[] = [
 type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
+  const router = useRouter();
   const { tenantId } = useTenant();
   const { data: creditsData } = useCreditsBalance();
   const availableCredits = creditsData?.availableBalance ?? creditsData?.balance ?? null;
@@ -192,6 +233,42 @@ export const IntegrationsSettings: React.FC = () => {
   const [connectedFetchingClasses, setConnectedFetchingClasses] = useState(false);
   const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
   const [updatingClasses, setUpdatingClasses] = useState(false);
+
+  // ── Route Magic state ─────────────────────────────────────────────────────
+  const [showRouteMagicModal, setShowRouteMagicModal] = useState(false);
+  const [routeMagicForm, setRouteMagicForm] = useState({
+    rm_tenant_id: '',
+    display_name: '',
+    api_key: '',
+    base_url: 'https://staging-api.routemagic.co.uk',
+  });
+  const [routeMagicConnecting, setRouteMagicConnecting] = useState(false);
+  const [routeMagicError, setRouteMagicError] = useState<string | null>(null);
+  const [routeMagicStatusData, setRouteMagicStatusData] = useState<{
+    rm_tenant_id: string | null;
+    display_name: string | null;
+    base_url: string | null;
+    last_verified_at: string | null;
+    last_sync_at: string | null;
+  } | null>(null);
+  const [routeMagicDisconnecting, setRouteMagicDisconnecting] = useState(false);
+  const [routeMagicSyncing, setRouteMagicSyncing] = useState(false);
+  const [routeMagicSyncResult, setRouteMagicSyncResult] = useState<{
+    fetched: number;
+    inserted: number;
+    skipped: number;
+    errors: number;
+  } | null>(null);
+
+  const routeMagicFormReset = () => {
+    setRouteMagicForm({
+      rm_tenant_id: '',
+      display_name: '',
+      api_key: '',
+      base_url: 'https://staging-api.routemagic.co.uk',
+    });
+    setRouteMagicError(null);
+  };
 
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
@@ -248,6 +325,23 @@ export const IntegrationsSettings: React.FC = () => {
         }
       } catch { setStatus('microsoft', 'disconnected'); }
 
+      // Instagram — hits the standalone LAD-Instagram-Comms service via
+      // the Next.js proxy. "Connected" = at least one active (non-deleted)
+      // account row, regardless of provider (meta or unipile).
+      setStatus('instagram', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/instagram-conversations/accounts');
+        if (!res.ok) { setStatus('instagram', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+          const connected = accounts.some(
+            (a: any) => (a.status ?? 'active') !== 'inactive' && !a.is_deleted,
+          );
+          setStatus('instagram', connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('instagram', 'disconnected'); }
+
       // LinkedIn
       setStatus('linkedin', 'loading');
       try {
@@ -287,6 +381,25 @@ export const IntegrationsSettings: React.FC = () => {
         }
       } catch {
         setStatus('mindbody', 'disconnected');
+      }
+
+      // Route Magic
+      try {
+        setStatus('routemagic', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/routemagic/status');
+        const data = await r.json();
+        setStatus('routemagic', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setRouteMagicStatusData({
+            rm_tenant_id: data.rm_tenant_id ?? null,
+            display_name: data.display_name ?? null,
+            base_url: data.base_url ?? null,
+            last_verified_at: data.last_verified_at ?? null,
+            last_sync_at: data.last_sync_at ?? null,
+          });
+        }
+      } catch {
+        setStatus('routemagic', 'disconnected');
       }
     };
     checkAll();
@@ -560,6 +673,136 @@ export const IntegrationsSettings: React.FC = () => {
               )}
             </div>
           )}
+          {activeView === 'routemagic' && (
+            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <Truck className="h-6 w-6 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base text-foreground">Route Magic</h3>
+                  <p className="text-xs text-muted-foreground">Sync customers as leads · create sale orders from WhatsApp</p>
+                </div>
+              </div>
+
+              {statusMap['routemagic'] === 'connected' ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                    {routeMagicStatusData?.display_name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Display Name</span>
+                        <span className="font-medium text-foreground">{routeMagicStatusData.display_name}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.rm_tenant_id && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Route Magic Tenant</span>
+                        <span className="font-medium text-foreground font-mono text-xs">{routeMagicStatusData.rm_tenant_id}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.base_url && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground flex-shrink-0">Base URL</span>
+                        <span className="font-medium text-foreground text-xs text-right break-all">{routeMagicStatusData.base_url}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.last_sync_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Customer Sync</span>
+                        <span className="font-medium text-foreground text-xs">{new Date(routeMagicStatusData.last_sync_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {!routeMagicStatusData?.last_sync_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Customer Sync</span>
+                        <span className="text-muted-foreground italic text-xs">Never synced</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {routeMagicSyncResult && (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-900/20 dark:border-emerald-900/40 p-3 text-xs space-y-1">
+                      <div className="font-semibold text-emerald-700 dark:text-emerald-300">Last sync result</div>
+                      <div className="grid grid-cols-4 gap-2 text-foreground">
+                        <div><span className="text-muted-foreground">Fetched:</span> {routeMagicSyncResult.fetched}</div>
+                        <div><span className="text-muted-foreground">Inserted:</span> {routeMagicSyncResult.inserted}</div>
+                        <div><span className="text-muted-foreground">Skipped:</span> {routeMagicSyncResult.skipped}</div>
+                        <div><span className="text-muted-foreground">Errors:</span> {routeMagicSyncResult.errors}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={routeMagicSyncing}
+                      onClick={async () => {
+                        setRouteMagicSyncing(true);
+                        setRouteMagicSyncResult(null);
+                        try {
+                          const r = await fetchWithTenant('/api/social-integration/routemagic/customers/sync', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ size: 100 }),
+                          });
+                          const data = await r.json();
+                          if (r.ok && data?.success) {
+                            setRouteMagicSyncResult({
+                              fetched: data.fetched ?? 0,
+                              inserted: data.inserted ?? 0,
+                              skipped: data.skipped ?? 0,
+                              errors: Array.isArray(data.errors) ? data.errors.length : 0,
+                            });
+                            setRouteMagicStatusData((prev) => prev ? { ...prev, last_sync_at: new Date().toISOString() } : prev);
+                          }
+                        } catch {} finally {
+                          setRouteMagicSyncing(false);
+                        }
+                      }}
+                      className="text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {routeMagicSyncing ? 'Syncing…' : 'Sync customers as leads'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={routeMagicDisconnecting}
+                      onClick={async () => {
+                        if (!confirm('Disconnect Route Magic? Sale-order history and customer sync watermarks remain in the DB.')) return;
+                        setRouteMagicDisconnecting(true);
+                        try {
+                          await fetchWithTenant('/api/social-integration/routemagic/disconnect', { method: 'POST' });
+                          setStatus('routemagic', 'disconnected');
+                          setRouteMagicStatusData(null);
+                          setRouteMagicSyncResult(null);
+                        } catch {} finally {
+                          setRouteMagicDisconnecting(false);
+                        }
+                      }}
+                      className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors disabled:opacity-60"
+                    >
+                      {routeMagicDisconnecting ? 'Disconnecting…' : 'Disconnect Route Magic'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect Route Magic so Maya can look up customers, share product info, and place sale orders straight from WhatsApp conversations.
+                  </p>
+                  <button
+                    onClick={() => {
+                      routeMagicFormReset();
+                      setShowRouteMagicModal(true);
+                    }}
+                    className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
+                  >
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Connect to Route Magic
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -597,7 +840,12 @@ export const IntegrationsSettings: React.FC = () => {
                       : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
                   }`}
                   onClick={() => {
-                    if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
+                    if (integration.comingSoon || isLocked) return;
+                    if (integration.route) {
+                      router.push(integration.route);
+                    } else {
+                      setActiveView(integration.id);
+                    }
                   }}
                 >
                   {integration.comingSoon && (
@@ -858,6 +1106,147 @@ export const IntegrationsSettings: React.FC = () => {
                 >
                   {mindBodyConnecting ? 'Connecting...' : 'Connect MindBody Account'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Route Magic Connect Modal */}
+      {showRouteMagicModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#000724] border border-gray-200 dark:border-[#262831] rounded-[2rem] shadow-2xl w-full sm:max-w-3xl sm:w-[90vw] overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-700">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Connect Route Magic</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Provided by your Route Magic admin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRouteMagicModal(false);
+                  routeMagicFormReset();
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#253456] rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setRouteMagicConnecting(true);
+                setRouteMagicError(null);
+                try {
+                  const payload = {
+                    rm_tenant_id: routeMagicForm.rm_tenant_id.trim(),
+                    display_name: routeMagicForm.display_name.trim() || undefined,
+                    api_key: routeMagicForm.api_key.trim(),
+                    base_url: routeMagicForm.base_url.trim() || undefined,
+                  };
+                  const r = await fetchWithTenant('/api/social-integration/routemagic/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  const data = await r.json();
+                  if (r.ok && data?.connected) {
+                    setStatus('routemagic', 'connected');
+                    setRouteMagicStatusData({
+                      rm_tenant_id: data.rm_tenant_id ?? null,
+                      display_name: data.display_name ?? null,
+                      base_url: data.base_url ?? null,
+                      last_verified_at: data.last_verified_at ?? null,
+                      last_sync_at: data.last_sync_at ?? null,
+                    });
+                    setShowRouteMagicModal(false);
+                    routeMagicFormReset();
+                  } else {
+                    const errorMsg = data?.detail
+                      ? `${data.error}: ${data.detail}`
+                      : (data?.error || data?.message || 'Connection failed. Please verify your credentials.');
+                    setRouteMagicError(errorMsg);
+                  }
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : 'Unknown error';
+                  setRouteMagicError(`Failed to connect: ${msg}`);
+                } finally {
+                  setRouteMagicConnecting(false);
+                }
+              }}
+              className="p-8 space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">
+                    Route Magic Tenant ID <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    required
+                    placeholder="e.g. sunmeetdemo"
+                    value={routeMagicForm.rm_tenant_id}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, rm_tenant_id: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                  <p className="text-[11px] text-muted-foreground ml-1">Sent as <code className="text-foreground">RM-TENANT-ID</code> header</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Display Name</label>
+                  <Input
+                    placeholder="e.g. Sunmeet (Sandbox)"
+                    value={routeMagicForm.display_name}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, display_name: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">
+                    API Key <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    required
+                    type="password"
+                    placeholder="Route Magic API key (UUID format)"
+                    value={routeMagicForm.api_key}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, api_key: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl font-mono"
+                  />
+                  <p className="text-[11px] text-muted-foreground ml-1">Sent as <code className="text-foreground">RM-API-KEY</code> header</p>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Base URL</label>
+                  <Input
+                    placeholder="https://staging-api.routemagic.co.uk"
+                    value={routeMagicForm.base_url}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, base_url: e.target.value }))}
+                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl font-mono text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground ml-1">Defaults to the sandbox endpoint. Switch to production when going live.</p>
+                </div>
+              </div>
+
+              {routeMagicError && (
+                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-rose-600 dark:text-rose-400 text-sm font-medium">
+                  {routeMagicError}
+                </div>
+              )}
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={routeMagicConnecting}
+                  className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {routeMagicConnecting ? 'Verifying & Connecting…' : 'Connect Route Magic Account'}
+                </button>
+                <p className="text-[11px] text-muted-foreground mt-3 text-center">
+                  We&apos;ll call <code className="text-foreground">GET /customers</code> against Route Magic to verify before saving.
+                </p>
               </div>
             </form>
           </div>

@@ -39,6 +39,7 @@ export const AUTH_ROUTES = [
   '/onboarding',
   '/community-roi',
   '/follow-ups',
+  '/instagram', // Instagram management (accounts, AI replies, comments, goals)
   '/api/protected', // Mark all protected API routes with /api/protected prefix
 ];
 

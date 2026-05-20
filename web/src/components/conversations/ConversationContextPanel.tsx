@@ -113,6 +113,19 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+  // Optional intent mapping — when set, the bot's intent classifier will
+  // auto-apply this label on inbound messages classified as that intent.
+  // '' means "manual label only — never auto-applied".
+  const [newLabelIntent, setNewLabelIntent] = useState<'' | 'book' | 'cancel' | 'reschedule' | 'info'>('');
+  // Opt this label into the AI context-tag classifier. When true, the agent
+  // may attach this label on any inbound message whose context matches the
+  // label's name + description. Mutually exclusive with intent mapping above
+  // (intent labels run on a separate, deterministic pipeline).
+  const [newLabelAutoClassify, setNewLabelAutoClassify] = useState(false);
+  // Description doubles as the prompt the LLM uses to decide whether to
+  // apply this label — operators write it like a rule ("customer asks about
+  // pricing or discounts", "expresses frustration or complaint").
+  const [newLabelDescription, setNewLabelDescription] = useState('');
 
   // Business profile state
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
@@ -279,18 +292,37 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
+    // metadata is JSONB on the server. Only set keys the operator opted in
+    // to — leaving them absent (not "") keeps the row free of empty-string
+    // match conditions the auto-classifier would otherwise pick up.
+    const metadata: Record<string, string> = {};
+    if (newLabelIntent) {
+      metadata.intent = newLabelIntent;
+    } else if (newLabelAutoClassify) {
+      // Auto-classify and intent are mutually exclusive — intent runs on a
+      // deterministic pipeline, auto-classify on the LLM context classifier.
+      metadata.auto_classify = 'true';
+    }
     try {
       const res = await fetchWithTenant(`${LABELS_API}?channel=${backendChannel}`, {
         method: 'POST',
-        body: JSON.stringify({ name: newLabelName.trim(), color: newLabelColor }),
+        body: JSON.stringify({
+          name: newLabelName.trim(),
+          color: newLabelColor,
+          description: newLabelDescription.trim() || undefined,
+          metadata,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setAllLabels((prev) => [...prev, data.data]);
         setNewLabelName('');
+        setNewLabelIntent('');
+        setNewLabelAutoClassify(false);
+        setNewLabelDescription('');
       }
     } catch {}
-  }, [newLabelName, newLabelColor, backendChannel]);
+  }, [newLabelName, newLabelColor, newLabelIntent, newLabelAutoClassify, newLabelDescription, backendChannel]);
 
   // ── Note actions ──────────────────────────────────────────────
 
@@ -460,6 +492,66 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                     Add
                   </Button>
                 </div>
+                {/* Optional: tie this label to what the AI hears from the
+                    customer. When the AI detects the chosen request type
+                    on any inbound message, this label is added to the
+                    conversation automatically. Leave on "Manual only"
+                    for labels operators apply by hand. */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    Auto-apply when AI detects:
+                  </span>
+                  <select
+                    value={newLabelIntent}
+                    onChange={(e) => {
+                      setNewLabelIntent(e.target.value as typeof newLabelIntent);
+                      // Intent + auto-classify are mutually exclusive — selecting
+                      // an intent disables the AI context classifier for this label.
+                      if (e.target.value) setNewLabelAutoClassify(false);
+                    }}
+                    className="h-7 text-xs flex-1 rounded border border-input bg-background px-2"
+                    title="Whenever the AI detects the chosen request type in an inbound message, this label is automatically added to the conversation."
+                  >
+                    <option value="">Manual only (no auto-apply)</option>
+                    <option value="book">Booking request</option>
+                    <option value="cancel">Cancellation request</option>
+                    <option value="reschedule">Reschedule request</option>
+                    <option value="info">Question or info inquiry</option>
+                  </select>
+                </div>
+
+                {/* AI context classifier — operator-curated vocabulary the
+                    Sonnet/Haiku-class classifier picks from on every inbound
+                    message. The description is the prompt the LLM uses to
+                    decide, so write it like a rule. */}
+                <div className="flex items-start gap-1.5 mt-1">
+                  <input
+                    id="newLabelAutoClassify"
+                    type="checkbox"
+                    checked={newLabelAutoClassify}
+                    onChange={(e) => {
+                      setNewLabelAutoClassify(e.target.checked);
+                      if (e.target.checked) setNewLabelIntent('');
+                    }}
+                    className="h-3.5 w-3.5 mt-0.5"
+                  />
+                  <label htmlFor="newLabelAutoClassify" className="text-[10px] text-muted-foreground cursor-pointer">
+                    Let AI apply this label based on conversation context
+                  </label>
+                </div>
+                {newLabelAutoClassify && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    <Input
+                      placeholder='When to apply (e.g. "customer asks about pricing or discounts")'
+                      value={newLabelDescription}
+                      onChange={(e) => setNewLabelDescription(e.target.value)}
+                      className="h-7 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">
+                      The AI uses this description to decide whether the label fits.
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

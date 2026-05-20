@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@lad/shared/storage';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import {
   Tooltip,
@@ -353,8 +354,12 @@ export function ChatGroupManager({
     }
   }, [open]);
 
-  const filteredGroups = searchQuery
-    ? groups.filter((g) => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Groups list is bounded (typically <50 per tenant) so we keep this filter
+  // client-side, but debounce the input so the .filter() doesn't run on every
+  // keystroke — matches the pattern used everywhere else.
+  const debouncedSearch = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
+  const filteredGroups = debouncedSearch
+    ? groups.filter((g) => g.name.toLowerCase().includes(debouncedSearch))
     : groups;
 
   // Load contacts from a source

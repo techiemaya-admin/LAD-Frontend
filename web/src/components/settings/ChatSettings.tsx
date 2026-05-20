@@ -439,11 +439,28 @@ export function ChatSettings() {
   >([]);
 
   // LinkedIn automation settings
-  const [linkedinAutomation, setLinkedinAutomation] = useState({
+  const [linkedinAutomation, setLinkedinAutomation] = useState<{
+    auto_like_posts: boolean;
+    auto_comment_posts: boolean;
+    ai_agent_reply_delay_seconds: number;
+  }>({
     auto_like_posts: false,
     auto_comment_posts: false,
+    ai_agent_reply_delay_seconds: 0,
   });
   const [savingLinkedinAutomation, setSavingLinkedinAutomation] = useState(false);
+
+  // LinkedIn follow-up sequence settings (tenant-level cadence for the
+  // 4-touch post-acceptance sequence — see LinkedInAutoFollowupService).
+  const DEFAULT_LI_FOLLOWUP_HOURS = [24, 72, 168, 336];
+  const [linkedinFollowup, setLinkedinFollowup] = useState<{
+    enabled: boolean;
+    schedule_hours: number[];
+  }>({
+    enabled: true,
+    schedule_hours: DEFAULT_LI_FOLLOWUP_HOURS,
+  });
+  const [savingLinkedinFollowup, setSavingLinkedinFollowup] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -453,17 +470,28 @@ export function ChatSettings() {
       fetchChatSettings(),
       fetchFollowupConfig(),
       fetch('/api/social-integration/linkedin/automation-settings').then((r) => r.json()).catch(() => null),
+      fetch('/api/social-integration/linkedin/followup-settings').then((r) => r.json()).catch(() => null),
       fetchShareableAssets(),
       fetchApprovedTemplates(),
     ])
-      .then(([p, s, f, liSettings, assets, tmpl]) => {
+      .then(([p, s, f, liSettings, liFollowup, assets, tmpl]) => {
         setPrompts(Array.isArray(p) ? p : []);
         setChatSettings(s);
         setFollowupConfig(f);
         if (liSettings?.success && liSettings.data) {
+          const rawDelay = Number(liSettings.data.ai_agent_reply_delay_seconds);
           setLinkedinAutomation({
-            auto_like_posts:    !!liSettings.data.auto_like_posts,
-            auto_comment_posts: !!liSettings.data.auto_comment_posts,
+            auto_like_posts:              !!liSettings.data.auto_like_posts,
+            auto_comment_posts:           !!liSettings.data.auto_comment_posts,
+            ai_agent_reply_delay_seconds: Number.isFinite(rawDelay) ? Math.max(0, Math.min(300, rawDelay)) : 0,
+          });
+        }
+        if (liFollowup?.success && liFollowup.data) {
+          setLinkedinFollowup({
+            enabled: liFollowup.data.enabled !== false,
+            schedule_hours: Array.isArray(liFollowup.data.schedule_hours) && liFollowup.data.schedule_hours.length > 0
+              ? liFollowup.data.schedule_hours.map((v: any) => Number(v) || 0).filter((v: number) => v > 0)
+              : DEFAULT_LI_FOLLOWUP_HOURS,
           });
         }
         setShareableAssets(Array.isArray(assets) ? assets : []);
@@ -696,6 +724,41 @@ export function ChatSettings() {
       setSavingLinkedinAutomation(false);
     }
   }, [linkedinAutomation, showToast]);
+
+  const handleSaveLinkedinFollowup = useCallback(async () => {
+    // Clamp + validate cadence before sending — backend re-validates but a
+    // fast frontend check gives the user immediate feedback.
+    const cleanHours = (linkedinFollowup.schedule_hours || [])
+      .map((v) => Number(v))
+      .filter((v) => Number.isFinite(v) && v > 0 && v <= 24 * 365);
+    if (cleanHours.length === 0) {
+      showToast('Add at least one positive hour value to the cadence', 'error');
+      return;
+    }
+    setSavingLinkedinFollowup(true);
+    try {
+      const res = await fetch('/api/social-integration/linkedin/followup-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: linkedinFollowup.enabled,
+          schedule_hours: cleanHours,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setLinkedinFollowup({
+          enabled: data.data.enabled !== false,
+          schedule_hours: Array.isArray(data.data.schedule_hours) ? data.data.schedule_hours : cleanHours,
+        });
+      }
+      showToast(data.success ? 'LinkedIn follow-up settings saved' : 'Failed to save', data.success ? 'success' : 'error');
+    } catch {
+      showToast('Failed to save', 'error');
+    } finally {
+      setSavingLinkedinFollowup(false);
+    }
+  }, [linkedinFollowup, showToast]);
 
   const handleSaveWebScraping = useCallback(async () => {
     setWebScrapingSaving(true);
@@ -2113,6 +2176,37 @@ export function ChatSettings() {
                 )}
               </button>
             </div>
+
+            {/* AI Agent reply delay */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">AI Agent Reply Delay</p>
+                  <p className="text-xs text-gray-500">
+                    Hold the AI&apos;s reply for this many seconds before sending — makes the response feel more human. 0 = instant.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={300}
+                  step={1}
+                  value={linkedinAutomation.ai_agent_reply_delay_seconds}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setLinkedinAutomation((prev) => ({
+                      ...prev,
+                      ai_agent_reply_delay_seconds: Number.isFinite(v) ? Math.max(0, Math.min(300, v)) : 0,
+                    }));
+                  }}
+                  className="w-20 px-2 py-1.5 border border-gray-200 rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <span className="text-xs text-gray-500 w-8">sec</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
@@ -2123,6 +2217,130 @@ export function ChatSettings() {
             >
               {savingLinkedinAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save LinkedIn Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ───── LinkedIn Follow-up Sequence (post-acceptance cadence) ───── */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2.5 bg-amber-50 rounded-lg">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">LinkedIn Follow-up Sequence</h3>
+          </div>
+          <p className="text-sm text-gray-500">
+            After a connection request is accepted, the AI agent schedules this sequence of messages towards booking a meeting. Each message uses your LinkedIn chat-agent prompt (above), is auto-cancelled when the lead replies, and is dynamically rescheduled when the lead asks for a specific future time.
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* On/off toggle */}
+          <div className="border border-gray-100 rounded-lg px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="h-4 w-4 text-amber-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Auto-schedule sequence on acceptance</p>
+                <p className="text-xs text-gray-500">When off, no scheduled follow-ups are created — the live agent still replies to inbound DMs.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setLinkedinFollowup((prev) => ({ ...prev, enabled: !prev.enabled }))}
+              title={linkedinFollowup.enabled ? 'On — click to disable' : 'Off — click to enable'}
+            >
+              {linkedinFollowup.enabled ? (
+                <ToggleRight className="h-6 w-6 text-amber-500" />
+              ) : (
+                <ToggleLeft className="h-6 w-6 text-gray-300" />
+              )}
+            </button>
+          </div>
+
+          {/* Cadence editor */}
+          <div className="border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Cadence (hours from acceptance)</p>
+                <p className="text-xs text-gray-500">
+                  One entry = one follow-up. Default: 24, 72, 168, 336 (≈ +1d, +3d, +7d, +14d).
+                </p>
+              </div>
+              <button
+                onClick={() => setLinkedinFollowup((prev) => ({ ...prev, schedule_hours: DEFAULT_LI_FOLLOWUP_HOURS }))}
+                className="text-xs text-amber-600 hover:underline"
+                disabled={!linkedinFollowup.enabled}
+                title="Reset to default cadence"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {linkedinFollowup.schedule_hours.map((hours, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500 w-16">
+                    Touch {idx + 1}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24 * 365}
+                    value={hours}
+                    disabled={!linkedinFollowup.enabled}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setLinkedinFollowup((prev) => {
+                        const next = [...prev.schedule_hours];
+                        next[idx] = Number.isFinite(v) ? v : 0;
+                        return { ...prev, schedule_hours: next };
+                      });
+                    }}
+                    className="w-24 px-2 py-1 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-gray-50 disabled:text-gray-400"
+                  />
+                  <span className="text-xs text-gray-400">
+                    hours (≈ {(hours / 24).toFixed(hours % 24 === 0 ? 0 : 1)}d)
+                  </span>
+                  <button
+                    onClick={() =>
+                      setLinkedinFollowup((prev) => ({
+                        ...prev,
+                        schedule_hours: prev.schedule_hours.filter((_, i) => i !== idx),
+                      }))
+                    }
+                    disabled={!linkedinFollowup.enabled || linkedinFollowup.schedule_hours.length <= 1}
+                    className="text-gray-300 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Remove this touch"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() =>
+                setLinkedinFollowup((prev) => ({
+                  ...prev,
+                  schedule_hours: [...prev.schedule_hours, prev.schedule_hours[prev.schedule_hours.length - 1] * 2 || 24],
+                }))
+              }
+              disabled={!linkedinFollowup.enabled || linkedinFollowup.schedule_hours.length >= 10}
+              className="mt-3 flex items-center gap-1 text-xs text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Plus className="h-3 w-3" />
+              Add another touch
+            </button>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveLinkedinFollowup}
+              disabled={savingLinkedinFollowup}
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
+            >
+              {savingLinkedinFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Follow-up Cadence
             </button>
           </div>
         </div>

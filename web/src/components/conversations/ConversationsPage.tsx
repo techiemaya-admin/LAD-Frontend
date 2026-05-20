@@ -10,6 +10,7 @@ import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
 import { LinkedInConversationView } from './LinkedInConversationView';
 import { EmailChannelView } from './EmailChannelView';
+import InstagramConversationView from './InstagramConversationView';
 import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
 import type { ChatGroup } from './ChatGroupManager';
 import type { Conversation, Channel } from '@/types/conversation';
@@ -70,6 +71,8 @@ function ChannelConversationView({
     loadMore,
     isLoadingMore,
     hasMore,
+    selectedLabelIds,
+    setSelectedLabelIds,
   } = useConversations({ channel });
 
 
@@ -260,6 +263,8 @@ function ChannelConversationView({
               onHideEmptyChange={setHideEmpty}
               sortBy={sortBy}
               onSortByChange={setSortBy}
+              selectedLabelIds={selectedLabelIds}
+              onLabelFilterChange={setSelectedLabelIds}
             />
           </motion.div>
         )}
@@ -368,6 +373,8 @@ function ChannelConversationView({
                     onHideEmptyChange={setHideEmpty}
                     sortBy={sortBy}
                     onSortByChange={setSortBy}
+                    selectedLabelIds={selectedLabelIds}
+                    onLabelFilterChange={setSelectedLabelIds}
                   />
                 )}
               </div>
@@ -468,7 +475,7 @@ function ChannelConversationView({
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
+type WaTab = 'personal' | 'waba' | 'instagram' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -479,6 +486,7 @@ type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
 interface ChannelConnectionStatus {
   personal: boolean;
   waba: boolean;
+  instagram: boolean;
   linkedin: boolean;
   gmail: boolean;
   gmailEmail: string | null;
@@ -489,7 +497,7 @@ interface ChannelConnectionStatus {
 }
 
 async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
-  const [personalResult, wabaResult, linkedinResult, emailResult] = await Promise.allSettled([
+  const [personalResult, wabaResult, instagramResult, linkedinResult, emailResult] = await Promise.allSettled([
     // Personal WA
     fetchWithTenant('/api/personal-whatsapp/accounts')
       .then(async (res) => {
@@ -507,6 +515,18 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
         const data = await res.json();
         const accounts: any[] = data?.accounts ?? data ?? [];
         return accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+      })
+      .catch(() => false),
+
+    // Instagram (LAD-Instagram-Comms via Next.js proxy)
+    fetchWithTenant('/api/instagram-conversations/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data?.data ?? data ?? [];
+        return accounts.some(
+          (a: any) => (a.status ?? 'active') !== 'inactive' && !a.is_deleted,
+        );
       })
       .catch(() => false),
 
@@ -551,6 +571,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
   return {
     personal:     personalResult.status === 'fulfilled' ? (personalResult.value as boolean) : false,
     waba:         wabaResult.status    === 'fulfilled' ? (wabaResult.value as boolean)    : false,
+    instagram:    instagramResult.status === 'fulfilled' ? (instagramResult.value as boolean) : false,
     linkedin:     linkedinResult.status === 'fulfilled' ? (linkedinResult.value as boolean) : false,
     gmail:        emailStatus.gmail,
     gmailEmail:   emailStatus.gmailEmail,
@@ -566,23 +587,26 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
 // then Gmail, then Outlook
 // ─────────────────────────────────────────────────────────────────────────────
 function getDefaultTab(status: ChannelConnectionStatus): WaTab {
-  if (status.personal) return 'personal';
-  if (status.waba)     return 'waba';
-  if (status.linkedin) return 'linkedin';
-  if (status.gmail)    return 'gmail';
-  if (status.outlook)  return 'outlook';
-  if (status.custom)   return 'custom';
+  if (status.personal)  return 'personal';
+  if (status.waba)      return 'waba';
+  if (status.instagram) return 'instagram';
+  if (status.linkedin)  return 'linkedin';
+  if (status.gmail)     return 'gmail';
+  if (status.outlook)   return 'outlook';
+  if (status.custom)    return 'custom';
   return 'personal'; // fallback (nothing connected)
 }
 
-// All possible tabs in display order
+// All possible tabs in display order — matches the Integrations page order:
+// Personal WA, WA Business, Instagram, LinkedIn, then Email channels
 const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
-  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
-  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
-  { id: 'gmail',    label: 'Gmail',         sublabel: 'gmail' },
-  { id: 'outlook',  label: 'Outlook',       sublabel: 'outlook' },
-  { id: 'custom',   label: 'Custom Email',  sublabel: 'custom_email' },
+  { id: 'personal',  label: 'Personal WA',  sublabel: 'personal_whatsapp' },
+  { id: 'waba',      label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'instagram', label: 'Instagram',    sublabel: 'instagram_dm' },
+  { id: 'linkedin',  label: 'LinkedIn',     sublabel: 'linkedin' },
+  { id: 'gmail',     label: 'Gmail',        sublabel: 'gmail' },
+  { id: 'outlook',   label: 'Outlook',      sublabel: 'outlook' },
+  { id: 'custom',    label: 'Custom Email', sublabel: 'custom_email' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -592,6 +616,7 @@ function getTabColor(tabId: WaTab): string {
   switch (tabId) {
     case 'personal':  return '#25D366'; // WhatsApp green
     case 'waba':      return '#128C7E'; // WhatsApp Business teal
+    case 'instagram': return '#E1306C'; // Instagram pink — pulled from the official gradient mid-stop
     case 'linkedin':  return '#0077B5'; // LinkedIn blue
     case 'gmail':     return '#EA4335'; // Gmail red
     case 'outlook':   return '#0078D4'; // Outlook blue
@@ -715,6 +740,7 @@ export function ConversationsPage() {
             isMobile={isMobile}
           />
         )}
+        {activeTab === 'instagram' && <InstagramConversationView />}
         {activeTab === 'linkedin'  && <LinkedInConversationView />}
         {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
         {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
