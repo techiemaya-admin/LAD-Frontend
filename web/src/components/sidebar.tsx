@@ -264,19 +264,21 @@ export function Sidebar() {
   ];
 
   // Helper: does the user have access to this nav item?
-  // An item is visible when ANY of the following matches:
-  //   • Admin / owner role → always
-  //   • requiredCapability is in user.capabilities[]
-  //   • requiredFeature    is in user.tenantFeatures[] (i.e. hasFeature)
+  // Tenant feature flag is the hard gate — if the tenant doesn't have the
+  // feature enabled, NO user of that tenant sees it (including owner/admin).
+  // Within an enabled feature, owner/admin see it automatically; other roles
+  // additionally need the matching capability.
   // Items without any required* field are public (always shown).
   const hasNavAccess = (item: NavItem): boolean => {
     if (!item.requiredCapability && !item.requiredFeature) return true;
+
+    // Tenant feature gate — applies to every role, no bypass.
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
+
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
     if (isAdminOrOwner) return true;
     const caps = user?.capabilities || [];
-    const capOk = !!item.requiredCapability && caps.includes(item.requiredCapability);
-    const featOk = !!item.requiredFeature    && hasFeature(item.requiredFeature);
-    return capOk || featOk;
+    return !!item.requiredCapability && caps.includes(item.requiredCapability);
   };
 
   // Filter navigation strictly. Previously we showed every item when the
