@@ -33,7 +33,8 @@ import {
   DollarSign,
   MessageSquare,
   Mail,
-  FileText
+  FileText,
+  ChevronDown,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -60,7 +61,7 @@ const SettingsPage: React.FC = () => {
   const [renewalDate, setRenewalDate] = useState<string>('');
   const [logoError, setLogoError] = useState(false);
   const [requirementConfigs, setRequirementConfigs] = useState<RequirementConfig[]>([]);
-  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules' | 'email_templates' | 'quotation-templates'>('lead_config');
+  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules'  | 'quotation-templates' | ''>('lead_config');
   const [editingConfig, setEditingConfig] = useState<RequirementConfig | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false); // Move this HERE
   const [isConceptModalOpen, setIsConceptModalOpen] = useState(false);
@@ -97,31 +98,6 @@ const SettingsPage: React.FC = () => {
     }
   }, [tenant?.name, user, companyName, dispatch]);
 
-  // useEffect(() => {
-  //   console.log("Tenant id : " + tenant?.id);
-  //   const fetchProposalSettingDetails = async () => {
-  //     try {
-  //       if (tenant?.id && tenan?.id !='default') {
-  //         setTenantId(tenant.id);
-  //         await fetchConfigs(tenant.id);
-  //         await fetchConcepts(tenant.id);
-  //         await fetchPricingRules(tenant.id);
-  //         await fetchpricingModels(tenant.id); // Fetch pricing modals after getting tenant_id
-  //         await fetchEmailTemplates(tenant.id); // Fetch email templates after getting tenant_id
-  //         await fetchQuotationTemplates(tenant.id);
-  //         await fetchPlaceholders(tenant.id);
-  //       } else {
-  //         console.log("No tenant id found in settings page");
-  //       }
-  //     } catch (error) {
-  //       logger.error("[Call Logs] Failed to get user tenant_id", error);
-  //     }
-  //   };
-  //   fetchProposalSettingDetails();
-  // }, []);
-
-
-  // Inside SettingsPage component...
 
   const fetchProposalSettingDetails = async (targetTenantId?: string) => {
     // Use the provided ID or fall back to the context tenant ID
@@ -931,126 +907,150 @@ const SettingsPage: React.FC = () => {
         {activeTab === 'credits' && <CreditsSettings />}
         {/* 4. Render LeadRequirements component when tab is active */}
         {activeTab === 'proposal_settings' && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4">
+            <div className="flex flex-col gap-4">
               {[
-                { id: 'lead_config', label: 'Lead Requirement', icon: Settings },
-                { id: 'concepts', label: 'Concept Management', icon: Sparkles },
-                { id: 'pricing_rules', label: 'Pricing Rules', icon: DollarSign },
-                { id: 'email_templates', label: 'Email Templates', icon: Mail },
-                { id: 'quotation-templates', label: 'Quotation Template', icon: FileText },
-              ].map((subTab) => (
-                <button
-                  key={subTab.id}
-                  onClick={() => setProposalSubTab(subTab.id as any)}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium transition-colors relative",
-                    proposalSubTab === subTab.id
-                      ? "text-[#4F46E5]"
-                      : "text-[#6B7280] hover:text-[#1F2937]"
-                  )}
-                >
-                  {subTab.label}
-                  {proposalSubTab === subTab.id && (
-                    <motion.div
-                      layoutId="proposalSubTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#4F46E5]"
-                    />
-                  )}
-                </button>
-              ))}
+                { id: 'lead_config', label: 'Lead requirement', icon: Settings, count: `${requirementConfigs.length} fields configured` },
+                { id: 'concepts', label: 'Concept management', icon: Sparkles, count: `${concepts.length} concepts active` },
+                { id: 'pricing_rules', label: 'Pricing rules', icon: DollarSign, count: `${pricingRules.length} rules` },
+                { id: 'quotation-templates', label: 'Quotation template', icon: FileText, count: `${quotationTemplates.length} ${quotationTemplates.length === 1 ? 'template' : 'templates'}` },
+              ].map((sub) => {
+                  const isExpanded = proposalSubTab === sub.id;
+                  return (
+                      <div
+                          key={sub.id}
+                          className={cn(
+                              "bg-white rounded-2xl border transition-all overflow-hidden flex flex-col",
+                              isExpanded ? "border-slate-200 shadow-sm" : "border-slate-100 hover:border-slate-200"
+                          )}
+                      >
+                        <button
+                            onClick={() => setProposalSubTab(isExpanded ? '' as any : sub.id as any)}
+                            className="flex items-center justify-between p-6 w-full text-left transition-colors hover:bg-slate-50/50"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm",
+                                isExpanded ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400"
+                            )}>
+                              <sub.icon className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{sub.label}</p>
+                              <p className="text-xs text-slate-400 font-medium">{sub.count}</p>
+                            </div>
+                          </div>
+                          <ChevronDown className={cn(
+                              "w-5 h-5 text-slate-400 transition-transform duration-300",
+                              isExpanded && "rotate-180"
+                          )} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                              <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                  className="border-t border-slate-50 bg-white"
+                              >
+                                <div className="p-8">
+                                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-50">
+                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                                      {sub.id === 'lead_config'}
+                                      {sub.id === 'concepts'}
+                                      {sub.id === 'pricing_rules'}
+                                      {sub.id === 'quotation-templates'}
+                                    </h3>
+                                  </div>
+
+                                  {sub.id === 'lead_config' && (
+                                      <LeadRequirements
+                                          requirementConfigs={requirementConfigs}
+                                          pricingModels={pricingModels}
+                                          onEdit={(config) => {
+                                            setEditingConfig(config);
+                                            setIsConfigModalOpen(true);
+                                          }}
+                                          onDelete={handleDeleteConfig}
+                                          onAdd={() => {
+                                            setEditingConfig(null);
+                                            setIsConfigModalOpen(true);
+                                          }}
+                                      />
+                                  )}
+
+                                  {sub.id === 'concepts' && (
+                                      <ConceptManagement
+                                          concepts={concepts}
+                                          tenantId={tenantId}
+                                          requirementConfigs={requirementConfigs}
+                                          onEdit={(concept) => {
+                                            setEditingConcept(concept);
+                                            const requirementConfigIds = concept.requirement_configs?.map(item => item.id) || [];
+                                            setSelectedConceptServices(requirementConfigIds);
+                                            setIsConceptModalOpen(true);
+                                          }}
+                                          onDelete={handleDeleteConcept}
+                                          onAdd={() => {
+                                            setEditingConcept(null);
+                                            setSelectedConceptServices([]);
+                                            setIsConceptModalOpen(true);
+                                          }}
+                                          afterSave={() => {
+                                            fetchConcepts(tenantId);
+                                            setIsConceptModalOpen(false);
+                                            setEditingConcept(null);
+                                          }}
+                                      />
+                                  )}
+
+                                    {sub.id === 'pricing_rules' && (
+                                      <PricingRules
+                                        pricingRules={pricingRules}
+                                        concepts={concepts}
+                                        tenantId={tenantId}
+                                        requirementConfigs={requirementConfigs}
+                                        onSave={handleSavePricingRule}
+                                        onDelete={handleDeletePricingRule}
+
+                                        afterSave={() => {
+                                          fetchPricingRules(tenantId);
+
+                                        }}
+                                      />
+                                  )}
+                                  {/*{sub.id === 'email_templates' && (*/}
+                                  {/*    <EmailTemplatesDragDrop*/}
+                                  {/*      templates={emailTemplates}*/}
+                                  {/*      placeholders={placeholders}*/}
+                                  {/*      tenantId={tenantId}*/}
+                                  {/*      onUpload={() => fetchEmailTemplates(tenantId)}*/}
+                                  {/*      onSaveDesign={handleSaveEmailTemplateDesign}*/}
+                                  {/*      onDelete={handleDeleteEmailTemplate}*/}
+                                  {/*      onPreview={handlePreviewTemplate}*/}
+                                  {/*      onSetDefault={handleSetDefaultEmailTemplate}*/}
+                                  {/*    />*/}
+                                  {/*  )}*/}
+                                {sub.id === 'quotation-templates' && (
+                                      <QuotationTemplates
+                                        templates={quotationTemplates}
+                                        onUpload={handleUploadQuotationTemplate}
+                                        onDelete={handleDeleteQuotationTemplate}
+                                        onPreview={handlePreviewQuotationTemplate}
+                                        onSetDefault={handleSetDefaultQuotationTemplate}
+                                        placeholderList={placeholders}
+                                      />
+                                    )}
+
+
+                      </div>
+                    </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-
-            {proposalSubTab === 'lead_config' && (
-              <LeadRequirements
-                requirementConfigs={requirementConfigs}
-                pricingModels={pricingModels}
-                onEdit={(config) => {
-                  setEditingConfig(config);
-                  setIsConfigModalOpen(true);
-                }}
-                onDelete={handleDeleteConfig}
-                onAdd={() => {
-                  setEditingConfig(null);
-                  setIsConfigModalOpen(true);
-                }}
-              />
-            )}
-
-            {proposalSubTab === 'concepts' && (
-              <ConceptManagement
-                concepts={concepts}
-                tenantId={tenantId}
-                requirementConfigs={requirementConfigs}
-                onEdit={(concept) => {
-                  setEditingConcept(concept);
-
-                  const requirementConfigIds = concept.requirement_configs.map(item => item.id);
-                  console.log('Editing concept with requirement config IDs:', requirementConfigIds);
-                  setSelectedConceptServices(requirementConfigIds || []);
-                  setIsConceptModalOpen(true);
-                }}
-                onDelete={handleDeleteConcept}
-                onAdd={() => {
-                  setEditingConcept(null);
-                  setSelectedConceptServices([]);
-                  setIsConceptModalOpen(true);
-                }}
-                afterSave={() => {
-                  fetchConcepts(tenantId);
-                  setIsConceptModalOpen(false);
-                  setEditingConcept(null);
-                }}
-              />
-            )}
-
-            {proposalSubTab === 'pricing_rules' && (
-              <PricingRules
-                pricingRules={pricingRules}
-                concepts={concepts}
-                tenantId={tenantId}
-                requirementConfigs={requirementConfigs}
-                onSave={handleSavePricingRule}
-                onDelete={handleDeletePricingRule}
-
-                afterSave={() => {
-                  fetchPricingRules(tenantId);
-
-                }}
-              />
-            )}
-            {proposalSubTab === 'email_templates' && (
-              // <EmailTemplates
-              //   templates={emailTemplates}
-              //   onUpload={handleUploadEmailTemplate}
-              //   onDelete={handleDeleteEmailTemplate}
-              //   onPreview={handlePreviewTemplate}
-              //   onSetDefault={handleSetDefaultEmailTemplate}
-              //   placeholderList={placeholders}
-              // />
-              // <QuotationEmailTemplateEditor mode="create" />
-              <EmailTemplatesDragDrop
-                templates={emailTemplates}
-                placeholders={placeholders}
-                tenantId={tenantId}
-                onUpload={() => fetchEmailTemplates(tenantId)}
-                onSaveDesign={handleSaveEmailTemplateDesign}
-                onDelete={handleDeleteEmailTemplate}
-                onPreview={handlePreviewTemplate}
-                onSetDefault={handleSetDefaultEmailTemplate}
-              />
-            )}
-            {proposalSubTab === 'quotation-templates' && (
-              <QuotationTemplates
-                templates={quotationTemplates}
-                onUpload={handleUploadQuotationTemplate}
-                onDelete={handleDeleteQuotationTemplate}
-                onPreview={handlePreviewQuotationTemplate}
-                onSetDefault={handleSetDefaultQuotationTemplate}
-                placeholderList={placeholders}
-              />
-            )}
-
+        );
+      })}
           </div>
         )}
 
@@ -1197,7 +1197,7 @@ const SettingsPage: React.FC = () => {
                     <button type="button" onClick={() => setIsConceptModalOpen(false)} className="flex-1 py-2.5 border border-[#E5E7EB] text-[#6B7280] rounded-xl font-bold text-sm hover:bg-white transition-colors">
                       Cancel
                     </button>
-                    <button type="submit" className="flex-1 py-2.5 bg-[#4F46E5] text-white rounded-xl font-bold text-sm hover:bg-[#4338CA] transition-colors">
+                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">
                       {editingConcept ? 'Update Concept' : 'Create Concept'}
                     </button>
                   </div>
@@ -1248,7 +1248,7 @@ const SettingsPage: React.FC = () => {
                       <div>
                         <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Pricing Model</label>
                         <select name="pricing_model_id" defaultValue={editingConfig?.pricing_model_id} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm">
-                          {pricingModels.map(pm => (
+                          {pricingModels.map((pm: any) => (
                             <option key={pm.id} value={pm.id}>{pm.value} ({pm.label})</option>
                           ))}
                         </select>
@@ -1262,165 +1262,9 @@ const SettingsPage: React.FC = () => {
                   </div>
                   <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
                     <button type="button" onClick={() => setIsConfigModalOpen(false)} className="flex-1 py-2 text-sm font-bold text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl">Cancel</button>
-                    <button type="submit" className="flex-1 py-2 text-sm font-bold text-white bg-[#4F46E5] rounded-xl">Save</button>
+                    <button type="submit" className="flex-1 py-2 text-sm font-bold text-white bg-blue-600 rounded-xl">Save</button>
                   </div>
                 </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* Requirements & Pricing Modal */}
-        <AnimatePresence>
-          {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsModalOpen(false)}
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              />
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-              >
-                <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
-                  <div>
-                    <h2 className="text-xl font-bold text-[#1F2937]">Lead Requirements & Pricing</h2>
-                    <p className="text-xs text-[#6B7280] mt-1">Review and edit lead details for {activeLead?.name}</p>
-                  </div>
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="p-2 hover:bg-[#E5E7EB] rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-[#6B7280]" />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-8">
-                  {/* Requirements Section */}
-                  <div className="mb-10">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#9CA3AF] flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Lead Details
-                      </h3>
-                      <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className="text-xs font-semibold text-[#4F46E5] hover:underline flex items-center gap-1"
-                      >
-                        {isEditing ? <><Check className="w-3 h-3" /> Done</> : <><Edit2 className="w-3 h-3" /> Edit Fields</>}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      {requirements.map(req => (
-                        <div key={req.id} className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">
-                            {req.field_key.replace('_', ' ')}
-                          </label>
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={req.value}
-                              onChange={(e) => updateRequirementValue(req.id, e.target.value)}
-                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
-                            />
-                          ) : (
-                            <div className="p-3 bg-[#F3F4F6] rounded-xl text-sm font-medium text-[#1F2937]">
-                              {req.value || 'Not specified'}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Pricing Section */}
-                  {pricing && (
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#9CA3AF] mb-6 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" /> Pricing Breakdown
-                      </h3>
-
-                      <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl overflow-hidden">
-                        <div className="p-6 space-y-4">
-                          {Object.entries(pricing.breakdown).map(([key, value]) => (
-                            <div key={key} className="flex justify-between items-center">
-                              <span className="text-sm text-[#4B5563] capitalize">{key.replace('_', ' ')}</span>
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  value={value}
-                                  onChange={(e) => updateBreakdownValue(key, parseFloat(e.target.value) || 0)}
-                                  className="w-32 p-1 text-right bg-white border border-[#E5E7EB] rounded text-sm font-bold text-[#1F2937]"
-                                />
-                              ) : (
-                                <span className="text-sm font-bold text-[#1F2937]">${value.toLocaleString()}</span>
-                              )}
-                            </div>
-                          ))}
-
-                          <div className="pt-4 border-t border-[#E5E7EB] space-y-3">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-[#6B7280]">Markup ({pricing.markup}%)</span>
-                              <span className="text-[#10B981] font-medium">+${(Object.values(pricing.breakdown).reduce((a, b) => a + b, 0) * pricing.markup / 100).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-[#6B7280]">Discount ({pricing.discount}%)</span>
-                              <span className="text-[#EF4444] font-medium">-${(Object.values(pricing.breakdown).reduce((a, b) => a + b, 0) * pricing.discount / 100).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-[#4F46E5] p-6 flex justify-between items-center">
-                          <span className="text-white/80 font-medium">Final Quotation Price</span>
-                          <span className="text-2xl font-bold text-white">${pricing.final_price.toLocaleString()}</span>
-                        </div>
-                      </div>
-
-                      {isEditing && (
-                        <div className="grid grid-cols-2 gap-4 mt-6">
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">Markup %</label>
-                            <input
-                              type="number"
-                              value={pricing.markup}
-                              onChange={(e) => updatePricingField('markup', parseFloat(e.target.value) || 0)}
-                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wide ml-1">Discount %</label>
-                            <input
-                              type="number"
-                              value={pricing.discount}
-                              onChange={(e) => updatePricingField('discount', parseFloat(e.target.value) || 0)}
-                              className="w-full p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1 py-3.5 text-sm font-bold text-[#4B5563] bg-white border border-[#E5E7EB] rounded-2xl hover:bg-[#F3F4F6] transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={handleSaveRequirements}
-                    className="flex-1 py-3.5 text-sm font-bold text-white bg-[#4F46E5] rounded-2xl hover:bg-[#4338CA] shadow-lg shadow-[#4F46E5]/20 transition-all"
-                  >
-                    Save & Generate Quotation
-                  </button>
-                </div>
               </motion.div>
             </div>
           )}
