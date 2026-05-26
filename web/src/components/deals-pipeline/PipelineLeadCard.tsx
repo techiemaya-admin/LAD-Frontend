@@ -1807,17 +1807,6 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 )}
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClose();
-              }}
-              className="text-gray-500 dark:text-[#7a8ba3] hover:text-gray-900 dark:hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto min-h-0">

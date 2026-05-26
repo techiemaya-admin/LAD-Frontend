@@ -3856,8 +3856,8 @@ export default function AdvancedSearchAIPage() {
                                         {busy ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
                                     </button>
                                 </div>
-                                <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
                             </div>
+                                <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
                         </div>
                     )}
                     {messages.length === 0 && (
@@ -9021,8 +9021,8 @@ const css = `
                 }
                 html, body, .adv-landing, .adv-chat-root, main { background: #FFFFFF !important; }
                 .adv-chat-input-box { width: 100% !important; max-width: 100% !important; border-radius: 20px; padding: 16px 18px 12px; border: none !important; box-shadow: none !important; outline: none !important; background: #FFFFFF !important; }
-                .adv-chat-ta { text-align: center; font-size: 15px !important; outline: none !important; border: none !important; background: #FFFFFF !important; }
-                .adv-chat-back { width: 36px; height: 36px; top: 82px; left: 12px; z-index: 2000 !important; }
+                .adv-chat-ta { text-align: left; font-size: 11px !important; outline: none !important; border: none !important; background: #FFFFFF !important; }
+                .adv-chat-back { width: 36px; height: 36px; top: 82px; left: 12px; z-index: 10 !important; }
                 .adv-leads-panel {width: 100% !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; border-left: none; }
                 main { overflow: hidden !important; height: calc(100vh - 64px) !important; padding-top: 0 !important; background: #FFFFFF !important; }
                 .adv-chat-root { height: calc(100vh - 64px) !important; overflow: hidden !important; background: #FFFFFF !important; }
@@ -9033,7 +9033,7 @@ const css = `
                 .adv-chat-left-empty .adv-msgs-inner { display: none !important; }
                 .adv-chat-left-empty .adv-chat-input-wrap { padding-bottom: 0 !important; flex: 0 0 auto !important; }
                 .adv-chat-left-empty .adv-chat-input-box { padding: 24px 30px !important; max-width: 90% !important; margin: 0 auto !important; }
-                .adv-chat-left-empty .adv-chat-ta { font-size: 20px !important; }
+                .adv-chat-left-empty .adv-chat-ta { font-size: 12px !important; }
                 .adv-mobile-icp-box { display: flex; width: auto !important; left: auto !important; right: 12px !important; top: 82px !important; }
                 /* Decrease width for a more contained look on mobile */
                 .adv-chat-msgs { flex: 1 !important; overflow-y: auto !important; padding: 72px 0 10px !important; width: 100% !important; display: flex; flex-direction: column; overflow-x: hidden !important; border: none !important; background: #FFFFFF !important; }
@@ -9042,8 +9042,8 @@ const css = `
                 .adv-mobile-footer { background: #FFFFFF !important; }
                 .adv-chat-input-box { width: 100% !important; max-width: 88% !important; margin: 0 auto !important; border-radius: 16px; padding: 10px 14px; background: #FFFFFF !important; border: 1.5px solid #e5e7eb !important; }
                 .adv-input-central-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-                  .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 14px !important; text-align: center !important; padding: 2px 0 !important; min-height: 24px !important; height: 24px !important; line-height: 24px !important; }
-                .adv-chat-input-foot { padding: 4px 0 2px !important; margin-top: 4px !important; border: none !important; background: none !important; justify-content: center !important; gap: 10px !important; }
+                  .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 11px !important; text-align: left !important; padding: 2px 0 !important; min-height: 24px !important; height: 24px !important; line-height: 24px !important; }
+                .adv-chat-input-foot { padding: 4px 0 2px !important; margin-top: 4px !important; border: none !important; background: none !important; justify-content: space-between !important; gap: 10px !important; }
                 .adv-premium-btn { width: auto !important; min-width: 95px !important; justify-content: center !important; padding: 3px 10px !important; margin: 0 !important; font-size: 10px !important; }
                 .adv-chat-attach-btn, .adv-send-sm { width: 28px !important; height: 28px !important; }
                 .adv-chat-attach-btn svg, .adv-send-sm svg { width: 13px !important; height: 13px !important; }
@@ -9134,7 +9134,7 @@ const css = `
                 /* MOBILE FOOTER */
                 .adv-mobile-footer {
                     display: flex; position: fixed; bottom: 10px; left: 6%; right: 6%;
-                    height: 60px; background: #FFFFFF !important; border-radius: 40px; z-index: 1000;
+                    height: 60px; background: #FFFFFF !important; border-radius: 40px; z-index: 40;
                     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
                     justify-content: space-around; align-items: center;
                     padding: 0 10px; border: none;
