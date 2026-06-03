@@ -8,6 +8,7 @@ import { ProfileSummaryDialog } from '@/components/campaigns';
 import AgentVisualizer from '@/components/ui/AgentVisualizer';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import WorkflowPreviewPanel from '@/components/onboarding/WorkflowPreviewPanel';
+import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmailTemplates, useCreateEmailTemplate } from '@lad/frontend-features/email-templates';
 import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
@@ -752,6 +753,7 @@ export default function AdvancedSearchAIPage() {
     // ── AI Playground state ──────────────────────────────────────────────────
     // ── AI Playground (chat-based business profiling) ────────────────────────
     const [showPlayground, setShowPlayground] = useState(false);
+    const [showMediaModal, setShowMediaModal] = useState(false);
     const [pgChatHistory, setPgChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string; card?: any }>>([]);
     const [pgInput, setPgInput] = useState('');
     const [pgBusy, setPgBusy] = useState(false);
@@ -3631,6 +3633,10 @@ export default function AdvancedSearchAIPage() {
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></svg>
                         Get leads from my active ICP
                     </button>
+                    <button className="adv-chip" onClick={() => setShowMediaModal(true)}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                        Media Generation
+                    </button>
                 </div>
 
                 {/* Recent searches */}
@@ -3999,6 +4005,10 @@ export default function AdvancedSearchAIPage() {
                             <button className="adv-gemini-chip" onClick={() => { setInput(ICP_LEADS_PROMPT); taRef.current?.focus(); }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></svg>
                                 Get leads from my active ICP
+                            </button>
+                            <button className="adv-gemini-chip" onClick={() => setShowMediaModal(true)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                                Media Generation
                             </button>
                         </div>
                     )}
@@ -4979,6 +4989,8 @@ export default function AdvancedSearchAIPage() {
                         </div>
                     </div>
                 )}
+
+                <MediaGenerationModal isOpen={showMediaModal} onClose={() => setShowMediaModal(false)} />
 
                 {/* Credit Recharge Modal */}
                 {showRechargeModal && (
@@ -9072,14 +9084,12 @@ const css = `
                 gap: 10px;
                 padding: 0 20px 20px;
                 width: 100%;
-                max-width: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                animation: fadeUp 0.5s ease 0.15s both;
+                max-width: 70%;
+                margin: 0 auto;
+                flex-wrap: wrap;
                 justify-content: center;
+                animation: fadeUp 0.5s ease 0.15s both;
             }
-            .adv-gemini-chips::-webkit-scrollbar {display:none; }
             .adv-gemini-chip {
                 display: inline-flex;
                 align-items: center;

@@ -36,10 +36,10 @@ export function AgentBuilderMCQ({
   };
 
   return (
-    <div className="relative flex flex-col items-center w-full max-w-md h-[600px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
+    <div className="relative flex flex-col items-center w-[448px] max-w-full h-[600px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
       
       <div className="w-full flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
-         <div className="flex items-center gap-2">
+         <div className="flex items-center gap-2 pl-10">
             <Sparkles className="size-4 text-emerald-500" />
             <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
                {phase || "Builder / MCQ"}
@@ -55,94 +55,98 @@ export function AgentBuilderMCQ({
          )}
       </div>
 
-      <div className="flex-1 w-full flex flex-col pt-6 px-6 overflow-y-auto scrollbar-none pb-4">
-        
-        {/* Texts */}
-        <div className="mb-6 space-y-4 px-2">
-          {question.split('\n').map((line, i) => (
-             <p key={i} className={cn(
-                 "text-center text-[#0b1957]",
-                 i === 0 ? "text-[16px] font-bold leading-tight" : "text-[14px] font-semibold text-slate-500 leading-relaxed"
-             )}>
-                {line}
-             </p>
-          ))}
-          {description && (
-             <div className="text-sm text-slate-400 text-center leading-relaxed">
-               <ReactMarkdown
-                 components={{
-                   strong: ({ node, ref, ...props }) => <strong className="font-bold" {...props} />,
-                   p: ({ node, ref, ...props }) => <p className="leading-relaxed" {...props} />,
-                   ul: ({ node, ref, ...props }) => <ul className="list-disc pl-4 space-y-1 text-left my-2" {...props} />,
-                   ol: ({ node, ref, ...props }) => <ol className="list-decimal pl-4 space-y-1 text-left my-2" {...props} />,
-                   li: ({ node, ref, ...props }) => <li className="text-slate-400 font-medium" {...props} />,
-                 }}
+      <div className="relative flex-1 min-h-0 w-full flex flex-col">
+         <div className="flex-grow overflow-y-auto scrollbar-none pt-6 px-6 pb-12">
+           
+           {/* Texts */}
+           <div className="mb-6 space-y-4 px-2">
+             {question.split('\n').map((line, i) => (
+                <p key={i} className={cn(
+                    "text-center text-[#0b1957]",
+                    i === 0 ? "text-xl md:text-2xl font-bold leading-snug" : "text-[14px] font-semibold text-slate-500 leading-relaxed"
+                )}>
+                   {line}
+                </p>
+             ))}
+             {description && (
+                <div className="text-sm text-slate-400 text-center leading-relaxed">
+                  <ReactMarkdown
+                    components={{
+                      strong: ({ node, ref, ...props }) => <strong className="font-bold" {...props} />,
+                      p: ({ node, ref, ...props }) => <p className="leading-relaxed" {...props} />,
+                      ul: ({ node, ref, ...props }) => <ul className="list-disc pl-4 space-y-1 text-left my-2" {...props} />,
+                      ol: ({ node, ref, ...props }) => <ol className="list-decimal pl-4 space-y-1 text-left my-2" {...props} />,
+                      li: ({ node, ref, ...props }) => <li className="text-slate-400 font-medium" {...props} />,
+                    }}
+                  >
+                    {description}
+                  </ReactMarkdown>
+                </div>
+             )}
+           </div>
+
+           {/* Options */}
+           <div className={cn(
+               "w-full pb-10",
+               isStacked ? "flex flex-col gap-3" : "flex flex-wrap gap-2.5 justify-center"
+           )}>
+             {options.map((opt) => (
+               <button
+                 key={opt.id}
+                 onClick={() => handleSelect(opt.id)}
+                 onDoubleClick={() => setSelectedId(null)}
+                 className={cn(
+                   "bg-white border text-left text-sm text-[#0b1957] flex items-center gap-3 transition-all hover:bg-slate-50 group",
+                   isStacked ? "w-full rounded-2xl px-5 py-4 shadow-sm hover:shadow-md" : "w-auto rounded-full px-4 py-2 hover:shadow-sm",
+                   selectedId === opt.id ? "border-[#0b1957] ring-1 ring-[#0b1957] shadow-md z-10 bg-slate-50" : "border-slate-200"
+                 )}
                >
-                 {description}
-               </ReactMarkdown>
-             </div>
-          )}
-        </div>
+                 <div className={cn(
+                     "size-3.5 rounded-full border shrink-0 transition-colors duration-200",
+                     selectedId === opt.id ? "border-[#0b1957] bg-[#0b1957]" : "border-slate-300 group-hover:border-[#0b1957]/50"
+                 )} />
+                 <span className={cn(
+                   "flex-1 font-medium", 
+                   isStacked && selectedId !== opt.id ? "truncate" : "whitespace-normal break-words"
+                 )}>
+                   {opt.label}
+                 </span>
+               </button>
+             ))}
 
-        {/* Options */}
-        <div className={cn(
-            "w-full pb-10",
-            isStacked ? "flex flex-col gap-3" : "flex flex-wrap gap-2.5 justify-center"
-        )}>
-          {options.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => handleSelect(opt.id)}
-              onDoubleClick={() => setSelectedId(null)}
-              className={cn(
-                "bg-white border text-left text-sm text-[#0b1957] flex items-center gap-3 transition-all hover:bg-slate-50 group",
-                isStacked ? "w-full rounded-2xl px-5 py-4 shadow-sm hover:shadow-md" : "w-auto rounded-full px-4 py-2 hover:shadow-sm",
-                selectedId === opt.id ? "border-[#0b1957] ring-1 ring-[#0b1957] shadow-md z-10 bg-slate-50" : "border-slate-200"
+             {/* Plus custom option */}
+             {showCustomInput ? (
+               <div className={cn("w-full animate-in fade-in zoom-in-95 mt-1", isStacked ? "" : "w-full")}>
+                   <input 
+                     type="text" 
+                     placeholder="Type your option..." 
+                     className="w-full bg-white border border-[#0b1957] rounded-2xl px-5 py-4 text-sm text-[#0b1957] shadow-lg outline-none focus:ring-2 focus:ring-[#0b1957]/20" 
+                     autoFocus 
+                     onKeyDown={(e) => {
+                         if (e.key === "Enter" && e.currentTarget.value.trim() && onNext) {
+                             onNext(e.currentTarget.value.trim());
+                         }
+                     }}
+                   />
+               </div>
+             ) : (
+               <button
+                 onClick={() => { setSelectedId("custom"); setShowCustomInput(true); }}
+                 className={cn(
+                   "border border-slate-300 border-dashed text-left text-sm text-slate-500 font-medium flex items-center gap-3 hover:bg-slate-50 hover:text-[#0b1957] transition-all",
+                   isStacked ? "w-full rounded-2xl px-5 py-3.5 bg-transparent" : "w-auto rounded-full px-4 py-2 bg-transparent/50"
+                 )}
+               >
+                 <div className="size-3.5 flex items-center justify-center shrink-0">
+                     <span className="text-xl leading-none -mt-0.5">+</span>
+                  </div>
+                  <span>something different ..?</span>
+                </button>
               )}
-            >
-              <div className={cn(
-                  "size-3.5 rounded-full border shrink-0 transition-colors duration-200",
-                  selectedId === opt.id ? "border-[#0b1957] bg-[#0b1957]" : "border-slate-300 group-hover:border-[#0b1957]/50"
-              )} />
-              <span className={cn(
-                "flex-1 font-medium", 
-                isStacked && selectedId !== opt.id ? "truncate" : "whitespace-normal break-words"
-              )}>
-                {opt.label}
-              </span>
-            </button>
-          ))}
-
-          {/* Plus custom option */}
-          {showCustomInput ? (
-            <div className={cn("w-full animate-in fade-in zoom-in-95 mt-1", isStacked ? "" : "w-full")}>
-                <input 
-                  type="text" 
-                  placeholder="Type your option..." 
-                  className="w-full bg-white border border-[#0b1957] rounded-2xl px-5 py-4 text-sm text-[#0b1957] shadow-lg outline-none focus:ring-2 focus:ring-[#0b1957]/20" 
-                  autoFocus 
-                  onKeyDown={(e) => {
-                      if (e.key === "Enter" && e.currentTarget.value.trim() && onNext) {
-                          onNext(e.currentTarget.value.trim());
-                      }
-                  }}
-                />
             </div>
-          ) : (
-            <button
-              onClick={() => { setSelectedId("custom"); setShowCustomInput(true); }}
-              className={cn(
-                "border border-slate-300 border-dashed text-left text-sm text-slate-500 font-medium flex items-center gap-3 hover:bg-slate-50 hover:text-[#0b1957] transition-all",
-                isStacked ? "w-full rounded-2xl px-5 py-3.5 bg-transparent" : "w-auto rounded-full px-4 py-2 bg-transparent/50"
-              )}
-            >
-              <div className="size-3.5 flex items-center justify-center shrink-0">
-                  <span className="text-xl leading-none -mt-0.5">+</span>
-              </div>
-              <span>something different ..?</span>
-            </button>
-          )}
-        </div>
+         </div>
+         {/* Fade overlay at the bottom of the scrollable MCQ area */}
+         <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none z-10" />
       </div>
 
       <div className="w-full flex-shrink-0 flex justify-end pb-8 px-6 pt-2 bg-gradient-to-t from-white via-white to-transparent relative z-20">

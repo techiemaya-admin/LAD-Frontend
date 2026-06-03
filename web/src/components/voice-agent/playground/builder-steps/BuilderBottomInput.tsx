@@ -1,8 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Mic, Send, Plus } from "lucide-react";
 
-export function BuilderBottomInput({ onSend, placeholder = "Type your response..." }: { onSend?: (val?: string) => void, placeholder?: string }) {
+export function BuilderBottomInput({ 
+  onSend, 
+  placeholder = "Type your response...",
+  enableUpload = false,
+  onFilesSelected
+}: { 
+  onSend?: (val?: string) => void;
+  placeholder?: string;
+  enableUpload?: boolean;
+  onFilesSelected?: (files: FileList) => void;
+}) {
   const [val, setVal] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
     if (onSend) onSend(val);
@@ -12,15 +23,33 @@ export function BuilderBottomInput({ onSend, placeholder = "Type your response..
   return (
     <div className="w-full flex justify-center mt-2 px-2 pb-2">
       <div className="w-full relative flex items-center bg-slate-50/80 backdrop-blur-md rounded-2xl border border-slate-200/50 shadow-sm p-1.5 transition-all focus-within:shadow-md focus-within:border-[#0b1957]/30">
-        <button
-          type="button"
-          className="p-2 shrink-0 text-[#0b1957]/50 hover:text-[#0b1957] transition-colors rounded-full hover:bg-slate-100"
-          aria-label="Add attachment"
-        >
-          <div className="border border-current rounded-full p-0.5">
-            <Plus className="size-4" />
-          </div>
-        </button>
+        {enableUpload ? (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 shrink-0 text-[#0b1957]/50 hover:text-[#0b1957] transition-colors rounded-full hover:bg-slate-100 cursor-pointer"
+              aria-label="Add attachment"
+            >
+              <div className="border border-current rounded-full p-0.5">
+                <Plus className="size-4" />
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                if (e.target.files) onFilesSelected?.(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </>
+        ) : (
+          <div className="w-4 shrink-0" />
+        )}
 
         <input
           type="text"

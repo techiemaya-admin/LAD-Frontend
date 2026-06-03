@@ -1,6 +1,6 @@
 import React from "react";
 import { BuilderBottomInput } from "./BuilderBottomInput";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export function AgentBuilderTextInput({
@@ -10,6 +10,12 @@ export function AgentBuilderTextInput({
   onClose,
   onNext,
   phase,
+  enableUpload = false,
+  references = [],
+  onUpload,
+  onRemove,
+  isUploading = false,
+  error = "",
 }: {
   question?: string;
   description?: string;
@@ -17,12 +23,26 @@ export function AgentBuilderTextInput({
   onClose?: () => void;
   onNext?: (val?: string, action?: string) => void;
   phase?: string;
+  enableUpload?: boolean;
+  references?: { filename: string; thumbnail: string; path: string }[];
+  onUpload?: (file: File) => void;
+  onRemove?: (path: string) => void;
+  isUploading?: boolean;
+  error?: string;
 }) {
+  const handleFilesSelected = (files: FileList) => {
+    if (onUpload) {
+      Array.from(files).forEach((file) => {
+        onUpload(file);
+      });
+    }
+  };
+
   return (
-    <div className="relative flex flex-col items-center w-full max-w-md h-[550px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
+    <div className="relative flex flex-col items-center w-[448px] max-w-full h-[550px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
       
       <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
-         <div className="flex items-center gap-2">
+         <div className="flex items-center gap-2 pl-10">
             <Sparkles className="size-4 text-emerald-500" />
             <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
                {phase || "Builder / Step"}
@@ -38,26 +58,64 @@ export function AgentBuilderTextInput({
          )}
       </div>
 
-      <div className="flex-1 flex flex-col justify-center px-8 w-full pb-10">
-         <h2 className="text-xl md:text-2xl font-bold text-[#0b1957] text-center leading-snug">
-            {question}
-         </h2>
-         {description && (
-           <div className="mt-4 text-xs md:text-sm text-slate-500 text-center leading-relaxed font-medium">
-             <ReactMarkdown
-               components={{
-                 strong: ({ node, ref, ...props }) => <strong className="font-bold" {...props} />,
-                 p: ({ node, ref, ...props }) => <p className="leading-relaxed" {...props} />,
-                 ul: ({ node, ref, ...props }) => <ul className="list-disc pl-4 space-y-1 text-left my-2" {...props} />,
-                 ol: ({ node, ref, ...props }) => <ol className="list-decimal pl-4 space-y-1 text-left my-2" {...props} />,
-                 li: ({ node, ref, ...props }) => <li className="text-slate-500 font-medium" {...props} />,
-               }}
-             >
-               {description}
-             </ReactMarkdown>
-           </div>
-         )}
+      <div className="relative flex-1 min-h-0 w-full flex flex-col pt-6">
+         <div className="flex-grow overflow-y-auto scrollbar-none px-6 pb-12">
+            <h2 className="text-xl md:text-2xl font-bold text-[#0b1957] text-center leading-snug">
+               {question}
+            </h2>
+            {description && (
+               <div className="mt-4 text-xs md:text-sm text-slate-500 text-center leading-relaxed font-medium">
+                 <ReactMarkdown
+                   components={{
+                     strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+                     p: ({ node, ...props }) => <p className="leading-relaxed" {...props} />,
+                     ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 text-left my-2" {...props} />,
+                     ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 text-left my-2" {...props} />,
+                     li: ({ node, ...props }) => <li className="text-slate-500 font-medium" {...props} />,
+                   }}
+                 >
+                   {description}
+                 </ReactMarkdown>
+               </div>
+            )}
+         </div>
+         {/* Fade overlay at the bottom of the scrollable description area */}
+         <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none z-10" />
       </div>
+
+      {/* Uploaded References Thumbnails Area */}
+      {enableUpload && (references.length > 0 || isUploading) && (
+        <div className="w-full flex flex-col px-8 mb-2 z-10 space-y-1 animate-in fade-in duration-200">
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+            References ({references.length}/5)
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            {references.map((ref) => (
+              <div key={ref.path} className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shadow-sm group">
+                <img src={ref.thumbnail} alt={ref.filename} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => onRemove?.(ref.path)}
+                  className="absolute top-0.5 right-0.5 bg-slate-900/70 hover:bg-slate-950 text-white rounded-full p-0.5 shadow-sm transition-colors cursor-pointer"
+                  aria-label="Remove image"
+                >
+                  <X className="size-2.5" />
+                </button>
+              </div>
+            ))}
+            {isUploading && (
+              <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 flex items-center justify-center bg-slate-50 animate-pulse">
+                <Loader2 className="size-4 text-slate-400 animate-spin" />
+              </div>
+            )}
+          </div>
+          {error && (
+            <div className="text-[10px] text-red-500 font-semibold mt-1">
+              {error}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="w-full flex flex-col mt-auto pb-4 pt-2 bg-gradient-to-t from-white via-white to-transparent relative z-20">
          {showSkip && (
@@ -71,7 +129,11 @@ export function AgentBuilderTextInput({
               </button>
             </div>
          )}
-         <BuilderBottomInput onSend={(val) => onNext?.(val)} />
+         <BuilderBottomInput 
+            onSend={(val) => onNext?.(val)} 
+            enableUpload={enableUpload}
+            onFilesSelected={handleFilesSelected}
+         />
       </div>
     </div>
   );
