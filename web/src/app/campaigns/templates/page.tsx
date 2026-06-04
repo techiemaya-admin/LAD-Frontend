@@ -351,7 +351,7 @@ export default function TemplatesPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
-      <div className="px-8">
+      <div className="px-4 md:px-8">
         <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-center gap-2 sm:gap-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -394,7 +394,7 @@ export default function TemplatesPage() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-8">
+      <div className="px-4 md:px-8 py-8">
 
         {/* ── Email Tab ─────────────────────────────────────────── */}
         {activeTab === 'email' && (

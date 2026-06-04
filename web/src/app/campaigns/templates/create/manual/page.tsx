@@ -1,7 +1,10 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import EmailTemplateEditor from '@/components/templates/EmailTemplateEditor';
 
 export default function ManualCreatePage() {
-  return <EmailTemplateEditor mode="create" />;
+  const router = useRouter();
+
+  return <EmailTemplateEditor mode="create" onBack={() => router.back()} />;
 }

@@ -14,6 +14,7 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 type Category  = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
 type MediaType = 'NONE' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
 type ButtonType = 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+type MobileTab = 'details' | 'content' | 'preview';
 
 interface TemplateButton {
   id:      string;
@@ -103,7 +104,7 @@ function ButtonRow({
 }) {
   const typeLabel =
     btn.type === 'QUICK_REPLY' ? 'Quick reply' :
-    btn.type === 'URL'         ? 'Visit website' : 'Call phone';
+    btn.type === 'URL'          ? 'Visit website' : 'Call phone';
 
   return (
     <div className="p-3 border border-[#E2E8F0] rounded-lg space-y-2 bg-[#FAFBFC]">
@@ -166,19 +167,22 @@ function ButtonRow({
 export default function WhatsAppTemplateCreatePage() {
   const router = useRouter();
 
+  // ── Mobile tab state ───────────────────────────────────────────────────────
+  const [mobileTab, setMobileTab] = useState<MobileTab>('details');
+
   // ── State ──────────────────────────────────────────────────────────────────
-  const [name,     setName]     = useState('');
+  const [name,      setName]     = useState('');
   const [language, setLanguage] = useState('en_US');
   const [category, setCategory] = useState<Category>('MARKETING');
 
   // Header / media
-  const [mediaType,       setMediaType]       = useState<MediaType>('NONE');
-  const [headerText,      setHeaderText]       = useState('');
-  const [headerVarExample,setHeaderVarExample] = useState('');
-  const [mediaHandle,     setMediaHandle]     = useState('');
-  const [mediaFileName,   setMediaFileName]   = useState('');
-  const [uploadStatus,    setUploadStatus]    = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
-  const [uploadError,     setUploadError]     = useState('');
+  const [mediaType,        setMediaType]        = useState<MediaType>('NONE');
+  const [headerText,       setHeaderText]       = useState('');
+  const [headerVarExample, setHeaderVarExample] = useState('');
+  const [mediaHandle,      setMediaHandle]      = useState('');
+  const [mediaFileName,    setMediaFileName]    = useState('');
+  const [uploadStatus,     setUploadStatus]     = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [uploadError,      setUploadError]      = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Body
@@ -190,7 +194,7 @@ export default function WhatsAppTemplateCreatePage() {
   const [footerText, setFooterText] = useState('');
 
   // Buttons
-  const [buttons,        setButtons]        = useState<TemplateButton[]>([]);
+  const [buttons,         setButtons]         = useState<TemplateButton[]>([]);
   const [showBtnMenu,    setShowBtnMenu]    = useState(false);
 
   // Submit
@@ -385,7 +389,7 @@ export default function WhatsAppTemplateCreatePage() {
     <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724]" onClick={() => setShowBtnMenu(false)}>
 
       {/* ── Sticky header bar — back only ── */}
-      <div className="bg-white border-b border-[#E2E8F0] px-6 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
+      <div className="bg-white border-b border-[#E2E8F0] px-4 md:px-6 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
         <button
           onClick={() => router.push('/campaigns/templates')}
           className="flex items-center gap-1.5 text-sm text-[#64748B] hover:text-[#1E293B] font-medium transition-colors"
@@ -396,14 +400,50 @@ export default function WhatsAppTemplateCreatePage() {
         <span className="text-sm font-semibold text-[#1E293B]">Create WhatsApp template</span>
       </div>
 
+      {/* ── Mobile Tabs ── */}
+      <div className="md:hidden bg-white border-b border-[#E2E8F0] sticky top-[60px] z-10">
+        <div className="flex">
+          <button
+            onClick={() => setMobileTab('details')}
+            className={`flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'details'
+                ? 'border-[#0b1957] text-[#0b1957]'
+                : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            Templated details
+          </button>
+          <button
+            onClick={() => setMobileTab('content')}
+            className={`flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'content'
+                ? 'border-[#0b1957] text-[#0b1957]'
+                : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            Content and button
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'preview'
+                ? 'border-[#0b1957] text-[#0b1957]'
+                : 'border-transparent text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
       {/* ── Two-column layout ── */}
       <div className="flex">
 
         {/* ─── Left: Form ─── */}
-        <div className="flex-1 p-6 space-y-4 min-w-0 max-w-4xl">
+        <div className={`flex-1 p-4 md:p-6 space-y-4 min-w-0 max-w-4xl ${mobileTab === 'preview' ? 'hidden' : ''}`}>
 
           {/* ── Template name & language section ── */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
+          <div className={`bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'details' ? 'hidden md:block' : ''}`}>
             <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8F9FE]">
               <h2 className="text-base font-semibold text-[#1E293B]">Template name and language</h2>
             </div>
@@ -475,7 +515,7 @@ export default function WhatsAppTemplateCreatePage() {
                   <button
                     onClick={handleSubmit}
                     disabled={!canSubmit || submitting}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[#0b1957] text-white rounded-xl font-semibold text-sm hover:bg-[#0a1540] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all"
+                    className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#0b1957] text-white rounded-xl font-semibold text-sm hover:bg-[#0a1540] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all"
                   >
                     {submitting
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
@@ -487,7 +527,7 @@ export default function WhatsAppTemplateCreatePage() {
           </div>
 
           {/* ── Content section ── */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
+          <div className={`bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'content' ? 'hidden md:block' : ''}`}>
             <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8F9FE]">
               <h2 className="text-base font-semibold text-[#1E293B]">Content</h2>
               <p className="text-xs text-[#64748B] mt-0.5">
@@ -731,66 +771,185 @@ export default function WhatsAppTemplateCreatePage() {
           </div>
 
           {/* ── Buttons section ── */}
-          <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8F9FE]">
-              <h2 className="text-base font-semibold text-[#1E293B]">
-                Buttons
-                <span className="ml-1 text-[#94A3B8] font-normal text-sm">· Optional</span>
-              </h2>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                Create buttons that let customers respond to your message or take action. You can add up to 3 buttons.
-              </p>
-            </div>
+          {(mobileTab === 'content' || typeof window === 'undefined' || window.innerWidth >= 768) && (
+            <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm">
+              <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8F9FE]">
+                <h2 className="text-base font-semibold text-[#1E293B]">
+                  Buttons
+                  <span className="ml-1 text-[#94A3B8] font-normal text-sm">· Optional</span>
+                </h2>
+                <p className="text-xs text-[#64748B] mt-0.5">
+                  Create buttons that let customers respond to your message or take action. You can add up to 3 buttons.
+                </p>
+              </div>
 
-            <div className="p-6 space-y-3">
-              {buttons.map(btn => (
-                <ButtonRow
-                  key={btn.id}
-                  btn={btn}
-                  onChange={patch => setButtons(prev => prev.map(b => b.id === btn.id ? { ...b, ...patch } : b))}
-                  onRemove={() => setButtons(prev => prev.filter(b => b.id !== btn.id))}
-                />
-              ))}
+              <div className="p-6 space-y-3">
+                {buttons.map(btn => (
+                  <ButtonRow
+                    key={btn.id}
+                    btn={btn}
+                    onChange={patch => setButtons(prev => prev.map(b => b.id === btn.id ? { ...b, ...patch } : b))}
+                    onRemove={() => setButtons(prev => prev.filter(b => b.id !== btn.id))}
+                  />
+                ))}
 
-              {buttons.length < 3 && (
-                <div className="relative" onClick={e => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBtnMenu(v => !v)}
-                    className="flex items-center gap-2 px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm font-medium text-[#1E293B] hover:border-[#0b1957]/40 hover:bg-[#F8F9FE] transition-colors"
-                  >
-                    <Plus className="w-4 h-4" /> Add button <ChevronDown className="w-4 h-4 ml-0.5" />
-                  </button>
-                  {showBtnMenu && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-10 overflow-hidden min-w-52">
-                      {[
-                        { type: 'QUICK_REPLY'   as ButtonType, label: 'Quick reply',        desc: 'Pre-set response button'  },
-                        { type: 'URL'           as ButtonType, label: 'Visit website',       desc: 'Link to a URL'            },
-                        { type: 'PHONE_NUMBER'  as ButtonType, label: 'Call phone number',   desc: 'Dial a phone number'      },
-                      ].map(opt => (
-                        <button
-                          key={opt.type}
-                          type="button"
-                          onClick={() => {
-                            setButtons(prev => [...prev, { id: uid(), type: opt.type, text: '', url: '', phone: '', urlType: 'static' }]);
-                            setShowBtnMenu(false);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-[#F8F9FE] transition-colors border-b border-[#E2E8F0] last:border-0"
-                        >
-                          <p className="text-sm font-semibold text-[#1E293B]">{opt.label}</p>
-                          <p className="text-xs text-[#64748B] mt-0.5">{opt.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                {buttons.length < 3 && (
+                  <div className="relative" onClick={e => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setShowBtnMenu(v => !v)}
+                      className="flex items-center gap-2 px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm font-medium text-[#1E293B] hover:border-[#0b1957]/40 hover:bg-[#F8F9FE] transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> Add button <ChevronDown className="w-4 h-4 ml-0.5" />
+                    </button>
+                    {showBtnMenu && (
+                      <div className="absolute top-full left-0 mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-10 overflow-hidden min-w-52">
+                        {[
+                          { type: 'QUICK_REPLY'   as ButtonType, label: 'Quick reply',        desc: 'Pre-set response button'  },
+                          { type: 'URL'           as ButtonType, label: 'Visit website',       desc: 'Link to a URL'            },
+                          { type: 'PHONE_NUMBER'  as ButtonType, label: 'Call phone number',   desc: 'Dial a phone number'      },
+                        ].map(opt => (
+                          <button
+                            key={opt.type}
+                            type="button"
+                            onClick={() => {
+                              setButtons(prev => [...prev, { id: uid(), type: opt.type, text: '', url: '', phone: '', urlType: 'static' }]);
+                              setShowBtnMenu(false);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-[#F8F9FE] transition-colors border-b border-[#E2E8F0] last:border-0"
+                          >
+                            <p className="text-sm font-semibold text-[#1E293B]">{opt.label}</p>
+                            <p className="text-xs text-[#64748B] mt-0.5">{opt.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* ── Mobile Footer with Template Status Indicator ── */}
+          <div className="p-4 pb-20 space-y-2">
+            <p className="text-sm text-[#64748B]">Template details pending</p>
           </div>
         </div>
 
-        {/* ─── Right: Preview (sticky) ─── */}
-        <div className="w-[340px] shrink-0 sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto border-l border-[#E2E8F0] bg-white">
+        {/* ─── Mobile Preview Tab Wrapper Layout ─── */}
+        <div className={`md:hidden flex-1 p-4 pb-20 ${mobileTab === 'preview' ? 'block' : 'hidden'}`}>
+          <div className="mx-auto max-w-md w-full">
+
+            {/* WA chat background */}
+            <div className="bg-[#e5ddd5] rounded-2xl p-4 min-h-[350px] w-full shadow-inner">
+              {/* Chat header bar */}
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-black/10">
+                <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1E293B] leading-none">Your Business</p>
+                  <p className="text-[11px] text-[#64748B] mt-0.5">Online</p>
+                </div>
+              </div>
+
+              {/* Message bubble */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden w-full mx-auto">
+                {/* Media / text header */}
+                {isMediaHeader && (
+                  <div className="h-36 bg-slate-100 flex items-center justify-center border-b border-slate-200">
+                    {uploadStatus === 'done' ? (
+                      <div className="text-center px-2">
+                        <FileIcon className="w-9 h-9 mx-auto text-slate-500 mb-1" />
+                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{mediaFileName}</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <span className="text-3xl block mb-1">
+                          {mediaType === 'IMAGE' ? '🖼️' : mediaType === 'VIDEO' ? '🎥' : '📄'}
+                        </span>
+                        <p className="text-xs text-slate-400">No {mediaType.toLowerCase()} uploaded</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!isMediaHeader && previewHeaderText && (
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <p className="text-base font-bold text-[#1E293B]">{previewHeaderText}</p>
+                  </div>
+                )}
+
+                {/* Body */}
+                <div className="px-4 py-3">
+                  <p className="text-base text-[#1E293B] leading-relaxed">
+                    <WAText text={previewBody} />
+                  </p>
+                </div>
+
+                {/* Footer */}
+                {footerText && (
+                  <div className="px-4 pb-2">
+                    <p className="text-sm text-slate-400">{footerText}</p>
+                  </div>
+                )}
+
+                {/* Timestamp */}
+                <div className="px-4 pb-2 flex justify-end">
+                  <span className="text-[11px] text-slate-400">09:33 ✓✓</span>
+                </div>
+
+                {/* Buttons */}
+                {buttons.filter(b => b.text.trim()).length > 0 && (
+                  <div className="border-t border-slate-100">
+                    {buttons.filter(b => b.text.trim()).map(b => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-center gap-1.5 px-4 py-3 text-sm text-[#0b85eb] font-semibold border-b border-slate-100 last:border-0"
+                      >
+                        {b.type === 'URL'          && <Globe  className="w-3 h-3.5" />}
+                        {b.type === 'PHONE_NUMBER' && <Phone  className="w-3 h-3.5" />}
+                        {b.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Submission summary card */}
+            {(safeName || bodyText) && (
+              <div className="mt-5 p-4 bg-[#F8F9FE] rounded-xl border border-[#E2E8F0] space-y-2">
+                <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-2">Summary</p>
+                {safeName && (
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-[#94A3B8]">Name</span>
+                    <span className="text-xs font-mono font-semibold text-[#1E293B] truncate max-w-[160px] text-right">{safeName}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#94A3B8]">Language</span>
+                  <span className="text-xs text-[#1E293B]">{LANGUAGES.find(l => l.code === language)?.label}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#94A3B8]">Category</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${categoryInfo.color}`}>
+                    {category}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs text-[#94A3B8]">Components</span>
+                  <span className="text-xs text-[#1E293B] text-right">
+                    {buildComponents().map((c: any) => c.type).join(', ') || '—'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Right: Desktop Preview (sticky) ─── */}
+        <div className="hidden md:block w-[340px] shrink-0 sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto border-l border-[#E2E8F0] bg-white">
           <div className="p-5">
             {/* Preview header */}
             <div className="flex items-center justify-between mb-4">
@@ -911,7 +1070,22 @@ export default function WhatsAppTemplateCreatePage() {
             )}
           </div>
         </div>
+
       </div>
+
+      {/* ── Mobile Fixed Submit Bar ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E8F0] p-4 z-30">
+        <button
+          onClick={handleSubmit}
+          disabled={!canSubmit || submitting}
+          className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0b1957] text-white rounded-xl font-semibold text-sm hover:bg-[#0a1540] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all"
+        >
+          {submitting
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
+            : 'Submit to Meta'}
+        </button>
+      </div>
+
     </div>
   );
 }
