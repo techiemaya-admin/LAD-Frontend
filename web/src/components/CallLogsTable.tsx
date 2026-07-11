@@ -827,7 +827,6 @@ export function CallLogsTable({
                   }
                 }}
                 className={cn(
-                  cellIndex === 0 && indent ? "pl-8" : "",
                   (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
                 )}
               >
@@ -856,7 +855,6 @@ export function CallLogsTable({
               }
             }}
             className={cn(
-              cellIndex === 0 && indent ? "pl-8" : "",
               (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
             )}
           >

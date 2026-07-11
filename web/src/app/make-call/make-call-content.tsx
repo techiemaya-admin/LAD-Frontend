@@ -603,7 +603,7 @@ export default function MakeCallContent() {
           </div>
           <Button 
             onClick={() => setIsPlaygroundOpen(true)}
-            className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 self-start sm:mt-2"
+            className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 self-end sm:self-start sm:mt-2"
           >
             <Sparkles className="w-4 h-4" />
             VOAG- Playground

@@ -58,19 +58,18 @@ export function AgentSelector({
         <p className="text-sm text-muted-foreground ml-7">Select or create an agent</p>
       </div>
 
-      {/* Merged: develop's compact single search-and-action row, with HEAD's
-          VOAG Playground button kept beside "New Agent" so the feature isn't
-          lost when the create-row got collapsed into the search row. */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border/30 flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[150px]">
+      {/* Search and Action Buttons Row */}
+      <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 border-b border-border/30">
+        {/* Search Bar */}
+        <div className="relative w-full mb-3 mx-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search agents by name, language..."
+            placeholder="Search agents"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
-              "w-full pl-9 pr-9 py-2 rounded-lg bg-muted/30 border border-border/50",
+              "w-full pl-9 pr-9 py-2.5 rounded-lg bg-muted/30 border border-border/50",
               "text-sm placeholder:text-muted-foreground text-foreground",
               "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
               "transition-all duration-200"
@@ -85,27 +84,31 @@ export function AgentSelector({
             </button>
           )}
         </div>
-        <Button
-          onClick={() => onSelectAgent(null)}
-          className={cn(
-            "justify-start gap-2 h-10 transition-all duration-200 font-medium shrink-0 px-2 sm:px-3",
-            selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
-          )}
-          variant={selectedAgentId === null ? "default" : "outline"}
-          size="sm"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="whitespace-nowrap">New Agent</span>
-        </Button>
-        <Button
-          onClick={onOpenPlayground}
-          variant="outline"
-          size="sm"
-          className="justify-start gap-2 h-10 font-medium shrink-0 px-2 sm:px-3 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span className="whitespace-nowrap hidden md:inline">VOAG Playground</span>
-        </Button>
+
+        {/* Action Buttons Row */}
+        <div className="flex items-center gap-2 w-full">
+          <Button
+            onClick={() => onSelectAgent(null)}
+            className={cn(
+              "justify-center gap-2 h-10 transition-all duration-200 font-medium flex-1 px-3 sm:px-4",
+              selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
+            )}
+            variant={selectedAgentId === null ? "default" : "outline"}
+            size="sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="whitespace-nowrap">New Agent</span>
+          </Button>
+          <Button
+            onClick={onOpenPlayground}
+            variant="outline"
+            size="sm"
+            className="justify-center gap-2 h-10 font-medium flex-1 px-3 sm:px-4 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="whitespace-nowrap">VOAG Playground</span>
+          </Button>
+        </div>
       </div>
 
       {/* Agent List */}
