@@ -415,47 +415,188 @@ export default function CampaignAnalyticsPage() {
   return (
     <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
-      <div className="mb-5 flex flex-col sm:flex-row justify-between mt-10 items-stretch sm:items-start gap-4">
-        <div className="flex-1">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/campaigns')} className="h-8 w-8 text-[#1E293B] dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800">
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-          <div className="flex items-center gap-3 mb-3 mt-2">
-            <RadioTower className="w-8 h-8 flex-shrink-0 text-[#1E293B] dark:text-white" />
-            <h1 className="text-2xl sm:text-4xl font-bold leading-none text-[#1E293B] dark:text-white capitalize">
-              {analytics.campaign.name}
-            </h1>
+      <div className="mb-5 mt-10">
+  {/* ================= MOBILE ================= */}
+        <div className="block sm:hidden">
+
+          <div className="mb-4">
+            <button
+              onClick={() => router.push("/campaigns")}
+              className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-[#6B7A99] cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-[#0B1957] dark:text-[#2563EB]" />
+              <span className="text-[#0B1957] dark:text-[#2563EB]">
+                Back to campaigns
+              </span>
+            </button>
           </div>
-          <div className="flex items-center gap-3 ml-11 flex-wrap">
-            <Badge className={`capitalize dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${analytics.campaign.status === 'running' ? 'dark:!text-emerald-400' : 'dark:!text-amber-300'}`} style={{ backgroundColor: analytics.campaign.status === 'running' ? '#dbfce7' : '#FEF3C7', color: analytics.campaign.status === 'running' ? 'green' : '#D97706' }}>
-              <div className="w-2 h-2 rounded-full mr-2 dark:!hidden" style={{ backgroundColor: analytics.campaign.status === 'running' ? '#10B981' : '#F59E0B' }} />
-              {analytics.campaign.status}
-            </Badge>
-            <LiveBadge isConnected={isConnected} showOffline className="font-semibold" />
-            <p className="text-sm text-[#64748B] dark:text-slate-300">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
+
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-[#2A3448] dark:bg-[#131B2E]">
+
+            <div className="flex items-start gap-3">
+
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#0B1957] bg-blue-50 dark:border-[#2563EB] dark:bg-[#0B1220]">
+                <RadioTower className="h-5 w-5 text-[#0B1957] dark:text-[#3B82F6]" />
+              </div>
+
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex flex-wrap items-center gap-2">
+
+                  <h1 className="truncate text-lg font-semibold text-gray-900 capitalize dark:text-white">
+                    {analytics.campaign.name}
+                  </h1>
+
+
+                  <Badge
+                    className={`h-5 rounded px-2 text-[10px] font-bold uppercase tracking-wide border-0 ${
+                      analytics.campaign.status === "running"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                    }`}
+                  >
+                    {analytics.campaign.status}
+                  </Badge>
+
+
+                  <LiveBadge
+                    isConnected={isConnected}
+                    showOffline
+                    className="h-5 px-2 text-[10px] font-bold uppercase tracking-wide"
+                  />
+
+                </div>
+
+
+                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                  Created{" "}
+                  {new Date(
+                    analytics.campaign.created_at
+                  ).toLocaleDateString()}
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div className="mt-4 flex gap-2">
+
+              <Button
+                onClick={() =>
+                  router.push(`/campaigns/${campaignId}/analytics/leads`)
+                }
+                className="flex-1 h-9 rounded-md bg-[#0B1957] px-3 text-xs font-semibold text-white hover:bg-[#101F6B] dark:bg-[#2563EB] dark:hover:bg-[#1D4ED8]"
+              >
+                <Users className="mr-2 h-3.5 w-3.5" />
+                View Leads
+              </Button>
+
+
+              <Button
+                onClick={() =>
+                  router.push(`/onboarding?campaignId=${campaignId}`)
+                }
+                className="flex-1 h-9 rounded-md border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-900 hover:border-gray-400 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-white dark:hover:border-slate-400 dark:hover:bg-slate-800/30"
+              >
+                <SquarePen className="mr-2 h-3.5 w-3.5" />
+                Edit Campaign
+              </Button>
+
+            </div>
+
           </div>
         </div>
-        <div className="flex gap-3 items-start">
-          <Button
-            onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)}
-            className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white !text-white transition-all duration-200 cursor-pointer border-none outline-none active:scale-[0.99]
-                      bg-[#0b1957] hover:bg-[#122572] shadow-[0_4px_20px_rgba(11,25,87,0.3)]
-                      dark:bg-[#2563eb] dark:hover:bg-blue-700 dark:shadow-[0_4px_20px_rgba(37,99,235,0.25)]"
-          >
-            <Users className="w-4 h-4 mr-2 shrink-0 stroke-[2] text-white !text-white" />
-            <span className="text-white !text-white">View Leads</span>
-          </Button>
-          <Button
-            onClick={() => router.push(`/onboarding/advanced-search-ai?campaignId=${campaignId}`)}
-            className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white !text-white transition-all duration-200 cursor-pointer border-none outline-none active:scale-[0.99]
-              bg-[#0b1957] hover:bg-[#122572] shadow-[0_4px_12px_rgba(11,25,87,0.15)]
-              dark:bg-[#2563eb] dark:hover:bg-blue-700 dark:shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
-          >
-            <SquarePen className="w-4 h-4 mr-2 shrink-0 stroke-[2] text-white !text-white" />
-            <span className="text-white !text-white">Edit Campaign</span>
-          </Button>
-        </div>
+
+  {/* ================= DESKTOP (UNCHANGED) ================= */}
+  <div className="hidden sm:flex flex-row justify-between items-start gap-4">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => router.push("/campaigns")}
+      className="h-8 w-8 text-[#1E293B] dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800"
+    >
+      <ArrowLeft className="w-6 h-6" />
+    </Button>
+
+    <div className="flex-1">
+      <div className="flex items-center gap-3 mb-3 mt-2">
+        <RadioTower className="w-8 h-8 flex-shrink-0 text-[#1E293B] dark:text-white" />
+        <h1 className="text-2xl sm:text-4xl font-bold leading-none text-[#1E293B] dark:text-white capitalize">
+          {analytics.campaign.name}
+        </h1>
       </div>
+
+      <div className="flex items-center gap-3 ml-11 flex-wrap">
+        <Badge
+          className={`capitalize dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${
+            analytics.campaign.status === "running"
+              ? "dark:!text-emerald-400"
+              : "dark:!text-amber-300"
+          }`}
+          style={{
+            backgroundColor:
+              analytics.campaign.status === "running"
+                ? "#dbfce7"
+                : "#FEF3C7",
+            color:
+              analytics.campaign.status === "running"
+                ? "green"
+                : "#D97706",
+          }}
+        >
+          <div
+            className="w-2 h-2 rounded-full mr-2 dark:!hidden"
+            style={{
+              backgroundColor:
+                analytics.campaign.status === "running"
+                  ? "#10B981"
+                  : "#F59E0B",
+            }}
+          />
+          {analytics.campaign.status}
+        </Badge>
+
+        <LiveBadge
+          isConnected={isConnected}
+          showOffline
+          className="font-semibold"
+        />
+
+        <p className="text-sm text-[#64748B] dark:text-slate-300">
+          Created{" "}
+          {new Date(
+            analytics.campaign.created_at
+          ).toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+
+    <div className="flex gap-3 items-start">
+      <Button
+        onClick={() =>
+          router.push(`/campaigns/${campaignId}/analytics/leads`)
+        }
+        className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white transition-all duration-200 bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700"
+      >
+        <Users className="w-4 h-4 mr-2 shrink-0" />
+        View Leads
+      </Button>
+
+      <Button
+        onClick={() =>
+          router.push(`/onboarding?campaignId=${campaignId}`)
+        }
+        className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white transition-all duration-200 bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700"
+      >
+        <SquarePen className="w-4 h-4 mr-2 shrink-0" />
+        Edit Campaign
+      </Button>
+    </div>
+  </div>
+</div>
 
       {/* Quick Stats Row */}
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
@@ -589,8 +730,10 @@ export default function CampaignAnalyticsPage() {
       </div>
 
       {/* ── Bulk Follow-up Panel ────────────────────────────────────────── */}
+      
       <div className="mb-8">
-        {/* Collapsed header — always visible */}
+        {/* Desktop only */}
+        <div className="hidden sm:block">
         <div className="flex items-stretch gap-2">
           <button
             onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
@@ -624,6 +767,62 @@ export default function CampaignAnalyticsPage() {
             <CalendarClock className="w-4 h-4" />
             <span className="hidden sm:inline">Manage schedule</span>
           </button>
+        </div>
+        </div>
+        {/* Collapsed header — always visible */}
+
+        {/* Mobile only */}
+        <div className='block sm:hidden'>
+          <div
+            onClick={() => {
+              setFollowupPanelOpen(v => !v);
+              setBulkStatus("idle");
+              setLeadProgress([]);
+              setSelectedLeadIds(new Set());
+            }}
+            className="relative flex items-center justify-between px-5 py-3 h-20 rounded-2xl bg-[#F8FAFC] dark:bg-[#000724] border border-[#E2E8F0] dark:border-[#2B3A52] shadow-sm hover:border-[#0B1957]/30 transition-all cursor-pointer rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0B1957]/10 dark:bg-[#2563EB]/20">
+                <Send className="h-4 w-4 text-[#0B1957] dark:text-blue-400" />
+              </div>
+
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Send Follow-up
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select leads → choose channel → AI generates personalised messages and
+                  sends
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setScheduleManagerOpen(true);
+                }}
+                className="flex items-center gap-1 rounded-md border border-[#2C4B87] bg-[#0B1957] px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-white hover:bg-[#10246E]"
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                Scheduler
+              </button>
+
+              {selectedLeadIds.size > 0 && !followupPanelOpen && (
+                <span className="rounded-full bg-[#0B1957] px-2 py-0.5 text-[10px] font-medium text-white">
+                  {selectedLeadIds.size}
+                </span>
+              )}
+
+              {followupPanelOpen ? (
+                <ChevronUp className="h-4 w-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Expanded panel */}

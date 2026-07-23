@@ -485,28 +485,56 @@ export default function CampaignLeadsPage() {
     );
   }
   return (
-    <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
+    <div className="w-full h-screen overflow-auto bg-slate-50 dark:sm:bg-[#000724] dark:bg-[#050814]">
       <div className="p-6 pb-12">
         {/* Header */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-              className="min-w-auto"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-            </Button>
-            <div>
-              <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
-                {campaign?.name || 'Campaign Leads'}
-              </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
-                {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
-              </p>
+
+        {/* Desktop only */}
+        <div className="hidden sm:block">
+          <div className="mb-6 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+                className="min-w-auto"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+              </Button>
+              <div>
+                <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+                  {campaign?.name || 'Campaign Leads'}
+                </h4>
+                <p className="text-sm text-slate-500 dark:text-slate-300">
+                  {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
+                </p>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Mobile only */}
+        <div className="block sm:hidden">
+          <button
+                onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+                className="flex items-center gap-2 text-[10px] font-semibold uppercase text-blue-500 hover:text-blue-700"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to campaign leads</span>
+          </button>
+          <div className="mb-6 flex justify-between items-center border-b border-slate-200 dark:border-white pb-3">
+            <div className="flex items-center gap-4">
+              <div className="mt-5">
+                <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-3">
+                  {campaign?.name || 'Campaign Leads'}
+                </h4>
+                <p className="text-sm text-slate-500 dark:text-slate-300">
+                  {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} active CRM lead records
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
 
         {/* Filter Tabs */}
         <div className="mb-4 flex gap-2 flex-wrap">
@@ -520,8 +548,8 @@ export default function CampaignLeadsPage() {
               key={tab.key}
               onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=${tab.key}`)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${filterParams === tab.key
-                  ? 'bg-[#0b1957] text-white border-[#0b1957] shadow-sm'
-                  : 'bg-white dark:bg-[#1a2a43] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#262831] hover:border-[#0b1957] hover:text-[#0b1957]'
+                  ? 'bg-blue-700 text-white border-[#0b1957] shadow-sm'
+                  : 'bg-white dark:bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#262831] hover:border-[#0b1957] hover:text-[#0b1957]'
                 }`}
             >
               {tab.label}
@@ -534,7 +562,7 @@ export default function CampaignLeadsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
-              className="pl-10 bg-white dark:bg-[#1a2a43] dark:border-[#262831] rounded-xl"
+              className="pl-10 bg-white dark:bg-transparent dark:md:bg-[#1a2a43] dark:border-white dark:md:border-none rounded-lg"
               placeholder="Search leads by name, email, company, or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

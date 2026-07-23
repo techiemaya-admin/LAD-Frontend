@@ -141,7 +141,7 @@ export default function EmployeeCard({
   return (
     <Card
       className={`
-        flex-1 bg-white dark:bg-[#1a2a43] rounded-xl border border-gray-200 dark:border-[#262831] shadow-sm
+        flex-1 bg-white dark:sm:bg-[#1a2a43] dark:bg-[#0B0F19] rounded-xl border border-gray-200 dark:border-[#262831] shadow-sm
         transition-all duration-300 ease-in-out relative
         hover:shadow-lg hover:border-[#0b1957] dark:hover:border-[#4a6cf7]
         ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
@@ -204,11 +204,11 @@ export default function EmployeeCard({
                   <Badge
                     variant="default"
                     className={`
-                      font-semibold text-xs h-auto py-0.5 max-w-full px-3 whitespace-normal line-clamp-2
+                      font-semibold text-xs h-auto py-0.5 max-w-full px-3 whitespace-normal line-clamp-2 dark:text-white
                       ${employeeViewMode === 'grid' ? 'self-center' : 'self-start'}
                     `}
                   >
-                    {employee.title}
+                    {employee.title.toUpperCase()}
                   </Badge>
                 )}
                 {/* Company shown on its own line, under the name/title chip */}
@@ -543,7 +543,7 @@ export default function EmployeeCard({
                   e.stopPropagation();
                   onViewSummary(employee);
                 }}
-                className="w-full border-[#0b1957] dark:border-[#2b7cff] text-[#0b1957] dark:text-[#2b7cff] font-semibold text-sm py-2 hover:bg-[#0b1957]/5 dark:hover:bg-[#2b7cff]/10"
+                className="w-full border-[#0b1957] dark:border-[#2b7cff] text-[#0b1957] dark:text-[#2b7cff] font-semibold text-sm py-2 hover:text-[#2140A5] hover:bg-[#0b1957]/5 dark:hover:bg-[#2b7cff]/10"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Generate Summary

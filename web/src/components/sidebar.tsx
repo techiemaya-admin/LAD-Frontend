@@ -341,7 +341,7 @@ export function Sidebar() {
             loading="eager"
             fetchPriority="high"
             decoding="async"
-            className="w-8 h-8 object-contain"
+            className="w-6 h-6 object-contain"
           />
           <span className="text-sm font-medium text-sidebar-foreground/90">
             {displayName}
@@ -796,7 +796,7 @@ export function Sidebar() {
           })()}
         </nav>
         {/* User Profile Inline Section */}
-        <div className="border-t border-sidebar-border mt-auto">
+        <div className="overflow-y-auto border-t border-sidebar-border mt-auto">
           {/* Avatar / profile row — click to toggle inline panel */}
           <div
             onClick={() => setIsUserPanelOpen((v) => !v)}
