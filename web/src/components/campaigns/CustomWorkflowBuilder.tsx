@@ -3231,7 +3231,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           <button onClick={onClose} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" title="Close builder">
             <X className="h-4 w-4" /> Close
           </button>
-          <span className="text-sm font-semibold text-foreground hidden sm:block">Custom Workflow</span>
+          <span className="text-sm font-semibold text-foreground hidden sm:block">Custom Accelerator</span>
           <Input className="w-64" value={name} onChange={(e) => setName(e.target.value)} placeholder="Workflow name…" />
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -3241,7 +3241,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </div>
           <Button onClick={launch} disabled={launching || hydrating}>
             {(launching || hydrating) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Rocket className="h-4 w-4 mr-2" />}
-            {hydrating ? 'Loading…' : editCampaignId ? 'Save changes' : 'Launch workflow'}
+            {hydrating ? 'Loading…' : editCampaignId ? 'Save changes' : 'Launch Accelerator'}
           </Button>
         </div>
       </div>
