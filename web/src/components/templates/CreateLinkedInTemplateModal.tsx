@@ -232,25 +232,34 @@ export default function CreateLinkedInTemplateModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/20 flex items-center justify-center w-10 h-10">
-              <Linkedin className="h-5 w-5" />
+      <DialogContent className="max-h-[90vh] overflow-y-auto  max-md:p-4 max-md:bg-white max-md:text-slate-900 max-md:border-slate-200 max-md:rounded-2xl dark:max-md:bg-[#020617] dark:max-md:text-white dark:max-md:border-slate-800 max-md:[&>button]:top-5 max-md:[&>button]:right-4 max-md:[&>button]:bg-slate-100 max-md:[&>button]:p-1.5 max-md:[&>button]:rounded-lg max-md:[&>button]:border max-md:[&>button]:border-slate-200 dark:max-md:[&>button]:bg-slate-900/80 dark:max-md:[&>button]:border-slate-800">
+        
+        {/* Header */}
+        <DialogHeader className="max-md:pb-6 max-md:pt-2 max-md:border-b max-md:border-slate-200 dark:max-md:border-slate-800/80 dark:max-md:bg-[#020617]">
+          {/* Added pr-10 right here */}
+          <div className="flex items-center gap-3 pr-10">
+            {/* Icon */}
+            <div className="p-2.5 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/20 max-md:bg-[#0066FF] max-md:text-white max-md:border-none flex items-center justify-center w-10 h-10 shrink-0">
+              <Linkedin className="h-5 w-5 max-md:fill-current" />
             </div>
-            <div className="flex flex-col">
-              <DialogTitle>{editing ? 'Edit LinkedIn Template' : 'New LinkedIn Template'}</DialogTitle>
-              <DialogDescription>
+
+            <div className="flex flex-col text-left">
+              <DialogTitle className="max-md:text-base max-md:font-bold max-md:text-slate-900 dark:max-md:text-white">
+                {editing ? 'Edit LinkedIn Template' : 'New LinkedIn Template'}
+              </DialogTitle>
+              <DialogDescription className="max-md:text-xs max-md:text-slate-500 dark:max-md:text-slate-400">
                 A reusable message for a connection request or a follow-up
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 px-8 py-4">
-          {/* Name */}
+        {/* Form Content */}
+        <div className="space-y-4 px-8 py-4 max-md:px-2 max-md:py-4">
+          
+          {/* Template Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="li-name">
+            <Label htmlFor="li-name" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
               Template Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -258,7 +267,9 @@ export default function CreateLinkedInTemplateModal({
               placeholder="e.g. Sales Outreach - Enterprise"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={errors.name ? 'border-red-500' : ''}
+              className={`max-md:bg-slate-50 max-md:h-10 max-md:border-slate-200 max-md:rounded-lg max-md:text-sm max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-white dark:max-md:placeholder:text-slate-600 ${
+                errors.name ? 'border-red-500' : ''
+              }`}
             />
             {errors.name && (
               <p className="text-xs text-red-600 flex items-center gap-1">
@@ -269,59 +280,82 @@ export default function CreateLinkedInTemplateModal({
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="li-desc">Description (optional)</Label>
+            <Label htmlFor="li-desc" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+              Description (optional)
+            </Label>
             <Input
               id="li-desc"
               placeholder="When to use this template…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="max-md:bg-slate-50 max-md:h-10 max-md:border-slate-200 max-md:rounded-lg max-md:text-sm max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-white dark:max-md:placeholder:text-slate-600"
             />
           </div>
 
-          {/* Template type (what the body is used for) */}
+          {/* Template Type */}
           <div className="space-y-1.5">
-            <Label htmlFor="li-type">Use this template for</Label>
+            <Label htmlFor="li-type" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+              Use this template for
+            </Label>
             <select
               id="li-type"
               value={templateType}
               onChange={(e) => handleTypeChange(e.target.value)}
-              className="w-full h-9 px-3 py-2 text-sm border border-input rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full h-9 px-3 py-2 text-sm border border-input rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-md:h-10 max-md:bg-slate-50 max-md:border-slate-200 max-md:rounded-lg max-md:text-slate-800 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-slate-200"
             >
               {LINKEDIN_TEMPLATE_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+                <option key={t.value} value={t.value} className="max-md:bg-white max-md:text-slate-900 dark:bg-[#161717] dark:max-md:bg-[#020922] dark:max-md:text-white">
+                  {t.label}
+                </option>
               ))}
             </select>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400">
               {isConnection
                 ? 'Connection request note — text-only and limited to 300 characters.'
                 : 'Follow-up message — sent after a connection is accepted. Supports an attachment.'}
             </p>
           </div>
 
-          {/* Message body + variable picker */}
+          {/* Message Body + Variable Picker */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="li-body">Message</Label>
+              <Label htmlFor="li-body" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+                Message
+              </Label>
               <div className="flex items-center gap-2">
                 {isConnection && (
-                  <span className={`text-xs ${body.length > LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  <span
+                    className={`text-xs ${
+                      body.length > LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH
+                        ? 'text-red-600'
+                        : 'text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400'
+                    }`}
+                  >
                     {body.length}/{LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH}
                   </span>
                 )}
-                {/* Variable picker — inserts a token at the cursor. */}
+                
                 <select
                   aria-label="Insert variable"
                   value=""
-                  onChange={(e) => { if (e.target.value) insertVariable(e.target.value); e.currentTarget.selectedIndex = 0; }}
-                  className="h-7 pl-2 pr-1 text-xs border border-input rounded-md bg-transparent text-[#0A66C2] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                  onChange={(e) => {
+                    if (e.target.value) insertVariable(e.target.value);
+                    e.currentTarget.selectedIndex = 0;
+                  }}
+                  className="h-7 pl-2 pr-1 text-xs border border-input rounded-md bg-transparent text-[#0A66C2] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer max-md:bg-blue-50 max-md:border-blue-200 max-md:text-[#0A66C2] max-md:px-2.5 max-md:rounded-md dark:max-md:bg-[#031548] dark:max-md:border-[#0A66C2]/40 dark:max-md:text-[#3b82f6]"
                 >
-                  <option value="">+ Add variable</option>
+                  <option value="" className="max-md:bg-white max-md:text-slate-900 dark:bg-[#161717] dark:max-md:bg-[#020922] dark:text-white">
+                    + Add variable
+                  </option>
                   {VARIABLE_OPTIONS.map((v) => (
-                    <option key={v.token} value={v.token}>{v.label}</option>
+                    <option key={v.token} value={v.token} className="max-md:bg-white max-md:text-slate-900 dark:bg-[#161717] dark:max-md:bg-[#020922] dark:text-white">
+                      {v.label}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
+
             <Textarea
               id="li-body"
               placeholder={
@@ -332,22 +366,31 @@ export default function CreateLinkedInTemplateModal({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={isConnection ? 3 : 5}
-              className={`resize-none text-sm ${errors.body ? 'border-red-500' : ''}`}
+              className={`resize-none text-sm max-md:bg-slate-50 max-md:border-slate-200 max-md:rounded-lg max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-slate-200 dark:max-md:placeholder:text-slate-600 ${
+                errors.body ? 'border-red-500' : ''
+              }`}
             />
             {errors.body && (
               <p className="text-xs text-red-600 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> {errors.body}
               </p>
             )}
-            <p className="text-[11px] text-muted-foreground">
-              Use the <span className="inline-flex items-center gap-0.5 font-medium text-[#0A66C2]"><Plus className="h-3 w-3" />Add variable</span> menu to personalize with the recipient&apos;s name, company, title, or location.
+            <p className="text-[11px] text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400">
+              Use the{' '}
+              <span className="inline-flex items-center gap-0.5 font-medium text-[#0A66C2] dark:max-md:text-blue-400">
+                <Plus className="h-3 w-3" />
+                Add variable
+              </span>{' '}
+              menu to personalize with the recipient&apos;s name, company, title, or location.
             </p>
           </div>
 
-          {/* Media attachment — follow-up templates only */}
+          {/* Media Attachment */}
           {!isConnection && (
             <div className="space-y-1.5">
-              <Label>Attachment (optional)</Label>
+              <Label className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+                Attachment (optional)
+              </Label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -356,22 +399,41 @@ export default function CreateLinkedInTemplateModal({
                 className="hidden"
               />
               {mediaUrl ? (
-                <div className="flex items-center gap-3 p-2 border rounded-md">
+                <div className="flex items-center gap-3 p-2 border rounded-md max-md:bg-slate-50 max-md:border-slate-200 max-md:rounded-lg dark:max-md:bg-[#020922] dark:max-md:border-slate-800">
                   {mediaType === 'image' ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={mediaUrl} alt={mediaFilename || 'attachment'} className="h-14 w-14 rounded object-cover border" />
+                    <img
+                      src={mediaUrl}
+                      alt={mediaFilename || 'attachment'}
+                      className="h-14 w-14 rounded object-cover border max-md:border-slate-200 dark:max-md:border-slate-800"
+                    />
                   ) : (
-                    <div className="h-14 w-14 rounded bg-muted flex items-center justify-center text-muted-foreground">
-                      {mediaType === 'video' ? <Film className="h-6 w-6" />
-                        : mediaType === 'audio' ? <Music className="h-6 w-6" />
-                        : <FileText className="h-6 w-6" />}
+                    <div className="h-14 w-14 rounded bg-muted flex items-center justify-center text-muted-foreground max-md:bg-slate-200 max-md:text-slate-600 dark:max-md:bg-slate-800 dark:max-md:text-slate-400">
+                      {mediaType === 'video' ? (
+                        <Film className="h-6 w-6" />
+                      ) : mediaType === 'audio' ? (
+                        <Music className="h-6 w-6" />
+                      ) : (
+                        <FileText className="h-6 w-6" />
+                      )}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{mediaFilename || 'Attachment'}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{mediaType || 'file'}</p>
+                    <p className="text-sm font-medium truncate max-md:text-slate-900 dark:max-md:text-white">
+                      {mediaFilename || 'Attachment'}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize max-md:text-slate-500 dark:max-md:text-slate-400">
+                      {mediaType || 'file'}
+                    </p>
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={clearMedia} title="Remove attachment">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearMedia}
+                    title="Remove attachment"
+                    className="max-md:text-slate-500 max-md:hover:text-slate-900 dark:max-md:text-slate-400 dark:max-md:hover:text-white"
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -381,13 +443,17 @@ export default function CreateLinkedInTemplateModal({
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingMedia}
-                  className="w-full justify-start text-muted-foreground"
+                  className="w-full justify-start text-muted-foreground max-md:bg-slate-50 max-md:border-slate-200 max-md:text-slate-600 max-md:hover:bg-slate-100 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-slate-400 dark:max-md:hover:bg-slate-800/50 dark:max-md:hover:text-white"
                 >
-                  {uploadingMedia ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Paperclip className="mr-2 h-4 w-4" />}
+                  {uploadingMedia ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="mr-2 h-4 w-4" />
+                  )}
                   {uploadingMedia ? 'Uploading…' : 'Attach image, video, voice note, or document'}
                 </Button>
               )}
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400">
                 Sent with the follow-up message. Max 25MB.
               </p>
               {errors.media && (
@@ -398,24 +464,33 @@ export default function CreateLinkedInTemplateModal({
             </div>
           )}
 
-          {/* Default toggle */}
-          <div className="flex items-center justify-between p-3 border rounded-md">
+          {/* Default Toggle Card */}
+          <div className="flex items-center justify-between p-3 border rounded-md max-md:p-4 max-md:border-slate-200 max-md:rounded-xl max-md:bg-slate-50/50 max-md:mt-6 dark:max-md:border-slate-700/80 dark:max-md:bg-transparent">
             <div className="space-y-0.5">
-              <Label htmlFor="li-default" className="text-sm font-medium">Set as Default Template</Label>
-              <p className="text-xs text-muted-foreground">Used automatically for new campaigns</p>
+              <Label htmlFor="li-default" className="text-sm font-medium max-md:font-bold max-md:text-slate-900 dark:max-md:text-white">
+                Set as Default Template
+              </Label>
+              <p className="text-xs text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400">
+                Used automatically for new campaigns
+              </p>
             </div>
             <Switch id="li-default" checked={isDefault} onCheckedChange={setIsDefault} />
           </div>
         </div>
 
-        <DialogFooter>
+        {/* Footer */}
+        <DialogFooter className="max-md:pt-4 max-md:flex max-md:justify-center dark:max-md:bg-[#020617]">
           <Button
             type="button"
             onClick={handleSave}
             disabled={saving || uploadingMedia}
-            className="px-8 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl"
+            className="px-8 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl max-md:w-auto max-md:mx-auto max-md:bg-[#0B1957] max-md:border max-md:border-blue-900/20 dark:max-md:bg-[#0c1e5b] dark:max-md:border-slate-700/50"
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             {editing ? 'Save Changes' : 'Save Template'}
           </Button>
         </DialogFooter>

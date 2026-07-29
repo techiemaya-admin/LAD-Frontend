@@ -100,25 +100,33 @@ export default function CreateInstagramTemplateModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529]/15 via-[#DD2A7B]/15 to-[#8134AF]/15 text-[#DD2A7B] border border-[#DD2A7B]/20 flex items-center justify-center w-10 h-10">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-md:p-4 max-md:bg-white max-md:text-slate-900 max-md:border-slate-200 max-md:rounded-2xl dark:max-md:bg-[#020617] dark:max-md:text-white dark:max-md:border-slate-800/80 max-md:[&>button]:top-5 max-md:[&>button]:right-4 max-md:[&>button]:bg-slate-100 max-md:[&>button]:p-1.5 max-md:[&>button]:rounded-lg max-md:[&>button]:border max-md:[&>button]:border-slate-200 dark:max-md:[&>button]:bg-slate-900/80 dark:max-md:[&>button]:border-slate-800">
+        
+        {/* Header */}
+        <DialogHeader className="max-md:pb-5 max-md:pt-1 max-md:border-b max-md:border-slate-200 dark:max-md:bg-[#020617] dark:max-md:border-slate-800/80">
+          <div className="flex items-center gap-3 pr-10">
+            {/* Instagram Icon */}
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529]/15 via-[#DD2A7B]/15 to-[#8134AF]/15 text-[#DD2A7B] border border-[#DD2A7B]/20 flex items-center justify-center w-10 h-10 shrink-0 max-md:bg-gradient-to-br max-md:from-[#f9ce34] max-md:via-[#ee2a7b] max-md:to-[#6228d7] max-md:text-white max-md:border-none">
               <Instagram className="h-5 w-5" />
             </div>
-            <div className="flex flex-col">
-              <DialogTitle>{editing ? 'Edit Instagram Template' : 'New Instagram Template'}</DialogTitle>
-              <DialogDescription>
+
+            <div className="flex flex-col text-left">
+              <DialogTitle className="max-md:text-base max-md:font-bold max-md:text-slate-900 dark:max-md:text-white">
+                {editing ? 'Edit Instagram Template' : 'New Instagram Template'}
+              </DialogTitle>
+              <DialogDescription className="max-md:text-xs max-md:text-slate-500 dark:max-md:text-slate-400">
                 Reusable Instagram DM — no Meta approval required
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 px-8 py-4">
-          {/* Name */}
+        {/* Content Body */}
+        <div className="space-y-4 px-8 py-4 max-md:px-2 max-md:py-4">
+          
+          {/* Template Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="ig-name">
+            <Label htmlFor="ig-name" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
               Template Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -126,7 +134,9 @@ export default function CreateInstagramTemplateModal({
               placeholder="e.g. Welcome DM"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={errors.name ? 'border-red-500' : ''}
+              className={`max-md:bg-slate-50 max-md:h-10 max-md:border-slate-200 max-md:rounded-lg max-md:text-sm max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-white dark:max-md:placeholder:text-slate-600 ${
+                errors.name ? 'border-red-500' : ''
+              }`}
             />
             {errors.name && (
               <p className="text-xs text-red-600 flex items-center gap-1">
@@ -135,14 +145,14 @@ export default function CreateInstagramTemplateModal({
             )}
           </div>
 
-          {/* Body */}
+          {/* Message Body */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="ig-content">
+              <Label htmlFor="ig-content" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
                 Message Body <span className="text-red-500">*</span>
               </Label>
-              <span className={`text-xs ${overLimit ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                {content.length}{overLimit ? ` · long DMs convert poorly` : ''}
+              <span className={`text-xs ${overLimit ? 'text-amber-600' : 'text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400'}`}>
+                {content.length}{overLimit ? ` · long DMs convert poorly` : ' characters'}
               </span>
             </div>
             <Textarea
@@ -151,58 +161,81 @@ export default function CreateInstagramTemplateModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
-              className={`resize-none text-sm ${errors.content ? 'border-red-500' : ''}`}
+              className={`resize-none text-sm max-md:bg-slate-50 max-md:border-slate-200 max-md:rounded-lg max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-slate-200 dark:max-md:placeholder:text-slate-600 ${
+                errors.content ? 'border-red-500' : ''
+              }`}
             />
             {errors.content && (
               <p className="text-xs text-red-600 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> {errors.content}
               </p>
             )}
-            <p className="text-[11px] text-muted-foreground">
-              Use <code className="px-1 py-0.5 rounded bg-muted">{'{{first_name}}'}</code>,{' '}
-              <code className="px-1 py-0.5 rounded bg-muted">{'{{username}}'}</code>,{' '}
-              <code className="px-1 py-0.5 rounded bg-muted">{'{{company}}'}</code> for personalization.
+            <p className="text-[11px] text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400 max-md:flex max-md:items-center max-md:gap-1.5 max-md:flex-wrap">
+              Use{' '}
+              <code className="px-1.5 py-0.5 rounded max-md:bg-blue-50 max-md:border max-md:border-blue-200 max-md:text-[#0A66C2] max-md:font-medium dark:max-md:bg-[#031548] dark:max-md:border-[#0A66C2]/40 dark:max-md:text-[#3b82f6]">
+                {'{{first_name}}'}
+              </code>
+              ,{' '}
+              <code className="px-1.5 py-0.5 rounded max-md:bg-blue-50 max-md:border max-md:border-blue-200 max-md:text-[#0A66C2] max-md:font-medium dark:max-md:bg-[#031548] dark:max-md:border-[#0A66C2]/40 dark:max-md:text-[#3b82f6]">
+                {'{{username}}'}
+              </code>
+              ,{' '}
+              <code className="px-1.5 py-0.5 rounded max-md:bg-blue-50 max-md:border max-md:border-blue-200 max-md:text-[#0A66C2] max-md:font-medium dark:max-md:bg-[#031548] dark:max-md:border-[#0A66C2]/40 dark:max-md:text-[#3b82f6]">
+                {'{{company}}'}
+              </code>{' '}
+              for personalization.
             </p>
           </div>
 
-          {/* Media URL (optional) */}
+          {/* Media URL */}
           <div className="space-y-1.5">
-            <Label htmlFor="ig-media">Media URL (optional)</Label>
+            <Label htmlFor="ig-media" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+              Media URL (optional)
+            </Label>
             <Input
               id="ig-media"
               placeholder="https://… image or video to attach"
               value={mediaUrl}
               onChange={(e) => setMediaUrl(e.target.value)}
+              className="max-md:bg-slate-50 max-md:border-slate-200 max-md:h-10 max-md:rounded-lg max-md:text-sm max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-white dark:max-md:placeholder:text-slate-600"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="ig-desc">Description (optional)</Label>
+            <Label htmlFor="ig-desc" className="max-md:text-xs max-md:font-semibold max-md:text-slate-700 dark:max-md:text-slate-200">
+              Description (optional)
+            </Label>
             <Input
               id="ig-desc"
               placeholder="Internal note about this template"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="max-md:bg-slate-50 max-md:h-10 max-md:border-slate-200 max-md:rounded-lg max-md:text-sm max-md:text-slate-900 max-md:placeholder:text-slate-400 dark:max-md:bg-[#020922] dark:max-md:border-slate-800 dark:max-md:text-white dark:max-md:placeholder:text-slate-600"
             />
           </div>
 
-          {/* Default toggle */}
-          <div className="flex items-center justify-between p-3 border rounded-md">
+          {/* Default Toggle Card */}
+          <div className="flex items-center justify-between p-3 border rounded-md max-md:p-4 max-md:border-slate-200 max-md:rounded-xl max-md:bg-slate-50/50 max-md:mt-6 dark:max-md:border-slate-700/80 dark:max-md:bg-transparent">
             <div className="space-y-0.5">
-              <Label htmlFor="ig-default" className="text-sm font-medium">Set as Default Template</Label>
-              <p className="text-xs text-muted-foreground">Used automatically for new campaigns</p>
+              <Label htmlFor="ig-default" className="text-sm font-medium max-md:font-bold max-md:text-slate-900 dark:max-md:text-white">
+                Set as Default Template
+              </Label>
+              <p className="text-xs text-muted-foreground max-md:text-slate-500 dark:max-md:text-slate-400">
+                Used automatically for new campaigns
+              </p>
             </div>
             <Switch id="ig-default" checked={isDefault} onCheckedChange={setIsDefault} />
           </div>
         </div>
 
-        <DialogFooter>
+        {/* Footer */}
+        <DialogFooter className="max-md:pt-4 max-md:flex max-md:justify-center dark:max-md:bg-[#020617]">
           <Button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-8 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl"
+            className="px-8 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl max-md:w-auto max-md:mx-auto max-md:bg-[#0B1957] max-md:border max-md:border-blue-900/20 dark:max-md:bg-[#0c1e5b] dark:max-md:border-slate-700/50"
           >
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {editing ? 'Save Changes' : 'Save Template'}
