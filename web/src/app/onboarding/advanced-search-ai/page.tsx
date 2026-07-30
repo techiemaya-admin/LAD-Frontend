@@ -683,6 +683,11 @@ export default function AdvancedSearchAIPage() {
     // True between "leads rendered" and "ICP scores arrived" when the search ran
     // with defer_icp. Drives the pulsing dot that stands in for the score chip.
     const [icpScoringPending, setIcpScoringPending] = useState(false);
+    // How the result list is ordered. 'relevance' is the order the search
+    // returned; 'icp_desc' puts the best ICP matches first. Kept as a view
+    // concern — `leads` always holds the original order so the user can switch
+    // back, and so the async score merge stays a pure by-id update.
+    const [leadSort, setLeadSort] = useState<'relevance' | 'icp_desc'>('relevance');
     // Per-lead selection: which prospects the user has checked to enroll into the
     // campaign. The list now spans the full ICP range (0–100); the user picks the
     // exact prospects rather than relying on a score cutoff. Keyed by lead.id.
@@ -1533,6 +1538,32 @@ export default function AdvancedSearchAIPage() {
             return next;
         });
     };
+
+    // ── Result ordering ──────────────────────────────────────────────────────
+    // A view over `leads`, never a mutation of it: the source list keeps the
+    // order the search returned so 'relevance' is always restorable, and the
+    // deferred ICP merge can stay a by-id update that doesn't care about order.
+    //
+    // Because this is derived, picking "Best ICP match" while scoring is still
+    // in flight just works — the list re-sorts on its own the moment the scores
+    // land, with no extra wiring.
+    const displayedLeads = useMemo(() => {
+        if (leadSort !== 'icp_desc') return leads;
+        // Unscored leads sort last rather than as 0 — "not scored yet" is not
+        // the same claim as "scored zero", and during the pending window every
+        // lead would otherwise be a spurious tie.
+        return [...leads].sort((a, b) => {
+            const as = a.icp_score, bs = b.icp_score;
+            if (as == null && bs == null) return 0;
+            if (as == null) return 1;
+            if (bs == null) return -1;
+            return bs - as;
+        });
+    }, [leads, leadSort]);
+
+    // True once at least one lead carries a score — the sort control is
+    // meaningless before that and would just be a dead input.
+    const hasAnyIcpScore = useMemo(() => leads.some(l => l.icp_score != null), [leads]);
 
     // Build a natural-language enrichment string from the Targeting card form values
     // and any bad-feedback comments — sent to the backend LLM to generate sharper keywords.
@@ -6172,7 +6203,27 @@ export default function AdvancedSearchAIPage() {
                                         <span style={{ fontSize: '12px', fontWeight: 600, color: '#0b1957' }}>
                                             {selectedLeadIds.size} of {leads.length} selected
                                         </span>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            {(hasAnyIcpScore || icpScoringPending) && (
+                                                <>
+                                                    <label htmlFor="adv-lead-sort" style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
+                                                        Sort
+                                                    </label>
+                                                    <select
+                                                        id="adv-lead-sort"
+                                                        value={leadSort}
+                                                        onChange={(e) => { e.stopPropagation(); setLeadSort(e.target.value as 'relevance' | 'icp_desc'); }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        title={icpScoringPending
+                                                            ? 'Scoring is still running — the list re-sorts as soon as scores arrive'
+                                                            : 'Order the results'}
+                                                        style={{ fontSize: '12px', fontWeight: 600, color: '#172560', background: '#fff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer' }}
+                                                    >
+                                                        <option value="relevance">Search order</option>
+                                                        <option value="icp_desc">Best ICP match</option>
+                                                    </select>
+                                                </>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); selectAllLeads(); }}
@@ -6293,8 +6344,11 @@ export default function AdvancedSearchAIPage() {
                                 {/* LinkedIn search leads */}
                                 {!inboundMode && (
                                     <div className="adv-leads-list">
-                                        {leads.map((lead, i) => (
-                                            <div key={i} className={`adv-lead-card flex items-center gap-[14px] p-[14px_16px] border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${lead.locked ? 'adv-lead-locked' : ''}`}>
+                                        {/* Keyed by lead id, not index — the sort control reorders this
+                                            list, and an index key would leave React reusing one lead's
+                                            row (and its checkbox) for a different person. */}
+                                        {displayedLeads.map((lead, i) => (
+                                            <div key={lead.id || i} className={`adv-lead-card flex items-center gap-[14px] p-[14px_16px] border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${lead.locked ? 'adv-lead-locked' : ''}`}>
                                                 {lead.profile_picture ? (
                                                     <img src={lead.profile_picture} alt={lead.name} className="w-[42px] h-[42px] rounded-full object-cover flex-shrink-0" />
                                                 ) : (
