@@ -1070,6 +1070,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         report_type: 'growth_opportunity_audit',
         context: '',
         email_now: false,
+        // On by default: this is an AI-written document sent to a prospect
+        // under the tenant's name. Reviewing it should be the thing you opt
+        // OUT of, not the thing you remember to switch on.
+        require_approval: true,
+        approval_channel: 'email',
+        approval_to: '',
       });
     }
     setEditingId(REPORT_STEP_ID);
@@ -1750,6 +1756,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 report_type: c.report_type || 'growth_opportunity_audit',
                 context: (c.context || '').trim() || undefined,
                 email_now: !!c.email_now,
+                require_approval: c.require_approval !== false,
+                approval_channel: c.approval_channel === 'whatsapp' ? 'whatsapp' : 'email',
+                approval_to: (c.approval_to || '').trim() || undefined,
                 ...delay,
               },
             });
@@ -2026,6 +2035,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 audience: (sc.job_titles || '').trim() || undefined,
                 report_type: rc.report_type || 'growth_opportunity_audit',
                 context: (rc.context || '').trim() || undefined,
+                require_approval: rc.require_approval !== false,
+                approval_channel: rc.approval_channel === 'whatsapp' ? 'whatsapp' : 'email',
+                approval_to: (rc.approval_to || '').trim() || undefined,
               },
             };
           })()),
@@ -3515,6 +3527,47 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     </div>
                   )}
                 </>
+              )}
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5" checked={cfg.require_approval !== false}
+                  onChange={(e) => setCfg(eid, { require_approval: e.target.checked })} />
+                <span className="text-xs">
+                  <span className="font-medium text-foreground">Review it before it goes out</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Strongly recommended. You get a link to read the PDF, then approve or reject.
+                    {isCampaign
+                      ? ' Until approved, your landing page will not offer it.'
+                      : ' Until approved, nothing is sent and no step can link it.'}
+                  </span>
+                </span>
+              </label>
+
+              {cfg.require_approval !== false && (
+                <div className="space-y-2 pl-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Send the review request by</label>
+                    <select className={field} value={cfg.approval_channel || 'email'}
+                      onChange={(e) => setCfg(eid, { approval_channel: e.target.value })}>
+                      <option value="email">Email</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">
+                      Who reviews it? <span className="text-red-600">*</span>
+                    </label>
+                    <input className={field} value={cfg.approval_to || ''}
+                      onChange={(e) => setCfg(eid, { approval_to: e.target.value })}
+                      placeholder={cfg.approval_channel === 'whatsapp' ? '+9715…' : 'you@yourcompany.com'} />
+                    {!(cfg.approval_to || '').trim() && (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        Needed to turn the review on. With nobody to ask, the report would wait
+                        forever, so it will go out unreviewed instead.
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* The rule: only the industry report can be given away publicly. */}
