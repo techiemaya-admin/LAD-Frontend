@@ -180,32 +180,36 @@ export const ZohoAutomationsPanel: React.FC = () => {
   }, [history, search]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+    <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <div>
-            <div className="text-sm font-semibold text-foreground">Task Automations</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-[#172560] dark:text-white">Task Automations</div>
+            <p className="text-xs text-slate-500 dark:text-[#7a8ba3]">
               Turn open Zoho tasks into LinkedIn / WhatsApp / Email actions — you approve each before it sends.
             </p>
           </div>
         </div>
-        <Button onClick={handleScan} disabled={scanning}>
-          {scanning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+        <button
+          onClick={handleScan}
+          disabled={scanning}
+          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2563eb] hover:bg-blue-700 transition-all disabled:opacity-50"
+        >
+          {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {scanning ? 'Scanning…' : 'Scan open tasks'}
-        </Button>
+        </button>
       </div>
 
       {!enabled && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
           Automation execution is currently disabled. Proposals will still appear, but approving is blocked until an admin sets <code className="mx-1">ZOHO_TASK_AUTOMATION_ENABLED=true</code>.
         </div>
       )}
       {banner && (
         <div className={`flex items-start gap-2 rounded-lg p-3 text-sm border ${
-          banner.kind === 'ok' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+          banner.kind === 'ok' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300'
         }`}>
           {banner.kind === 'ok' ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
           {banner.text}
@@ -215,29 +219,35 @@ export const ZohoAutomationsPanel: React.FC = () => {
       {!loading && (
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-8"
+            <div className="relative flex items-center w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                className="w-full pl-9 pr-3 h-9 rounded-lg text-sm border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 placeholder="Search a task or contact (e.g. Eric)…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleQueryScan(); }}
               />
             </div>
-            <Button variant="outline" size="sm" disabled={queryScanning || !search.trim()} onClick={handleQueryScan} title="Search all open Zoho tasks and interpret matches">
+            <button
+              type="button"
+              disabled={queryScanning || !search.trim()}
+              onClick={handleQueryScan}
+              title="Search all open Zoho tasks and interpret matches"
+              className="h-9 px-3.5 rounded-lg text-sm font-medium border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#09153b] text-[#172560] dark:text-white hover:bg-slate-50 dark:hover:bg-[#122254] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {queryScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span className="hidden sm:inline ml-1.5">Search Zoho</span>
-            </Button>
+              <span className="hidden sm:inline">Search Zoho</span>
+            </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sort</span>
+            <span className="text-xs text-slate-500 dark:text-[#7a8ba3]">Sort</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortKey)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+              className="h-9 px-3 rounded-lg text-xs font-medium border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-[#172560] dark:text-white focus:outline-none"
             >
-              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-white dark:bg-[#071131]">{o.label}</option>)}
             </select>
           </div>
         </div>
@@ -267,33 +277,43 @@ export const ZohoAutomationsPanel: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {visibleProposals.map((a) => (
-            <div key={a.id} className="rounded-lg border border-border p-3 space-y-2">
+            <div key={a.id} className="rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-slate-50/50 dark:bg-[#040b25] p-3.5 space-y-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   {channelIcon(a.channel)}
-                  <span className="text-sm font-medium text-foreground truncate">{a.subject || 'Task'}</span>
-                  {a.action && <Badge variant="secondary" className="capitalize">{a.action.replace(/_/g, ' ')}</Badge>}
-                  {a.status === 'failed' && <Badge variant="secondary" className="bg-red-100 text-red-700">retry</Badge>}
+                  <span className="text-sm font-semibold text-[#172560] dark:text-white truncate">{a.subject || 'Task'}</span>
+                  {a.action && <Badge variant="secondary" className="capitalize bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1c2c4e]">{a.action.replace(/_/g, ' ')}</Badge>}
+                  {a.status === 'failed' && <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50">retry</Badge>}
                 </div>
-                <span className="text-xs text-muted-foreground truncate">{a.contact_name} · {targetLabel(a)}</span>
+                <span className="text-xs text-slate-500 dark:text-[#7a8ba3] truncate">{a.contact_name} · {targetLabel(a)}</span>
               </div>
 
               <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[72px]"
+                className="w-full rounded-md border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-[#172560] dark:text-white placeholder:text-slate-400 px-3 py-2 text-sm min-h-[72px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 value={drafts[a.id] ?? a.message ?? ''}
                 onChange={(e) => setDrafts((d) => ({ ...d, [a.id]: e.target.value }))}
               />
 
-              {a.error && <p className="text-xs text-red-600">{a.error}</p>}
+              {a.error && <p className="text-xs text-red-600 dark:text-red-400">{a.error}</p>}
 
               <div className="flex items-center gap-2">
-                <Button size="sm" disabled={busyId === a.id || !enabled} onClick={() => handleApprove(a)}>
-                  {busyId === a.id ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />}
+                <button
+                  type="button"
+                  disabled={busyId === a.id || !enabled}
+                  onClick={() => handleApprove(a)}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {busyId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                   Approve & send
-                </Button>
-                <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => handleReject(a)}>
-                  <X className="h-4 w-4 mr-1.5" /> Reject
-                </Button>
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === a.id}
+                  onClick={() => handleReject(a)}
+                  className="h-8 px-3 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" /> Reject
+                </button>
               </div>
             </div>
           ))}
@@ -301,7 +321,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
       )}
 
       {history.length > 0 && (
-        <div className="pt-2 border-t border-border">
+        <div className="pt-2 border-t border-slate-200 dark:border-[#1c2c4e]">
           <button onClick={() => setShowHistory((v) => !v)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
             {showHistory ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             History ({search.trim() ? `${visibleHistory.length} of ${history.length}` : history.length})

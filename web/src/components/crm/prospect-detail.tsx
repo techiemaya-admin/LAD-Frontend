@@ -145,7 +145,7 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
       {/* Hero + KPI row */}
       <LadCard padded={false}>
         <div className="flex flex-col lg:flex-row">
-          <div className="p-5 lg:p-6 lg:w-[34%] border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#262831] flex items-center gap-4">
+          <div className="p-5 lg:p-6 lg:w-[34%] border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#1c2c4e] flex items-center gap-4">
             <div
               className="w-16 h-16 rounded-2xl grid place-items-center text-white text-[20px] font-semibold shrink-0"
               style={{ background: `linear-gradient(135deg, ${T.primary}, ${T.primaryHead})` }}
@@ -258,7 +258,7 @@ function KpiFit({ value }: { value: number | null }) {
     : value >= 0.4 ? 'Partial match'
     : 'Weak match';
   return (
-    <div className="p-4 lg:p-5 border-r border-b lg:border-b-0 border-slate-100 dark:border-[#262831] flex items-center gap-3">
+    <div className="p-4 lg:p-5 border-r border-b lg:border-b-0 border-slate-100 dark:border-[#1c2c4e] flex items-center gap-3">
       <div className="relative w-14 h-14 shrink-0">
         <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={T.badgeBg} strokeWidth="3.6" />
@@ -300,7 +300,7 @@ function KpiSpark({ counts, total }: { counts: number[]; total: number }) {
   const lastX = (n - 1) * step;
   const lastY = h - (counts[n - 1] / max) * h;
   return (
-    <div className="p-4 lg:p-5 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#262831]">
+    <div className="p-4 lg:p-5 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#1c2c4e]">
       <p className="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-300 font-semibold">
         Engagement · 7d
       </p>
@@ -342,7 +342,7 @@ function KpiRoutes({
     <button
       onClick={onClick}
       aria-expanded={open}
-      className="text-left w-full p-4 lg:p-5 border-r border-slate-100 dark:border-[#262831] hover:bg-[#f1f3fb] dark:hover:bg-[#0e1a3a] transition group"
+      className="text-left w-full p-4 lg:p-5 border-r border-slate-100 dark:border-[#1c2c4e] hover:bg-[#f1f3fb] dark:hover:bg-[#0e1d4d] transition group"
     >
       <div className="flex items-start justify-between">
         <p className="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-300 font-semibold">
@@ -705,7 +705,7 @@ function IntentStrip({ signals }: { signals: ProspectFixture['intent_signals'] }
           return (
             <div
               key={i}
-              className="relative rounded-2xl border border-slate-200 dark:border-[#262831] p-4 overflow-hidden"
+              className="relative rounded-2xl border border-slate-200 dark:border-[#1c2c4e] dark:bg-[#09153b]/50 p-4 overflow-hidden"
             >
               <div
                 className="absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-10"
@@ -843,7 +843,7 @@ function ActionBtn({
     ? 'text-white shadow-sm hover:opacity-95'
     : danger
     ? 'text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40'
-    : 'text-[#172560] dark:text-white border border-slate-200 dark:border-[#262831] hover:bg-slate-50 dark:hover:bg-[#1a2a43]';
+    : 'text-[#172560] dark:text-white border border-slate-200 dark:border-[#1c2c4e] hover:bg-slate-50 dark:hover:bg-[#0e1d4d]';
   return (
     <button
       type="button"

@@ -48,9 +48,9 @@ export function AgentSelector({
     });
   }, [agents, searchQuery]);
   return (
-    <div className="glass-card w-full min-w-0 max-w-none rounded-2xl h-full flex flex-col overflow-hidden shadow-lg">
+    <div className="glass-card dark:bg-[#071131] dark:border-blue-950/40 w-full min-w-0 max-w-none rounded-2xl h-full flex flex-col overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="w-full p-3 sm:p-4 md:p-5 lg:p-6 border-b border-border/50 bg-primary/5">
+      <div className="w-full p-3 sm:p-4 md:p-5 lg:p-6 border-b border-border/50 dark:border-blue-950/40 bg-primary/5 dark:bg-[#071131]">
         <div className="flex items-center gap-2 mb-1">
           <Mic className="h-5 w-5 text-primary" />
           <h2 className="font-display font-bold text-xl text-foreground">Voice Agents</h2>
@@ -59,7 +59,7 @@ export function AgentSelector({
       </div>
 
       {/* Search and Action Buttons Row */}
-      <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 border-b border-border/30">
+      <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 border-b border-border/30 dark:border-blue-950/40">
         {/* Search Bar */}
         <div className="relative w-full mb-3 mx-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -69,7 +69,7 @@ export function AgentSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
-              "w-full pl-9 pr-9 py-2.5 rounded-lg bg-muted/30 border border-border/50",
+              "w-full pl-9 pr-9 py-2.5 rounded-lg bg-muted/30 dark:bg-[#071131] border border-border/50 dark:border-blue-950/40",
               "text-sm placeholder:text-muted-foreground text-foreground",
               "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
               "transition-all duration-200"
@@ -149,7 +149,7 @@ export function AgentSelector({
                     "animate-fade-in-up group overflow-hidden",
                     isSelected 
                       ? `border-primary ${status.bgColor} bg-gradient-to-r from-primary/10 via-transparent to-transparent shadow-lg` 
-                      : "border-border/30 hover:border-border/60 hover:bg-accent/5 bg-background"
+                      : "border-border/30 dark:border-blue-950/40 hover:border-border/60 hover:bg-accent/5 bg-background"
                   )}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >

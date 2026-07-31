@@ -789,3 +789,49 @@ body {
   }
 }
 
+/* -------------------------------------------------------------
+   GLOBAL DARK MODE DROPDOWN & SELECT STYLES
+   Ensures popovers use #071131 navy background with subtle #1c2c4e border,
+   and option hover/focused/active states use standard light blue (#2563eb).
+----------------------------------------------------------------- */
+.dark select {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+  border-color: #1c2c4e !important;
+}
+
+.dark select option {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:active,
+.dark select option:checked {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-content"],
+.dark [data-radix-select-content],
+.dark [role="menu"],
+.dark [role="listbox"] {
+  background-color: #071131 !important;
+  border-color: #1c2c4e !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-item"]:focus,
+.dark [data-slot="select-item"][data-highlighted],
+.dark [data-slot="select-item"][data-state="checked"],
+.dark [role="option"]:focus,
+.dark [role="option"][data-highlighted],
+.dark [role="option"][aria-selected="true"],
+.dark [role="menuitem"]:focus,
+.dark [role="menuitem"][data-highlighted] {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+

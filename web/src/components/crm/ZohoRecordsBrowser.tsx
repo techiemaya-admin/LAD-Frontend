@@ -47,6 +47,13 @@ interface CRMRecord {
 
 const PAGE_SIZE = 50;
 
+function initialsOf(name?: string | null): string {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 export const ZohoRecordsBrowser: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<ZohoStatus | null>(null);
@@ -169,7 +176,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
+      <div className="flex items-center justify-center py-16 text-slate-500 dark:text-[#7a8ba3]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading Zoho CRM…
       </div>
     );
@@ -177,10 +184,10 @@ export const ZohoRecordsBrowser: React.FC = () => {
 
   if (!status?.connected) {
     return (
-      <div className="rounded-xl border border-border bg-card p-8 text-center space-y-2">
-        <div className="text-sm font-medium text-foreground">Zoho CRM isn’t connected</div>
-        <p className="text-sm text-muted-foreground">
-          Connect Zoho in <a href="/settings?tab=integrations" className="underline">Settings → Integrations</a> to sync and browse your Contacts, Leads, Deals, and Tasks here.
+      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-8 text-center space-y-2">
+        <div className="text-sm font-medium text-[#172560] dark:text-white">Zoho CRM isn’t connected</div>
+        <p className="text-sm text-slate-500 dark:text-[#7a8ba3]">
+          Connect Zoho in <a href="/settings?tab=integrations" className="underline text-blue-600 dark:text-blue-400">Settings → Integrations</a> to sync and browse your Contacts, Leads, Deals, and Tasks here.
         </p>
       </div>
     );
@@ -188,49 +195,67 @@ export const ZohoRecordsBrowser: React.FC = () => {
 
   const c = status.counts || {};
 
+  const iconForKey = (k: string) => {
+    if (k === 'contacts') return <Contact className="h-4 w-4" />;
+    if (k === 'leads') return <Users className="h-4 w-4" />;
+    if (k === 'deals') return <Briefcase className="h-4 w-4" />;
+    return <CheckSquare className="h-4 w-4" />;
+  };
+
   return (
     <div className="space-y-4">
       {/* Header: counts + sync */}
-      <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="grid grid-cols-4 gap-3 flex-1 min-w-[280px]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 min-w-[280px]">
             {(['contacts', 'leads', 'deals', 'tasks'] as const).map((k) => (
-              <div key={k} className="rounded-lg border border-border p-2.5 text-center">
-                <div className="text-xl font-semibold text-foreground">{c[k] ?? '—'}</div>
-                <div className="text-xs text-muted-foreground capitalize">{k}</div>
+              <div key={k} className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-slate-50 dark:bg-[#040b25] p-3.5 flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#0e1d4d] text-blue-600 dark:text-blue-400 grid place-items-center shrink-0">
+                  {iconForKey(k)}
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-[#172560] dark:text-white tabular-nums leading-none">{c[k] ?? '0'}</div>
+                  <div className="text-xs text-slate-500 dark:text-[#7a8ba3] capitalize mt-1 font-medium">{k}</div>
+                </div>
               </div>
             ))}
           </div>
-          <Button onClick={handleSync} disabled={syncing}>
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2563eb] hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {syncing ? 'Syncing…' : 'Sync from Zoho'}
-          </Button>
+          </button>
         </div>
         {status.last_synced && (
-          <p className="text-xs text-muted-foreground">Last synced {new Date(status.last_synced).toLocaleString()}</p>
+          <p className="text-xs text-slate-500 dark:text-[#7a8ba3]">Last synced {new Date(status.last_synced).toLocaleString()}</p>
         )}
         {error && (
-          <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3 text-sm text-red-700 dark:text-red-300">
             <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {error}
           </div>
         )}
         {success && (
-          <div className="flex items-start gap-2 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+          <div className="flex items-start gap-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 p-3 text-sm text-green-700 dark:text-green-300">
             <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> {success}
           </div>
         )}
       </div>
 
       {/* Records browser */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <div className="flex gap-1">
+      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div className="flex gap-1.5 bg-slate-100 dark:bg-[#040b25] p-1 rounded-xl border border-slate-200 dark:border-[#1c2c4e]">
             {(['contacts', 'leads', 'deals', 'tasks'] as RecordType[]).map((t) => (
               <button
                 key={t}
                 onClick={() => { setRecordType(t); setSearch(''); }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize flex items-center gap-1.5 transition-colors ${
-                  recordType === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize flex items-center gap-1.5 transition-all ${
+                  recordType === t
+                    ? 'bg-[#2563eb] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-[#7a8ba3] hover:text-[#172560] dark:hover:text-white hover:bg-white dark:hover:bg-[#0e1d4d]'
                 }`}
               >
                 {t === 'contacts' && <Contact className="h-3.5 w-3.5" />}
@@ -241,61 +266,90 @@ export const ZohoRecordsBrowser: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder={`Search ${recordType}…`} value={search} onChange={(e) => onSearchChange(e.target.value)} />
+          <div className="relative flex items-center w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              className="w-full pl-9 pr-3 h-9 rounded-lg text-xs border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              placeholder={`Search ${recordType}…`}
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
           </div>
         </div>
 
         {recordsLoading ? (
-          <div className="flex items-center justify-center py-10 text-muted-foreground">
+          <div className="flex items-center justify-center py-10 text-slate-500 dark:text-[#7a8ba3]">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
           </div>
         ) : records.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground text-sm">
+          <div className="text-center py-10 text-slate-500 dark:text-[#7a8ba3] text-sm">
             No {recordType} synced yet. Click “Sync from Zoho” to pull them in.
           </div>
         ) : (
           <ScrollArea className="max-h-[560px]">
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-slate-100 dark:divide-[#132247]">
               {records.map((r) => (
-                <div key={r.id} className="py-2.5 flex items-center justify-between gap-3">
+                <div key={r.id} className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#0a173d]/50 px-2 rounded-lg transition-colors cursor-pointer">
                   {recordType === 'deals' ? (
                     <>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{r.deal_name || 'Untitled deal'}</div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '—'}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                          {initialsOf(r.deal_name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.deal_name || 'Untitled deal'}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] truncate">
+                            {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '—'}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        {r.stage && <Badge variant="secondary">{r.stage}</Badge>}
-                        {r.amount != null && <div className="text-sm font-medium text-foreground mt-1">{r.amount.toLocaleString()}</div>}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          {r.stage && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.stage}</Badge>}
+                          {r.amount != null && <div className="text-xs font-bold text-[#172560] dark:text-white mt-0.5">{r.amount.toLocaleString()}</div>}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
                       </div>
                     </>
                   ) : recordType === 'tasks' ? (
                     <>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{r.subject || 'Untitled task'}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
-                          {r.related_to && <span className="truncate">{r.related_to}</span>}
-                          {r.due_date && <span>Due {new Date(r.due_date).toLocaleDateString()}</span>}
-                          {r.priority && <span>{r.priority} priority</span>}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                          {initialsOf(r.subject)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.subject || 'Untitled task'}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5">
+                            {r.related_to && <span className="truncate">{r.related_to}</span>}
+                            {r.due_date && <span>Due {new Date(r.due_date).toLocaleDateString()}</span>}
+                            {r.priority && <span>{r.priority} priority</span>}
+                          </div>
                         </div>
                       </div>
-                      {r.status && <Badge variant="secondary" className="flex-shrink-0">{r.status}</Badge>}
+                      <div className="flex items-center gap-3 shrink-0">
+                        {r.status && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.status}</Badge>}
+                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                      </div>
                     </>
                   ) : (
                     <>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{r.name || '—'}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
-                          {r.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
-                          {r.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
-                          {r.company_name && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />{r.company_name}</span>}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                          {initialsOf(r.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.name || '—'}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                            {r.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
+                            {r.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
+                            {r.company_name && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />{r.company_name}</span>}
+                          </div>
                         </div>
                       </div>
-                      {r.title && <span className="text-xs text-muted-foreground flex-shrink-0">{r.title}</span>}
+                      <div className="flex items-center gap-3 shrink-0">
+                        {r.title && <span className="text-[11px] text-slate-500 dark:text-[#7a8ba3]">{r.title}</span>}
+                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                      </div>
                     </>
                   )}
                 </div>
@@ -305,15 +359,25 @@ export const ZohoRecordsBrowser: React.FC = () => {
         )}
 
         {total > PAGE_SIZE && (
-          <div className="flex items-center justify-between pt-3 mt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">Page {page} of {totalPages} · {total.toLocaleString()} {recordType}</span>
+          <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-[#132247]">
+            <span className="text-xs text-slate-500 dark:text-[#7a8ba3]">Page {page} of {totalPages} · {total.toLocaleString()} {recordType}</span>
             <div className="flex gap-1">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => loadRecords(recordType, page - 1, search)}>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => loadRecords(recordType, page - 1, search)}
+                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] grid place-items-center text-slate-600 dark:text-slate-300 disabled:opacity-40"
+              >
                 <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => loadRecords(recordType, page + 1, search)}>
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => loadRecords(recordType, page + 1, search)}
+                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] grid place-items-center text-slate-600 dark:text-slate-300 disabled:opacity-40"
+              >
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
           </div>
         )}

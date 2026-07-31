@@ -837,7 +837,7 @@ export function CallOptions(props: CallOptionsProps) {
             </thead>
             <tbody>
               {bulkEntries.slice(0, visibleCount).map((row, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t first:border-t-0 dark:border-[#262831]">
                   {/* --- radio + edit before phone --- */}
                   <td className="p-2 align-middle text-center">
                     <div className="flex items-center justify-center gap-2">
@@ -944,8 +944,8 @@ export function CallOptions(props: CallOptionsProps) {
     );
   };
   return (
-    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#000724] border border-gray-100 dark:border-[#262831]">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#000724] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#000724] mb-1 -mx-2 mt-2">
+    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#071131] border border-gray-100 dark:border-[#262831]">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#071131] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#071131] mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
           <PhoneCall className="w-5 h-5 inline mr-2" /> Call Options
         </CardTitle>
@@ -997,7 +997,7 @@ export function CallOptions(props: CallOptionsProps) {
                   value={dial}
                   onChange={(e) => onDialChange(e.target.value)}
                   placeholder="Enter phone number"
-                  className="flex-1 px-3 py-2 text-sm outline-none bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                  className="flex-1 px-3 py-2 text-sm outline-none bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 />
               </div>
 

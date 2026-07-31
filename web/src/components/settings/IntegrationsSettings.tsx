@@ -982,7 +982,7 @@ export const IntegrationsSettings: React.FC = () => {
               return (
                 <div
                   key={integration.id}
-                  className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
+                  className={`group relative flex flex-col rounded-xl border border-border bg-card dark:bg-[#071131] dark:border-blue-950/40 p-5 transition-all ${
                     integration.comingSoon || isLocked
                       ? 'opacity-75 cursor-default'
                       : 'hover:border-primary/30 hover:shadow-md cursor-pointer'

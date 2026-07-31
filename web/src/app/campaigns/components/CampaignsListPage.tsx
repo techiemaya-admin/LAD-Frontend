@@ -293,7 +293,7 @@ export default function CampaignsListPage() {
             <Button
               onClick={() => router.push("/campaigns/workflow")}
               variant="outline"
-              className="rounded-xl font-semibold px-3 py-1.5 flex-1 sm:w-auto border-[#0b1957] text-[#0b1957] hover:bg-[#0b1957]/10 hover:cursor-pointer"
+              className="rounded-xl font-semibold px-3 py-1.5 flex-1 sm:w-auto border-[#0b1957] text-[#0b1957] hover:text-[#0b1957] dark:text-white dark:hover:text-white hover:bg-[#0b1957]/10 hover:cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-1" />
               Custom Accelerator
@@ -331,7 +331,7 @@ export default function CampaignsListPage() {
           {/* Rate Limits Grid - 2x2 Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Daily Limit Card */}
-            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -370,7 +370,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Limit Card */}
-            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -408,7 +408,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Usage Chart */}
-            <Card className="bg-white dark:bg-[#000724] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <Avatar className="w-10 h-10 bg-green-100">

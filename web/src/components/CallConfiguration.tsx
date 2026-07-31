@@ -236,8 +236,8 @@ export function CallConfiguration({
   const [isRephrasing, setIsRephrasing] = useState(false);
 
   return (
-    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#000724] border border-gray-100 dark:border-[#262831]">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#000724] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#000724] mb-1 -mx-2 mt-2">
+    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#071131] border border-gray-100 dark:border-[#262831]">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#071131] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#071131] mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
           <Phone className="w-5 h-5 inline mr-2" /> Call Configuration
         </CardTitle>
@@ -311,11 +311,11 @@ export function CallConfiguration({
                       <span className="text-sm font-medium text-gray-700 dark:text-white">{activeCode}</span>
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                  <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-[#262831]">
                     {countryCodes.map((code) => {
                       const country = DIAL_TO_COUNTRY[code];
                       return (
-                        <SelectItem key={code} value={code} className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                        <SelectItem key={code} value={code} className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
                           <div className="flex items-center gap-3">
                             {country ? (
                               <Image
@@ -349,15 +349,15 @@ export function CallConfiguration({
                   <SelectTrigger className="h-auto flex-1 border-0 rounded-none focus:ring-0 shadow-none bg-transparent px-3 text-left min-h-[48px]">
                     <SelectValue placeholder="Select number" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                  <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-[#262831]">
                     {numbers.map((n) => (
-                      <SelectItem key={n.id} value={n.id} className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                      <SelectItem key={n.id} value={n.id} className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
                         <div className="flex flex-col">
                           <span className="font-medium">
                             {n.base_number ?? normalizeE164Like(n.phone_number)}
                           </span>
                           {n.provider && (
-                            <span className="text-xs truncate text-muted-foreground transition-colors duration-100 group-data-[highlighted]:text-white/80 dark:group-data-[highlighted]:text-[#000724]/80">
+                            <span className="text-xs truncate text-muted-foreground transition-colors duration-100 group-data-[highlighted]:text-white/80 dark:group-data-[highlighted]:text-white/80">
                               {n.provider}
                             </span>
                           )}
@@ -436,13 +436,13 @@ export function CallConfiguration({
                       className="h-auto py-3 group" // <-- Ensure 'group' is fully present here
                     >
                       <div className="flex items-center gap-3 w-full">
-                        <Mic className="w-4 h-4 text-blue-500 flex-shrink-0 transition-colors duration-100 group-data-[highlighted]:text-white dark:group-data-[highlighted]:text-[#000724]" />
+                        <Mic className="w-4 h-4 text-blue-500 flex-shrink-0 transition-colors duration-100 group-data-[highlighted]:text-white dark:group-data-[highlighted]:text-white" />
                         <div className="flex-1 flex items-center justify-between min-w-0">
                           <div className="flex flex-col items-start min-w-0">
                             <span className="font-medium truncate">
                               {agent.name}
                             </span>
-                            <span className="text-xs truncate text-muted-foreground transition-colors duration-100 group-data-[highlighted]:text-white/80 dark:group-data-[highlighted]:text-[#000724]/80">
+                            <span className="text-xs truncate text-muted-foreground transition-colors duration-100 group-data-[highlighted]:text-white/80 dark:group-data-[highlighted]:text-white/80">
                               {agent.description} • {agent.accent} •{" "}
                               {agent.gender}
                             </span>

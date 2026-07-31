@@ -24,6 +24,15 @@ function TypePill({ type }: { type: CrmContact['type'] }) {
     inbound:  { label: 'Inbound',  color: '#a16207', bg: '#fef3c7' },
   };
   const m = map[type] ?? map.imported;
+
+  if (type === 'prospect') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded-full text-[#0B1957] bg-[#e8ebf7] dark:bg-[#2563eb] dark:text-white dark:rounded-md">
+        {m.label}
+      </span>
+    );
+  }
+
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
@@ -334,7 +343,7 @@ function CrmTable<R extends CrmContact>({
               <th className="w-9 px-3 py-2.5">
                 <input
                   type="checkbox"
-                  className="rounded border-slate-300 dark:border-[#262831] focus:ring-[#0B1957]/30"
+                  className="rounded border-slate-300 focus:ring-[#0B1957]/30 dark:appearance-none dark:w-4 dark:h-4 dark:shrink-0 dark:rounded-[5px] dark:border-2 dark:border-[#1c2c4e] dark:bg-transparent dark:checked:bg-blue-600 dark:checked:border-blue-600 dark:focus-visible:ring-1 dark:focus-visible:ring-blue-500/50 dark:cursor-pointer dark:relative dark:checked:after:content-[''] dark:checked:after:absolute dark:checked:after:left-[4px] dark:checked:after:top-[0px] dark:checked:after:w-[4px] dark:checked:after:h-[8px] dark:checked:after:border-white dark:checked:after:border-r-2 dark:checked:after:border-b-2 dark:checked:after:rotate-45 dark:transition-all"
                   aria-label="Select all rows"
                 />
               </th>
@@ -364,7 +373,7 @@ function CrmTable<R extends CrmContact>({
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
-                    className="rounded border-slate-300 dark:border-[#262831] focus:ring-[#0B1957]/30"
+                    className="rounded border-slate-300 focus:ring-[#0B1957]/30 dark:appearance-none dark:w-4 dark:h-4 dark:shrink-0 dark:rounded-[5px] dark:border-2 dark:border-[#1c2c4e] dark:bg-transparent dark:checked:bg-blue-600 dark:checked:border-blue-600 dark:focus-visible:ring-1 dark:focus-visible:ring-blue-500/50 dark:cursor-pointer dark:relative dark:checked:after:content-[''] dark:checked:after:absolute dark:checked:after:left-[4px] dark:checked:after:top-[0px] dark:checked:after:w-[4px] dark:checked:after:h-[8px] dark:checked:after:border-white dark:checked:after:border-r-2 dark:checked:after:border-b-2 dark:checked:after:rotate-45 dark:transition-all"
                     aria-label={`Select ${r.name}`}
                   />
                 </td>

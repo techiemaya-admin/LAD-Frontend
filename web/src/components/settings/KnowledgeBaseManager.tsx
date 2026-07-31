@@ -591,7 +591,7 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
 
   return (
     <div className="flex flex-col w-full">
-      <div className="p-6 border-b border-gray-100 dark:border-blue-950/40 flex items-center justify-between">
+      <div className="p-6 border-b border-gray-100 dark:bg-[#071131] dark:border-blue-950/40 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />

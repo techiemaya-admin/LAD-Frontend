@@ -22,6 +22,8 @@ import {
   MessageCircle,
   FlaskConical,
   Globe,
+  Calendar,
+  Info,
   X,
   Send,
   Sparkles,
@@ -1229,7 +1231,7 @@ export function ChatSettings() {
       </div>
 
       {/* ── Section 1: System Prompts ─────────────────────────────── */}
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
         <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
           <div className="flex items-center gap-2 mb-1">
             <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -1288,7 +1290,7 @@ export function ChatSettings() {
 
         {/* Prompts list — hidden entirely when no channel is connected */}
         {(!channelsLoaded || visibleChannels.length > 0) && (
-        <div className="divide-y divide-gray-100 dark:divide-blue-950/40">
+        <div className="divide-y dark:bg-black/20 divide-gray-100 dark:divide-blue-950/40">
           {filteredPrompts.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-400 dark:text-slate-300">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -1496,7 +1498,7 @@ export function ChatSettings() {
       </div>
 
       {/* ── Shareable Assets ─────────────────────────────────────── */}
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
         <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
           <div className="flex items-center gap-2 mb-1">
             <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -1761,7 +1763,7 @@ export function ChatSettings() {
       </div>
 
       {/* ── Section 2.5: Company Website Context ─────────────────── */}
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
         <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
           <div className="flex items-center gap-2 mb-1">
             <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -1809,7 +1811,7 @@ export function ChatSettings() {
             {chatSettings.web_scraping_urls.length > 0 && (
               <div className="mb-3 border border-gray-100 dark:border-blue-950/40 rounded-lg divide-y divide-gray-100 dark:divide-blue-950/40 overflow-hidden">
                 {chatSettings.web_scraping_urls.map((url, idx) => (
-                  <div key={idx} className="flex items-center justify-between px-3 py-2.5 bg-white dark:bg-[#061033]/30 hover:bg-gray-50 dark:hover:bg-[#061033]/60">
+                  <div key={idx} className="flex items-center justify-between px-3 py-2.5 bg-white dark:bg-blue-950/20 hover:bg-gray-50 dark:hover:bg-[#061033]/60">
                     <div className="flex items-center gap-2 overflow-hidden min-w-0">
                       <Globe className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                       <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{url}</span>
@@ -2063,7 +2065,7 @@ export function ChatSettings() {
           typing rows are WhatsApp settings, so this card only shows while a
           WhatsApp tab is selected — and only the selected flavour's row. */}
       {(activeChannel === 'personal_whatsapp' || activeChannel === 'waba') && (
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
         <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
           <div className="flex items-center gap-2 mb-1">
             <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -2081,10 +2083,10 @@ export function ChatSettings() {
               Show &quot;typing…&quot; to the contact while the AI is composing a reply.
             </p>
 
-            <div className="space-y-3 border border-gray-100 dark:border-blue-950/40 rounded-lg divide-y divide-gray-100 dark:divide-blue-950/40 overflow-hidden">
+            <div className="space-y-3 border border-gray-100 dark:border-blue-950/80 rounded-lg divide-y divide-gray-100 dark:divide-blue-950/40 overflow-hidden">
               {/* Personal WhatsApp row */}
               {activeChannel === 'personal_whatsapp' && (
-              <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-transparent">
+              <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-blue-950/20">
                 <div className="flex items-center gap-2.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 flex-shrink-0" />
                   <div>
@@ -2160,181 +2162,192 @@ export function ChatSettings() {
           applied to every channel) and shown only while a WhatsApp tab is
           selected. LinkedIn has its own follow-up card; other channels none. */}
       {(activeChannel === 'waba' || activeChannel === 'personal_whatsapp') && (
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
-        <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
-          <div className="flex items-center gap-2 mb-1">
-            <Bell className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">WhatsApp Follow-ups</h2>
-            <span className="flex items-center gap-1.5 ml-1 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-full">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              WhatsApp only
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-slate-300">
-            Configure when automated follow-up messages are sent after a WhatsApp conversation ends.
-            Each stage fires once at the scheduled delay. Booking reminders below also send via WhatsApp.
-          </p>
-        </div>
-        <div className="p-6 space-y-5">
-          {/* Master enable */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable WhatsApp Follow-ups</p>
-              <p className="text-xs text-gray-500 dark:text-slate-300 mt-0.5">
-                Automatically send follow-up messages when a customer stops responding on WhatsApp
-              </p>
+        <div className="relative bg-white dark:bg-[#071131] rounded-2xl border border-gray-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
+          {/* Card Header */}
+          <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
+            <div className="flex items-center gap-2 mb-1">
+              <Bell className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">WhatsApp Follow-ups</h2>
+              <span className="flex items-center gap-1.5 ml-1 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                WhatsApp only
+              </span>
             </div>
-            <button
-              onClick={() => setFollowupConfig((prev) => ({ ...prev, enabled: !prev.enabled }))}
-            >
-              {followupConfig.enabled ? (
-                <ToggleRight className="h-6 w-6 text-blue-500 dark:text-blue-400" />
-              ) : (
-                <ToggleLeft className="h-6 w-6 text-gray-300 dark:text-gray-600" />
-              )}
-            </button>
+            <p className="text-sm text-gray-500 dark:text-slate-300">
+              Configure when automated follow-up messages are sent after a WhatsApp conversation ends.
+              Each stage fires once at the scheduled delay. Booking reminders below also send via WhatsApp.
+            </p>
           </div>
 
-          {/* Stage timing table */}
-          <div className="border border-gray-100 dark:border-blue-950/40 rounded-lg overflow-x-auto custom-scrollbar">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50 dark:bg-[#051139] border-b border-gray-100 dark:border-blue-950/40">
-                <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-32">Stage</th>
-                  <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3">Description</th>
-                  <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-32">Delay (hrs)</th>
-                  <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-56">WhatsApp Template</th>
-                  <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-20">Enabled</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
-                {(
-                  [
-                    { key: 'FIRST',  label: '1st Follow-up', desc: 'Warm first check-in',           color: 'text-green-600 bg-green-50 dark:text-emerald-400 dark:bg-emerald-950/30' },
-                    { key: 'SECOND', label: '2nd Follow-up', desc: 'Value offer / nudge',            color: 'text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950/20' },
-                    { key: 'THIRD',  label: '3rd Follow-up', desc: 'Non-pushy check-in (1 week)',    color: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950/20' },
-                    { key: 'FOURTH', label: 'Final message', desc: 'Warm goodbye (2 weeks)',         color: 'text-red-600 bg-red-50 dark:text-rose-400 dark:bg-rose-950/30' },
-                  ] as Array<{ key: keyof FollowupTimingConfig['stages']; label: string; desc: string; color: string }>
-                ).map(({ key, label, desc, color }) => {
-                  const stage = followupConfig.stages[key];
-                  // Past 24h, free text is blocked by Meta — flag stages that need a template
-                  const needsTemplate = stage.delay_hours > 24;
-                  const templateMissing = needsTemplate && !(stage.template_name || '').trim();
-                  return (
-                    <tr key={key} className={`dark:bg-transparent ${!followupConfig.enabled ? 'opacity-50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${color}`}>
-                          {label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-slate-300">{desc}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min={1}
-                            max={720}
-                            value={stage.delay_hours}
-                            disabled={!followupConfig.enabled || !stage.enabled}
-                            onChange={(e) => updateStage(key, 'delay_hours', parseInt(e.target.value) || 24)}
-                            className="w-20 px-2 py-1.5 text-sm border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 disabled:opacity-40 disabled:bg-gray-50"
-                          />
-                          <span className="text-xs text-gray-400 dark:text-slate-300">h</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Select
-                          value={stage.template_name || "placeholder-fallback"}
-                          disabled={!followupConfig.enabled || !stage.enabled || loadingTemplates}
+          <div className="p-6 space-y-5">
+            {/* Master enable */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable WhatsApp Follow-ups</p>
+                <p className="text-xs text-gray-500 dark:text-slate-300 mt-0.5">
+                  Automatically send follow-up messages when a customer stops responding on WhatsApp
+                </p>
+              </div>
+              <button
+                onClick={() => setFollowupConfig((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                className="cursor-pointer"
+              >
+                {followupConfig.enabled ? (
+                  <ToggleRight className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                ) : (
+                  <ToggleLeft className="h-6 w-6 text-gray-300 dark:text-gray-600" />
+                )}
+              </button>
+            </div>
+
+            {/* Stage timing table */}
+            <div className="border border-gray-100 dark:border-blue-950/40 rounded-lg overflow-x-auto custom-scrollbar">
+              <table className="w-full min-w-[600px]">
+                <thead className="bg-gray-50 dark:bg-[#051139] border-b border-gray-100 dark:border-blue-950/40">
+                  <tr>
+                    <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-32">Stage</th>
+                    <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3">Description</th>
+                    <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-32">Delay (hrs)</th>
+                    <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-56">WhatsApp Template</th>
+                    <th className="text-left text-xs font-medium text-gray-500 dark:text-slate-300 px-4 py-3 w-20">Enabled</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+                  {(
+                    [
+                      { key: 'FIRST',  label: '1st Follow-up', desc: 'Warm first check-in',          color: 'text-green-600 bg-green-50 dark:text-emerald-400 dark:bg-emerald-950/30' },
+                      { key: 'SECOND', label: '2nd Follow-up', desc: 'Value offer / nudge',            color: 'text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950/20' },
+                      { key: 'THIRD',  label: '3rd Follow-up', desc: 'Non-pushy check-in (1 week)',    color: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950/20' },
+                      { key: 'FOURTH', label: 'Final message', desc: 'Warm goodbye (2 weeks)',         color: 'text-red-600 bg-red-50 dark:text-rose-400 dark:bg-rose-950/30' },
+                    ] as Array<{ key: keyof FollowupTimingConfig['stages']; label: string; desc: string; color: string }>
+                  ).map(({ key, label, desc, color }) => {
+                    const stage = followupConfig.stages[key];
+                    const needsTemplate = stage.delay_hours > 24;
+                    const templateMissing = needsTemplate && !(stage.template_name || '').trim();
+                    return (
+                      <tr key={key} className={`dark:bg-transparent transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-900/20 ${!followupConfig.enabled ? 'opacity-50' : ''}`}>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${color}`}>
+                            {label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-slate-300">{desc}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              max={720}
+                              value={stage.delay_hours}
+                              disabled={!followupConfig.enabled || !stage.enabled}
+                              onChange={(e) => updateStage(key, 'delay_hours', parseInt(e.target.value) || 24)}
+                              className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40"
+                            />
+                            <span className="text-xs text-gray-400 dark:text-slate-400">h</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Select
+                            value={stage.template_name || "placeholder-fallback"}
+                            disabled={!followupConfig.enabled || !stage.enabled || loadingTemplates}
                             onValueChange={(value: string) => updateStage(key, 'template_name', value === "placeholder-fallback" ? "" : value)}
-                        >
-                          <SelectTrigger
-                              className={`h-auto flex-1 border-0 rounded-none focus:ring-0 shadow-none bg-transparent px-3 text-left min-h-[48px] 
-                              ${templateMissing ? 'border-red-300 text-red-900 dark:text-rose-400' : 'border-gray-200 dark:border-blue-950/60'} `}
+                          >
+                            <SelectTrigger
+                              className={`h-auto flex-1 border-0 rounded-none focus:ring-0 shadow-none bg-transparent px-2 text-left min-h-[38px] ${
+                                templateMissing ? 'border-red-300 text-red-900 dark:text-rose-400 font-medium' : 'border-gray-200 dark:border-blue-950/60 dark:text-slate-200'
+                              }`}
                               title={
                                 needsTemplate
-                                    ? 'Required: Meta blocks free-text replies after 24 h'
-                                    : 'Optional: leave blank to use AI-generated reply within 24 h window'
+                                  ? 'Required: Meta blocks free-text replies after 24 h'
+                                  : 'Optional: leave blank to use AI-generated reply within 24 h window'
                               }
-                          >
-                            <SelectValue placeholder="Select a template" />
-                          </SelectTrigger>
+                            >
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
 
-                          {/* FIXED: Synced floating window canvas directly to your midnight theme box (#00051d) */}
-                          <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
-                            <SelectItem
+                            <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                              <SelectItem
                                 value="placeholder-fallback"
-                                className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
-
-                              {loadingTemplates
+                                className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724]"
+                              >
+                                {loadingTemplates
                                   ? 'Loading templates…'
                                   : needsTemplate
-                                      ? '— Pick a template (required) —'
-                                      : '— AI-generated (within 24 h) —'}
-                            </SelectItem>
+                                  ? '— Pick a template (required) —'
+                                  : '— AI-generated (within 24 h) —'}
+                              </SelectItem>
 
-                            {approvedTemplates.map((t) => (
+                              {approvedTemplates.map((t) => (
                                 <SelectItem
-                                    key={`${t.name}-${t.language}`}
-                                    value={t.name}
-                                    className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                                  key={`${t.name}-${t.language}`}
+                                  value={t.name}
+                                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724]"
+                                >
                                   {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                                 </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {templateMissing && (
-                          <p className="text-[10px] text-red-600 dark:text-rose-400 mt-1">
-                            Required — delays past 24 h need an approved template
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          disabled={!followupConfig.enabled}
-                          onClick={() => updateStage(key, 'enabled', !stage.enabled)}
-                        >
-                          {stage.enabled ? (
-                            <ToggleRight className="h-5 w-5 text-blue-500 dark:text-blue-400 disabled:opacity-40" />
-                          ) : (
-                            <ToggleLeft className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {templateMissing && (
+                            <p className="text-[10px] text-red-600 dark:text-rose-400 mt-1">
+                              Required — delays past 24 h need an approved template
+                            </p>
                           )}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!loadingTemplates && approvedTemplates.length === 0 && (
-              <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-100 dark:border-amber-900/40 text-[11px] text-amber-700 dark:text-amber-400">
-                No approved WhatsApp templates found.  Add and approve templates in your Meta Business Manager — without a template, follow-ups past 24 h will fail to send.
-              </div>
-            )}
-          </div>
-
-          {/* Booking reminders — list of N pre-booking nudges */}
-          <div className="border border-gray-100 dark:border-blue-950/40 rounded-lg p-4 bg-gray-50/40 dark:bg-[#061033]/20 space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-                Booking Reminders
-              </label>
-              <p className="text-xs text-gray-500 dark:text-slate-300">
-                Sent to the customer BEFORE their booking start time so they don&apos;t miss the session.
-                Add as many reminders as you need (e.g. a 24h heads-up + a 3h nudge).
-              </p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            disabled={!followupConfig.enabled}
+                            onClick={() => updateStage(key, 'enabled', !stage.enabled)}
+                            className="cursor-pointer"
+                          >
+                            {stage.enabled ? (
+                              <ToggleRight className="h-5 w-5 text-blue-500 dark:text-blue-400 disabled:opacity-40" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!loadingTemplates && approvedTemplates.length === 0 && (
+                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-100 dark:border-amber-900/40 text-[11px] text-amber-700 dark:text-amber-400">
+                  No approved WhatsApp templates found. Add and approve templates in your Meta Business Manager — without a template, follow-ups past 24 h will fail to send.
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              {followupConfig.booking_reminders.map((reminder, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-wrap items-end gap-2 p-3 bg-white dark:bg-[#030a21]/80 rounded-md border border-gray-200 dark:border-blue-950/40"
-                >
-                  <div className="flex flex-col min-w-[140px]">
-                    <label className="text-[11px] font-medium text-gray-600 dark:text-slate-300 mb-1">
+
+            {/* Booking reminders */}
+            <div className="border border-gray-100 dark:border-blue-950/40 rounded-xl p-5 bg-transparent space-y-4">
+              {/* Section Header */}
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-800/30 flex items-center justify-center shrink-0">
+                  <Calendar className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Booking Reminders</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                    Sent to the customer BEFORE their booking start time so they don&apos;t miss the session. Add as many reminders as you need (e.g. a 24h heads-up + a 3h nudge).
+                  </p>
+                </div>
+              </div>
+
+              {/* Reminders Rows */}
+              <div className="space-y-3 pt-1">
+                {followupConfig.booking_reminders.map((reminder, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-4 text-xs"
+                  >
+                    {/* Reminder Label */}
+                    <span className="w-24 shrink-0 text-slate-400 font-medium">
                       Reminder #{idx + 1}
-                    </label>
-                    <div className="flex items-center gap-1.5">
+                    </span>
+
+                    {/* Delay Input */}
+                    <div className="flex items-center gap-2 w-36 shrink-0">
                       <input
                         type="number"
                         min={1}
@@ -2348,129 +2361,108 @@ export function ChatSettings() {
                             ),
                           }))
                         }
-                        className="w-20 px-2 py-1.5 text-sm border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                        className="w-16 px-2.5 py-1.5 text-center font-semibold bg-white dark:bg-[#03091e] text-slate-800 dark:text-white border border-gray-200 dark:border-[#1e293b] rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
-                      <span className="text-xs text-gray-500 dark:text-slate-300">h before</span>
+                      <span className="text-slate-400">h before</span>
                     </div>
-                  </div>
 
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="text-[11px] font-medium text-gray-600 dark:text-slate-300 mb-1 block">
-                      WhatsApp Template
-                    </label>
-
-                    <Select
-                      value={reminder.template_name || "placeholder-fallback"}
-                      disabled={loadingTemplates}
+                    {/* Template Select Dropdown */}
+                    <div className="flex-1 min-w-[220px]">
+                      <Select
+                        value={reminder.template_name || "placeholder-fallback"}
+                        disabled={loadingTemplates}
                         onValueChange={(value: string) =>
+                          setFollowupConfig((prev) => ({
+                            ...prev,
+                            booking_reminders: prev.booking_reminders.map((r, i) =>
+                              i === idx ? { ...r, template_name: value === "placeholder-fallback" ? "" : value } : r
+                            ),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full h-8 px-3 text-xs bg-transparent border border-gray-200 dark:border-blue-950/60 rounded-md focus:ring-0 shadow-none text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                          <SelectValue placeholder="Select a template" />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                          <SelectItem value="placeholder-fallback" className="text-xs">
+                            {loadingTemplates ? 'Loading templates…' : '— AI-generated (default) —'}
+                          </SelectItem>
+                          {approvedTemplates.map((t) => (
+                            <SelectItem key={`${t.name}-${t.language}`} value={t.name} className="text-xs">
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Delete Row Button */}
+                    <button
+                      type="button"
+                      onClick={() =>
                         setFollowupConfig((prev) => ({
                           ...prev,
-                          booking_reminders: prev.booking_reminders.map((r, i) =>
-                            i === idx ? { ...r, template_name: value === "placeholder-fallback" ? "" : value } : r
-                          ),
+                          booking_reminders: prev.booking_reminders.filter((_, i) => i !== idx),
                         }))
                       }
-                  >
-                      <SelectTrigger className="w-full h-auto flex-1 border-0 rounded-none focus:ring-0 shadow-none bg-transparent px-3 text-left min-h-[48px] border-slate-800/80 focus:border-slate-600">
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-
-                      {/* FIXED: Locked layout viewports back to deep dark panels (#00051d) with clean vertical scroll bounding */}
-                      <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
-                        {/* Empty value = AI-generated: the WABA service composes the
-                            reminder at send time (free-form inside the 24h window,
-                            generic approved-template fallback outside it). */}
-                        <SelectItem
-                            value="placeholder-fallback"
-                            className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
-                          {loadingTemplates
-                              ? 'Loading templates…'
-                              : '— AI-generated (default) —'}
-                        </SelectItem>
-
-                        {approvedTemplates.map((t) => (
-                            <SelectItem
-                                key={`${t.name}-${t.language}`}
-                                value={t.name}
-                                className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
-                              {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
-                            </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      disabled={followupConfig.booking_reminders.length <= 1}
+                      className="p-1 text-rose-500 hover:text-rose-400 disabled:opacity-20 cursor-pointer shrink-0 ml-2"
+                      title="Remove reminder"
+                    >
+                      ✕
+                    </button>
                   </div>
+                ))}
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFollowupConfig((prev) => ({
-                        ...prev,
-                        booking_reminders: prev.booking_reminders.filter((_, i) => i !== idx),
-                      }))
-                    }
-                    disabled={followupConfig.booking_reminders.length <= 1}
-                    title={
-                      followupConfig.booking_reminders.length <= 1
-                        ? 'At least one reminder is required'
-                        : 'Remove this reminder'
-                    }
-                    className="px-2 py-1.5 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+              {/* Add Another Reminder Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFollowupConfig((prev) => ({
+                      ...prev,
+                      booking_reminders: [...prev.booking_reminders, { delay_hours: 1, template_name: '' }],
+                    }))
+                  }
+                  disabled={followupConfig.booking_reminders.length >= 10}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                >
+                  <span className="text-sm">＋</span> Add another reminder
+                </button>
+              </div>
+
+              {/* Info Box */}
+              <div className="flex items-start gap-2.5 pt-2 text-xs text-slate-400">
+                <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                <p>
+                  AI-generated reminders send as personalised free-text while the customer&apos;s 24-hour conversation window is open, and fall back to your approved follow-up template when it isn&apos;t. Pick an approved template instead for guaranteed delivery regardless of the window.
+                </p>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                setFollowupConfig((prev) => ({
-                  ...prev,
-                  booking_reminders: [
-                    ...prev.booking_reminders,
-                    // New entries default to 1h before so the user is forced to
-                    // choose a meaningful delay before saving.
-                    { delay_hours: 1, template_name: '' },
-                  ],
-                }))
-              }
-              disabled={followupConfig.booking_reminders.length >= 10}
-              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="text-lg leading-none">＋</span> Add another reminder
-            </button>
+            {/* Reliability indicator */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-100 dark:border-blue-900/40">
+              <Zap className="h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                Follow-ups are delivered reliably even if the server restarts.
+              </p>
+            </div>
 
-            <p className="text-xs text-gray-500 dark:text-slate-300">
-              AI-generated reminders send as personalised free-text while the customer&apos;s 24-hour
-              conversation window is open, and fall back to your approved follow-up template when it
-              isn&apos;t. Pick an approved template instead for guaranteed delivery regardless of the window.
-              {followupConfig.booking_reminders.length >= 10 && (
-                <span className="block mt-1 text-amber-600 dark:text-amber-400">Maximum 10 reminders per booking.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Reliability indicator */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-100 dark:border-blue-900/40">
-            <Zap className="h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-            <p className="text-xs text-blue-700 dark:text-blue-400">
-              Follow-ups are delivered reliably even if the server restarts.
-            </p>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={handleSaveFollowup}
-              disabled={savingFollowup}
-              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] dark:bg-blue-600 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all shadow-md active:scale-95"
-            >
-              {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Follow-up Settings
-            </button>
+            {/* Footer save button */}
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleSaveFollowup}
+                disabled={savingFollowup}
+                className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 dark:bg-blue-600 rounded-xl hover:bg-blue-500 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save Follow-up Settings
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* ── Section 7: LinkedIn Automation ──────────────────────── */}
@@ -2869,7 +2861,7 @@ export function ChatSettings() {
       {/* One quiet strip so hidden settings are discoverable — the settings
           themselves are kept and reappear once the channel is reconnected. */}
       {channelsLoaded && hiddenChannels.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm px-5 py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <EyeOff className="h-4 w-4 text-gray-400 flex-shrink-0" />
             <p className="text-sm text-gray-500">

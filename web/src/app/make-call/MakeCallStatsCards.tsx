@@ -26,7 +26,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
@@ -58,7 +58,7 @@ interface StatCardProps {
 
 const StatCard = ({ title, value, icon, bgColor }: StatCardProps) => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
