@@ -136,10 +136,11 @@ export {
   BUSINESS_PROFILE_COMPANY_HALF,
   BUSINESS_PROFILE_ICP_HALF,
   BUSINESS_PROFILE_ALL_FIELDS,
+  BUSINESS_PROFILE_BASICS_FIELDS,
   emptyBusinessProfile,
   computeCompleteness,
 } from './businessProfile';
-export { getBusinessProfile, saveBusinessProfile } from './businessProfileApi';
+export { getBusinessProfile, saveBusinessProfile, uploadCompanyLogo } from './businessProfileApi';
 export { useBusinessProfile } from './hooks/useBusinessProfile';
 export type { UseBusinessProfileResult } from './hooks/useBusinessProfile';
 export { useIcpDefinitionMutations } from './hooks/useIcpDefinitionMutations';

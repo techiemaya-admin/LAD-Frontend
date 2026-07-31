@@ -247,6 +247,8 @@ function isValidEmail(e: string): boolean {
 // ── Component ────────────────────────────────────────────────────
 
 export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channel, emailGroupId }: ImportLeadsDialogProps) {
+  const inputBorderClass = "border border-gray-300 dark:border-slate-700 bg-white dark:bg-[#00051d] text-foreground dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500 focus:border-blue-500 focus-visible:outline-none";
+
   // Email mode: channel is 'gmail' or 'outlook'
   const isEmailMode = channel === 'gmail' || channel === 'outlook';
   const [activeTab, setActiveTab] = useState('single');
@@ -934,8 +936,8 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:w-[90vw] h-auto max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader>
+      <DialogContent className="z-[6000] sm:w-[90vw] sm:max-w-5xl h-auto max-h-[90vh] flex flex-col p-0 gap-0 border bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800">
+        <DialogHeader className="border-b bg-white dark:bg-[#000724] border-gray-100 dark:border-slate-800/80">
           <DialogTitle className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-orange-50 text-orange-600 border border-orange-100 shadow-sm flex items-center justify-center w-10 h-10">
               <UserPlus className="h-6 w-6 stroke-[2.5px]" />
@@ -944,19 +946,32 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden bg-gray-50/30">
-          <TabsList className="mx-8 mt-6 w-auto self-start">
-            <TabsTrigger value="single" className="text-xs gap-1.5">
-              <UserPlus className="h-3.5 w-3.5" />
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-[#000724]"
+        >
+          <TabsList className="mx-3 sm:mx-8 mt-4 sm:mt-6 max-w-[calc(100%-1.5rem)] sm:max-w-full overflow-x-auto justify-start flex-nowrap shrink-0 bg-blue-600 dark:bg-blue-600/90 p-1 rounded-xl h-auto gap-1 border border-blue-500/40 shadow-sm">
+            <TabsTrigger
+              value="single"
+              className="text-xs px-3 py-1.5 gap-1.5 rounded-lg text-blue-100 hover:text-white hover:bg-white/10 data-[state=active]:bg-white data-[state=active]:text-slate-800 dark:data-[state=active]:bg-[#00051d] dark:data-[state=active]:text-slate-300 font-medium data-[state=active]:font-semibold data-[state=active]:shadow-sm transition-all shrink-0 whitespace-nowrap"
+            >
+              <UserPlus className="h-3.5 w-3.5 shrink-0" />
               Add Leads
             </TabsTrigger>
-            <TabsTrigger value="excel" className="text-xs gap-1.5">
-              <FileSpreadsheet className="h-3.5 w-3.5" />
+            <TabsTrigger
+              value="excel"
+              className="text-xs px-3 py-1.5 gap-1.5 rounded-lg text-blue-100 hover:text-white hover:bg-white/10 data-[state=active]:bg-white data-[state=active]:text-slate-800 dark:data-[state=active]:bg-[#00051d] dark:data-[state=active]:text-slate-300 font-medium data-[state=active]:font-semibold data-[state=active]:shadow-sm transition-all shrink-0 whitespace-nowrap"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
               Excel Upload
             </TabsTrigger>
             {!isEmailMode && (
-              <TabsTrigger value="url" className="text-xs gap-1.5">
-                <Globe className="h-3.5 w-3.5" />
+              <TabsTrigger
+                value="url"
+                className="text-xs px-3 py-1.5 gap-1.5 rounded-lg text-blue-100 hover:text-white hover:bg-white/10 data-[state=active]:bg-white data-[state=active]:text-slate-800 dark:data-[state=active]:bg-[#00051d] dark:data-[state=active]:text-slate-300 font-medium data-[state=active]:font-semibold data-[state=active]:shadow-sm transition-all shrink-0 whitespace-nowrap"
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0" />
                 Scrape from URL
               </TabsTrigger>
             )}
@@ -964,8 +979,8 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
 
           {/* ── Excel Upload Tab ─────────────────────── */}
-          <TabsContent value="excel" className="px-8 py-6 flex-1">
-            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+          <TabsContent value="excel" className="px-3 sm:px-8 py-4 sm:py-6 flex-1">
+            <div className="border-2 border-dashed rounded-xl p-4 sm:p-8 text-center transition-colors border-border dark:border-slate-800 dark:bg-[#00051d]/50 hover:border-blue-500/50">
               <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium mb-1">Upload Excel file (.xlsx)</p>
               <p className="text-xs text-muted-foreground mb-4">
@@ -980,11 +995,12 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   {excelError}
                 </p>
               )}
-              <div className="flex gap-2 justify-center">
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-stretch sm:items-center">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => excelInputRef.current?.click()}
+                  className="w-full sm:w-auto justify-center"
                 >
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Choose Excel File
@@ -993,6 +1009,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   variant="outline"
                   size="sm"
                   onClick={downloadTemplate}
+                  className="w-full sm:w-auto justify-center"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download Template
@@ -1009,11 +1026,11 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           </TabsContent>
 
           {/* ── URL Scrape Tab ───────────────────────── */}
-          <TabsContent value="url" className="px-4 py-3 flex-1">
-            <div className="border-2 border-dashed border-border rounded-xl p-6">
+          <TabsContent value="url" className="px-3 sm:px-4 py-3 flex-1">
+            <div className="border-2 border-dashed rounded-xl p-3.5 sm:p-6 border-border dark:border-slate-800 dark:bg-[#00051d]/50">
               <div className="flex items-start gap-3 mb-4">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="h-5 w-5 text-primary" />
+                <div className="h-10 w-10 rounded-full bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium mb-0.5">Extract contacts from any webpage</p>
@@ -1025,7 +1042,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                 </div>
               </div>
 
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <div className="relative flex-1">
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -1033,7 +1050,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     value={scrapeUrl}
                     onChange={(e) => { setScrapeUrl(e.target.value); setScrapeError(''); }}
                     disabled={scraping}
-                    className="pl-9 h-9 text-sm"
+                    className={cn("pl-9 h-9 text-sm", inputBorderClass)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !scraping && scrapeUrl.trim()) {
                         handleScrapeUrl();
@@ -1045,7 +1062,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   size="sm"
                   onClick={handleScrapeUrl}
                   disabled={scraping || !scrapeUrl.trim()}
-                  className="gap-1.5 shrink-0"
+                  className="gap-1.5 shrink-0 w-full sm:w-auto justify-center"
                 >
                   {scraping ? (
                     <>
@@ -1089,8 +1106,8 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           </TabsContent>
 
           {/* ── Single/List Add Tab ────────────────── */}
-          <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-8 py-6">
-            <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+          <TabsContent value="single" className="flex-1 flex flex-col min-h-0 px-3 sm:px-8 py-4 sm:py-6">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 sm:pr-2">
               <div className="space-y-3">
                 {leads.map((lead, idx) => (
                   <LeadRow
@@ -1112,7 +1129,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
             <Button
               variant="ghost"
               size="sm"
-              className="mt-2 w-full text-xs text-primary justify-center gap-1.5 border border-dashed border-primary/30 hover:border-primary/60"
+              className="mt-2 w-full text-xs text-blue-600 dark:text-blue-400 justify-center gap-1.5 border border-dashed border-blue-400/40 dark:border-blue-500/40 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-all"
               onClick={addLead}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -1123,7 +1140,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
         {/* ── Invalid Records Banner ──────────────── */}
         {hasValidationErrors && !importResult?.success && (
-          <div className="mx-8 mb-4 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden shadow-sm">
+          <div className="mx-3 sm:mx-8 mb-4 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden shadow-sm">
             {/* Top row: summary + bulk actions */}
             <div className="px-3 py-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-amber-700 min-w-0">
@@ -1179,7 +1196,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
         {/* ── Broadcast Assignment (pre-import only) ──────────────── */}
         {groups.length > 0 && !importResult?.success && !isEmailMode && (
-          <div className="px-4 py-3 border-t border-border">
+          <div className="px-4 py-3 border-t border-border dark:border-slate-800/80">
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
               Assign to Broadcasts
             </p>
@@ -1193,8 +1210,8 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     className={cn(
                       'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
                       selected
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-muted/50 text-muted-foreground border-border dark:border-slate-800 hover:border-blue-500/50'
                     )}
                   >
                     <span
@@ -1394,7 +1411,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                       value={broadcastName}
                       onChange={(e) => { setBroadcastName(e.target.value); setBroadcastCreateError(''); }}
                       disabled={creatingBroadcast}
-                      className="h-8 text-xs"
+                      className={cn("h-8 text-xs", inputBorderClass)}
                       autoFocus
                     />
                     {broadcastCreateError && (
@@ -1503,7 +1520,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         )}
 
         {/* ── Footer ─────────────────────────────── */}
-        <DialogActions>
+        <DialogActions className="border-t bg-gray-50/50 dark:bg-[#000724] border-gray-100 dark:border-slate-800/80">
           {!importResult?.success ? (
             <div className="flex flex-col w-full space-y-4">
               {/* Run in background toggle — only shown when importing more than 1 lead */}
@@ -1514,13 +1531,13 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   className={cn(
                     'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-colors text-left text-xs',
                     runInBackground
-                      ? 'border-primary/40 bg-primary/5 text-primary'
-                      : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/30 hover:bg-muted/50'
+                      ? 'border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-500/30 hover:bg-muted/50'
                   )}
                 >
                   <div className={cn(
                     'h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-                    runInBackground ? 'bg-primary border-primary text-white' : 'border-muted-foreground/40'
+                    runInBackground ? 'bg-blue-600 border-blue-600 text-white' : 'border-muted-foreground/40'
                   )}>
                     {runInBackground && <Check className="h-2.5 w-2.5" />}
                   </div>
@@ -1612,16 +1629,17 @@ interface LeadRowProps {
 function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggleSelect, canRemove, isEmailMode }: LeadRowProps) {
   const channels = detectChannels(lead);
   const hasErrors = Object.keys(errors).length > 0;
+  const inputBorderClass = "border border-gray-300 dark:border-slate-700 bg-white dark:bg-[#00051d] text-foreground dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500 focus:border-blue-500 focus-visible:outline-none";
 
   return (
     <div
       className={cn(
-        'p-3 rounded-xl border bg-card transition-colors',
+        'p-2.5 sm:p-3 rounded-xl border transition-colors bg-white dark:bg-[#00051d]',
         hasErrors
           ? isSelected
             ? 'border-red-400 bg-red-50/60 ring-2 ring-red-200'
             : 'border-red-300 bg-red-50/30 hover:border-red-400'
-          : 'border-border hover:border-primary/20'
+          : 'border-border dark:border-slate-800/80 hover:border-blue-500/30'
       )}
     >
       <div className="flex items-center justify-between mb-2.5">
@@ -1675,13 +1693,13 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
       </div>
 
       {/* Row 1: Name + Company */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
         <div className="relative">
           <Input
             placeholder="Full name *"
             value={lead.name}
             onChange={(e) => onUpdate(lead.id, 'name', e.target.value)}
-            className="h-8 text-sm pl-3"
+            className={cn("h-8 text-sm pl-3", inputBorderClass)}
           />
         </div>
         <div className="relative">
@@ -1690,7 +1708,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
             placeholder="Company"
             value={lead.company}
             onChange={(e) => onUpdate(lead.id, 'company', e.target.value)}
-            className="h-8 text-sm pl-8"
+            className={cn("h-8 text-sm pl-8", inputBorderClass)}
           />
         </div>
       </div>
@@ -1710,6 +1728,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
                 onChange={(e) => onUpdate(lead.id, 'email', e.target.value)}
                 className={cn(
                   'h-8 text-sm pl-8',
+                  inputBorderClass,
                   errors.email && 'border-red-400 focus-visible:ring-red-300'
                 )}
               />
@@ -1720,7 +1739,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
           <div className="space-y-1">
             <div className="relative">
               <Phone className={cn(
@@ -1737,6 +1756,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
                 }}
                 className={cn(
                   'h-8 text-sm pl-8',
+                  inputBorderClass,
                   errors.phone && 'border-red-400 focus-visible:ring-red-300'
                 )}
               />
@@ -1757,6 +1777,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
                 onChange={(e) => onUpdate(lead.id, 'email', e.target.value)}
                 className={cn(
                   'h-8 text-sm pl-8',
+                  inputBorderClass,
                   errors.email && 'border-red-400 focus-visible:ring-red-300'
                 )}
               />
@@ -1770,7 +1791,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
 
       {/* Row 3: LinkedIn + Instagram — hidden in email mode */}
       {!isEmailMode && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="space-y-1">
             <div className="relative">
               <Linkedin className={cn(
@@ -1783,6 +1804,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
                 onChange={(e) => onUpdate(lead.id, 'linkedin_url', e.target.value)}
                 className={cn(
                   'h-8 text-sm pl-8',
+                  inputBorderClass,
                   errors.linkedin_url && 'border-red-400 focus-visible:ring-red-300'
                 )}
               />
@@ -1803,6 +1825,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
                 onChange={(e) => onUpdate(lead.id, 'instagram_url', e.target.value)}
                 className={cn(
                   'h-8 text-sm pl-8',
+                  inputBorderClass,
                   errors.instagram_url && 'border-red-400 focus-visible:ring-red-300'
                 )}
               />

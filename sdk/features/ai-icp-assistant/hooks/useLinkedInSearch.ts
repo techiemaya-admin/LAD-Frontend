@@ -197,6 +197,11 @@ export function useLinkedInSearch() {
           // the caller can present the full range for checkbox selection. Checked
           // with `!== undefined` because 0 is a valid, intentional value.
           ...(body.icp_min_score !== undefined ? { icp_min_score: body.icp_min_score } : {}),
+          // Return leads as soon as the LinkedIn search lands, without waiting for
+          // ICP scoring (~25s of Gemini calls). The caller renders them immediately
+          // and fills scores in via scoreIcp(). Backend only honours this when
+          // icp_min_score is 0 — it can't skip scoring it needs in order to filter.
+          ...(body.defer_icp          ? { defer_icp:          true                   } : {}),
           // Sales Navigator flag
           ...(body.useSalesNav        ? { useSalesNav:        body.useSalesNav        } : {}),
         };
@@ -227,6 +232,10 @@ export function useLinkedInSearch() {
           total:      data.total    ?? (data.leads || []).length,
           cursor:     data.cursor   ?? null,
           icp_applied: data.icp_applied ?? false,
+          // True when leads came back before ICP scoring ran (defer_icp). The UI
+          // should show them right away with a pending indicator, then call
+          // scoreIcp() and merge the scores in.
+          icp_pending: data.icp_pending ?? false,
 
           // Intent fields (same structure in both endpoints)
           intent: data.intent || null,
@@ -298,6 +307,65 @@ export function useLinkedInSearch() {
   );
 
   /**
+   * Score an already-rendered set of leads against the ICP.
+   *
+   * Pairs with `defer_icp` on searchUnified(): the search returns leads without
+   * waiting on ~25s of Gemini qualification, the UI paints them, then this fills
+   * the scores in. Stateless by design — the leads go back up in the request
+   * rather than the caller polling a job id, because the backend runs at
+   * maxScale 10 and a poll can land on an instance that never saw the job.
+   *
+   * Body: { leads, icp_description, targeting_filters? }
+   * Returns: { success, results: [{ id, icp_score, match_level, icp_reasoning, enriched_profile }] }
+   */
+  const scoreIcp = useCallback(
+    async (
+      leads: Record<string, any>[],
+      icpDescription: string,
+      targetingFilters?: Record<string, any> | null
+    ): Promise<any | null> => {
+      if (!leads?.length || !icpDescription?.trim()) return null;
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/campaigns/linkedin/search/icp-score`,
+          {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify({
+              // Only the fields the backend needs to enrich + score. Sending the
+              // whole lead object back would balloon the request for no gain.
+              leads: leads.map(l => ({
+                id:                l.id,
+                name:              l.name,
+                first_name:        l.first_name,
+                last_name:         l.last_name,
+                headline:          l.headline,
+                current_company:   l.current_company,
+                location:          l.location,
+                industry:          l.industry,
+                profile_url:       l.profile_url,
+                public_identifier: l.public_identifier,
+                provider_id:       l.provider_id,
+                inferred:          l.inferred,
+              })),
+              icp_description: icpDescription,
+              ...(targetingFilters ? { targeting_filters: targetingFilters } : {}),
+            }),
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`ICP scoring failed: ${response.statusText}`);
+        }
+        return await response.json();
+      } catch (err) {
+        console.warn('[useLinkedInSearch] scoreIcp error:', err);
+        return null;
+      }
+    },
+    []
+  );
+
+  /**
    * Reset state
    */
   const reset = useCallback(() => {
@@ -312,6 +380,7 @@ export function useLinkedInSearch() {
     search,           // ← BACKUP: /search/advanced — use for pagination ("Get More")
     searchUnified,    // ← PRIMARY: /search/unified — 6-module router for fresh searches
     inferNationality,
+    scoreIcp,         // ← deferred ICP scoring for searchUnified({ defer_icp: true })
     reset,
   };
 }

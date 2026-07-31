@@ -199,14 +199,14 @@ export function ConversationsPage() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Top bar: WA channel tabs + AI toggle — now always visible */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
+      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0 gap-2">
         {/* Channel tabs — only connected channels are rendered */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
           {/* Loading skeleton while connection status is being resolved */}
           {channelStatus === null && (
             <>
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
             </>
           )}
           {visibleTabs.map(({ id, label, sublabel }) => (
@@ -214,7 +214,7 @@ export function ConversationsPage() {
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
+                'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all shrink-0 whitespace-nowrap',
                 activeTab === id
                   ? 'text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -235,7 +235,7 @@ export function ConversationsPage() {
         <Button
           variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
           size="sm"
-          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
+          className={`gap-1.5 text-xs h-7 shrink-0 ${isPlaygroundOpen ? 'text-primary' : ''}`}
           onClick={() => setIsPlaygroundOpen((v) => !v)}
           title="Open AI Playground to test your system prompt"
         >

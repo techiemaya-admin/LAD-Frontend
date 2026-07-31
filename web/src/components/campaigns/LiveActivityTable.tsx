@@ -327,6 +327,9 @@ interface ActivityItem {
   status: string;
   message_content?: string;
   error_message?: string;
+  /** JSONB — shape varies by action_type; connection rows may carry
+   *  already_connected / already_sent / provider_detail (see LinkedInStepExecutor). */
+  response_data?: Record<string, unknown> | string | null;
 }
 
 export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
@@ -580,6 +583,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           profileVisited: false,
           connectionStatus: 'NOT_SENT' as const,
           connectionSentWithMessage: false,
+          // Set when response_data.already_connected / already_sent comes back true —
+          // the step completed (counts as done) but no fresh invite was actually sent.
+          connectionProviderDetail: undefined as string | undefined,
           connectionAccepted: false,
           connectionWithdrawn: false,   // tracks CONNECTION_WITHDRAWN
           contacted: false,
@@ -647,20 +653,33 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
         lead.connectionWithdrawn = true;
         lead.connectionStatus = 'WITHDRAWN';
       } else if (actionType.includes('CONNECTION')) {
+        // Parse response_data once per row — used below for the
+        // personalization source AND for already_connected/already_sent, which
+        // can arrive on ANY connection row, not only *_SENT_WITH_MESSAGE ones.
+        const respData = activity.response_data;
+        const parsedResp = typeof respData === 'string'
+          ? (() => { try { return JSON.parse(respData); } catch { return null; } })()
+          : respData;
+
         // Capture the personalization source — which post/article URL the agent
         // used as the hook. Only present on CONNECTION_SENT_WITH_MESSAGE rows.
         if (
           (actionType === 'CONNECTION_SENT_WITH_MESSAGE' || actionType.includes('SENT_WITH_MESSAGE')) &&
-          !lead.personalizationSource
+          !lead.personalizationSource &&
+          parsedResp?.personalization_source
         ) {
-          const respData = activity.response_data;
-          const parsed = typeof respData === 'string'
-            ? (() => { try { return JSON.parse(respData); } catch { return null; } })()
-            : respData;
-          if (parsed?.personalization_source) {
-            lead.personalizationSource = parsed.personalization_source;
-          }
+          lead.personalizationSource = parsedResp.personalization_source;
         }
+
+        // Did this row actually deliver a fresh invite, or was it a terminal
+        // no-op (already 1st-degree connected, or LinkedIn already had a
+        // pending invite)? Both are recorded status:'success' — the step
+        // completed and must not retry — but "Connection Sent" would be a
+        // false claim for either. See LinkedInStepExecutor.js for the write side.
+        const alreadyConnected = parsedResp?.already_connected === true;
+        const alreadySent = parsedResp?.already_sent === true;
+        const providerDetail = typeof parsedResp?.provider_detail === 'string' ? parsedResp.provider_detail : null;
+
         // Check for rate limit in error message
         const isRateLimit = errorMsg.toLowerCase().includes('limit') ||
           errorMsg.toLowerCase().includes('rate');
@@ -684,8 +703,16 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
           lead.profileVisited = true;
           lead.connectionStatus = 'SENT';
 
-          // Check if connection was sent with a message
-          if (messageContent && messageContent.trim().length > 0) {
+          if (alreadyConnected || alreadySent) {
+            // Terminal and correct, but nothing was actually sent this run —
+            // never claim a message went out for a request that never fired.
+            lead.connectionSentWithMessage = false;
+            lead.connectionProviderDetail = providerDetail
+              || (alreadyConnected
+                ? 'Already a 1st-degree LinkedIn connection — no invite was sent.'
+                : 'LinkedIn reports an invitation was already sent to this person.');
+          } else if (messageContent && messageContent.trim().length > 0) {
+            // Check if connection was sent with a message
             lead.connectionSentWithMessage = true;
           }
         }
@@ -1311,9 +1338,13 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                                   <p className="font-medium mb-0.5">{step.label}</p>
                                   {step.type === 'linkedin_connect' ? (
                                     isDone ? (
-                                      lead.connectionSentWithMessage
-                                        ? <p className="text-green-500">✓ Sent with message</p>
-                                        : <p className="text-amber-500">✓ Sent without message — LinkedIn daily connection limit reached</p>
+                                      lead.connectionProviderDetail
+                                        // Terminal (the step is done, never retries), but not a fresh
+                                        // send — LinkedIn already had this relationship or invite.
+                                        ? <p className="text-blue-400">ⓘ {lead.connectionProviderDetail}</p>
+                                        : lead.connectionSentWithMessage
+                                          ? <p className="text-green-500">✓ Sent with message</p>
+                                          : <p className="text-amber-500">✓ Sent without message — LinkedIn daily connection limit reached</p>
                                     ) : lead.connectionStatus === 'PAUSED' ? (
                                       <p className="text-amber-500">
                                         ⏸ Paused —{' '}

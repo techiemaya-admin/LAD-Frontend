@@ -576,7 +576,7 @@ export function PersonalWaTemplateManager() {
         <Button size="sm" className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
                 onClick={openCreate}>
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span className="hidden sm:inline">New Template</span>
+          <span className="inline">New Template</span>
         </Button>
       </div>
 

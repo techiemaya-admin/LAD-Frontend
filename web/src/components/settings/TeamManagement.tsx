@@ -469,8 +469,7 @@ export const TeamManagement: React.FC = () => {
 
       {/* Add User Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="w-full h-full sm:h-auto sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[100vh] sm:max-h-[90vh] bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831] rounded-none sm:rounded-2xl">
-
+        <DialogContent className="w-full max-h-[85vh] sm:max-h-[90vh] sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831] rounded-xl sm:rounded-2xl my-auto">
           {/* Synchronized Header Row UI */}
           <DialogHeader className="p-4 md:p-6 border-b border-slate-100 dark:border-[#262831] dark:bg-[#0e1a3a]/60 shrink-0">
             <div className="flex items-center gap-3">

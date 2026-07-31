@@ -657,7 +657,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                 <Plus className="h-4 w-4 mr-1" /> Clone Voice
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[550px] p-6 rounded-3xl">
+            <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[560px] p-6 rounded-3xl">
               <DialogHeader className="flex-col items-start gap-1.5 pb-4 border-none">
                 <DialogTitle>Clone a New Voice</DialogTitle>
                 <DialogDescription>

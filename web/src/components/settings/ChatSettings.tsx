@@ -501,10 +501,10 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm dark:bg-[#030a21]/60 dark:border-blue-950/40">
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-blue-950/40 flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Email agent (Gmail &amp; Outlook)</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Email agent (Gmail &amp; Outlook)</h3>
           <p className="text-xs text-gray-500 mt-0.5">
             Automatically replies to new emails in your connected inboxes using the prompt
             below — same AI brain as your WhatsApp agent. Replies stay in the original thread.
@@ -535,7 +535,7 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
           in Settings → Integrations. The agent only answers mail received after it&apos;s enabled.
         </p>
         <div>
-          <label className="text-xs font-medium text-gray-700">System prompt</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-500">System prompt</label>
           <textarea
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
@@ -546,7 +546,7 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
               'pricing and availability using the knowledge base. Be concise and professional. ' +
               'If the sender asks for anything you are unsure about, say a team member will follow up.'
             }
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-red-400 disabled:bg-gray-50"
+            className="mt-1 w-full rounded-lg border border-gray-200 dark:border-blue-950/60 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-400 disabled:bg-gray-50"
           />
           <p className="mt-1 text-[11px] text-gray-500">
             The knowledge base and tone from your chat settings are added automatically.
@@ -688,7 +688,13 @@ export function ChatSettings() {
   // (the historical behaviour); a template id means "send that LinkedIn
   // template's body + media" — parity with the WhatsApp follow-up section.
   const DEFAULT_LI_FOLLOWUP_HOURS = [24, 72, 168, 336];
-  type LiFollowupTouch = { hours: number; template_id: string | null; touch_type?: 'industry_trend' | 'company_page_post' | null };
+  type LiFollowupTouch = {
+    hours: number;
+    template_id: string | null;
+    touch_type?: 'industry_trend' | 'company_page_post' | null;
+    /** Only set for touch_type 'company_page_post' — the page posts are shared from. */
+    company_page_url?: string | null;
+  };
   const [linkedinFollowup, setLinkedinFollowup] = useState<{
     enabled: boolean;
     touches: LiFollowupTouch[];
@@ -736,7 +742,7 @@ export function ChatSettings() {
           let touches: LiFollowupTouch[] = [];
           if (Array.isArray(liFollowup.data.touches) && liFollowup.data.touches.length > 0) {
             touches = liFollowup.data.touches
-              .map((t: any) => ({ hours: Number(t?.hours) || 0, template_id: t?.template_id || null, touch_type: t?.touch_type || null }))
+              .map((t: any) => ({ hours: Number(t?.hours) || 0, template_id: t?.template_id || null, touch_type: t?.touch_type || null, company_page_url: t?.company_page_url || null }))
               .filter((t: LiFollowupTouch) => t.hours > 0);
           } else if (Array.isArray(liFollowup.data.schedule_hours) && liFollowup.data.schedule_hours.length > 0) {
             touches = liFollowup.data.schedule_hours
@@ -1060,10 +1066,26 @@ export function ChatSettings() {
     // Clamp + validate cadence before sending — backend re-validates but a
     // fast frontend check gives the user immediate feedback.
     const cleanTouches = (linkedinFollowup.touches || [])
-      .map((t) => ({ hours: Number(t.hours), template_id: t.touch_type ? null : (t.template_id || null), touch_type: t.touch_type || null }))
+      .map((t) => ({
+        hours: Number(t.hours),
+        template_id: t.touch_type ? null : (t.template_id || null),
+        touch_type: t.touch_type || null,
+        company_page_url: t.touch_type === 'company_page_post'
+          ? (t.company_page_url || '').trim()
+          : null,
+      }))
       .filter((t) => Number.isFinite(t.hours) && t.hours > 0 && t.hours <= 24 * 365);
     if (cleanTouches.length === 0) {
       showToast('Add at least one positive hour value to the cadence', 'error');
+      return;
+    }
+    // The backend rejects a company-page touch without a page; catch it here so
+    // the user sees which touch is at fault instead of a generic 400.
+    const missingPageAt = cleanTouches.findIndex(
+      (t) => t.touch_type === 'company_page_post' && !t.company_page_url
+    );
+    if (missingPageAt !== -1) {
+      showToast(`Touch ${missingPageAt + 1}: add the LinkedIn company page URL to share posts from`, 'error');
       return;
     }
     setSavingLinkedinFollowup(true);
@@ -1080,7 +1102,7 @@ export function ChatSettings() {
       if (data.success && data.data) {
         const touches: LiFollowupTouch[] = Array.isArray(data.data.touches) && data.data.touches.length > 0
           ? data.data.touches
-              .map((t: any) => ({ hours: Number(t?.hours) || 0, template_id: t?.template_id || null, touch_type: t?.touch_type || null }))
+              .map((t: any) => ({ hours: Number(t?.hours) || 0, template_id: t?.template_id || null, touch_type: t?.touch_type || null, company_page_url: t?.company_page_url || null }))
               .filter((t: LiFollowupTouch) => t.hours > 0)
           : cleanTouches;
         setLinkedinFollowup({
@@ -2803,6 +2825,38 @@ export function ChatSettings() {
                         <option value="__create__">➕ Create new template…</option>
                       </select>
                     </div>
+
+                    {/* Company page URL — only for the company-page-post mode.
+                        Asked for explicitly: LinkedIn's API exposes admined pages
+                        by URN with no slug, so the page can't be auto-resolved. */}
+                    {touch.touch_type === 'company_page_post' && (
+                      <div className="flex items-start gap-2 mt-2">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-slate-300 w-16 pt-2">Page</span>
+                        <div className="flex-1">
+                          <input
+                            type="url"
+                            inputMode="url"
+                            value={touch.company_page_url ?? ''}
+                            disabled={!linkedinFollowup.enabled}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLinkedinFollowup((prev) => {
+                                const next = [...prev.touches];
+                                next[idx] = { ...next[idx], company_page_url: val };
+                                return { ...prev, touches: next };
+                              });
+                            }}
+                            placeholder="https://www.linkedin.com/company/your-page"
+                            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-blue-950/60 rounded-xl bg-white dark:bg-[#030a21] dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-blue-950/40 transition-all"
+                            title="The LinkedIn company page this touch shares a post from"
+                          />
+                          <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1 leading-snug">
+                            We pick the post from this page that best fits the lead&apos;s industry. If nothing fits,
+                            the touch sends an industry-trend message and shares the page link instead — never a broken post link.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -45,46 +45,120 @@ export default function CookiesPolicyPage() {
       </ul>
 
       <h2 id="types">4. Types of cookies we use</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Purpose</th>
-            <th>Examples</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <strong>Strictly necessary</strong>
-            </td>
-            <td>
+      {/* Mobile Card View (< sm) */}
+      <div className="block sm:hidden space-y-4 my-6">
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1a2f6b]/20 space-y-3">
+          <div>
+            <strong className="text-base text-[#0b1957] dark:text-white">Strictly necessary</strong>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Purpose
+            </span>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-0">
               Required for the Services to function, including authentication, security, and load
               balancing. These cannot be switched off in our systems.
-            </td>
-            <td>Session/authentication token, CSRF and security cookies</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Functional</strong>
-            </td>
-            <td>
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Examples
+            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+              Session/authentication token, CSRF and security cookies
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1a2f6b]/20 space-y-3">
+          <div>
+            <strong className="text-base text-[#0b1957] dark:text-white">Functional</strong>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Purpose
+            </span>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-0">
               Remember your choices and preferences to provide a more personalized experience.
-            </td>
-            <td>Theme preference, language, UI settings</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Analytics / performance</strong>
-            </td>
-            <td>
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Examples
+            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+              Theme preference, language, UI settings
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1a2f6b]/20 space-y-3">
+          <div>
+            <strong className="text-base text-[#0b1957] dark:text-white">Analytics / performance</strong>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Purpose
+            </span>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-0">
               Help us understand how visitors interact with the Services so we can measure and improve
               performance. Used where permitted by your consent settings.
-            </td>
-            <td>Aggregated usage and performance metrics</td>
-          </tr>
-        </tbody>
-      </table>
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-0.5">
+              Examples
+            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+              Aggregated usage and performance metrics
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop / Tablet Table View (>= sm) */}
+      <div className="hidden sm:block my-6 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="!mb-0">
+          <thead>
+            <tr>
+              <th className="w-1/4">Category</th>
+              <th className="w-1/2">Purpose</th>
+              <th className="w-1/4">Examples</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>Strictly necessary</strong>
+              </td>
+              <td>
+                Required for the Services to function, including authentication, security, and load
+                balancing. These cannot be switched off in our systems.
+              </td>
+              <td>Session/authentication token, CSRF and security cookies</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Functional</strong>
+              </td>
+              <td>
+                Remember your choices and preferences to provide a more personalized experience.
+              </td>
+              <td>Theme preference, language, UI settings</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Analytics / performance</strong>
+              </td>
+              <td>
+                Help us understand how visitors interact with the Services so we can measure and improve
+                performance. Used where permitted by your consent settings.
+              </td>
+              <td>Aggregated usage and performance metrics</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <h2 id="specific">5. Authentication and preference storage</h2>
       <p>

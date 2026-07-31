@@ -83,18 +83,11 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
   const allConversations = conversations;
 
-  // Auto-select first conversation if none selected
-  const effectiveSelectedId = useMemo(() => {
-    if (selectedId && conversations.find((c) => c.id === selectedId)) {
-      return selectedId;
-    }
-    return conversations[0]?.id || null;
-  }, [selectedId, conversations]);
-
   // Selected conversation (with messages loaded separately)
   const selectedConversation = useMemo(() => {
-    return conversations.find((c) => c.id === effectiveSelectedId) || null;
-  }, [conversations, effectiveSelectedId]);
+    if (!selectedId) return null;
+    return conversations.find((c) => c.id === selectedId) || null;
+  }, [conversations, selectedId]);
 
   // Unread counts
   const unreadCounts = useMemo(() => {
@@ -129,8 +122,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     mutationFn: sendMessageApi,
     onSuccess: () => {
       // Invalidate messages and conversation list to show updated last message
-      if (effectiveSelectedId) {
-        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(effectiveSelectedId) });
+      if (selectedId) {
+        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(selectedId) });
       }
       queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
     },
@@ -138,13 +131,13 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
 
   const sendMessage = useCallback(
     async (payload: RichMessagePayload) => {
-      if (!effectiveSelectedId || !selectedConversation) return;
+      if (!selectedId || !selectedConversation) return;
       // Require at least some content for text messages (also guard against missing type)
       const payloadType = payload.type || 'text';
       if (payloadType === 'text' && !payload.content?.trim()) return;
 
       return sendMutation.mutateAsync({
-        conversationId: effectiveSelectedId,
+        conversationId: selectedId,
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
         channel: hookOptions?.channel,
@@ -168,7 +161,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
         pollOptions:     payload.pollOptions,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
+    [selectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations
@@ -201,7 +194,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     conversations,
     allConversations,
     selectedConversation,
-    selectedId: effectiveSelectedId,
+    selectedId,
     selectConversation,
     channelFilter,
     setChannelFilter,

@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Workflow, Play, GitBranch, Zap, ArrowRightLeft, ArrowUpDown, Plus, X, ChevronRight, ChevronLeft, Linkedin, Mail, MessageCircle, Phone, UserPlus, Send, Eye, Wand2 } from 'lucide-react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
 import { StepType } from '@/types/campaign';
@@ -18,6 +18,7 @@ import { CustomWorkflowNode } from './workflow/CustomWorkflowNode';
 import { createReactFlowNodes, createReactFlowEdges, WorkflowLayout } from './workflow/workflowFlowBuilder';
 import LabeledEdge from './workflow/LabeledEdge';
 import StepEditor from './workflow/StepEditor';
+import { StepInsertMenu, type InsertMenuItem } from './workflow/StepInsertMenu';
 
 const nodeTypes = { custom: CustomWorkflowNode };
 const edgeTypes = { labeled: LabeledEdge };
@@ -98,9 +99,51 @@ function FlowInner({
     return () => window.removeEventListener('openStepEditor', handle as EventListener);
   }, [workflowPreview]);
 
+  // Node input/output "+" (CustomWorkflowNode dispatches 'addWorkflowStepAt') —
+  // same catalog as the bottom "Add Step" bar, but dropped into the clicked slot.
+  const insertWorkflowStep = useOnboardingStore((s) => s.insertWorkflowStep);
+  const [insertAt, setInsertAt] = useState<{ anchorId: string; position: 'before' | 'after'; x: number; y: number } | null>(null);
+  // The onboarding page mounts this panel more than once (mobile + desktop
+  // layouts, only one visible). Without this the hidden copies would answer the
+  // same window event and hold a menu open behind the breakpoint.
+  const flowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handle = (e: any) => {
+      const d = e.detail || {};
+      if (!d.anchorId) return;
+      if (!flowRef.current?.offsetParent) return; // this copy is not on screen
+      setInsertAt({
+        anchorId: String(d.anchorId),
+        position: d.position === 'before' ? 'before' : 'after',
+        x: Number(d.x) || 0,
+        y: Number(d.y) || 0,
+      });
+    };
+    window.addEventListener('addWorkflowStepAt', handle);
+    return () => window.removeEventListener('addWorkflowStepAt', handle);
+  }, []);
+
+  const insertItems: InsertMenuItem[] = insertAt
+    ? PLATFORMS.flatMap((p) => (PLATFORM_ACTIONS[p.id] || []).map((a: any) => ({
+        key: `${p.id}-${a.type}`,
+        label: a.title,
+        sub: a.desc,
+        group: p.label,
+        icon: <span style={{ color: p.color }}>{a.icon}</span>,
+        chip: 'bg-gray-100 dark:bg-gray-800',
+        onSelect: () => insertWorkflowStep(
+          { id: `${a.type}-${Date.now()}`, type: a.type as StepType, title: a.title, description: a.desc, channel: p.id },
+          insertAt.anchorId,
+          insertAt.position,
+        ),
+      })))
+    : [];
+
   return (
     <>
       <ReactFlow
+        ref={flowRef}
         nodes={flowNodes}
         edges={flowEdges}
         onNodesChange={onNodesChange}
@@ -131,6 +174,13 @@ function FlowInner({
           className="!bg-white dark:!bg-[#161d36] !border-gray-200 dark:!border-gray-700 !rounded-[10px] !shadow-md"
         />
       </ReactFlow>
+      {insertAt && (
+        <StepInsertMenu
+          x={insertAt.x} y={insertAt.y} position={insertAt.position}
+          items={insertItems} onClose={() => setInsertAt(null)}
+          zIndex={60}
+        />
+      )}
       {editingStep && (
         <StepEditor step={editingStep} onClose={() => setEditingStep(null)} campaignId={campaignId} />
       )}

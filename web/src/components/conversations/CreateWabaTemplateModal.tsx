@@ -8,6 +8,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
@@ -324,10 +327,10 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-col items-start gap-1">
           <DialogTitle className="flex items-center gap-2">
             Create WhatsApp Template
-            <Badge variant="outline" className="text-[10px]">WABA</Badge>
+            <Badge variant="outline" className="hidden sm:inline-flex text-[10px]">WABA</Badge>
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
             Templates must be approved by Meta before use. Approval usually takes a few minutes.
@@ -391,13 +394,18 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Language <span className="text-red-500">*</span></label>
-                    <select
-                      value={language}
-                      onChange={e => setLanguage(e.target.value)}
-                      className="w-full h-8 px-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                    >
-                      {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-                    </select>
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGES.map(l => (
+                          <SelectItem key={l.code} value={l.code}>
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -613,15 +621,19 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                 {buttons.map((btn) => (
                   <div key={btn.id} className="p-3 border border-border rounded-lg space-y-2">
                     <div className="flex items-center gap-2">
-                      <select
+                      <Select
                         value={btn.type}
-                        onChange={e => updateButton(btn.id, { type: e.target.value as ButtonType })}
-                        className="h-7 px-2 border border-input rounded text-xs bg-background focus:outline-none"
+                        onValueChange={val => updateButton(btn.id, { type: val as ButtonType })}
                       >
-                        <option value="QUICK_REPLY">Quick Reply</option>
-                        <option value="URL">URL</option>
-                        <option value="PHONE_NUMBER">Phone Number</option>
-                      </select>
+                        <SelectTrigger className="h-7 text-xs w-[130px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Quick Reply</SelectItem>
+                          <SelectItem value="URL">URL</SelectItem>
+                          <SelectItem value="PHONE_NUMBER">Phone Number</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Input
                         placeholder="Button label"
                         value={btn.text}

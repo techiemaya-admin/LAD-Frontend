@@ -117,10 +117,10 @@ export function TargetAccountsEditor({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-5 py-3">
+    <div className="rounded-lg border border-gray-200 bg-white dark:bg-slate-900 dark:border-slate-800">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 dark:border-slate-800 px-5 py-3">
         <div>
-          <h4 className="text-sm font-semibold text-gray-900">Named target accounts</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Named target accounts</h4>
           <p className="mt-0.5 text-xs text-gray-500">
             ABM searches only fire when this list is non-empty.{' '}
             <strong>{value.length}</strong> account{value.length === 1 ? '' : 's'} configured.
@@ -139,7 +139,7 @@ export function TargetAccountsEditor({
             type="button"
             onClick={() => setBulkOpen((v) => !v)}
             disabled={disabled}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
+            className="rounded border border-gray-300 bg-white dark:bg-slate-900 dark:border-slate-700 px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
           >
             {bulkOpen ? 'Cancel bulk' : 'Bulk paste'}
           </button>
@@ -157,7 +157,7 @@ export function TargetAccountsEditor({
       </header>
 
       {bulkOpen && (
-        <div className="space-y-2 border-b border-gray-200 bg-gray-50 px-5 py-3">
+        <div className="space-y-2 border-b border-gray-200 bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-5 py-3">
           <label className="block text-xs font-medium text-gray-700">
             One account per line, comma-separated: <code>Company Name, domain.com</code>
           </label>
@@ -167,7 +167,7 @@ export function TargetAccountsEditor({
             disabled={disabled}
             rows={6}
             placeholder={'Acme, acme.com\nBeta, beta.io\nGamma'}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm font-mono disabled:opacity-50"
+            className="w-full rounded border border-gray-300 dark:border-slate-700 px-2 py-1.5 text-sm font-mono disabled:opacity-50"
           />
           <div className="flex justify-end">
             <button
@@ -233,14 +233,14 @@ export function TargetAccountsEditor({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3">
+      <div className="flex flex-wrap gap-2 border-t border-gray-200 bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-5 py-3">
         <input
           type="text"
           value={newCompany}
           onChange={(e) => setNewCompany(e.target.value)}
           disabled={disabled}
           placeholder="Company name"
-          className="flex-1 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-sm disabled:opacity-50"
+          className="flex-1 min-w-0 rounded border border-gray-300 dark:border-slate-700 px-2 py-1.5 text-sm disabled:opacity-50"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -254,7 +254,7 @@ export function TargetAccountsEditor({
           onChange={(e) => setNewDomain(e.target.value)}
           disabled={disabled}
           placeholder="domain.com (optional)"
-          className="w-48 rounded border border-gray-300 px-2 py-1.5 text-sm disabled:opacity-50"
+          className="w-48 rounded border border-gray-300 dark:border-slate-700 px-2 py-1.5 text-sm disabled:opacity-50"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

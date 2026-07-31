@@ -148,9 +148,9 @@ export function LinkedInChatToolbar({
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1 px-3 py-1.5 border-t border-border bg-slate-50/50">
+      <div className="flex items-center gap-1 px-3 py-1.5 border-t border-border bg-slate-50/50 dark:bg-slate-700/50 overflow-x-auto no-scrollbar">
         {/* AI Agent pill */}
-        <div className="hidden lg:block">
+        <div>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -178,7 +178,7 @@ export function LinkedInChatToolbar({
         </div>
 
         {/* Attach media */}
-        <div className="hidden lg:block">
+        <div>
           <input
             type="file"
             ref={fileInputRef}
@@ -202,7 +202,7 @@ export function LinkedInChatToolbar({
         </div>
 
         {/* Templates */}
-        <div className="hidden lg:block">
+        <div>
           <DropdownMenu onOpenChange={(open) => open && loadTemplates()}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -263,7 +263,7 @@ export function LinkedInChatToolbar({
         </div>
 
         {/* Assign to team */}
-        <div className="hidden lg:block">
+        <div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

@@ -476,7 +476,7 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
         </Button>
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <FlaskConical className="h-5 w-5 text-[#0B1957] shrink-0" />
+          <FlaskConical className="h-5 w-5 text-[#0B1957] dark:text-white shrink-0" />
           <h2 className="font-semibold text-sm truncate">AI Playground</h2>
           <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden xs:inline-block">
             {settings?.ai_model || "claude-sonnet"}
@@ -603,8 +603,8 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
                           <button
                             key={p.id}
                             onClick={() => handleSelectPrompt(p)}
-                            className={`w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2 ${
-                              p.name === selectedPromptName ? "bg-accent" : ""
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-200 dark:hover:bg-[#2EE6A6] transition-colors flex items-center gap-2 ${
+                              p.name === selectedPromptName ? "bg-slate-200 dark:bg-[#2EE6A6]" : ""
                             }`}
                           >
                             {/* Channel icon */}
@@ -747,14 +747,14 @@ export function AIPlayground({ onClose }: AIPlaygroundProps) {
                 <div
                   className={`shrink-0 h-7 w-7 rounded-full flex items-center justify-center ${
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground dark:text-white"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
                 </div>
                 {msg.role === "user" ? (
-                  <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div className="max-w-[80%] bg-primary text-primary-foreground dark:text-white rounded-2xl rounded-tr-sm px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">
                     {msg.content}
                   </div>
                 ) : (

@@ -312,28 +312,10 @@ export function TemplatePicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader>
-          <div className="flex items-center justify-between w-full">
-            <DialogTitle className="flex items-center gap-3">
-              <MessageSquare className="h-6 w-6 text-orange-600" />
-              Send Template Message
-              <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-100 px-3">
-                {selectedCount} conversation{selectedCount !== 1 ? 's' : ''}
-              </Badge>
-            </DialogTitle>
-            
-            {channel === 'waba' && (
-            <div className="mr-8"> {/* Added explicitly to push the button left, away from the hidden close 'X' */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 text-xs px-3 rounded-lg border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 transition-all"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> New template
-              </Button>
-            </div>
-            )}
-          </div>
+          <DialogTitle className="flex items-center gap-3">
+            <MessageSquare className="h-6 w-6 text-orange-600" />
+            Send Template Message
+          </DialogTitle>
         </DialogHeader>
 
         <CreateWabaTemplateModal
@@ -349,8 +331,8 @@ export function TemplatePicker({
           {!selectedTemplate ? (
             <>
               {/* Search */}
-              <div className="px-8 pt-6 pb-2">
-                <div className="relative">
+              <div className="px-8 pt-6 pb-2 flex items-center gap-3">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search templates..."
@@ -359,6 +341,16 @@ export function TemplatePicker({
                     className="pl-9 h-11 rounded-xl bg-gray-50 dark:bg-[#2e2f2f] border-gray-100 dark:border-[#3d3d3d] dark:text-white dark:placeholder:text-[#8696a0]"
                   />
                 </div>
+                {channel === 'waba' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 text-xs px-3.5 rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 dark:border-orange-500/30 dark:text-orange-400 dark:hover:bg-orange-500/10 transition-all shrink-0 font-medium"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> New template
+                  </Button>
+                )}
               </div>
 
               {/* Template list */}
@@ -458,7 +450,7 @@ export function TemplatePicker({
                                   <SelectItem key={o.value} value={o.value}>
                                     <div className="flex flex-col">
                                       <span className="font-bold">{o.label}</span>
-                                      <span className="text-[10px] text-muted-foreground">{o.hint}</span>
+                                      <span className="text-[10px]">{o.hint}</span>
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -519,24 +511,30 @@ export function TemplatePicker({
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Name Personalization</h4>
                     <div className="grid grid-cols-2 gap-3">
                       <button
+                        type="button"
                         onClick={() => setNameFormat('first')}
                         className={cn(
                           "p-3 rounded-xl border transition-all text-left group",
-                          nameFormat === 'first' ? "border-orange-500 bg-orange-50/50 ring-1 ring-orange-200" : "border-gray-100 hover:border-orange-200"
+                          nameFormat === 'first'
+                            ? "border-orange-500 bg-orange-50/50 dark:bg-orange-950/40 ring-1 ring-orange-200 dark:ring-orange-500/30"
+                            : "border-gray-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2e2f2f] hover:border-orange-200 dark:hover:border-orange-500/40"
                         )}
                       >
-                        <span className={cn("block text-sm font-bold", nameFormat === 'first' ? "text-orange-700" : "text-gray-900")}>First Name</span>
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">e.g. Naveen</span>
+                        <span className={cn("block text-sm font-bold", nameFormat === 'first' ? "text-orange-700 dark:text-orange-400" : "text-gray-900 dark:text-white")}>First Name</span>
+                        <span className={cn("text-[10px] font-medium uppercase tracking-tight", nameFormat === 'first' ? "text-orange-600/80 dark:text-orange-300/80" : "text-muted-foreground dark:text-gray-400")}>e.g. Naveen</span>
                       </button>
                       <button
+                        type="button"
                         onClick={() => setNameFormat('full')}
                         className={cn(
                           "p-3 rounded-xl border transition-all text-left group",
-                          nameFormat === 'full' ? "border-orange-500 bg-orange-50/50 ring-1 ring-orange-200" : "border-gray-100 hover:border-orange-200"
+                          nameFormat === 'full'
+                            ? "border-orange-500 bg-orange-50/50 dark:bg-orange-950/40 ring-1 ring-orange-200 dark:ring-orange-500/30"
+                            : "border-gray-100 dark:border-[#3d3d3d] bg-white dark:bg-[#2e2f2f] hover:border-orange-200 dark:hover:border-orange-500/40"
                         )}
                       >
-                        <span className={cn("block text-sm font-bold", nameFormat === 'full' ? "text-orange-700" : "text-gray-900")}>Full Name</span>
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">e.g. Naveen Reddy</span>
+                        <span className={cn("block text-sm font-bold", nameFormat === 'full' ? "text-orange-700 dark:text-orange-400" : "text-gray-900 dark:text-white")}>Full Name</span>
+                        <span className={cn("text-[10px] font-medium uppercase tracking-tight", nameFormat === 'full' ? "text-orange-600/80 dark:text-orange-300/80" : "text-muted-foreground dark:text-gray-400")}>e.g. Naveen Reddy</span>
                       </button>
                     </div>
                   </div>
@@ -611,7 +609,9 @@ export function TemplatePicker({
           <div className="flex items-center justify-between w-full">
             <div className="text-sm font-medium text-muted-foreground">
               {selectedTemplate ? (
-                <span>Ready to send to {selectedCount}</span>
+                <span>
+                  Ready to send {selectedCount} {selectedCount === 1 ? 'conversation' : 'conversations'}.
+                </span>
               ) : (
                 <span>Select a template to continue</span>
               )}

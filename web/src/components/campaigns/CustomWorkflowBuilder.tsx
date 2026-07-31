@@ -27,19 +27,27 @@ import {
   Rocket, Loader2, Linkedin, Mail, MailPlus, MessageCircle, Phone, Clock,
   Users, Repeat, Search, X, HardDrive, Inbox, ListOrdered, BarChart3, GitFork, DatabaseZap,
   Wand2, Trash2, Radar, Split, Plus, Upload, FileSpreadsheet, Sparkles, Contact, Download, Megaphone, Zap, Globe, Telescope, Gauge, Shuffle, PenLine, Webhook, PenTool, ShieldCheck,
-  Bookmark,
+  Bookmark, LayoutTemplate, ExternalLink, FlaskConical, Play,
+  Instagram, UserCheck, FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import LeadPreviewPanel from './LeadPreviewPanel';
 import {
   WORKFLOW_TEMPLATES, WorkflowTemplate,
   SOURCE_STEP_ID, FOLLOWUP_STEP_ID, ANALYTICS_STEP_ID, ZOHO_UPDATE_STEP_ID,
   MEDIA_STEP_ID, MULTICOND_STEP_ID, AI_STEP_ID, ENRICH_STEP_ID, EXPORT_STEP_ID,
   AUTOPOST_STEP_ID, CONTENT_STEP_ID, APPROVAL_STEP_ID, AI_DEFAULT_INSTRUCTION, EXPORT_DEFAULT_COLUMNS,
+  IG_AUTOPOST_STEP_ID, HUMAN_TASK_STEP_ID, REPORT_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
-  SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, templateNodeKey,
+  SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
+  templateToPreviewSteps,
 } from './workflowTemplates';
+import {
+  buildIntelSteps, buildLeadReportStepConfig, buildContentMacros,
+  buildTestRunSteps, TEST_RUNNABLE_TYPES,
+} from './workflowPayload';
 import { TemplateIcon, stepCategory } from './TemplateIcon';
 import {
   useStrategies, useCreateStrategy, useSharedStrategies, useImportSharedStrategy,
@@ -60,6 +68,7 @@ import { CustomWorkflowNode } from '@/components/onboarding/workflow/CustomWorkf
 import { WorkflowCanvas } from '@/components/onboarding/workflow/WorkflowCanvas';
 import { createReactFlowNodes, createReactFlowEdges } from '@/components/onboarding/workflow/workflowFlowBuilder';
 import LabeledEdge from '@/components/onboarding/workflow/LabeledEdge';
+import { StepInsertMenu, type InsertMenuItem } from '@/components/onboarding/workflow/StepInsertMenu';
 
 const nodeTypes = { custom: CustomWorkflowNode };
 const edgeTypes = { labeled: LabeledEdge };
@@ -191,6 +200,157 @@ const CONDITIONS = [
   { value: 'wa_read', label: 'WhatsApp read', action: 'WA_READ' },
   { value: 'wa_replied', label: 'WhatsApp replied', action: 'WA_REPLIED' },
 ];
+
+// ─── Per-node instructions ───────────────────────────────────────────────────
+// What each node needs and how it behaves, shown at the top of its settings
+// drawer. Keyed by SourceKey for sources, by StepType for plain outreach/logic
+// nodes, by 'router' for the router variant, and by the node's fixed macro id
+// (see workflowTemplates.ts) for everything else — mirrors the key resolution
+// already used for icons/labels in renderEditor(). Deliberately a loose
+// Record<string,string>, not tied to the three exhaustive StepType maps
+// elsewhere (StepSettings.tsx / both campaignStore.ts) — this is a new,
+// independent lookup so it can't break their exhaustiveness.
+const STEP_INSTRUCTIONS: Record<string, string> = {
+  // Sources
+  zoho_recurring: 'Imports newly-created Zoho CRM contacts every day for the life of the campaign. Nothing is required — the tag filter is optional.',
+  zoho_once: 'Imports contacts already synced from Zoho CRM, once. Nothing is required.',
+  ghl_once: 'Imports contacts already synced from GoHighLevel, once. Nothing is required.',
+  file_import: "Imports leads from an uploaded CSV/Excel file. Needs a file with at least one column mapped to name, company, email, or LinkedIn URL. Rows with no LinkedIn URL are resolved automatically by name+company at send time — some may never match, and those retry indefinitely rather than fail. Map a LinkedIn URL column directly when you have one.",
+  linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
+  linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
+  // LinkedIn outreach
+  linkedin_connect: "Sends a LinkedIn connection request — no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
+  linkedin_message: "Sends a LinkedIn DM — but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
+  linkedin_inmail: 'Sends a paid InMail straight to a non-connection — no prior connect step needed. Needs message text and a LinkedIn Premium / Sales Navigator / Recruiter seat with InMail credits on the sending account.',
+  linkedin_visit: "Visits the lead's LinkedIn profile as a warm-up signal. Nothing is required; no sequence dependency, though it reads best placed before Connect/Message.",
+  linkedin_follow: "Follows the lead's LinkedIn profile. Nothing is required; no sequence dependency.",
+  // Other channels
+  email_send: 'Sends an email. Needs a subject, a body, and a connected email sender.',
+  whatsapp_send: 'Sends a WhatsApp message. Needs message text and a connected WhatsApp number.',
+  voice_agent_call: 'Places an AI voice call. Voice agent and script are both optional — if left blank, the first available voice agent is used.',
+  condition: 'Pauses the lead here until the chosen condition (connection accepted, message replied, etc.) is met, then continues.',
+  router: 'Watches the step placed right before it. After the set number of failed attempts, it stops retrying and reroutes the lead to the fallback channel instead.',
+  // Macro nodes (by fixed id — see workflowTemplates.ts)
+  [FOLLOWUP_STEP_ID]: 'Automatic follow-up touches if a lead does not reply, on the schedule below. Needs at least one touch configured (defaults are pre-filled).',
+  [ANALYTICS_STEP_ID]: 'Emails or WhatsApps a daily performance digest. Needs a recipient.',
+  [ZOHO_UPDATE_STEP_ID]: "Writes this workflow's results back onto the lead's Zoho record. Needs a target module and at least one field mapped.",
+  [MEDIA_STEP_ID]: 'Generates an image or video asset to attach to outreach or a scheduled post.',
+  [MULTICOND_STEP_ID]: 'Routes each lead down a different branch (and message) by a field value. Needs at least one condition with a value and a message.',
+  [AI_STEP_ID]: 'Uses AI to clean up messy imported titles/names before outreach runs. Nothing is required. Most useful placed right after the contact source, before any outreach step.',
+  [ENRICH_STEP_ID]: "Reveals a lead's email/phone via FullEnrich, spending credits per lead found. Nothing is required. Most useful before an Email or WhatsApp step that needs that contact info.",
+  [EXPORT_STEP_ID]: 'Sends the final lead list to a file, database, email, WhatsApp, webhook, Sheet, or Slack. Needs at least one destination configured.',
+  [AUTOPOST_STEP_ID]: "Publishes on a recurring schedule to the tenant's own LinkedIn feed — not sent to leads. Needs post content from a LinkedIn content node.",
+  [CONTENT_STEP_ID]: 'Writes (or AI-generates) the text for the scheduled LinkedIn post.',
+  [APPROVAL_STEP_ID]: 'Holds a post for approval over WhatsApp/email before it publishes. Needs an approver contact, AND a LinkedIn auto-post node in this workflow — approval has nothing to gate without one.',
+  [SCRAPE_STEP_ID]: "Reads one web page's text for this workflow's own use. Needs a URL. This is the exact URL entered — it does NOT automatically use each lead's own company site — and its content is not inserted into your message unless you separately reference {{web_insight}} there, which is filled from a different, automatic per-lead lookup, not this step. Point this at a page that should be the same for every lead, or skip it.",
+  [RESEARCH_STEP_ID]: "Runs AI research on each lead's company from the open web. Nothing is required.",
+  [SCORE_STEP_ID]: 'Scores each lead\'s buy-intent 0-100 and labels it hot/warm/cold. Nothing is required. Pairs naturally with a Multi-condition step placed right after it, to branch hot vs. cold leads.',
+  [SPLIT_STEP_ID]: 'Sends variant A or B (roughly 50/50, sticky per lead) to compare two openers. Needs a message for BOTH variants.',
+  [SETFIELD_STEP_ID]: 'Writes a tag or value onto the lead record for later branching or export.',
+  [HTTP_STEP_ID]: "Calls any external API with this lead's data. Requests to internal/private/cloud-metadata addresses are blocked.",
+};
+
+// ─── Build with AI ───────────────────────────────────────────────────────────
+/**
+ * Starting points on the resting screen. Each seeds the prompt with a shape the
+ * drafter handles well and leaves the specifics in [brackets] for the user to
+ * replace — a real head start, not decoration. Colours follow the channel
+ * palette used everywhere else in the builder, so a starter reads as the
+ * channel it will build for.
+ */
+const AI_STARTERS: { label: string; prompt: string; icon: React.ReactNode; chip: string }[] = [
+  {
+    label: 'LinkedIn outreach',
+    chip: 'bg-[#0077B5]',
+    icon: <Linkedin className="h-4 w-4 text-white" />,
+    prompt: 'Find [job title] at [industry] companies in [location], visit their profile, send a connection request, then message them once they accept — and follow up twice if they go quiet.',
+  },
+  {
+    label: 'Email sequence',
+    chip: 'bg-amber-600',
+    icon: <Mail className="h-4 w-4 text-white" />,
+    prompt: 'Email [job title] at [industry] companies in [location], then follow up twice if they do not reply.',
+  },
+  {
+    label: 'Import a list',
+    chip: 'bg-emerald-600',
+    icon: <FileSpreadsheet className="h-4 w-4 text-white" />,
+    prompt: 'Import my CSV of contacts, find each person on LinkedIn, send a connection request, then message them once they accept.',
+  },
+  {
+    label: 'From your CRM',
+    chip: 'bg-red-600',
+    icon: <DatabaseZap className="h-4 w-4 text-white" />,
+    prompt: 'Import new contacts from Zoho every day, connect with them on LinkedIn, send a welcome email, then follow up twice.',
+  },
+];
+
+/**
+ * One clarifying question from /workflow/plan. The catalog lives server-side so
+ * every question maps to a config key the builder actually reads; the shape is
+ * mirrored here only for rendering.
+ */
+type AiQuestion = {
+  id: string;
+  nodeKey: string;
+  question: string;
+  help?: string;
+  placeholder?: string;
+  type: 'choice' | 'multi' | 'text' | 'longtext';
+  options?: { value: string; label: string; hint?: string }[];
+  required?: boolean;
+  /** Copy fields: blank is a real answer ("let Mr LAD write it"). */
+  skippable?: boolean;
+  /**
+   * Whether the listed options are a shortlist rather than the whole set. Only
+   * set where a typed answer is genuinely honoured — offering it on a closed
+   * set (the three follow-up channels, yes/no) would take an answer the engine
+   * cannot act on and silently drop it.
+   */
+  allowOther?: boolean;
+  otherLabel?: string;
+  otherPlaceholder?: string;
+  otherHelp?: string;
+};
+
+// ─── Test run ────────────────────────────────────────────────────────────────
+//
+// This used to be a browser simulation that described what each step would do.
+// It is now a REAL single-lead execution on the server: the research and
+// content steps run for real and produce the actual artifacts, so an
+// accelerator whose output IS a PDF and a landing page can be judged by reading
+// them rather than by reading a description of them.
+//
+// Nothing reaches the lead. That is enforced in the backend executor
+// (WorkflowTestRunService), not here — the rows below are a rendering of what
+// the server reports it did, and the panel has no say in what runs.
+
+/** One row of the timeline the server returns. */
+type TestStep = {
+  type: string;
+  title: string;
+  status: 'ran' | 'skipped' | 'failed';
+  detail: string;
+  artifacts?: TestArtifact[];
+};
+
+/** Something the run actually produced, at a real URL. */
+type TestArtifact = {
+  kind: 'report' | 'landing_page' | 'file' | string;
+  label: string;
+  url: string;
+};
+
+const ARTIFACT_ICON: Record<string, React.ReactNode> = {
+  report: <FileText className="h-4 w-4 text-rose-600" />,
+  landing_page: <Globe className="h-4 w-4 text-sky-600" />,
+  file: <Download className="h-4 w-4 text-cyan-700" />,
+};
+const ARTIFACT_LABEL: Record<string, string> = {
+  report: 'PDF report',
+  landing_page: 'Landing page',
+  file: 'Results file',
+};
 
 // "Macro" nodes (single-instance): follow-ups EXPAND into real engine steps at
 // launch; analytics becomes campaign config read by the digest cron — it is
@@ -468,8 +628,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   /** Reopen an existing custom workflow for editing; launch updates it in place. */
   editCampaignId?: string;
 }) {
-  const { workflowPreview, setWorkflowPreview, addWorkflowStep, updateWorkflowStep } = useOnboardingStore();
+  const {
+    workflowPreview, setWorkflowPreview, updateWorkflowStep,
+    addWorkflowStep: appendWorkflowStep, insertWorkflowStep,
+  } = useOnboardingStore();
   const res = useBuilderResources();
+
+  /** Slot chosen by a node's "+" button, consumed by the very next add*() call. */
+  const insertAtRef = useRef<{ anchorId: string; position: 'before' | 'after' } | null>(null);
+  /**
+   * Every add*() helper below goes through this. Normally it appends, exactly
+   * as the store action does; when the picker was opened from a node's "+" it
+   * drops the step into that slot instead — so one wrapper makes the whole
+   * palette insert-aware without touching each helper.
+   */
+  const addWorkflowStep = useCallback((step: WorkflowPreviewStep) => {
+    const at = insertAtRef.current;
+    if (at) insertWorkflowStep(step, at.anchorId, at.position);
+    else appendWorkflowStep(step);
+  }, [appendWorkflowStep, insertWorkflowStep]);
 
   const [name, setName] = useState('');
   const [perDay, setPerDay] = useState('25');
@@ -482,6 +659,20 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   // Edit mode: block the canvas until the saved state is back, so a stray click
   // can't launch a half-restored workflow over the real one.
   const [hydrating, setHydrating] = useState(!!editCampaignId);
+
+  useEffect(() => {
+    if (!editCampaignId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetchWithTenant(`/api/campaigns/landing-page/${editCampaignId}`);
+        if (!r.ok) return;                       // 404 simply means no page yet
+        const j = await r.json();
+        if (!cancelled) setSavedLanding(j?.page || null);
+      } catch { /* the builder must still open if this read fails */ }
+    })();
+    return () => { cancelled = true; };
+  }, [editCampaignId]);
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   // Zoho write-back node: the target module's field metadata (fetched lazily).
@@ -494,12 +685,42 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   const [mediaGalleryOpen, setMediaGalleryOpen] = useState(false);
   const [mediaImporting, setMediaImporting] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
-  // Left-panel tabs + template browsing state (Templates | Build from steps).
-  const [paletteTab, setPaletteTab] = useState<'templates' | 'steps'>('templates');
+  // Left-panel tabs + template browsing state (Templates | Build with AI | Build from steps).
+  const [paletteTab, setPaletteTab] = useState<'templates' | 'ai' | 'steps'>('templates');
   const [tplSearch, setTplSearch] = useState('');
   const [expandedTpl, setExpandedTpl] = useState<string | null>(WORKFLOW_TEMPLATES[0]?.key || null);
   /** Template shown in the right-hand overview drawer (null = show node editor). */
   const [overviewTpl, setOverviewTpl] = useState<string | null>(null);
+  /** Open step picker for a node's input/output "+" (null = closed). */
+  const [insertMenu, setInsertMenu] = useState<{ anchorId: string; position: 'before' | 'after'; x: number; y: number } | null>(null);
+
+  // ── "Build with AI": describe a pipeline, answer a few questions, get one ──
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiBuilding, setAiBuilding] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  /** What the last AI draft produced — shown so the user can see what changed. */
+  const [aiResult, setAiResult] = useState<{ name: string; chain: string[]; notes: string } | null>(null);
+  /** The draft being clarified; null once it has been applied to the canvas. */
+  const [aiDraft, setAiDraft] = useState<any>(null);
+  const [aiQuestions, setAiQuestions] = useState<AiQuestion[]>([]);
+  const [aiAnswers, setAiAnswers] = useState<Record<string, any>>({});
+  /** Index of the question on screen — one at a time, like a conversation. */
+  const [aiStep, setAiStep] = useState(0);
+  /** Free-text buffer for the current question. */
+  const [aiText, setAiText] = useState('');
+  /** Question id whose "something else" input is open, if any. */
+  const [aiOtherFor, setAiOtherFor] = useState<string | null>(null);
+  const aiInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // ── Test run: simulate the current pipeline against one sample lead ───────
+  const [testOpen, setTestOpen] = useState(false);
+  const [testLead, setTestLead] = useState<Record<string, string>>({
+    first_name: '', last_name: '', title: '', company: '', industry: '', location: '', email: '', phone: '',
+  });
+  const [testSampling, setTestSampling] = useState(false);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testSteps, setTestSteps] = useState<TestStep[] | null>(null);
 
   // ── Strategies: save the current canvas as a reusable playbook ────────────
   const { data: ownStrategies = [] } = useStrategies();
@@ -519,6 +740,16 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   // LinkedIn auto-post state.
   const [autopostGenerating, setAutopostGenerating] = useState(false);
   const [autopostMsg, setAutopostMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  /**
+   * The landing page already saved for the campaign being edited.
+   *
+   * Needed to answer "did anything actually change?". Without it the builder
+   * cannot tell an edited brief from an untouched one, and the only honest
+   * options would be to rewrite a public page on every save or never rewrite it.
+   */
+  const [savedLanding, setSavedLanding] = useState<any>(null);
+  const [landingBusy, setLandingBusy] = useState(false);
+  const [landingErr, setLandingErr] = useState<string | null>(null);
   const [liOrganizations, setLiOrganizations] = useState<{ id: string; name: string }[]>([]);
   const autopostFileRef = useRef<HTMLInputElement | null>(null);
   // Inline AI-media wizard for the auto-post node — runs the media builder's
@@ -571,6 +802,24 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     };
     window.addEventListener('openStepEditor', onEdit);
     return () => window.removeEventListener('openStepEditor', onEdit);
+  }, []);
+
+  // Node "+" clicks (CustomWorkflowNode dispatches 'addWorkflowStepAt') — open
+  // the step picker anchored to that slot.
+  useEffect(() => {
+    const onInsertAt = (e: any) => {
+      const d = e.detail || {};
+      if (!d.anchorId) return;
+      setOverviewTpl(null);
+      setInsertMenu({
+        anchorId: String(d.anchorId),
+        position: d.position === 'before' ? 'before' : 'after',
+        x: Number(d.x) || 0,
+        y: Number(d.y) || 0,
+      });
+    };
+    window.addEventListener('addWorkflowStepAt', onInsertAt);
+    return () => window.removeEventListener('addWorkflowStepAt', onInsertAt);
   }, []);
 
   const pickSource = (key: SourceKey) => {
@@ -760,36 +1009,14 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         !window.confirm(`Replace the current Accelerator with the "${t.name}" template?`)) {
       return;
     }
-    // Publisher-only templates have no source: they enrol nobody, so a contact
-    // source would be a step the user configures and then never uses.
-    const srcDef = t.source ? SOURCES.find((s) => s.key === t.source!.key) : undefined;
-    const steps: WorkflowPreviewStep[] = t.source ? [{
-      id: SOURCE_STEP_ID, type: 'lead_generation',
-      channel: t.source.key.startsWith('linkedin') ? 'linkedin' : 'email',
-      title: t.source.title || srcDef?.label || 'Contact source',
-      description: t.source.description || srcDef?.sub || '',
-    }] : [];
-    const cfgs: Record<string, any> = {};
-    if (t.source && (t.source.cfg || opts?.sourceCfgOverride)) {
-      cfgs[SOURCE_STEP_ID] = { ...(t.source.cfg || {}), ...(opts?.sourceCfgOverride || {}) };
-    }
-
-    // A node-cfg override addresses nodes by `macroId || type`. Templates carry
-    // at most one node per addressable type, so first-match assignment is exact;
-    // a hand-built template with two same-type nodes would seed both alike.
-    const nodeOverrides = opts?.nodeCfgOverride || {};
-    for (const n of t.nodes) {
-      const id = n.macroId || nextId();
-      const override = nodeOverrides[templateNodeKey(n)];
-      const channel = n.type.startsWith('linkedin') ? 'linkedin'
-        : n.type.startsWith('email') ? 'email'
-        : n.type.startsWith('whatsapp') ? 'whatsapp'
-        : n.type === 'voice_agent_call' ? 'voice'
-        : n.type === 'condition' ? 'linkedin'
-        : 'email';
-      steps.push({ id, type: n.type, channel, title: n.title, description: n.description } as WorkflowPreviewStep);
-      if (n.cfg || override) cfgs[id] = { ...(n.cfg || {}), ...(override || {}) };
-    }
+    // Expanded by the shared helper so this and the chat wizard's right-hand
+    // preview always produce the same pipeline from the same template.
+    const { steps, configs: cfgs } = templateToPreviewSteps(t, {
+      sourceCfgOverride: opts?.sourceCfgOverride,
+      nodeCfgOverride: opts?.nodeCfgOverride,
+      sourceLabel: (key) => SOURCES.find((s) => s.key === key),
+      nextId,
+    });
 
     setSource(t.source ? t.source.key : null);
     setWorkflowPreview(steps);
@@ -798,6 +1025,183 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setError(null);
     // With no source, open the first real node instead of a step that isn't there.
     setEditingId(t.source ? SOURCE_STEP_ID : (steps[0]?.id ?? null));
+  };
+
+  /** Put a finished draft on the canvas via the one existing apply path. */
+  const applyAiTemplate = (t: any) => {
+    const srcDef = SOURCES.find((s) => s.key === t.source?.key);
+    // silent: replacing the canvas was already confirmed when the draft started.
+    applyTemplate({
+      key: `ai-${Date.now()}`,
+      name: t.name || 'AI workflow',
+      tagline: t.tagline || '',
+      chain: t.nodes.map((n: any) => n.title),
+      source: t.source?.key
+        ? { key: t.source.key, cfg: t.source.cfg || {}, title: srcDef?.label || 'Contact source', description: srcDef?.sub || '' }
+        : undefined,
+      nodes: t.nodes,
+      inputs: [],
+      accent: '#0b1957',
+      meta: { cycleDays: parseInt(days, 10) || 30, channels: new Set(t.nodes.map((n: any) => n.type.split('_')[0])).size },
+      category: 'general',
+    } as WorkflowTemplate, { silent: true });
+    setAiResult({ name: t.name || 'AI workflow', chain: t.nodes.map((n: any) => n.title), notes: t.notes || '' });
+  };
+
+  /** Reset the conversation back to the prompt box. */
+  const resetAiChat = () => {
+    setAiDraft(null); setAiQuestions([]); setAiAnswers({}); setAiStep(0); setAiText(''); setAiOtherFor(null);
+  };
+
+  /**
+   * "Build with AI" — describe a pipeline in words, answer a few questions,
+   * get it on the canvas.
+   *
+   * Two-phase on purpose. Drafting straight to the canvas produced pipelines
+   * whose every node was blank, so the user had to open each one anyway; asking
+   * first means the nodes arrive configured. The questions come from the server
+   * (grounded in real config keys) rather than being invented here, and only
+   * cover what the description did not already say.
+   *
+   * The draft is still a starting point, not a launch: every node opens for
+   * editing and the usual launch validation applies.
+   */
+  const buildWithAi = async () => {
+    const description = aiPrompt.trim();
+    if (!description || aiBuilding) return;
+    if (workflowPreview.length > 0 &&
+        !window.confirm('Replace the current Accelerator with the workflow the AI builds?')) {
+      return;
+    }
+    setAiBuilding(true); setAiError(null); setAiResult(null); resetAiChat();
+    try {
+      const res = await fetchWithTenant('/api/campaigns/workflow/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description }),
+      });
+      const data = await res.json();
+      if (!data?.success || !data?.template?.nodes?.length) {
+        setAiError(data?.error || 'Could not draft a workflow. Try rephrasing, or build it from the steps tab.');
+        return;
+      }
+      // Nothing to clarify — skip the questions entirely rather than inventing some.
+      if (!data.questions?.length) { applyAiTemplate(data.template); return; }
+      setAiDraft(data.template);
+      setAiQuestions(data.questions);
+      setAiStep(0);
+      setAiText(''); setAiOtherFor(null);
+    } catch (e: any) {
+      setAiError(e?.message || 'Could not reach the AI service.');
+    } finally {
+      setAiBuilding(false);
+    }
+  };
+
+  /** Send the collected answers back and put the configured pipeline on the canvas. */
+  const finishAiChat = async (finalAnswers: Record<string, any>) => {
+    setAiBuilding(true); setAiError(null);
+    try {
+      const res = await fetchWithTenant('/api/campaigns/workflow/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: aiPrompt.trim(), template: aiDraft, answers: finalAnswers }),
+      });
+      const data = await res.json();
+      if (!data?.success || !data?.template?.nodes?.length) {
+        setAiError(data?.error || 'Could not finish building that workflow.');
+        return;
+      }
+      applyAiTemplate(data.template);
+      resetAiChat();
+    } catch (e: any) {
+      setAiError(e?.message || 'Could not reach the AI service.');
+    } finally {
+      setAiBuilding(false);
+    }
+  };
+
+  /**
+   * Record one answer and advance. Answering the last question builds straight
+   * away — a separate "done" click after the final answer is a step with no
+   * decision in it.
+   */
+  const answerAiQuestion = (value: any) => {
+    const q = aiQuestions[aiStep];
+    if (!q) return;
+    const next = { ...aiAnswers, [q.id]: value };
+    setAiAnswers(next);
+    setAiText(''); setAiOtherFor(null);
+    if (aiStep + 1 < aiQuestions.length) setAiStep(aiStep + 1);
+    else finishAiChat(next);
+  };
+
+  /** Skip an optional question, leaving the node's own default in place. */
+  const skipAiQuestion = () => {
+    setAiText(''); setAiOtherFor(null);
+    if (aiStep + 1 < aiQuestions.length) setAiStep(aiStep + 1);
+    else finishAiChat(aiAnswers);
+  };
+
+  /** Ask the AI to invent a lead to test against. */
+  const generateSampleLead = async () => {
+    setTestSampling(true); setTestError(null);
+    try {
+      const srcCfg = configs[SOURCE_STEP_ID] || {};
+      const hint = [srcCfg.job_titles, srcCfg.industries, srcCfg.locations, srcCfg.keywords]
+        .filter(Boolean).join(', ');
+      const res = await fetchWithTenant('/api/campaigns/workflow/sample-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hint }),
+      });
+      const data = await res.json();
+      if (!data?.success || !data?.lead) {
+        setTestError(data?.error || 'Could not generate a sample lead — fill the fields in yourself.');
+        return;
+      }
+      setTestLead((prev) => ({ ...prev, ...data.lead }));
+    } catch (e: any) {
+      setTestError(e?.message || 'Could not reach the AI service.');
+    } finally {
+      setTestSampling(false);
+    }
+  };
+
+  /**
+   * Run the current pipeline against one lead — for real, on the server.
+   *
+   * The executable steps in this payload come from the SAME builders Launch
+   * uses (workflowPayload.ts), so what the test runs is what would launch.
+   * Every other node is sent as type + title only: enough to list what was
+   * skipped, and no message copy, template id or recipient for anything that
+   * could contact a person. The backend refuses to run them regardless — the
+   * filter is a closed handler map there, not a shape of this request.
+   */
+  const runTest = async () => {
+    setTestRunning(true); setTestError(null); setTestSteps(null);
+    try {
+      const res = await fetchWithTenant('/api/campaigns/workflow/test-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          lead: testLead,
+          steps: buildTestRunSteps(workflowPreview, configs),
+          config: buildContentMacros(workflowPreview, configs),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setTestError(data?.error || 'The test run could not complete.');
+        return;
+      }
+      setTestSteps(Array.isArray(data.timeline) ? data.timeline : []);
+    } catch (e: any) {
+      setTestError(e?.message || 'The test run could not complete.');
+    } finally {
+      setTestRunning(false);
+    }
   };
 
   /**
@@ -946,6 +1350,90 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setEditingId(EXPORT_STEP_ID);
   };
 
+  /**
+   * Landing page — campaign-level, exactly like the auto-post node.
+   *
+   * Defaults to capture-on and approval-on: the page is published to a public
+   * URL under the tenant's brand, so it is reviewed before anyone can read it.
+   */
+  /**
+   * Instagram auto-post — campaign-level, exactly like the LinkedIn one.
+   *
+   * Media is REQUIRED and there is no way around it: Instagram has no
+   * text-only post type, so a caption alone can never be published.
+   */
+  const addInstagramPost = () => {
+    if (!workflowPreview.some((s) => s.id === IG_AUTOPOST_STEP_ID)) {
+      addWorkflowStep({ id: IG_AUTOPOST_STEP_ID, type: 'instagram_post', channel: 'email', title: 'Instagram auto-post', description: 'Image / Reel · Daily' });
+      setCfg(IG_AUTOPOST_STEP_ID, {
+        caption: '', media_url: '', media_type: 'image',
+        ai_generate: false, share_to_feed: true,
+        frequency: 'daily', days: [1, 2, 3, 4, 5], time: '10:00',
+      });
+    }
+    setEditingId(IG_AUTOPOST_STEP_ID);
+  };
+
+  /**
+   * Human task — PER-LEAD, unlike every other node added here.
+   *
+   * Pauses each lead at this point until someone confirms via a one-time
+   * link. Exists so a workflow can include work the platform cannot do
+   * (record a video, build a PDF, make a judgement call) instead of
+   * pretending those steps happened.
+   */
+  /**
+   * Audit report — the ONE node whose execution model depends on its own config.
+   *
+   * scope 'lead'     → a per-lead step, written from that company's research
+   * scope 'campaign' → a campaign-level macro, written about the industry
+   *
+   * Defaults to per-lead: it is the more valuable artifact, and the one the
+   * outreach steps can reference per prospect.
+   */
+  const addReport = () => {
+    if (!workflowPreview.some((s) => s.id === REPORT_STEP_ID)) {
+      addWorkflowStep({ id: REPORT_STEP_ID, type: 'lead_report', channel: 'email', title: 'Audit report', description: 'Per lead · PDF' });
+      setCfg(REPORT_STEP_ID, {
+        scope: 'lead',
+        report_type: 'growth_opportunity_audit',
+        context: '',
+        email_now: false,
+        // On by default: this is an AI-written document sent to a prospect
+        // under the tenant's name. Reviewing it should be the thing you opt
+        // OUT of, not the thing you remember to switch on.
+        require_approval: true,
+        approval_channel: 'email',
+        approval_to: '',
+      });
+    }
+    setEditingId(REPORT_STEP_ID);
+  };
+
+  const addHumanTask = () => {
+    if (!workflowPreview.some((s) => s.id === HUMAN_TASK_STEP_ID)) {
+      addWorkflowStep({ id: HUMAN_TASK_STEP_ID, type: 'human_task', channel: 'email', title: 'Human task', description: 'Pauses until confirmed' });
+      setCfg(HUMAN_TASK_STEP_ID, {
+        title: '', instructions: '', assignee_channel: 'email', assignee_to: '',
+      });
+    }
+    setEditingId(HUMAN_TASK_STEP_ID);
+  };
+
+  const addLandingPage = () => {
+    if (!workflowPreview.some((s) => s.id === LANDING_STEP_ID)) {
+      addWorkflowStep({ id: LANDING_STEP_ID, type: 'landing_page', channel: 'email', title: 'Landing page', description: 'AI page · Capture form' });
+      setCfg(LANDING_STEP_ID, {
+        brief: '',
+        goal: '',
+        capture_enabled: true,
+        capture_fields: ['name', 'email'],
+        require_approval: true,
+      });
+    }
+    setEditingId(LANDING_STEP_ID);
+  };
+
   const setCfg = useCallback((id: string, patch: any) => {
     setConfigs((c) => ({ ...c, [id]: { ...(c[id] || {}), ...patch } }));
   }, []);
@@ -1085,10 +1573,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const step = mb.step as string;
     const p: any = mb.uiPayload || {};
     if (step === 'loading' || mb.generating) return;
-    // Hand back to the manual UI on anything we can't answer — an error, or a
-    // video/keyframe phase that has no question to answer.
     if (mb.error) { setAutoMedia(false); return; }
-    if (step !== 'builder-mcq-few' && step !== 'builder-text') return;
+
+    // Steps the driver deliberately leaves alone. builder-image-output is the
+    // intended stop — picking the picture is the user's call. Brand-DNA
+    // extraction is a genuine wait, and the hook already polls it.
+    if (step === 'builder-image-output' || step === 'builder-video-progress') return;
+
+    // The brand-DNA review is a confirmation screen, not a question: the wizard
+    // parks there until something sends "Select this & start". Nothing polls it,
+    // so leaving it unanswered surfaced three minutes later as "the image
+    // service stopped responding" when the service was perfectly healthy.
+    const isConfirm = step === 'builder-brand-dna';
+    // Hand back to the manual UI on anything else we can't answer — a video or
+    // keyframe phase has no question, and pretending to work is worse than
+    // showing the real screen.
+    if (!isConfirm && step !== 'builder-mcq-few' && step !== 'builder-text') { setAutoMedia(false); return; }
 
     const key = `${step}|${p.phase || ''}|${p.question || ''}`;
     if (autoBusyRef.current || autoKeyRef.current === key) return;
@@ -1102,6 +1602,14 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     (async () => {
       const post = (configs[CONTENT_STEP_ID]?.content || configs[AUTOPOST_STEP_ID]?.content || '').trim();
       let answer = '';
+      if (isConfirm) {
+        // The exact label the worker matches on — the full studio sends the same.
+        answer = 'Select this & start';
+        setAutoMediaLog((l) => [...l, { phase: p.phase || 'Brand DNA', answer }]);
+        try { await mb.advanceStep?.(answer); } catch { /* surfaced via mb.error */ }
+        autoBusyRef.current = false;
+        return;
+      }
       try {
         const res = await fetchWithTenant('/api/campaigns/linkedin-post/media-answer', {
           method: 'POST',
@@ -1187,6 +1695,39 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   const editingStep = workflowPreview.find((s) => s.id === editingId) || null;
   const cfg = editingId ? (configs[editingId] || {}) : {};
 
+  /**
+   * Hard sequence-order problems — derived from the visual step list itself,
+   * not per-node field completeness (launch() below still owns that, on
+   * click). Anything surfaced here disables Launch before the click, because
+   * these aren't "a field is empty", they're "this step can never do
+   * anything, ever" — grounded in confirmed engine behaviour:
+   *  - linkedin_message only sends once a connection is ACCEPTED
+   *    (LinkedInStepExecutor's isConnectionAccepted check). With no earlier
+   *    linkedin_connect step in this workflow, nothing ever asks the lead to
+   *    connect, so the step waits forever and never actually sends.
+   *  - post_approval has nothing to gate without a linkedin_post/autopost
+   *    node in the same workflow — same rule launch() already enforces on
+   *    click (the APPROVAL_STEP_ID check further below); surfaced here too
+   *    so Launch is disabled ahead of time instead of erroring after a click.
+   */
+  const sequenceIssues = useMemo(() => {
+    const issues: { id: string; message: string }[] = [];
+    let seenConnect = false;
+    for (const step of workflowPreview) {
+      if (step.type === 'linkedin_connect') seenConnect = true;
+      else if (step.type === 'linkedin_message' && !seenConnect) {
+        issues.push({
+          id: step.id,
+          message: "Add a 'Connection request' step before 'Message' — Message only sends once a connection is accepted, so without a Connect step earlier in the sequence it will wait forever and never send.",
+        });
+      }
+    }
+    if (workflowPreview.some((s) => s.id === APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
+      issues.push({ id: APPROVAL_STEP_ID, message: 'The Approval node needs a LinkedIn post node — it gates what that node publishes.' });
+    }
+    return issues;
+  }, [workflowPreview]);
+
   // Router-style branch visualisation for the Multi-condition node: one output
   // node per condition (+ else), fanned out on the canvas.
   const CH_TO_STEP: Record<string, StepType> = { email: 'email_send', linkedin: 'linkedin_message', whatsapp: 'whatsapp_send' };
@@ -1215,6 +1756,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setError(null);
     if (hydrating) return;   // never launch over a workflow that is still loading
     if (!name.trim()) { setError('Name your Accelerator.'); return; }
+    // Belt-and-suspenders: the Launch button is already disabled while
+    // sequenceIssues is non-empty, but guard the click too in case state
+    // changed between render and click.
+    if (sequenceIssues.length) { setError(sequenceIssues[0].message); setEditingId(sequenceIssues[0].id); return; }
     // A publisher-only workflow (content → approval → post) never touches a
     // lead: all three nodes compile into campaigns.config.autopost, a
     // campaign-level macro that linkedinAutopostCron fires on a schedule. There
@@ -1252,7 +1797,6 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const enrichNode = workflowPreview.find((s) => s.id === ENRICH_STEP_ID);
     const mediaNode = workflowPreview.find((s) => s.id === MEDIA_STEP_ID);
     const analyticsNode = workflowPreview.find((s) => s.id === ANALYTICS_STEP_ID);
-    const exportNode = workflowPreview.find((s) => s.id === EXPORT_STEP_ID);
     const autopostNode = workflowPreview.find((s) => s.id === AUTOPOST_STEP_ID);
     const zohoUpdateNode = workflowPreview.find((s) => s.id === ZOHO_UPDATE_STEP_ID);
     if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly) { setError('Add at least one outreach step.'); return; }
@@ -1391,6 +1935,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             source: 'signal_detection',
             signal_query: (srcCfg.signal_query || '').trim(),
             decision_maker_titles: titles,
+            // Blank/absent = worldwide. The backend only pays for the
+            // author-location lookups when this is set.
+            location: (srcCfg.location || '').trim() || undefined,
             leadGenerationLimit: perDayN,
           },
         });
@@ -1473,28 +2020,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       }
 
       // Web-intel nodes → per-lead steps that run before outreach, so the
-      // message generators can use what they gathered.
+      // message generators can use what they gathered. Emitted by the shared
+      // builder, so a Test run executes exactly these — see workflowPayload.ts.
       const csvList = (v: any) => String(v || '').split(',').map((x: string) => x.trim()).filter(Boolean);
-      if (workflowPreview.some((s) => s.id === SCRAPE_STEP_ID)) {
-        const sc = configs[SCRAPE_STEP_ID] || {};
-        steps.push({
-          type: 'web_scrape', title: 'Webpage scraper', channel: 'email', order_index: order++,
-          config: { url: (sc.url || '').trim() || undefined, max_chars: Math.max(200, Math.min(5000, parseInt(sc.max_chars, 10) || 1500)) },
-        });
-      }
-      if (workflowPreview.some((s) => s.id === RESEARCH_STEP_ID)) {
-        steps.push({ type: 'web_research', title: 'Web research', channel: 'email', order_index: order++, config: {} });
-      }
-      if (workflowPreview.some((s) => s.id === SCORE_STEP_ID)) {
-        const sc = configs[SCORE_STEP_ID] || {};
-        steps.push({
-          type: 'lead_score', title: 'Lead scoring', channel: 'email', order_index: order++,
-          config: {
-            hiring_companies: csvList(sc.hiring_companies),
-            funding_companies: csvList(sc.funding_companies),
-            competitor_companies: csvList(sc.competitor_companies),
-          },
-        });
+      for (const st of buildIntelSteps(workflowPreview, configs)) {
+        steps.push({ ...st, order_index: order++ });
       }
 
       // Set field / HTTP request → per-lead steps before outreach, so the
@@ -1548,7 +2078,34 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           continue;
         }
         const delay = { delayDays: Math.max(0, parseInt(c.delayDays, 10) || 0), delayHours: 0 };
-        if (s.type === 'linkedin_connect') steps.push({ type: s.type, title: 'Send Connection Request', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), template_id: c.linkedin_template_id || undefined, ...delay } });
+        if (s.type === 'lead_report') {
+          // Campaign-scoped reports are macros and were emitted into config
+          // above; only the per-lead variant becomes a step. Shared with the
+          // Test run — see workflowPayload.ts.
+          const reportCfg = buildLeadReportStepConfig(c, delay);
+          if (reportCfg) {
+            steps.push({
+              type: 'lead_report', title: 'Audit report', channel: 'email',
+              order_index: order++, config: reportCfg,
+            });
+          }
+        }
+        else         if (s.type === 'human_task') {
+          // Per-lead, unlike the other new nodes. WorkflowProcessor pauses the
+          // lead here and resumes it only once someone confirms.
+          steps.push({
+            type: 'human_task', title: (c.title || 'Human task').trim(), channel: 'email',
+            order_index: order++,
+            config: {
+              title: (c.title || 'Human task').trim(),
+              instructions: (c.instructions || '').trim(),
+              assignee_channel: c.assignee_channel === 'whatsapp' ? 'whatsapp' : 'email',
+              assignee_to: (c.assignee_to || '').trim(),
+              ...delay,
+            },
+          });
+        }
+        else         if (s.type === 'linkedin_connect') steps.push({ type: s.type, title: 'Send Connection Request', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_message') steps.push({ type: s.type, title: 'Send LinkedIn Message', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_inmail') steps.push({ type: s.type, title: 'Send LinkedIn InMail', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), subject: (c.subject || '').trim() || undefined, template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_visit') steps.push({ type: s.type, title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: order++, config: { ...delay } });
@@ -1567,7 +2124,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       // else the chosen template id). Delays are relative to the prior step.
       const fc = configs[FOLLOWUP_STEP_ID] || {};
       const fuChannel = fc.channel === 'email' ? 'email' : fc.channel === 'whatsapp' ? 'whatsapp' : 'linkedin';
-      const fuTouchList: { hours?: number; template_id?: string; message?: string }[] =
+      const fuTouchList: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] =
         Array.isArray(fc.touches) && fc.touches.length ? fc.touches.slice(0, 7) : [{ hours: 24 }, { hours: 72 }, { hours: 168 }];
       if (followupNode) {
         fuTouchList.forEach((t, idx) => {
@@ -1729,7 +2286,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ...(srcCfg.resolve_instagram ? { resolve_instagram: true, instagram_business_discovery: srcCfg.instagram_business_discovery !== false } : {}),
           } : {}),
           ...(followupNode ? {
-            followup_sequence: { touches: fuTouchList.length, channel: fuChannel, timeline_hours: fuTouchList.map((t) => t.hours || 24), human_approval: !!fc.human_approval },
+            followup_sequence: { touches: fuTouchList.length, channel: fuChannel, timeline_hours: fuTouchList.map((t) => t.hours || 24), touches_config: fuTouchList.map((t) => ({ hours: t.hours || 24, template_id: t.template_id || undefined, touch_type: t.touch_type || undefined })), human_approval: !!fc.human_approval },
           } : {}),
           ...(autopostNode ? (() => {
             // The three nodes merge here: content node supplies the copy/media,
@@ -1770,22 +2327,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               },
             };
           })() : {}),
-          ...(exportNode ? (() => {
-            const ec = configs[EXPORT_STEP_ID] || {};
+          // export_results / campaign_report / landing_page macros. Shared
+          // with the Test run, which executes all three — see workflowPayload.ts.
+          ...buildContentMacros(workflowPreview, configs),
+          ...(workflowPreview.some((s) => s.id === IG_AUTOPOST_STEP_ID) ? (() => {
+            const ic = configs[IG_AUTOPOST_STEP_ID] || {};
             return {
-              // Read by CampaignExportService — on completion and from "Export now".
-              export_results: {
-                format: ec.format || 'csv',
-                destinations: Array.isArray(ec.destinations) && ec.destinations.length ? ec.destinations : ['file'],
-                columns: Array.isArray(ec.columns) && ec.columns.length ? ec.columns : EXPORT_DEFAULT_COLUMNS,
-                run_on_completion: ec.run_on_completion !== false,
-                email_to: (ec.email_to || '').trim() || undefined,
-                whatsapp_to: (ec.whatsapp_to || '').trim() || undefined,
-                webhook_url: (ec.webhook_url || '').trim() || undefined,
-                sheet_id: (ec.sheet_id || '').trim() || undefined,
-                slack_webhook_url: (ec.slack_webhook_url || '').trim() || undefined,
-                bucket: (ec.bucket || '').trim() || undefined,
-                bucket_prefix: (ec.bucket_prefix || '').trim() || undefined,
+              // Read by InstagramAutopostScheduleService at launch. media_url is
+              // what the backend gates on — Instagram has no text-only post.
+              instagram_autopost: {
+                caption: (ic.caption || '').trim(),
+                media_url: (ic.media_url || '').trim(),
+                media_type: ic.media_type === 'reel' ? 'reel' : 'image',
+                cover_url: (ic.cover_url || '').trim() || undefined,
+                share_to_feed: ic.share_to_feed !== false,
+                ai_generate: !!ic.ai_generate,
+                frequency: ic.frequency === 'weekly' ? 'weekly' : 'daily',
+                days: Array.isArray(ic.days) && ic.days.length ? ic.days : undefined,
+                time: ic.time || '10:00',
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
               },
             };
           })() : {}),
@@ -1828,6 +2388,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ...(rest.config.export_results ? {} : { export_results: null }),
             ...(rest.config.analytics_notifications ? {} : { analytics_notifications: null }),
             ...(rest.config.followup_sequence ? {} : { followup_sequence: null }),
+            ...(rest.config.landing_page ? {} : { landing_page: null }),
+            ...(rest.config.instagram_autopost ? {} : { instagram_autopost: null }),
+            ...(rest.config.campaign_report ? {} : { campaign_report: null }),
           },
         };
         // `status` is deliberately dropped. update() has no active→running
@@ -1924,6 +2487,67 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     launch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLaunch, source, workflowPreview, configs]);
+
+  /**
+   * Step picker for a node's input/output "+". Same palette as the left rail —
+   * each entry runs the very same add*() helper (so per-node config defaults are
+   * still seeded) with insertAtRef pointing at the clicked slot, which is what
+   * turns an append into an insert. Single-instance macro nodes that are
+   * already on the canvas are shown disabled rather than silently no-op'ing.
+   */
+  const renderInsertMenu = () => {
+    if (!insertMenu) return null;
+    const has = (id: string) => workflowPreview.some((s) => s.id === id);
+    const run = (fn: () => void) => {
+      insertAtRef.current = { anchorId: insertMenu.anchorId, position: insertMenu.position };
+      try { fn(); } finally { insertAtRef.current = null; }
+    };
+    const macro = (id: string, label: string, sub: string, icon: React.ReactNode, chip: string, on: () => void, group: string): InsertMenuItem => ({
+      key: id, label, sub, icon, chip, group,
+      disabled: has(id), hint: 'Already in this workflow',
+      onSelect: () => run(on),
+    });
+
+    const items: InsertMenuItem[] = [
+      ...OUTREACH.map((o, i) => ({
+        key: `outreach-${i}`,
+        label: o.label,
+        sub: o.group,
+        icon: o.icon,
+        chip: o.chip,
+        group: 'Outreach & timing',
+        onSelect: () => run(() => (o.router ? addRouter() : addOutreach(o.type))),
+      })),
+      macro(MULTICOND_STEP_ID, 'Multi-condition', 'Branch by a field value', <Split className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addMultiCond, 'Logic & routing'),
+      macro(SPLIT_STEP_ID, 'A/B split test', 'Compare two openers', <Shuffle className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addSplitTest, 'Logic & routing'),
+      macro(SETFIELD_STEP_ID, 'Set field', 'Tag or write a value', <PenLine className="h-4 w-4 text-lime-600" />, 'bg-lime-50 dark:bg-lime-950/30', addSetField, 'Logic & routing'),
+      macro(AI_STEP_ID, 'AI Agent', 'Clean & normalise lead data', <Sparkles className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addAiParse, 'Enrich & AI'),
+      macro(ENRICH_STEP_ID, 'Enrich contact', 'Official email · phone', <Contact className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addDataEnrich, 'Enrich & AI'),
+      macro(SCRAPE_STEP_ID, 'Webpage scraper', "Read the lead's website", <Globe className="h-4 w-4 text-sky-600" />, 'bg-sky-50 dark:bg-sky-950/30', addWebScrape, 'Enrich & AI'),
+      macro(RESEARCH_STEP_ID, 'Web research', 'AI company intel', <Telescope className="h-4 w-4 text-indigo-600" />, 'bg-indigo-50 dark:bg-indigo-950/30', addWebResearch, 'Enrich & AI'),
+      macro(SCORE_STEP_ID, 'Lead scoring', 'Buy-intent 0-100', <Gauge className="h-4 w-4 text-yellow-600" />, 'bg-yellow-50 dark:bg-yellow-950/30', addLeadScore, 'Enrich & AI'),
+      macro(MEDIA_STEP_ID, 'AI Media', 'Generate media to attach', <Wand2 className="h-4 w-4 text-fuchsia-600" />, 'bg-fuchsia-50 dark:bg-fuchsia-950/30', addMedia, 'Enrich & AI'),
+      macro(FOLLOWUP_STEP_ID, 'Follow-up sequence', 'Touches if no reply', <ListOrdered className="h-4 w-4 text-indigo-600" />, 'bg-indigo-50 dark:bg-indigo-950/30', addFollowup, 'Automation & output'),
+      macro(HTTP_STEP_ID, 'HTTP request', 'Call any API per lead', <Webhook className="h-4 w-4 text-slate-600" />, 'bg-slate-100 dark:bg-slate-800/50', addHttpRequest, 'Automation & output'),
+      macro(CONTENT_STEP_ID, 'LinkedIn content', 'Write or AI-generate a post', <PenTool className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addLinkedInContent, 'Automation & output'),
+      macro(APPROVAL_STEP_ID, 'Approval', 'Approve before posting', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addPostApproval, 'Automation & output'),
+      macro(AUTOPOST_STEP_ID, 'LinkedIn auto-post', 'Recurring post to your feed', <Megaphone className="h-4 w-4 text-[#0077B5]" />, 'bg-sky-50 dark:bg-sky-950/30', addAutopost, 'Automation & output'),
+      macro(IG_AUTOPOST_STEP_ID, 'Instagram auto-post', 'Image or Reel · on a schedule', <Instagram className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addInstagramPost, 'Automation & output'),
+      macro(REPORT_STEP_ID, 'Audit report', 'PDF · attach or offer', <FileText className="h-4 w-4 text-teal-700" />, 'bg-teal-50 dark:bg-teal-950/30', addReport, 'Automation & output'),
+      macro(HUMAN_TASK_STEP_ID, 'Assign a human task', 'Pauses until someone confirms', <UserCheck className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addHumanTask, 'Automation & output'),
+      macro(LANDING_STEP_ID, 'Landing page', 'AI-written · captures leads', <LayoutTemplate className="h-4 w-4 text-emerald-700" />, 'bg-emerald-50 dark:bg-emerald-950/30', addLandingPage, 'Automation & output'),
+      macro(ZOHO_UPDATE_STEP_ID, 'Update Zoho record', 'Write back to Contacts', <DatabaseZap className="h-4 w-4 text-red-600" />, 'bg-red-50 dark:bg-red-950/30', addZohoUpdate, 'Automation & output'),
+      macro(ANALYTICS_STEP_ID, 'Analytics report', 'Daily digest', <BarChart3 className="h-4 w-4 text-cyan-600" />, 'bg-cyan-50 dark:bg-cyan-950/30', addAnalytics, 'Automation & output'),
+      macro(EXPORT_STEP_ID, 'Export results', 'CSV · download & more', <Download className="h-4 w-4 text-cyan-700" />, 'bg-cyan-50 dark:bg-cyan-950/30', addExport, 'Automation & output'),
+    ];
+
+    return (
+      <StepInsertMenu
+        x={insertMenu.x} y={insertMenu.y} position={insertMenu.position}
+        items={items} onClose={() => setInsertMenu(null)}
+      />
+    );
+  };
 
   /**
    * Right-hand "Template overview" drawer — full pipeline breakdown before you
@@ -2041,7 +2665,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isSplit = editingId === SPLIT_STEP_ID;
     const isSetField = editingId === SETFIELD_STEP_ID;
     const isHttp = editingId === HTTP_STEP_ID;
-    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval;
+    const isLanding = editingId === LANDING_STEP_ID;
+    const isIgPost = editingId === IG_AUTOPOST_STEP_ID;
+    const isHumanTask = editingId === HUMAN_TASK_STEP_ID;
+    const isReport = editingId === REPORT_STEP_ID;
+    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport;
     const visual = isSource
       ? SOURCES.find((s) => s.key === source)
       : isFollowup
@@ -2081,6 +2709,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           : isRouter
             ? { icon: <GitFork className="h-4 w-4 text-rose-600" />, chip: 'bg-rose-50 dark:bg-rose-950/30' }
             : OUTREACH.find((o) => o.type === editingStep.type && !o.router);
+    // What this node needs / how it behaves — same key resolution as `visual`
+    // above (macro id when fixed, 'router' for the router variant, else type).
+    const instructionsKey = isSource ? (source || '') : isRouter ? 'router' : isMacro ? editingId : editingStep.type;
+    const instructions = STEP_INSTRUCTIONS[instructionsKey as string];
     return (
       <div className="absolute right-0 top-0 h-full w-[22rem] bg-card border-l border-border shadow-2xl z-10 flex flex-col">
         <div className="flex items-start gap-3 p-4 border-b border-border">
@@ -2096,6 +2728,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </button>
         </div>
         <div className="flex-1 p-4 space-y-4 overflow-y-auto text-sm">
+          {instructions && (
+            <div className="rounded-lg border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 p-2.5 text-[12px] leading-relaxed text-sky-900 dark:text-sky-200">
+              {instructions}
+            </div>
+          )}
           {isSource && source === 'zoho_recurring' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Import from</label>
               <select className={field} value={cfg.zoho_modules || 'contacts'} onChange={(e) => setCfg(editingId, { zoho_modules: e.target.value })}>
@@ -2186,13 +2823,35 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 placeholder="e.g. VP Revenue Operations, Head of Sales" />
               <p className="text-[11px] text-muted-foreground">Comma-separated. Who to enrol at the companies that match the signal.</p>
             </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">Location (optional)</label>
+              <Input value={cfg.location || ''}
+                onChange={(e) => setCfg(editingId, { location: e.target.value })}
+                placeholder="e.g. Dubai, United Arab Emirates" />
+              {/*
+                Honest about the mechanism, because the result can surprise:
+                LinkedIn cannot search posts by geography, so we search
+                worldwide and then keep only the people whose own profile says
+                they are there. A narrow location can therefore come back empty
+                even when the signal exists somewhere.
+              */}
+              <p className="text-[11px] text-muted-foreground">
+                Leave blank to search worldwide. LinkedIn can’t filter posts by place, so Mr LAD
+                searches everywhere and then keeps only people whose profile location matches —
+                a very specific place may find fewer leads.
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">Runs daily until the campaign ends, enrolling up to {perDay}/day of newly-signalled leads.</p>
           </>)}
 
           {isFollowup && (() => {
+            // Is an Audit report node positioned BEFORE this follow-up?
+            const reportIdx = workflowPreview.findIndex((x) => x.id === REPORT_STEP_ID);
+            const followupIdx = workflowPreview.findIndex((x) => x.id === FOLLOWUP_STEP_ID);
+            const reportBeforeFollowup = reportIdx !== -1 && followupIdx !== -1 && reportIdx < followupIdx;
             const eid = editingId!;
             const channel: string = cfg.channel || 'linkedin';
-            const touches: { hours?: number; template_id?: string; message?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
+            const touches: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
             const tmpls: any[] = channel === 'email' ? res.emailTemplates : channel === 'whatsapp' ? res.waTemplates : res.liTemplates;
             const tmplName = (t: any) => t.name || t.title || 'Template';
             const syncDesc = (n: number, ch: string) => updateWorkflowStep(eid, { description: `${n} touches · ${FU_CHANNELS.find((c2) => c2.value === ch)?.label}` });
@@ -2200,6 +2859,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const addTouch = () => { if (touches.length >= 7) return; const last = touches[touches.length - 1]?.hours || 24; const next = [...touches, { hours: last * 2 }]; setCfg(eid, { touches: next }); syncDesc(next.length, channel); };
             const removeTouch = (i: number) => { if (touches.length <= 1) return; const next = touches.filter((_, idx) => idx !== i); setCfg(eid, { touches: next }); syncDesc(next.length, channel); };
             return (<>
+              {/* The report must be GENERATED before a touch can attach it.
+                  Presence alone is not enough: a report node placed after the
+                  follow-up has not run when the touch fires, so the attachment
+                  would silently fall back to a plain message. Check position. */}
+              {(() => null)()}
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Follow-up channel</label>
                 <select className={field} value={channel} onChange={(e) => { setCfg(eid, { channel: e.target.value }); syncDesc(touches.length, e.target.value); }}>
                   {FU_CHANNELS.map((c2) => <option key={c2.value} value={c2.value}>{c2.label}</option>)}
@@ -2221,8 +2885,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                         <Input type="number" className="w-24 h-8" value={String(h)} onChange={(e) => setTouch(i, { hours: Math.max(1, parseInt(e.target.value, 10) || 1) })} />
                         <span className="text-xs text-muted-foreground">hours (≈ {Math.round((h / 24) * 10) / 10}d) after {i === 0 ? 'the previous step' : `touch ${i}`}</span>
                       </div>
-                      <select className={`${field} h-8`} value={t.template_id || ''} onChange={(e) => setTouch(i, { template_id: e.target.value || undefined })}>
+                      <select className={`${field} h-8`}
+                        value={t.touch_type === 'lead_report' ? '__lead_report__' : (t.template_id || '')}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          // The report option is a TOUCH TYPE, not a template —
+                          // the backend branches on touch_type, so setting one
+                          // must clear the other or the row carries both and the
+                          // template path wins.
+                          if (v === '__lead_report__') setTouch(i, { touch_type: 'lead_report', template_id: undefined });
+                          else setTouch(i, { touch_type: undefined, template_id: v || undefined });
+                        }}>
                         <option value="">AI-generated (default)</option>
+                        {reportBeforeFollowup && (
+                          <option value="__lead_report__">Attach the audit report</option>
+                        )}
                         {tmpls.map((tm: any) => <option key={tm.id} value={tm.id}>{tmplName(tm)}</option>)}
                       </select>
                       {!t.template_id && (
@@ -2237,6 +2914,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="text-base leading-none">+</span> Add another touch
                   </button>
                 )}
+
+                {/* Dry-run the cadence before it goes anywhere near a real lead. */}
+                <a
+                  href="/followup-simulator.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 flex items-start gap-2 rounded-lg border border-dashed border-border p-2.5 hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors group"
+                >
+                  <span className="text-base leading-none mt-0.5">🧪</span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-foreground group-hover:text-amber-700">
+                      Test this sequence first
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground leading-snug">
+                      Play the whole cadence against a sample lead and read what each touch would
+                      actually send — before you launch.
+                    </span>
+                  </span>
+                </a>
               </div>
 
               <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer select-none">
@@ -2992,6 +3688,569 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             </>);
           })()}
 
+          {isIgPost && (() => {
+            const eid = editingId!;
+            const isReel = cfg.media_type === 'reel';
+            const days: number[] = Array.isArray(cfg.days) ? cfg.days : [1, 2, 3, 4, 5];
+            const toggleDay = (d: number) => setCfg(eid, {
+              days: days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort(),
+            });
+            return (<>
+              <div className="rounded-md border border-pink-200 bg-pink-50 dark:border-pink-800 dark:bg-pink-950/30 px-3 py-2">
+                <p className="text-[11px] text-pink-900 dark:text-pink-200">
+                  Posts to <strong>your own Instagram account</strong> on a schedule — one post
+                  per campaign, not one per lead.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Post type</label>
+                <select className={field} value={cfg.media_type || 'image'}
+                  onChange={(e) => setCfg(eid, { media_type: e.target.value })}>
+                  <option value="image">Image post</option>
+                  <option value="reel">Reel (video)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">
+                  {isReel ? 'Video URL' : 'Image URL'} <span className="text-red-600">*</span>
+                </label>
+                <input className={field} value={cfg.media_url || ''}
+                  onChange={(e) => setCfg(eid, { media_url: e.target.value })}
+                  placeholder={isReel ? 'https://…/video.mp4' : 'https://…/image.jpg'} />
+                <p className="text-[11px] text-muted-foreground">
+                  Instagram downloads this itself, so it has to be publicly reachable — a
+                  private or expiring link fails while Instagram processes it, not when you save.
+                </p>
+              </div>
+
+              {isReel && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground">Cover image URL (optional)</label>
+                  <input className={field} value={cfg.cover_url || ''}
+                    onChange={(e) => setCfg(eid, { cover_url: e.target.value })}
+                    placeholder="https://…/cover.jpg" />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Caption</label>
+                <textarea className={`${field} min-h-[90px] resize-y`} value={cfg.caption || ''}
+                  onChange={(e) => setCfg(eid, { caption: e.target.value })}
+                  placeholder="What this post is about…" />
+              </div>
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5" checked={!!cfg.ai_generate}
+                  onChange={(e) => setCfg(eid, { ai_generate: e.target.checked })} />
+                <span className="text-xs">
+                  <span className="font-medium text-foreground">Write the caption with AI each time</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Grounded in your business profile. The caption above is used as the topic,
+                    and as a fallback if generation fails.
+                  </span>
+                </span>
+              </label>
+
+              {isReel && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" className="mt-0.5" checked={cfg.share_to_feed !== false}
+                    onChange={(e) => setCfg(eid, { share_to_feed: e.target.checked })} />
+                  <span className="text-xs">
+                    <span className="font-medium text-foreground">Also show on your profile grid</span>
+                  </span>
+                </label>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">How often</label>
+                <select className={field} value={cfg.frequency || 'daily'}
+                  onChange={(e) => setCfg(eid, { frequency: e.target.value })}>
+                  <option value="daily">Every day</option>
+                  <option value="weekly">Chosen days</option>
+                </select>
+              </div>
+
+              {cfg.frequency === 'weekly' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground">Days</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+                      <button key={d} type="button" onClick={() => toggleDay(i)}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                          days.includes(i)
+                            ? 'border-pink-600 bg-pink-600 text-white'
+                            : 'border-border text-muted-foreground hover:bg-muted/50'
+                        }`}>{d}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Time</label>
+                <input type="time" className={field} value={cfg.time || '10:00'}
+                  onChange={(e) => setCfg(eid, { time: e.target.value })} />
+              </div>
+
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 px-3 py-2">
+                <p className="text-[11px] text-amber-900 dark:text-amber-200">
+                  Instagram publishing needs Meta&apos;s approval for this app before it can post.
+                  You can configure this now; it starts publishing once that is granted.
+                </p>
+              </div>
+            </>);
+          })()}
+
+          {isReport && (() => {
+            const eid = editingId!;
+            const isCampaign = cfg.scope === 'campaign';
+            const hasLanding = workflowPreview.some((x) => x.id === LANDING_STEP_ID);
+            // Whether the earlier research steps that a per-lead report needs
+            // are actually in this workflow. Without them the step fails at
+            // runtime with "add a Research or Scrape step", so say it here.
+            const hasResearch = workflowPreview.some((x) => x.id === RESEARCH_STEP_ID || x.id === SCRAPE_STEP_ID);
+            return (<>
+              <div className="rounded-md border border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/30 px-3 py-2">
+                <p className="text-[11px] text-teal-900 dark:text-teal-200">
+                  Builds a PDF you can send as an attachment or offer as a download.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">What is it about?</label>
+                <select className={field} value={cfg.scope || 'lead'}
+                  onChange={(e) => setCfg(eid, { scope: e.target.value })}>
+                  <option value="lead">Each lead&apos;s own company</option>
+                  <option value="campaign">The campaign&apos;s industry</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  {isCampaign
+                    ? 'One report for the whole campaign. The same document for everyone, so it can be given away on a landing page.'
+                    : 'A separate report per lead, written from their own website and research. More valuable, but personal to them.'}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Report</label>
+                <select className={field} value={cfg.report_type || 'growth_opportunity_audit'}
+                  onChange={(e) => setCfg(eid, { report_type: e.target.value })}>
+                  <option value="growth_opportunity_audit">Growth Opportunity Audit</option>
+                  <option value="competitor_analysis">Competitor Analysis</option>
+                  <option value="lead_conversion_assessment">Lead Conversion Assessment</option>
+                  <option value="customer_experience_audit">Customer Experience Audit</option>
+                  <option value="revenue_leakage_report">Revenue Leakage Report</option>
+                  <option value="market_positioning_review">Market Positioning Review</option>
+                  <option value="sales_process_review">Sales Process Review</option>
+                  <option value="followup_effectiveness_audit">Follow-up Effectiveness Audit</option>
+                  <option value="marketing_performance_snapshot">Marketing Performance Snapshot</option>
+                  <option value="industry_benchmark_report">Industry Benchmark Report</option>
+                </select>
+              </div>
+
+              {isCampaign && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground">Industry</label>
+                  <input className={field} value={cfg.industry || ''}
+                    onChange={(e) => setCfg(eid, { industry: e.target.value })}
+                    placeholder="e.g. freight forwarding in the UAE" />
+                  <p className="text-[11px] text-muted-foreground">
+                    Left blank, the industry from your contact source is used. A report that
+                    would read the same for any sector is not worth sending.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Anything to add? (optional)</label>
+                <textarea className={`${field} min-h-[70px] resize-y`} value={cfg.context || ''}
+                  onChange={(e) => setCfg(eid, { context: e.target.value })}
+                  placeholder="Angles you want covered, or things to avoid." />
+              </div>
+
+              {!isCampaign && (
+                <>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={!!cfg.email_now}
+                      onChange={(e) => setCfg(eid, { email_now: e.target.checked })} />
+                    <span className="text-xs">
+                      <span className="font-medium text-foreground">Email it here, as an attachment</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        Otherwise it is saved and any later step can link it with{' '}
+                        <code className="text-[10px]">{'{{report_url}}'}</code>.
+                      </span>
+                    </span>
+                  </label>
+
+                  {!hasResearch && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 px-3 py-2">
+                      <p className="text-[11px] text-amber-900 dark:text-amber-200">
+                        Add a <strong>Research</strong> or <strong>Scrape</strong> step before this one.
+                        A per-lead report is written from what those find; without them there is
+                        nothing to write about and the step will fail rather than invent something.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5" checked={cfg.require_approval !== false}
+                  onChange={(e) => setCfg(eid, { require_approval: e.target.checked })} />
+                <span className="text-xs">
+                  <span className="font-medium text-foreground">Review it before it goes out</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Strongly recommended. You get a link to read the PDF, then approve or reject.
+                    {isCampaign
+                      ? ' Until approved, your landing page will not offer it.'
+                      : ' Until approved, nothing is sent and no step can link it.'}
+                  </span>
+                </span>
+              </label>
+
+              {cfg.require_approval !== false && (
+                <div className="space-y-2 pl-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Send the review request by</label>
+                    <select className={field} value={cfg.approval_channel || 'email'}
+                      onChange={(e) => setCfg(eid, { approval_channel: e.target.value })}>
+                      <option value="email">Email</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">
+                      Who reviews it? <span className="text-red-600">*</span>
+                    </label>
+                    <input className={field} value={cfg.approval_to || ''}
+                      onChange={(e) => setCfg(eid, { approval_to: e.target.value })}
+                      placeholder={cfg.approval_channel === 'whatsapp' ? '+9715…' : 'you@yourcompany.com'} />
+                    {!(cfg.approval_to || '').trim() && (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        Needed to turn the review on. With nobody to ask, the report would wait
+                        forever, so it will go out unreviewed instead.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* The rule: only the industry report can be given away publicly. */}
+              <div className={`rounded-md border px-3 py-2 ${
+                isCampaign
+                  ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+                  : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50'
+              }`}>
+                <p className={`text-[11px] ${isCampaign ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                  {isCampaign
+                    ? (hasLanding
+                      ? 'Your landing page will offer this as a download once someone fills the form.'
+                      : 'Add a Landing page node and this becomes a download people can fill a form to get.')
+                    : 'A per-lead report cannot go on a landing page — one public URL is shared by every visitor, so there is no way to know whose report to show. Switch to the campaign industry for that.'}
+                </p>
+              </div>
+            </>);
+          })()}
+
+          {isHumanTask && (() => {
+            const eid = editingId!;
+            const isWa = cfg.assignee_channel === 'whatsapp';
+            return (<>
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 px-3 py-2">
+                <p className="text-[11px] text-amber-900 dark:text-amber-200">
+                  <strong>Pauses each lead here</strong> until a person confirms. Use it for work
+                  Mr LAD cannot do itself — recording a video, building a deck, a judgement call.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Task name</label>
+                <input className={field} value={cfg.title || ''}
+                  onChange={(e) => setCfg(eid, { title: e.target.value })}
+                  placeholder="e.g. Record a personalised video" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">What needs doing?</label>
+                <textarea className={`${field} min-h-[100px] resize-y`} value={cfg.instructions || ''}
+                  onChange={(e) => setCfg(eid, { instructions: e.target.value })}
+                  placeholder={'e.g. Record a 60-second video mentioning their recent funding round, upload it, and paste the link back.'} />
+                <p className="text-[11px] text-muted-foreground">
+                  Sent with the notification, so write it for whoever has to act on it.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Notify by</label>
+                <select className={field} value={cfg.assignee_channel || 'email'}
+                  onChange={(e) => setCfg(eid, { assignee_channel: e.target.value })}>
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">
+                  {isWa ? 'WhatsApp number' : 'Email address'} <span className="text-red-600">*</span>
+                </label>
+                <input className={field} value={cfg.assignee_to || ''}
+                  onChange={(e) => setCfg(eid, { assignee_to: e.target.value })}
+                  placeholder={isWa ? '+9715…' : 'someone@yourcompany.com'} />
+                <p className="text-[11px] text-muted-foreground">
+                  They get a link to confirm — no Mr LAD login needed. Without someone to
+                  notify, leads would wait here forever.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 px-3 py-2">
+                <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                  Whatever they type when confirming is saved onto the lead, so later steps can
+                  use it.
+                </p>
+              </div>
+            </>);
+          })()}
+
+          {isLanding && (() => {
+            const eid = editingId!;
+            const fields: string[] = Array.isArray(cfg.capture_fields) && cfg.capture_fields.length
+              ? cfg.capture_fields : ['name', 'email'];
+            const toggleField = (f: string) => setCfg(eid, {
+              capture_fields: fields.includes(f) ? fields.filter((x) => x !== f) : [...fields, f],
+            });
+            // Read the brief in the browser. A .txt/.md brief is just text, and
+            // uploading it to parse it server-side would add an endpoint, a
+            // storage object and a failure mode for no benefit.
+            const readFile = async (file?: File | null) => {
+              if (!file) return;
+              if (file.size > 200 * 1024) {
+                setError('That file is larger than 200 KB. Paste the relevant part instead.');
+                return;
+              }
+              try {
+                const text = await file.text();
+                setCfg(eid, { brief: text.slice(0, 20000), source_file_name: file.name });
+              } catch {
+                setError('Could not read that file. Paste the content instead.');
+              }
+            };
+            return (<>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-3 py-2">
+                <p className="text-[11px] text-emerald-900 dark:text-emerald-200">
+                  Builds <strong>one public page for this campaign</strong> (not one per lead).
+                  The copy is written from your saved business profile and ICP, so describe
+                  only what is specific to this page.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">What is this page for?</label>
+                <textarea
+                  className={`${field} min-h-[110px] resize-y`}
+                  value={cfg.brief || ''}
+                  onChange={(e) => setCfg(eid, { brief: e.target.value, source_file_name: undefined })}
+                  placeholder={'e.g. A page for our corporate wellness package aimed at HR heads in Dubai. Mention the free pilot session and that sessions run on-site.'}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Your company name, what you sell, who you sell to and your logo are pulled
+                  from your business profile automatically. Do not repeat them here.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Or upload a brief</label>
+                <label className="flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 cursor-pointer hover:bg-muted/40">
+                  <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground truncate">
+                    {cfg.source_file_name || 'Choose a .txt or .md file'}
+                  </span>
+                  <input type="file" accept=".txt,.md,text/plain,text/markdown" className="hidden"
+                    onChange={(e) => readFile(e.target.files?.[0])} />
+                </label>
+                <p className="text-[11px] text-muted-foreground">
+                  The file is read here and its text fills the box above, so you can edit it before launching.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Goal (optional)</label>
+                <input className={field} value={cfg.goal || ''}
+                  onChange={(e) => setCfg(eid, { goal: e.target.value })}
+                  placeholder="e.g. book a discovery call" />
+              </div>
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5" checked={cfg.capture_enabled !== false}
+                  onChange={(e) => setCfg(eid, { capture_enabled: e.target.checked })} />
+                <span className="text-xs">
+                  <span className="font-medium text-foreground">Capture leads on the page</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Anyone who fills the form is added to this campaign and picked up by the
+                    steps below. Turn this off and the button points at your booking link instead.
+                  </span>
+                </span>
+              </label>
+
+              {cfg.capture_enabled !== false && (
+                <div className="space-y-1 pl-5">
+                  <label className="text-xs font-medium text-foreground">Ask for</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['name', 'email', 'phone', 'company', 'message'].map((f) => (
+                      <button key={f} type="button" onClick={() => toggleField(f)}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] capitalize transition-colors ${
+                          fields.includes(f)
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-border text-muted-foreground hover:bg-muted/50'
+                        }`}>{f}</button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Every extra field costs you conversions. Email alone is usually enough.
+                  </p>
+                </div>
+              )}
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5" checked={cfg.require_approval !== false}
+                  onChange={(e) => setCfg(eid, { require_approval: e.target.checked })} />
+                <span className="text-xs">
+                  <span className="font-medium text-foreground">Review before it goes live</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Strongly recommended. The page is written by AI and published on a public
+                    URL under your brand.
+                  </span>
+                </span>
+              </label>
+
+              {/* Build it now and hand back a URL, so the copy can be judged
+                  before committing to a launch. The content that comes back is
+                  stored on the node and reused at launch, so the page that goes
+                  live is the page that was reviewed. */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={landingBusy || !(cfg.brief || '').trim()}
+                  onClick={async () => {
+                    setLandingErr(null);
+                    setLandingBusy(true);
+                    try {
+                      const r = await fetchWithTenant('/api/campaigns/landing-page/preview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          brief: cfg.brief || '',
+                          goal: cfg.goal || '',
+                          capture_enabled: cfg.capture_enabled !== false,
+                          capture_fields: fields,
+                        }),
+                      });
+                      const j = await r.json().catch(() => ({}));
+                      if (!r.ok || !j?.url) throw new Error(j?.error || 'Could not build the preview.');
+                      setCfg(eid, {
+                        preview_url: j.url,
+                        preview_content: j.content,
+                        // Stored so launch can tell whether the brief changed
+                        // after the preview was taken.
+                        preview_brief: (cfg.brief || '').trim(),
+                      });
+                    } catch (err: any) {
+                      setLandingErr(err?.message || 'Could not build the preview.');
+                    } finally {
+                      setLandingBusy(false);
+                    }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {landingBusy
+                    ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" /> Writing the page…</>)
+                    : (<><Sparkles className="h-3.5 w-3.5" /> {cfg.preview_url ? 'Generate again' : 'Generate & preview'}</>)}
+                </button>
+
+                {!(cfg.brief || '').trim() && (
+                  <p className="text-[11px] text-muted-foreground">Describe the page above first.</p>
+                )}
+                {landingErr && <p className="text-[11px] text-red-600">{landingErr}</p>}
+
+                {cfg.preview_url && (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-3 py-2 space-y-1">
+                    <a href={cfg.preview_url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-200 hover:underline break-all">
+                      <ExternalLink className="h-3 w-3 flex-shrink-0" /> Open the preview
+                    </a>
+                    <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
+                      {(cfg.preview_brief ?? '') === (cfg.brief || '').trim()
+                        ? 'This exact page is what launches. The form is inactive until it is published.'
+                        : 'You have edited the brief since this preview. Generate again, or launch and the page will be written afresh.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {savedLanding ? (() => {
+                // Compare against what produced the LIVE page. Mirrors
+                // hasInputChanges() on the backend, which is the real gate —
+                // this only decides whether to offer the choice.
+                const norm = (v: any) => String(v ?? '').trim();
+                const sortedFields = (v: any) => (Array.isArray(v) ? [...v].sort().join(',') : '');
+                const dirty =
+                  norm(cfg.brief) !== norm(savedLanding.source_text) ||
+                  (cfg.capture_enabled !== false) !== (savedLanding.capture_enabled !== false) ||
+                  sortedFields(fields) !== sortedFields(savedLanding.capture_fields);
+                const live = savedLanding.status === 'published';
+                return (
+                  <div className="space-y-2">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 px-3 py-2 space-y-1">
+                      <p className="text-[11px] font-medium text-foreground">
+                        {live ? 'This page is live' : `Current page: ${savedLanding.status}`}
+                      </p>
+                      {savedLanding.public_url && (
+                        <a href={savedLanding.public_url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline break-all">
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {savedLanding.public_url}
+                        </a>
+                      )}
+                      {typeof savedLanding.submission_count === 'number' && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {savedLanding.submission_count} lead{savedLanding.submission_count === 1 ? '' : 's'} captured so far
+                        </p>
+                      )}
+                    </div>
+
+                    {dirty ? (
+                      <label className="flex items-start gap-2 cursor-pointer rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 px-3 py-2">
+                        <input type="checkbox" className="mt-0.5" checked={!!cfg.regenerate}
+                          onChange={(e) => setCfg(eid, { regenerate: e.target.checked })} />
+                        <span className="text-xs">
+                          <span className="font-medium text-amber-900 dark:text-amber-200">Rewrite the page with these changes</span>
+                          <span className="block text-[11px] text-amber-800 dark:text-amber-300">
+                            {cfg.regenerate
+                              ? (live
+                                ? 'The new copy needs approving before it replaces what is live. The current page keeps working until then.'
+                                : 'The page will be written again and will need approving.')
+                              : 'Leave this unticked and your edits are saved, but the existing page is left exactly as it is.'}
+                          </span>
+                        </span>
+                      </label>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        Nothing about the page content has changed, so it will be left alone.
+                      </p>
+                    )}
+                  </div>
+                );
+              })() : (
+                <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 px-3 py-2">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                    The page is written when you launch, then appears here for review. Nothing is
+                    published until you approve it.
+                  </p>
+                </div>
+              )}
+            </>);
+          })()}
+
           {isHttp && (() => {
             const eid = editingId!;
             const hdrs: any[] = Array.isArray(cfg.headers) ? cfg.headers : [{ key: '', value: '' }];
@@ -3221,6 +4480,39 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           })()}
 
           {!isSource && (editingStep.type === 'linkedin_connect' || editingStep.type === 'linkedin_message') && (<>
+            {/* Who is this actually going to? Built from the SOURCE node's
+                targeting, because that is what decides who gets enrolled — this
+                node only decides what they receive. Connection requests cannot
+                be unsent, so seeing the people first is worth the extra call. */}
+            {(() => {
+              const sc = configs[SOURCE_STEP_ID] || {};
+              const srcNode = workflowPreview.find((x) => x.id === SOURCE_STEP_ID);
+              const parts = [sc.job_titles, sc.industries, sc.locations, sc.keywords]
+                .map((v: any) => String(v || '').trim()).filter(Boolean);
+              const query = parts.join(' ');
+              // Only LinkedIn search targeting can be previewed. An imported
+              // file or a CRM sync already has its people, so there is nothing
+              // to search for and offering the button would just fail.
+              // `source` is the SourceKey state, not the node's StepType — the
+              // source node is always type 'lead_generation' regardless of
+              // which kind of source was picked.
+              const isSearchSource = source === 'linkedin_search';
+              const reason = !srcNode
+                ? 'Add a contact source first to see who this reaches.'
+                : !isSearchSource
+                  ? 'Only available when the source is a LinkedIn search.'
+                  : !query
+                    ? 'Set job titles or a location on the source node first.'
+                    : null;
+              return (
+                <LeadPreviewPanel
+                  query={query}
+                  count={6}
+                  disabledReason={reason}
+                />
+              );
+            })()}
+
             {res.liTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">LinkedIn template (optional)</label>
                 <select className={field} value={cfg.linkedin_template_id || ''} onChange={(e) => {
@@ -3304,6 +4596,14 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               <Input value={cfg.subject || ''} onChange={(e) => { setCfg(editingId, { subject: e.target.value }); updateWorkflowStep(editingId, { description: e.target.value.slice(0, 40) }); }} /></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Body</label>
               <textarea className={`${field} min-h-[110px]`} value={cfg.body || ''} onChange={(e) => setCfg(editingId, { body: e.target.value })} placeholder="Leave blank to let Mr LAD draft it" /></div>
+            <label className="flex items-start gap-2.5 rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+              <input type="checkbox" className="mt-0.5 h-4 w-4" checked={cfg.track_opens !== false}
+                onChange={(e) => setCfg(editingId, { track_opens: e.target.checked })} />
+              <span className="min-w-0">
+                <span className="block text-sm text-foreground">Track email opens</span>
+                <span className="block text-[11px] text-muted-foreground">Required for a &ldquo;Wait for condition → Email read&rdquo; step later in this workflow. Turn off for sensitive sends.</span>
+              </span>
+            </label>
           </>)}
           {!isSource && editingStep.type === 'voice_agent_call' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Calling number</label>
@@ -3365,6 +4665,228 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     );
   };
 
+  /** Test-run drawer: sample lead in, real artifacts out. */
+  const renderTestPanel = () => {
+    /** Nodes on the canvas whose step type the server will actually execute. */
+    const runnable = workflowPreview.filter(
+      (s) => s.type && TEST_RUNNABLE_TYPES.has(s.type),
+    ).length
+      + (workflowPreview.some((s) => s.id === LANDING_STEP_ID) ? 1 : 0)
+      + (workflowPreview.some((s) => s.id === EXPORT_STEP_ID) ? 1 : 0);
+    const LEAD_FIELDS: { key: string; label: string; placeholder: string }[] = [
+      { key: 'first_name', label: 'First name', placeholder: 'Dana' },
+      { key: 'last_name', label: 'Last name', placeholder: 'Reyes' },
+      { key: 'title', label: 'Job title', placeholder: 'VP Operations' },
+      { key: 'company', label: 'Company', placeholder: 'Trellis Freight' },
+      { key: 'industry', label: 'Industry', placeholder: 'Logistics' },
+      { key: 'location', label: 'Location', placeholder: 'Dubai, UAE' },
+      { key: 'email', label: 'Email', placeholder: 'dana@trellisfreight.com' },
+      { key: 'phone', label: 'Phone', placeholder: '+971 50 123 4567' },
+    ];
+    const tone: Record<TestStep['status'], string> = {
+      ran: 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/60 dark:bg-emerald-950/20',
+      skipped: 'border-border bg-muted/30',
+      failed: 'border-amber-200 dark:border-amber-900 bg-amber-50/60 dark:bg-amber-950/20',
+    };
+    const badge: Record<TestStep['status'], string> = {
+      ran: 'text-emerald-700 dark:text-emerald-400',
+      skipped: 'text-muted-foreground',
+      failed: 'text-amber-700 dark:text-amber-400',
+    };
+    // Pulled to the top of the results: the artifacts ARE the point of a test
+    // run, and hunting for them inside a step list buries the thing the user
+    // came to look at.
+    const artifacts: TestArtifact[] = (testSteps || []).flatMap((s) => s.artifacts || []);
+    return (
+      <div className="absolute right-0 top-0 h-full w-[24rem] bg-card border-l border-border shadow-2xl z-10 flex flex-col">
+        <div className="flex items-start gap-3 p-4 border-b border-border">
+          <IconChip icon={<FlaskConical className="h-4 w-4 text-emerald-600" />} chip="bg-emerald-50 dark:bg-emerald-950/30" size="h-10 w-10" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-foreground">Test run</div>
+            <div className="text-xs text-muted-foreground">One real run against one lead</div>
+          </div>
+          <button onClick={() => setTestOpen(false)} className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-4 space-y-4 overflow-y-auto text-sm">
+          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 text-[12px] leading-relaxed text-emerald-900 dark:text-emerald-200 space-y-1.5">
+            <p>
+              Runs the research and content steps <strong>for real</strong> against one lead, so you can read
+              what your Accelerator actually produces before you launch it.
+            </p>
+            <p>
+              <strong>Nothing is sent to the prospect.</strong> Every message, connection request and call is
+              skipped. Anything the Export step delivers goes to the addresses you put on that node — yours.
+            </p>
+            <p className="text-emerald-800/90 dark:text-emerald-300/90">
+              This costs credits: live web research, AI-written reports and pages, and a real PDF render.
+              Reports and pages publish to a temporary public link.
+            </p>
+          </div>
+
+          {!runnable && !!workflowPreview.length && (
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 text-[12px] leading-relaxed text-muted-foreground">
+              Nothing in this workflow produces something to look at yet. A test run executes research,
+              scraping, scoring, reports, landing pages and exports — add one of those and there will be an
+              artifact to review.
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-semibold text-foreground">Sample lead</span>
+              <button type="button" onClick={generateSampleLead} disabled={testSampling}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border text-[11.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 disabled:opacity-50 transition-colors">
+                {testSampling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {testSampling ? 'Generating…' : 'Generate for me'}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-2 leading-snug">
+              Use a real company you know, so you can judge whether the research and the report are any good.
+              Or let Mr LAD invent someone who fits your targeting.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {LEAD_FIELDS.map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">{f.label}</label>
+                  <Input value={testLead[f.key] || ''} placeholder={f.placeholder}
+                    onChange={(e) => setTestLead((p) => ({ ...p, [f.key]: e.target.value }))} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {testError && (
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[12px] text-amber-900 dark:text-amber-200">
+              {testError}
+            </div>
+          )}
+
+          {testSteps && (
+            <div className="space-y-2">
+              {!!artifacts.length && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/30 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                    What this run produced
+                  </div>
+                  {artifacts.map((a, i) => (
+                    <a key={`${a.url}-${i}`} href={a.url} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 rounded-lg bg-card border border-border p-2 hover:border-[#0b1957]/40 transition-colors">
+                      <span className="flex-shrink-0">{ARTIFACT_ICON[a.kind] || ARTIFACT_ICON.file}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[12px] font-semibold text-foreground truncate">{a.label}</span>
+                        <span className="block text-[10.5px] text-muted-foreground">{ARTIFACT_LABEL[a.kind] || 'File'}</span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    </a>
+                  ))}
+                  <p className="text-[10.5px] text-emerald-800/90 dark:text-emerald-300/90 leading-snug">
+                    These are real, publicly reachable links, published as temporary previews. Launching
+                    generates the customer-facing versions separately.
+                  </p>
+                </div>
+              )}
+
+              <div className="text-xs font-semibold text-foreground pt-1">Step by step</div>
+              {testSteps.map((s, i) => (
+                <div key={`${s.type}-${i}`} className={`rounded-xl border p-2.5 ${tone[s.status] || tone.skipped}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-card border border-border text-[10px] font-bold text-muted-foreground flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <span className="text-[12.5px] font-semibold text-foreground flex-1 truncate">{s.title}</span>
+                    <span className={`text-[9.5px] font-bold uppercase tracking-wider ${badge[s.status] || badge.skipped}`}>
+                      {s.status === 'ran' ? 'Ran' : s.status === 'failed' ? 'Failed' : 'Skipped'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug whitespace-pre-line">{s.detail}</p>
+                  {!!s.artifacts?.length && (
+                    <div className="mt-2 space-y-1">
+                      {s.artifacts.map((a, j) => (
+                        <a key={`${a.url}-${j}`} href={a.url} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#0b1957] dark:text-sky-400 hover:underline">
+                          <ExternalLink className="h-3 w-3" /> {a.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <p className="text-[10.5px] text-muted-foreground leading-snug pt-1">
+                Skipped steps are not a fault: outreach, follow-ups and paid contact enrichment are held back
+                so a test can never reach the person you made up. They run normally once you launch.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 border-t border-border bg-muted/20 space-y-1.5">
+          <Button className="w-full" onClick={runTest} disabled={testRunning || !workflowPreview.length}>
+            {testRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+            {testRunning ? 'Running…' : testSteps ? 'Run again' : 'Run for real'}
+          </Button>
+          {testRunning && (
+            // Research, an LLM report and a PDF render, one after the other.
+            // Without this the panel looks hung and people click away mid-run.
+            <p className="text-[10.5px] text-muted-foreground text-center leading-snug">
+              Researching, writing and rendering. This usually takes a minute or two.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Suggested next node — a deterministic recommendation, not a live AI call,
+   * so it can't be flaky about something adjacent to what gates Launch. Each
+   * rule traces to a documented producer/consumer relationship already noted
+   * in STEP_INSTRUCTIONS or the palette copy above (e.g. lead-score → Multi-
+   * condition, AI Agent → LinkedIn). Purely a shortcut: every suggestion here
+   * is also always pickable manually from the palette below, unchanged.
+   */
+  const suggestions = useMemo(() => {
+    if (!source) return []; // "pick a source" is already section 1 of the palette
+    type Suggestion = { key: string; label: string; sub: string; action: () => void; primary?: boolean };
+    const hasId = (id: string) => workflowPreview.some((s) => s.id === id);
+    const hasType = (t: StepType) => workflowPreview.some((s) => s.type === t);
+    const hasOutreach = hasType('linkedin_connect') || hasType('email_send') || hasType('whatsapp_send') || hasType('voice_agent_call');
+    const last = workflowPreview[workflowPreview.length - 1];
+    const lastKey = !last ? 'source' : last.id === SOURCE_STEP_ID ? 'source' : (MACRO_STEP_IDS.includes(last.id) ? last.id : last.type);
+    const out: Suggestion[] = [];
+    switch (lastKey) {
+      case 'source':
+        if (!hasOutreach) {
+          out.push({ key: 'linkedin_connect', label: 'Connection request', sub: 'Start LinkedIn outreach with a connect step', action: () => addOutreach('linkedin_connect'), primary: true });
+          out.push({ key: 'email_send', label: 'Send email', sub: 'Or start an email sequence instead', action: () => addOutreach('email_send') });
+        }
+        if (!hasId(AI_STEP_ID)) out.push({ key: AI_STEP_ID, label: 'AI Agent', sub: 'Clean up messy imported titles/names first', action: addAiParse });
+        break;
+      case 'linkedin_connect':
+        out.push({ key: 'linkedin_message', label: 'Message', sub: 'Sent once the connection is accepted', action: () => addOutreach('linkedin_message'), primary: true });
+        break;
+      case SCORE_STEP_ID:
+        out.push({ key: MULTICOND_STEP_ID, label: 'Multi-condition', sub: 'Branch hot vs. cold leads by the score just computed', action: addMultiCond, primary: true });
+        break;
+      case SCRAPE_STEP_ID:
+      case RESEARCH_STEP_ID:
+      case AI_STEP_ID:
+      case ENRICH_STEP_ID:
+        if (!hasOutreach) out.push({ key: 'linkedin_connect', label: 'Connection request', sub: 'Start outreach now that lead data is ready', action: () => addOutreach('linkedin_connect'), primary: true });
+        break;
+      case 'linkedin_message':
+      case 'email_send':
+      case 'whatsapp_send':
+      case 'voice_agent_call':
+        if (!hasId(FOLLOWUP_STEP_ID)) out.push({ key: FOLLOWUP_STEP_ID, label: 'Follow-up sequence', sub: 'Automatic touches if there is no reply', action: addFollowup, primary: true });
+        if (!hasId(EXPORT_STEP_ID)) out.push({ key: EXPORT_STEP_ID, label: 'Export results', sub: 'Send the final list to a file, sheet, or webhook', action: addExport });
+        break;
+      default:
+        break;
+    }
+    return out;
+  }, [workflowPreview, source]);
+
   return (
     <div className="h-full min-h-0 flex flex-col bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
@@ -3381,18 +4903,37 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <span>Leads/day</span><Input type="number" className="w-16 h-8" value={perDay} onChange={(e) => setPerDay(e.target.value)} />
             <span>Days</span><Input type="number" className="w-16 h-8" value={days} onChange={(e) => setDays(e.target.value)} />
           </div>
+          <Button variant="outline" onClick={() => setTestOpen((v) => !v)} disabled={!workflowPreview.length || hydrating}
+            title="Run the research and content steps for real against one lead. Costs credits. Nothing is sent to the prospect.">
+            <FlaskConical className="h-4 w-4 mr-2" />
+            Test run
+          </Button>
           <Button variant="outline" onClick={saveAsStrategy} disabled={strategySaving || launching || hydrating}
             title="Save this pipeline so you can reuse it later without launching it now">
             {strategySaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Bookmark className="h-4 w-4 mr-2" />}
             Save as strategy
           </Button>
-          <Button onClick={launch} disabled={launching || hydrating}>
+          <Button onClick={launch} disabled={launching || hydrating || sequenceIssues.length > 0}
+            title={sequenceIssues.length ? sequenceIssues[0].message : undefined}>
             {(launching || hydrating) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Rocket className="h-4 w-4 mr-2" />}
             {hydrating ? 'Loading…' : editCampaignId ? 'Save changes' : 'Launch Accelerator'}
           </Button>
         </div>
       </div>
       {error && <div className="mx-4 mt-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
+      {!error && sequenceIssues.length > 0 && (
+        <div className="mx-4 mt-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900 p-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
+          <span className="flex-1">
+            <strong className="font-semibold">Launch is disabled — fix the sequence first: </strong>
+            {sequenceIssues[0].message}
+            {sequenceIssues.length > 1 && ` (+${sequenceIssues.length - 1} more)`}
+          </span>
+          <button type="button" onClick={() => setEditingId(sequenceIssues[0].id)}
+            className="flex-shrink-0 px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors">
+            Fix it
+          </button>
+        </div>
+      )}
       {strategyMsg && (
         <div className={`mx-4 mt-3 rounded-lg border p-3 text-sm flex items-start gap-2 ${
           strategyMsg.ok
@@ -3408,24 +4949,283 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
       <div className="flex-1 flex min-h-0">
         {/* Palette */}
-        <div className="w-[19rem] border-r border-border bg-card overflow-y-auto p-4 space-y-6">
-          {/* Tabs — Templates | Build from steps */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/60 dark:bg-slate-800/60">
-            {([['templates', 'Templates'], ['steps', 'Build from steps']] as const).map(([k, label]) => (
+        {/* Column, not a plain scroller: the AI tab pins its composer to the
+            bottom the way a chat does, so it owns its own scroll region. */}
+        <div className="w-[19rem] border-r border-border bg-card flex flex-col min-h-0">
+          {/* Tabs — Templates | Build with AI | Build from steps */}
+          <div className="flex items-center gap-1 p-1 m-4 mb-0 flex-shrink-0 rounded-xl bg-muted/60 dark:bg-slate-800/60">
+            {([['templates', 'Templates'], ['ai', 'Build with AI'], ['steps', 'From steps']] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setPaletteTab(k)}
-                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all ${
+                className={`flex-1 inline-flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-[12px] font-semibold transition-all ${
                   paletteTab === k
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}>
                 {k === 'templates'
-                  ? <Zap className="h-3.5 w-3.5" />
-                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 6h16M4 12h10M4 18h13" /></svg>}
+                  ? <Zap className="h-3.5 w-3.5 flex-shrink-0" />
+                  : k === 'ai'
+                    ? <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 6h16M4 12h10M4 18h13" /></svg>}
                 {label}
               </button>
             ))}
           </div>
 
+          {paletteTab === 'ai' && (
+            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
+              {/* Resting state: a calm starting screen rather than a form. The
+                  starters are real accelerators — each seeds the prompt with a
+                  shape Mr LAD handles well, which the user then edits. */}
+              {!aiQuestions.length && !aiResult && (
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-1">
+                  <h2 className="font-serif text-[22px] leading-tight text-foreground">Start with a goal</h2>
+                  <p className="text-[12.5px] text-muted-foreground mt-1.5 mb-6 leading-snug max-w-[15rem]">
+                    Say who you want to reach and how. Mr LAD asks a few questions, then builds the pipeline.
+                  </p>
+                  <div className="w-full space-y-2">
+                    {AI_STARTERS.map((s) => (
+                      <button key={s.label} type="button"
+                        onClick={() => {
+                          setAiPrompt(s.prompt);
+                          // Show the START of the seeded prompt, not wherever the
+                          // textarea happened to scroll to, and put the caret at
+                          // the front so the first [bracket] is what you edit.
+                          requestAnimationFrame(() => {
+                            const el = aiInputRef.current;
+                            if (!el) return;
+                            el.focus();
+                            el.setSelectionRange(0, 0);
+                            el.scrollTop = 0;
+                          });
+                        }}
+                        className="w-full flex items-center gap-3 rounded-full border border-border bg-card px-2 py-2 text-left hover:border-[#0b1957]/40 hover:bg-muted/40 transition-colors">
+                        <span className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${s.chip}`}>
+                          {s.icon}
+                        </span>
+                        <span className="text-[13px] font-medium text-foreground truncate">{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* The clarifying conversation: one question at a time. */}
+              {!!aiQuestions.length && (() => {
+                const q = aiQuestions[aiStep];
+                if (!q) return null;
+                const answered = aiQuestions.slice(0, aiStep).filter((x) => aiAnswers[x.id] !== undefined);
+                const labelFor = (x: AiQuestion, v: any) => {
+                  if (Array.isArray(v)) return v.map((one) => x.options?.find((o) => o.value === one)?.label || one).join(', ');
+                  return x.options?.find((o) => o.value === v)?.label || String(v);
+                };
+                const multiSelected: string[] = Array.isArray(aiAnswers[q.id]) ? aiAnswers[q.id] : [];
+                const toggleMulti = (v: string) => {
+                  const next = multiSelected.includes(v) ? multiSelected.filter((x) => x !== v) : [...multiSelected, v];
+                  setAiAnswers({ ...aiAnswers, [q.id]: next });
+                };
+                return (
+                  <div className="space-y-3">
+                    {/* What you asked for, and what has been settled so far. */}
+                    <div className="rounded-xl bg-muted/50 dark:bg-slate-800/40 p-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">You asked for</div>
+                      <p className="text-[12px] text-foreground leading-snug">{aiPrompt.trim()}</p>
+                    </div>
+                    {answered.map((x) => (
+                      <div key={x.id} className="flex items-start gap-2 text-[11.5px]">
+                        <svg className="text-emerald-600 flex-shrink-0 mt-0.5" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        <span className="min-w-0 flex-1">
+                          <span className="text-muted-foreground">{x.question}</span>{' '}
+                          <span className="font-semibold text-foreground">{labelFor(x, aiAnswers[x.id]) || 'Mr LAD writes it'}</span>
+                        </span>
+                      </div>
+                    ))}
+
+                    <div className="rounded-2xl border border-[#0b1957]/30 bg-[#0b1957]/[0.03] dark:bg-[#0b1957]/[0.08] p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#0b1957] dark:text-sky-300">
+                          Question {aiStep + 1} of {aiQuestions.length}
+                        </span>
+                        <button type="button" onClick={resetAiChat}
+                          className="text-[10.5px] font-semibold text-muted-foreground hover:text-foreground">Start over</button>
+                      </div>
+                      <p className="font-serif text-[16px] text-foreground leading-snug">{q.question}</p>
+                      {q.help && <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{q.help}</p>}
+
+                      {q.type === 'choice' && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {q.options?.map((o) => (
+                            <button key={o.value} type="button" onClick={() => answerAiQuestion(o.value)} disabled={aiBuilding}
+                              className={`w-full text-left border border-border bg-card px-3 py-2 hover:border-[#0b1957] hover:bg-[#0b1957]/[0.04] disabled:opacity-50 transition-all ${
+                                o.hint ? 'rounded-2xl' : 'rounded-full'}`}>
+                              <span className="block text-[12.5px] font-medium text-foreground">{o.label}</span>
+                              {o.hint && <span className="block text-[10.5px] text-muted-foreground">{o.hint}</span>}
+                            </button>
+                          ))}
+                          {/* Escape hatch, only where a typed answer is honoured. */}
+                          {q.allowOther && (aiOtherFor === q.id ? (
+                            <div className="rounded-2xl border border-[#0b1957] bg-card px-3 py-2.5 space-y-2">
+                              {q.otherHelp && <p className="text-[10.5px] text-muted-foreground leading-snug">{q.otherHelp}</p>}
+                              <input autoFocus value={aiText} onChange={(e) => setAiText(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && aiText.trim()) answerAiQuestion(aiText.trim()); }}
+                                placeholder={q.otherPlaceholder || ''}
+                                className="w-full rounded-full border border-input bg-background px-3 py-1.5 text-[12.5px] outline-none focus:border-[#0b1957]/40" />
+                              <div className="flex items-center gap-1.5">
+                                <button type="button" disabled={aiBuilding || !aiText.trim()}
+                                  onClick={() => answerAiQuestion(aiText.trim())}
+                                  className="flex-1 rounded-full bg-[#0b1957] text-white text-[12px] font-semibold py-1.5 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                                  Use this
+                                </button>
+                                <button type="button" onClick={() => { setAiOtherFor(null); setAiText(''); }}
+                                  className="px-3 py-1.5 rounded-full border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                                  Back
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => { setAiOtherFor(q.id); setAiText(''); }} disabled={aiBuilding}
+                              className="w-full text-left rounded-full border border-dashed border-border bg-transparent px-3 py-2 text-[12.5px] font-medium text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 disabled:opacity-50 transition-all">
+                              {q.otherLabel || 'Something else…'}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {q.type === 'multi' && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {q.options?.map((o) => {
+                            const on = multiSelected.includes(o.value);
+                            return (
+                              <button key={o.value} type="button" onClick={() => toggleMulti(o.value)}
+                                className={`w-full text-left rounded-full border px-3 py-2 transition-all ${
+                                  on ? 'border-[#0b1957] bg-[#0b1957]/[0.06]' : 'border-border bg-card hover:border-[#0b1957]/40'}`}>
+                                <span className="flex items-center gap-2">
+                                  <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
+                                    on ? 'bg-[#0b1957] border-[#0b1957]' : 'border-muted-foreground/40'}`}>
+                                    {on && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block text-[12.5px] font-semibold text-foreground">{o.label}</span>
+                                    {o.hint && <span className="block text-[10.5px] text-muted-foreground">{o.hint}</span>}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                          <button type="button" disabled={aiBuilding || !multiSelected.length}
+                            onClick={() => answerAiQuestion(multiSelected)}
+                            className="w-full rounded-xl bg-[#0b1957] text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                            Continue
+                          </button>
+                        </div>
+                      )}
+
+                      {(q.type === 'text' || q.type === 'longtext') && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {q.type === 'longtext' ? (
+                            <textarea value={aiText} onChange={(e) => setAiText(e.target.value)}
+                              placeholder={q.placeholder || ''}
+                              className="w-full min-h-[80px] rounded-xl border border-input bg-background px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40 resize-y" />
+                          ) : (
+                            <input value={aiText} onChange={(e) => setAiText(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' && aiText.trim()) answerAiQuestion(aiText.trim()); }}
+                              placeholder={q.placeholder || ''}
+                              className="w-full rounded-xl border border-input bg-background px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40" />
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <button type="button" disabled={aiBuilding || (!!q.required && !aiText.trim())}
+                              onClick={() => answerAiQuestion(aiText.trim())}
+                              className="flex-1 rounded-xl bg-[#0b1957] text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                              Continue
+                            </button>
+                            {!q.required && (
+                              <button type="button" onClick={skipAiQuestion} disabled={aiBuilding}
+                                className="px-3 py-2 rounded-xl border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
+                                {q.skippable ? 'Let Mr LAD write it' : 'Skip'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {aiBuilding && (
+                        <p className="text-[11px] text-muted-foreground mt-2 inline-flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Building your workflow…
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {aiError && (
+                <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-[12px] text-amber-900 dark:text-amber-200">
+                  {aiError}
+                </div>
+              )}
+
+              {aiResult && (
+                <div className="mt-3 rounded-xl border border-border bg-card p-3">
+                  <div className="text-[13px] font-bold text-foreground">{aiResult.name}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-y-1.5" style={{ columnGap: 4 }}>
+                    {aiResult.chain.map((c, i) => (
+                      <Fragment key={i}>
+                        {i > 0 && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
+                        <span className="text-[10.5px] font-semibold px-2 py-[3px] rounded-full whitespace-nowrap bg-[#0b1957]/10 text-[#0b1957] dark:text-sky-300">{c}</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                  {aiResult.notes && <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{aiResult.notes}</p>}
+                  <div className="flex items-center gap-1.5 mt-3">
+                    <button type="button" onClick={() => setPaletteTab('steps')}
+                      className="flex-1 rounded-full border border-border py-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 transition-colors">
+                      Adjust the steps
+                    </button>
+                    <button type="button" onClick={() => { setAiResult(null); setAiPrompt(''); }}
+                      className="px-3 py-2 rounded-full border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                      New
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Composer — pinned, like a chat. Hidden mid-conversation: the
+                answer controls are the input at that point, and two places to
+                type would be ambiguous. */}
+            {!aiQuestions.length && (
+              <div className="flex-shrink-0 border-t border-border p-3">
+                <div className="rounded-2xl border border-input bg-muted/40 dark:bg-slate-800/40 focus-within:bg-background focus-within:border-[#0b1957]/40 transition-colors">
+                  <textarea
+                    ref={aiInputRef}
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); buildWithAi(); }
+                    }}
+                    rows={3}
+                    placeholder="Describe the workflow you want…"
+                    className="w-full max-h-[9rem] bg-transparent px-3 pt-2.5 pb-1 text-[13px] leading-snug outline-none resize-none overflow-y-auto placeholder:text-muted-foreground"
+                  />
+                  <div className="flex items-center justify-between px-2 pb-2">
+                    <span className="text-[10px] text-muted-foreground pl-1">Enter to send</span>
+                    <button type="button" onClick={buildWithAi} disabled={aiBuilding || !aiPrompt.trim()}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#0b1957] text-white text-[12px] font-semibold pl-2.5 pr-3 py-1.5 hover:bg-[#0b1957]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                      {aiBuilding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      {aiBuilding ? 'Thinking' : 'Build'}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2 leading-snug text-center">
+                  Nothing is launched or sent until you press Launch.
+                </p>
+              </div>
+            )}
+          </div>
+          )}
+
+          {paletteTab !== 'ai' && (
+          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-6">
           {paletteTab === 'templates' && (<>
             {/* Search */}
             <div className="relative">
@@ -3554,6 +5354,33 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
 
           {paletteTab === 'steps' && (<>
+          {/* Suggested next step — a shortcut, not a requirement. Every option
+              here is also always pickable manually from the sections below. */}
+          {suggestions.length > 0 && (
+            <div className="rounded-2xl border border-dashed border-[#0b1957]/30 bg-[#0b1957]/[0.03] dark:bg-[#0b1957]/[0.08] p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[#0b1957] dark:text-sky-300" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#0b1957] dark:text-sky-300">Suggested next step</span>
+              </div>
+              <div className="space-y-1.5">
+                {suggestions.map((s) => (
+                  <button key={s.key} type="button" onClick={s.action}
+                    className={`w-full flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition-all ${
+                      s.primary
+                        ? 'border-[#0b1957] bg-card shadow-sm hover:bg-[#0b1957]/[0.04]'
+                        : 'border-border bg-card/60 hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    }`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12.5px] font-semibold text-foreground truncate">{s.label}</span>
+                      <span className="block text-[11px] text-muted-foreground truncate">{s.sub}</span>
+                    </span>
+                    <Plus className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10.5px] text-muted-foreground leading-snug">Just a suggestion — pick any other step below instead if you&rsquo;d rather.</p>
+            </div>
+          )}
           {/* 1 · Contact source */}
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -3703,6 +5530,93 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-foreground truncate">Export results</span>
                     <span className="block text-xs text-muted-foreground truncate">File · DB · Email · WhatsApp · more</span>
+                  </span>
+                  {added && (
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+            {/* Instagram auto-post — one scheduled post per campaign. */}
+            {(() => {
+              const added = workflowPreview.some((s) => s.id === IG_AUTOPOST_STEP_ID);
+              return (
+                <button onClick={addInstagramPost}
+                  className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                  }`}>
+                  <IconChip icon={<Instagram className="h-4 w-4 text-pink-600" />} chip="bg-pink-50 dark:bg-pink-950/30" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground truncate">Instagram auto-post</span>
+                    <span className="block text-xs text-muted-foreground truncate">Image or Reel · On a schedule</span>
+                  </span>
+                  {added && (
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {/* Audit report — a PDF worth receiving. */}
+            {(() => {
+              const added = workflowPreview.some((s) => s.id === REPORT_STEP_ID);
+              return (
+                <button onClick={addReport}
+                  className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                  }`}>
+                  <IconChip icon={<FileText className="h-4 w-4 text-teal-700" />} chip="bg-teal-50 dark:bg-teal-950/30" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground truncate">Audit report</span>
+                    <span className="block text-xs text-muted-foreground truncate">PDF · Attach or offer as a download</span>
+                  </span>
+                  {added && (
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {/* Human task — the escape hatch for work Mr LAD cannot do. */}
+            {(() => {
+              const added = workflowPreview.some((s) => s.id === HUMAN_TASK_STEP_ID);
+              return (
+                <button onClick={addHumanTask}
+                  className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                  }`}>
+                  <IconChip icon={<UserCheck className="h-4 w-4 text-amber-600" />} chip="bg-amber-50 dark:bg-amber-950/30" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground truncate">Assign a human task</span>
+                    <span className="block text-xs text-muted-foreground truncate">Pauses the lead until someone confirms</span>
+                  </span>
+                  {added && (
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {/* Landing page — one public page for the whole campaign. */}
+            {(() => {
+              const added = workflowPreview.some((s) => s.id === LANDING_STEP_ID);
+              return (
+                <button onClick={addLandingPage}
+                  className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                  }`}>
+                  <IconChip icon={<LayoutTemplate className="h-4 w-4 text-emerald-700" />} chip="bg-emerald-50 dark:bg-emerald-950/30" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground truncate">Landing page</span>
+                    <span className="block text-xs text-muted-foreground truncate">AI-written from your ICP · Captures leads</span>
                   </span>
                   {added && (
                     <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
@@ -3881,6 +5795,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             })()}
           </div>
           </>)}
+          </div>
+          )}
         </div>
 
         {/* Canvas */}
@@ -3894,9 +5810,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               <BuilderCanvas steps={workflowPreview} branches={mcBranches} switchId={MULTICOND_STEP_ID} />
             </ReactFlowProvider>
           )}
-          {overviewTpl ? renderTemplateOverview() : renderEditor()}
+          {testOpen ? renderTestPanel() : overviewTpl ? renderTemplateOverview() : renderEditor()}
         </div>
       </div>
+
+      {/* Step picker opened from a node's input/output "+". */}
+      {renderInsertMenu()}
 
       {/* AI Media Studio (MAGe) — generate assets, then pick from the gallery. */}
       {showMediaStudio && (

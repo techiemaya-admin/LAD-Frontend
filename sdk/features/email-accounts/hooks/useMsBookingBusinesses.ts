@@ -8,6 +8,8 @@ import type { MsBookingBusiness } from '../types';
 
 export interface UseMsBookingBusinessesReturn {
   businesses: MsBookingBusiness[];
+  /** True until the query has data — covers loading, retrying, and offline-paused. */
+  isPending: boolean;
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -19,6 +21,7 @@ export function useMsBookingBusinesses(enabled = true): UseMsBookingBusinessesRe
 
   return {
     businesses: query.data ?? [],
+    isPending:  query.isPending,
     isLoading:  query.isLoading,
     isError:    query.isError,
     error:      query.error,

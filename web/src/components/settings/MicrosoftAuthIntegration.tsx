@@ -7,10 +7,22 @@ import {
   useMicrosoftEmailStatus,
   startMicrosoftOAuth,
 } from '@lad/frontend-features/email-accounts';
+import { MicrosoftBookingWizard } from './MicrosoftBookingWizard';
 
 export const MicrosoftAuthIntegration: React.FC = () => {
-  const { isConnected, email, isLoading, refetch, disconnect } = useMicrosoftEmailStatus();
+  const {
+    isConnected,
+    email,
+    isLoading,
+    refetch,
+    disconnect,
+    bookingsAccessible,
+    selectedBusinessName,
+  } = useMicrosoftEmailStatus();
   const [isActing, setIsActing] = useState(false);
+  // Reopened explicitly via "Change booking page"; also lets a skipped wizard stay
+  // dismissed for the rest of the session without persisting anything.
+  const [wizardOverride, setWizardOverride] = useState<'open' | 'skipped' | null>(null);
 
   useEffect(() => {
     // If returning from Microsoft OAuth flow, refresh status + clean up URL
@@ -52,6 +64,12 @@ export const MicrosoftAuthIntegration: React.FC = () => {
 
   const busy = isLoading || isActing;
 
+  // VOAG showed this picker as a post-OAuth redirect step. LAD_backend's callback
+  // returns straight to /settings, so surface it here instead: automatically when
+  // connected but unconfigured, and on demand via "Change booking page".
+  const showWizard =
+    isConnected && wizardOverride !== 'skipped' && (wizardOverride === 'open' || !bookingsAccessible);
+
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724] p-5 sm:p-6 shadow-sm space-y-5">
         <div className="flex items-center gap-3 pb-1">
@@ -85,6 +103,39 @@ export const MicrosoftAuthIntegration: React.FC = () => {
             <AlertCircle className="h-5 w-5 text-gray-400" />
           )}
         </div>
+
+        {showWizard && (
+          <MicrosoftBookingWizard
+            onSaved={() => {
+              setWizardOverride(null);
+              refetch();
+            }}
+            onSkip={() => setWizardOverride('skipped')}
+          />
+        )}
+
+        {isConnected && !showWizard && bookingsAccessible && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-[#00051d]/40 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <Calendar className="h-5 w-5 shrink-0 text-gray-500" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Booking page</p>
+                <p className="truncate text-sm text-gray-500 dark:text-slate-300">
+                  {selectedBusinessName || 'Configured'}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setWizardOverride('open')}
+              disabled={busy}
+            >
+              Change
+            </Button>
+          </div>
+        )}
 
           <div className="flex gap-3 w-full">
         {isConnected ? (

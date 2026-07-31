@@ -8,6 +8,8 @@ import type { MsBookingStaff } from '../types';
 
 export interface UseMsBookingStaffReturn {
   staff: MsBookingStaff[];
+  /** True until the query has data — covers loading, retrying, and offline-paused. */
+  isPending: boolean;
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -19,6 +21,7 @@ export function useMsBookingStaff(businessId: string, enabled = true): UseMsBook
 
   return {
     staff:     query.data ?? [],
+    isPending:  query.isPending,
     isLoading: query.isLoading,
     isError:   query.isError,
     error:     query.error,

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import {
   loginStart,
@@ -202,17 +203,26 @@ const Login: React.FC = () => {
             )}
           </div>
           {/* Remember Me Checkbox */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
+          <div className="flex items-center space-x-2">
+            <Checkbox
               id="rememberMe"
               checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+              className="
+                h-4 w-4 rounded-md
+                border-gray-300 dark:border-gray-600
+                bg-white/80 dark:bg-gray-800/40
+                data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500
+                data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500
+                data-[state=checked]:text-white
+                focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400
+                hover:border-blue-500 dark:hover:border-blue-400
+                transition-colors cursor-pointer
+              "
             />
             <label
               htmlFor="rememberMe"
-              className="ml-2 text-sm text-gray-700 dark:text-white cursor-pointer select-none"
+              className="text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer select-none"
             >
               Remember
             </label>

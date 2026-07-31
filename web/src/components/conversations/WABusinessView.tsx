@@ -234,6 +234,7 @@ interface WABAChatWindowProps {
   onMuteChat?: ConversationActionHandler;
   onClearChat?: ConversationActionHandler;
   onCloseChat?: ConversationActionHandler;
+  onOpenImportLeads?: () => void;
   channel?: 'personal' | 'waba';
   conversationId?: string;
   owner?: string | null;
@@ -1016,6 +1017,7 @@ function WABAChatWindow({
   onMuteChat,
   onClearChat,
   onCloseChat,
+  onOpenImportLeads,
   channel,
   conversationId,
   owner,
@@ -1212,7 +1214,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
   // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
-    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 150)}px`; }
+    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }
   }, [text]);
 
   // Close attach menu on outside click
@@ -1851,50 +1853,24 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#222e35] border-l border-border dark:border-[#222d34]">
-        <div className="bg-white dark:bg-[#111b21] p-8 rounded-2xl max-w-sm w-full flex flex-col items-center text-center shadow-sm">
-          <div className="mb-6 relative">
-            <div className="w-32 h-24 relative flex items-center justify-center">
-              <svg viewBox="0 0 200 150" className="w-full h-full text-[#00a884]">
-                <path d="M40 120 L160 120 C165 120 170 115 170 110 L170 40 C170 35 165 30 160 30 L40 30 C35 30 30 35 30 40 L30 110 C30 115 35 120 40 120 Z" fill="#e9edef" />
-                <rect x="35" y="35" width="130" height="80" fill="#202c33" />
-                <path d="M20 125 L180 125 C185 125 185 130 180 130 L20 130 C15 130 15 125 20 125 Z" fill="#d1d7db" />
-                <rect x="40" y="40" width="120" height="70" fill="#00a884" />
-                <rect x="50" y="50" width="40" height="10" rx="2" fill="#fff" opacity="0.9" />
-                <rect x="110" y="70" width="40" height="10" rx="2" fill="#dcf8c6" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-[19px] font-normal text-foreground dark:text-[#e9edef] mb-2">Download WhatsApp for Mac</h2>
-          <p className="text-[13px] text-muted-foreground dark:text-[#8696a0] mb-8 leading-5">
-            Make calls and get a faster experience when you download the Mac app.
-          </p>
-          <button type="button" className="bg-[#00a884] hover:bg-[#008f6f] text-white dark:text-[#111b21] font-medium text-[13px] px-6 py-2.5 rounded-full transition-colors">
-            Get from App Store
-          </button>
-        </div>
-
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#161717] border-l border-border dark:border-[#222d34]">
         <div className="flex gap-6 mt-8">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <FileText className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" />
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="w-[62px] h-12 bg-black/4 dark:bg-[#35373b] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#d8dadf] dark:hover:bg-[#323436] transition-colors">
+              <FileText className="w-6 h-6 text-[#111b21] dark:text-[#e9edef]" />
             </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Send document</span>
+            <span className="text-[13px] font-medium text-[#111b21] dark:text-[#e9edef]">Send Template</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <UserPlus className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" />
+          <button
+            type="button"
+            onClick={onOpenImportLeads}
+            className="flex flex-col items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer group focus:outline-none"
+          >
+            <div className="w-[62px] h-12 bg-black/4 dark:bg-[#35373b] rounded-full flex items-center justify-center group-hover:bg-[#d8dadf] dark:group-hover:bg-[#323436] transition-colors">
+              <UserPlus className="w-6 h-6 text-[#111b21] dark:text-[#e9edef]" />
             </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Add contact</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <svg className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
-              </svg>
-            </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Ask Meta AI</span>
-          </div>
+            <span className="text-[13px] font-medium text-[#111b21] dark:text-[#e9edef]">Import Leads</span>
+          </button>
         </div>
       </div>
     );
@@ -2140,10 +2116,10 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
         <div className="flex items-end gap-2">
 
           {/* ── Pill — attach + emoji + textarea all inside ── */}
-          <div className="flex-1 flex items-center bg-[#f0f2f5] dark:bg-[#171818] rounded-full px-2 h-[44px] gap-1">
+          <div className="flex-1 flex items-end bg-[#f0f2f5] dark:bg-[#171818] rounded-[24px] px-2 py-1 min-h-[44px] gap-1">
 
             {/* Attach — inside pill */}
-            <div ref={attachBtnRef} className="relative flex-shrink-0">
+            <div ref={attachBtnRef} className="relative flex-shrink-0 self-end mb-0.5">
               <button
                 type="button"
                 onClick={() => setShowAttachMenu(v => !v)}
@@ -2173,7 +2149,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             </div>
 
             {/* Emoji — inside pill */}
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-shrink-0 self-end mb-0.5">
               <button
                 type="button"
                 data-sticker-btn
@@ -2203,7 +2179,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
               onChange={e => setText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={pendingFiles.length > 0 ? 'Add a caption (optional)…' : 'Type a message'}
-              className="flex-1 bg-transparent border-0 text-foreground dark:text-[#e9edef] py-2.5 px-1 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] self-center"
+              className="flex-1 bg-transparent border-0 text-foreground dark:text-[#e9edef] py-2 px-1 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] my-0.5 leading-normal"
               rows={1}
             />
           </div>
@@ -2212,7 +2188,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={cn('h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-muted flex-shrink-0', agentType === 'human' && 'text-orange-500')}
+                className={cn('h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-muted flex-shrink-0 self-end mb-0.5', agentType === 'human' && 'text-orange-500')}
                 title={agentType === 'human' ? 'Human agent — tap to hand back to Mr LAD' : 'Mr LAD is replying — tap to take over'}
               >
                 {agentType === 'human' ? <User className="h-5 w-5" /> : <img src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" className="h-7 w-7 object-contain" />}
@@ -2230,28 +2206,30 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             </DropdownMenuContent>
           </DropdownMenu>
 
-         {/* Send / Mic */}
-{isSending ? (
-  <Loader2 className="w-6 h-6 text-[#00a884] animate-spin" />
-) : (text.trim() || pendingFiles.length > 0) ? (
-  <button
-    type="button"
-    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#00a884] hover:text-[#008f6f]"
-    onClick={handleSend}
-    aria-label="Send message"
-  >
-    <Send className="w-6 h-6" />
-  </button>
-) : (
-  <button
-    ref={micBtnRef}
-    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-muted-foreground dark:text-[#8696a0] hover:text-[#00a884] dark:hover:text-[#00a884]"
-    onClick={startVoiceRecording}
-    aria-label="Record voice message"
-  >
-    <Mic className="w-6 h-6" />
-  </button>
-)}
+          {/* Send / Mic */}
+          {isSending ? (
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center self-end mb-0.5">
+              <Loader2 className="w-6 h-6 text-[#00a884] animate-spin" />
+            </div>
+          ) : (text.trim() || pendingFiles.length > 0) ? (
+            <button
+              type="button"
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#00a884] hover:text-[#008f6f] self-end mb-0.5"
+              onClick={handleSend}
+              aria-label="Send message"
+            >
+              <Send className="w-6 h-6" />
+            </button>
+          ) : (
+            <button
+              ref={micBtnRef}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-muted-foreground dark:text-[#8696a0] hover:text-[#00a884] dark:hover:text-[#00a884] self-end mb-0.5"
+              onClick={startVoiceRecording}
+              aria-label="Record voice message"
+            >
+              <Mic className="w-6 h-6" />
+            </button>
+          )}
 
         </div>
 
@@ -2415,6 +2393,8 @@ interface WABASidebarProps {
   loadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  isImportDialogOpen?: boolean;
+  onImportDialogOpenChange?: (open: boolean) => void;
 }
 
 type FilterTab = 'all' | 'unread' | 'favourites';
@@ -2444,6 +2424,8 @@ function WABASidebar({
   loadMore,
   hasMore,
   isLoadingMore,
+  isImportDialogOpen: externalIsImportDialogOpen,
+  onImportDialogOpenChange,
 }: WABASidebarProps) {
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -2505,7 +2487,9 @@ function WABASidebar({
   }, [conversations, normalizePhone]);
 
   // ── Import dialog ──────────────────────────────────────────────────────
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [internalIsImportDialogOpen, setInternalIsImportDialogOpen] = useState(false);
+  const isImportDialogOpen = externalIsImportDialogOpen ?? internalIsImportDialogOpen;
+  const setIsImportDialogOpen = onImportDialogOpenChange ?? setInternalIsImportDialogOpen;
 
   // ── Group manager dialog ───────────────────────────────────────────────
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -3272,7 +3256,7 @@ function WABASidebar({
             className={cn(
               'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border',
               filterTab === tab
-                ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
+                ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
                 : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
             )}
           >
@@ -3288,7 +3272,7 @@ function WABASidebar({
             className={cn(
               'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
               hideEmpty
-                ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
+                ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
                 : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
             )}
           >
@@ -3304,7 +3288,7 @@ function WABASidebar({
               <button className={cn(
                 'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
                 selectedLabelIds.length > 0
-                  ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
+                  ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
                   : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
               )}>
                 <Tag className="h-3.5 w-3.5" />
@@ -3365,7 +3349,7 @@ function WABASidebar({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onContextStatusFilterChange('all')}
-                className={cn('text-xs cursor-pointer', (!contextStatusFilter || contextStatusFilter === 'all') && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}
+                className={cn('text-xs cursor-pointer', (!contextStatusFilter || contextStatusFilter === 'all') && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884]')}
               >
                 All stages
               </DropdownMenuItem>
@@ -3375,11 +3359,11 @@ function WABASidebar({
                   <DropdownMenuItem
                     key={value}
                     onClick={() => onContextStatusFilterChange(value)}
-                    className={cn('text-xs cursor-pointer flex items-center gap-2', contextStatusFilter === value && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}
+                    className={cn('text-xs cursor-pointer flex items-center gap-2', contextStatusFilter === value && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884]')}
                   >
                     <Tag className="h-3.5 w-3.5 shrink-0" fill={tagColor} style={{ color: tagColor }} />
                     <span className="truncate flex-1">{label}</span>
-                    {count > 0 && <span className="text-[10px] text-muted-foreground">{count}</span>}
+                    {count > 0 && <span className="text-[10px] !hover:text-muted-foreground">{count}</span>}
                   </DropdownMenuItem>
                 );
               })}
@@ -3403,13 +3387,13 @@ function WABASidebar({
             <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db]">
               <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onSortByChange('date')} className={cn('text-xs cursor-pointer', sortBy === 'date' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+              <DropdownMenuItem onClick={() => onSortByChange('date')} className={cn('text-xs cursor-pointer', sortBy === 'date' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884]')}>
                 <Calendar className="h-3.5 w-3.5 mr-2" /> Date (most recent)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSortByChange('message_count')} className={cn('text-xs cursor-pointer', sortBy === 'message_count' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+              <DropdownMenuItem onClick={() => onSortByChange('message_count')} className={cn('text-xs cursor-pointer', sortBy === 'message_count' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884]')}>
                 <Hash className="h-3.5 w-3.5 mr-2" /> Size (most messages)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSortByChange('name')} className={cn('text-xs cursor-pointer', sortBy === 'name' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+              <DropdownMenuItem onClick={() => onSortByChange('name')} className={cn('text-xs cursor-pointer', sortBy === 'name' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884]')}>
                 <ArrowDownUp className="h-3.5 w-3.5 mr-2" /> Name (A → Z)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -4641,6 +4625,7 @@ export function WABusinessView({
   // Groups currently multi-selected in the Broadcast Groups panel — when non-empty,
   // the right pane shows broadcast-group actions instead of the chat splash.
   const [multiSelectGroupIds, setMultiSelectGroupIds] = useState<string[]>([]);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Lazily resolve WhatsApp DPs (avatars) for visible personal-WhatsApp conversations.
   // We POST the ids of any conversation still missing an avatar; the backend fetches
@@ -4978,6 +4963,8 @@ const handleFavorite = useCallback(
               loadMore={loadMore}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
+              isImportDialogOpen={isImportDialogOpen}
+              onImportDialogOpenChange={setIsImportDialogOpen}
             />
           </motion.div>
         )}
@@ -4998,7 +4985,7 @@ const handleFavorite = useCallback(
 
       {/* Main Chat Area — hidden on mobile when no conversation selected */}
       <div className={cn(
-        "flex-1 overflow-hidden min-w-0",
+        "flex-1 overflow-hidden min-w-0 dark:bg-[#161717]",
         (!typedSelectedConversation && multiSelectGroupIds.length === 0) ? "hidden lg:flex" : "flex"
       )}>
         {multiSelectGroupIds.length > 0 ? (
@@ -5024,6 +5011,7 @@ const handleFavorite = useCallback(
           onMuteChat={muteConversation}
           onClearChat={(id) => handleClear(id)}
           onCloseChat={() => { selectConversation(''); }}
+          onOpenImportLeads={() => setIsImportDialogOpen(true)}
           channel={channel}
           conversationId={typedSelectedConversation?.id}
           owner={typedSelectedConversation?.owner}

@@ -39,7 +39,7 @@ export default function CTASection() {
       description: 'Get 100 credits to test',
       icon: <Zap className="w-6 h-6" />,
       action: '/onboarding',
-      highlight: true
+      highlight: false  
     },
     {
       type: 'secondary',

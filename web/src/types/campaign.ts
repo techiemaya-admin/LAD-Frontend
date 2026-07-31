@@ -30,6 +30,16 @@ export type StepType =
   | 'analytics_report'
   | 'export_results'
   | 'linkedin_post'
+  // Campaign-level: ONE Instagram post/Reel per campaign, not one per lead.
+  | 'instagram_post'
+  // Per-lead: pauses the lead until a human confirms via a one-time link.
+  | 'human_task'
+  // Per-lead by default; switches to a campaign-level macro when its scope is
+  // set to the whole campaign's industry (see config.campaign_report).
+  | 'lead_report'
+  // Campaign-level: generates ONE public page for the campaign. Never per-lead —
+  // a per-lead landing page would mint one public URL per enrolled prospect.
+  | 'landing_page'
   | 'linkedin_content'
   | 'post_approval'
   | 'web_scrape'

@@ -65,6 +65,17 @@ function statusBadgeVariant(
   }
 }
 
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case 'running':
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800';
+    case 'queued':
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900/50';
+    default:
+      return '';
+  }
+}
+
 function statusLabel(status: string): string {
   return (
     {
@@ -268,7 +279,10 @@ function SentList({
           >
             <div className="flex items-center justify-between">
               <div className="font-medium truncate pr-2">{r.subject}</div>
-              <Badge variant={statusBadgeVariant(r.status)}>
+              <Badge
+                variant={statusBadgeVariant(r.status)}
+                className={statusBadgeClass(r.status)}
+              >
                 {statusLabel(r.status)}
               </Badge>
             </div>
@@ -305,7 +319,10 @@ function RunDetail({ id }: { id: string }) {
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-medium truncate pr-2">{data.subject}</h3>
-        <Badge variant={statusBadgeVariant(data.status)}>
+        <Badge
+          variant={statusBadgeVariant(data.status)}
+          className={statusBadgeClass(data.status)}
+        >
           {statusLabel(data.status)}
         </Badge>
       </div>

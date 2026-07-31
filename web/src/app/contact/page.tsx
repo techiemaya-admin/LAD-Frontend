@@ -82,7 +82,7 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
@@ -98,7 +98,7 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">

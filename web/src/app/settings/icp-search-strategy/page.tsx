@@ -15,6 +15,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+
 import Link from 'next/link';
 
 import {
@@ -97,6 +100,19 @@ export default function IcpSearchStrategyPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <header className="mb-6">
+        {/* Back Button */}
+        <div className="mb-4 sm:hidden sm:mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors p-0 h-auto hover:bg-transparent group"
+          >
+            <div className="p-1.5 rounded-full bg-white shadow-sm border border-slate-200 group-hover:border-slate-300 transition-all">
+              <ArrowLeft className="h-4 w-4" />
+            </div>
+            <span className="font-medium text-sm">Back</span>
+          </Button>
+        </div>
         <nav className="text-xs text-gray-500">
           <Link href="/settings" className="hover:underline">
             Settings
@@ -106,7 +122,7 @@ export default function IcpSearchStrategyPage() {
             Prospects
           </Link>
         </nav>
-        <h1 className="mt-1 text-2xl font-semibold text-gray-900">
+        <h1 className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
           Search strategy
         </h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -117,7 +133,7 @@ export default function IcpSearchStrategyPage() {
       </header>
 
       {loading && (
-        <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+        <div className="rounded border border-gray-200 bg-gray-50 dark:bg-slate-900 dark:border-slate-800 p-6 text-sm text-gray-600">
           Loading active ICP…
         </div>
       )}
@@ -143,7 +159,7 @@ export default function IcpSearchStrategyPage() {
 
       {definition && draft && (
         <>
-          <div className="mb-4 flex items-center justify-between rounded-md bg-gray-50 px-4 py-2 text-xs text-gray-600">
+          <div className="mb-4 flex items-center justify-between rounded-md bg-gray-50 dark:bg-background px-4 py-2 text-xs text-gray-600">
             <span>
               Editing variant <strong>{definition.variant_name}</strong> ·
               last updated{' '}
@@ -165,9 +181,9 @@ export default function IcpSearchStrategyPage() {
           />
 
           {/* ── Action bar (sticky bottom) ────────────────────────────── */}
-          <div className="sticky bottom-0 mt-6 -mx-6 border-t border-gray-200 bg-white px-6 py-3 shadow-sm sm:mx-0 sm:rounded-b-lg">
+          <div className="sticky bottom-0 mt-6 -mx-6 border-t border-gray-200 bg-white dark:bg-slate-900 dark:border-slate-800 px-6 py-3 shadow-sm sm:mx-0 sm:rounded-b-lg">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-gray-600 dark:text-gray-500">
                 {saveError ? (
                   <span className="text-rose-600">
                     Save failed: {saveError.message}
@@ -205,11 +221,11 @@ export default function IcpSearchStrategyPage() {
           </div>
 
           {/* ── JSON preview (collapsible, debug aid) ─────────────────── */}
-          <details className="mt-6 rounded border border-gray-200 bg-white">
-            <summary className="cursor-pointer px-4 py-2 text-xs text-gray-600 hover:bg-gray-50">
+          <details className="mt-6 rounded border border-gray-200 bg-white dark:bg-slate-900 dark:border-slate-800">
+            <summary className="cursor-pointer px-4 py-2 text-xs text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-800">
               Show effective strategy JSON
             </summary>
-            <pre className="overflow-x-auto px-4 py-3 text-xs text-gray-700">
+            <pre className="overflow-x-auto px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
               {JSON.stringify(draft, null, 2)}
             </pre>
           </details>

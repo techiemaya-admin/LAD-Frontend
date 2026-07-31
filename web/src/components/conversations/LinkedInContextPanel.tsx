@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   X, Linkedin, ExternalLink, Tag, Plus, Trash2, Check, Loader2,
-  StickyNote, UserCheck, Sparkles, AlertCircle,
+  StickyNote, UserCheck, Sparkles, AlertCircle, ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -301,13 +301,30 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-white border-l border-border w-full sm:w-[340px] flex-shrink-0",
-      "fixed inset-y-0 right-0 z-50 lg:static lg:z-0 lg:flex"
+      "flex flex-col h-full bg-card  border-l border-border w-full sm:w-[340px] flex-shrink-0",
+      "fixed top-14 bottom-0 right-0 z-50 lg:static lg:z-0 lg:flex"
     )}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-        <h3 className="text-sm font-semibold text-slate-800">Contact Details</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 -ml-1 lg:hidden text-slate-500"
+            onClick={onClose}
+            aria-label="Back to chat"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Contact Details</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 hidden lg:inline-flex text-slate-500"
+          onClick={onClose}
+          aria-label="Close contact details"
+        >
           <X className="w-4 h-4" />
         </Button>
       </div>
@@ -320,22 +337,22 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               <img
                 src={proxied}
                 alt={contact.name}
-                className="w-20 h-20 rounded-full object-cover bg-blue-100"
+                className="w-20 h-20 rounded-full object-cover bg-blue-100 dark:bg-blue-900/50"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xl">
+              <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center font-semibold text-xl">
                 {contact.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?'}
               </div>
             )}
             {/* LinkedIn ring */}
-            <span className="absolute -bottom-1 -right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0A66C2] ring-2 ring-white">
+            <span className="absolute -bottom-1 -right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0A66C2] ring-2 ring-white dark:ring-slate-950">
               <Linkedin className="w-3.5 h-3.5 text-white" />
             </span>
           </div>
-          <p className="mt-3 text-base font-semibold text-slate-900 text-center">{contact.name}</p>
+          <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100 text-center">{contact.name}</p>
           {headlineDisplay && (
-            <p className="mt-0.5 text-xs text-slate-500 text-center line-clamp-2 max-w-[260px]">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 text-center line-clamp-2 max-w-[260px]">
               {headlineDisplay}
             </p>
           )}
@@ -344,7 +361,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               href={lead_linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[260px]"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate max-w-[260px]"
             >
               <ExternalLink className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">View LinkedIn profile</span>
@@ -355,7 +372,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         {/* Labels */}
         <div className="px-4 py-4 border-b border-border">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Labels</p>
+            <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">Labels</p>
             <Button
               variant="ghost" size="icon" className="h-6 w-6"
               onClick={() => setShowLabelInput(s => !s)}
@@ -365,7 +382,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
           </div>
 
           {labels.length === 0 && !labelLoading && (
-            <p className="text-xs text-slate-400">No labels assigned</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">No labels assigned</p>
           )}
 
           {labelLoading && (
@@ -407,7 +424,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                       <button
                         key={l.id}
                         onClick={() => addLabel(l.id)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
                       >
                         <Plus className="w-3 h-3" />
                         {l.name}
@@ -434,13 +451,13 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
         {/* Metadata */}
         <div className="px-4 py-4 border-b border-border space-y-2">
-          <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase mb-2">Metadata</p>
+          <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase mb-2">Metadata</p>
           <Row label="Status" value={
             <span className={cn(
               'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium',
-              connection_status === 'active'   ? 'bg-emerald-50 text-emerald-700' :
-              connection_status === 'accepted' ? 'bg-amber-50 text-amber-700' :
-                                                  'bg-slate-100 text-slate-600'
+              connection_status === 'active'   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+              connection_status === 'accepted' ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
+                                                  'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
             )}>
               {connection_status === 'accepted' ? 'Connected' : connection_status === 'active' ? 'Active' : 'Pending'}
             </span>
@@ -450,7 +467,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             <Row label="Campaign" value={
               <a
                 href={`/campaigns/${campaign_id}/analytics/leads`}
-                className="text-blue-600 hover:underline truncate max-w-[160px] inline-block"
+                className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[160px] inline-block"
                 title={campaign_id}
               >
                 {campaign_id.slice(0, 8)}…
@@ -470,8 +487,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800">AI Chat Agent</p>
-                <p className="text-[10px] text-slate-500 truncate">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">AI Chat Agent</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                   Auto-replies to inbound LinkedIn DMs
                 </p>
               </div>
@@ -484,7 +501,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               disabled={agentEnabled === null || agentSaving}
               className={cn(
                 'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
-                agentEnabled ? 'bg-blue-600' : 'bg-slate-300',
+                agentEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700',
                 agentSaving && 'opacity-60'
               )}
             >
@@ -496,7 +513,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               />
             </button>
           </div>
-          <p className="mt-1.5 text-[10px] text-slate-400">
+          <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
             Tenant-wide setting (Settings → Chat → LinkedIn).
           </p>
         </div>
@@ -508,8 +525,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               <div className="flex items-center gap-2 min-w-0">
                 <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-800">Auto Follow-ups</p>
-                  <p className="text-[10px] text-slate-500 truncate">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Auto Follow-ups</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                     {followupPaused
                       ? 'Paused for this lead'
                       : followupPendingCount > 0
@@ -526,7 +543,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                 disabled={followupPaused === null || followupSaving}
                 className={cn(
                   'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
-                  !followupPaused ? 'bg-amber-500' : 'bg-slate-300',
+                  !followupPaused ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700',
                   followupSaving && 'opacity-60'
                 )}
               >
@@ -538,7 +555,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                 />
               </button>
             </div>
-            <p className="mt-1.5 text-[10px] text-slate-400">
+            <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
               Pause to stop the scheduled 4-touch sequence for this lead only. The live AI agent still replies to inbound messages.
             </p>
           </div>
@@ -562,14 +579,14 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
           {/* Assignment */}
           <TabsContent value="assignment" className="pt-3">
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3">
+            <div className="rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-3">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-[11px] text-amber-800">
+                <div className="text-[11px] text-amber-800 dark:text-amber-200">
                   <p className="font-semibold mb-0.5">Assignment for LinkedIn — coming soon</p>
-                  <p className="text-amber-700">
+                  <p className="text-amber-700 dark:text-amber-300/80">
                     Per-conversation assignment for LinkedIn requires the
-                    <code className="mx-1 px-1 rounded bg-amber-100">/api/threads/…?channel=linkedin</code>
+                    <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/50">/api/threads/…?channel=linkedin</code>
                     endpoint. Available now for WhatsApp; LinkedIn parity is queued.
                   </p>
                 </div>
@@ -601,12 +618,12 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             </div>
             <div className="space-y-2">
               {notes.length === 0 && (
-                <p className="text-[11px] text-slate-400 text-center py-2">No notes yet.</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">No notes yet.</p>
               )}
               {notes.map(n => (
-                <div key={n.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-700 whitespace-pre-wrap">{n.content}</p>
-                  <p className="mt-1 text-[10px] text-slate-400">
+                <div key={n.id} className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{n.content}</p>
+                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
                     {n.author_name ? `${n.author_name} · ` : ''}
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                   </p>
@@ -617,7 +634,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
           {/* Internal comments — placeholder */}
           <TabsContent value="internal" className="pt-3">
-            <p className="text-[11px] text-slate-400 text-center py-3">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-3">
               Internal comments coming soon.
             </p>
           </TabsContent>
@@ -632,8 +649,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2 text-xs">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-slate-700 text-right">{value}</span>
+      <span className="text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-slate-700 dark:text-slate-300 text-right">{value}</span>
     </div>
   );
 }

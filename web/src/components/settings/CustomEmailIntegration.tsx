@@ -248,7 +248,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="smtp.webaaps.live"
                   value={form.host}
                   onChange={e => setForm(f => ({ ...f, host: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
               <div>
@@ -258,7 +258,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="587"
                   value={form.port}
                   onChange={e => setForm(f => ({ ...f, port: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
             </div>
@@ -292,7 +292,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   // Mirror to from_address if user hasn't customised it
                   from_address: f.from_address || e.target.value,
                 }))}
-                className="mt-1"
+                className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 autoComplete="off"
               />
             </div>
@@ -306,7 +306,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   autoComplete="new-password"
-                  className="pr-9"
+                  className="pr-9 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
                 <button
                   type="button"
@@ -330,7 +330,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="you@yourdomain.com (defaults to username)"
                   value={form.from_address}
                   onChange={e => setForm(f => ({ ...f, from_address: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
                 {form.from_address && !fromAddressLooksLikeEmail && (
                   <p className="text-[11px] text-red-600 mt-1">
@@ -344,7 +344,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="WebApps Sales"
                   value={form.display_name}
                   onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
             </div>

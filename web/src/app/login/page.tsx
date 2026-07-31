@@ -37,7 +37,7 @@ export default function LoginPage() {
                 playsInline
                 preload="metadata"
                 aria-hidden="true"
-                className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-screen"
+                className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-lighten"
               />
             </div>
 

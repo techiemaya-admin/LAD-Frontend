@@ -108,3 +108,43 @@ export async function saveBusinessProfile(
   });
   return full;
 }
+
+/**
+ * Upload the tenant's company logo.
+ *
+ * Multipart POST to /api/ai-playground/company-logo. The backend stores the
+ * image in GCS and merges the resulting public URL into `icp_data.companyLogoUrl`
+ * itself, so callers only need to reflect the returned URL in local state —
+ * no follow-up saveBusinessProfile() call.
+ *
+ * Note: this bypasses `request()` because it must NOT set a JSON Content-Type;
+ * the browser has to generate the multipart boundary.
+ */
+export async function uploadCompanyLogo(file: File): Promise<string> {
+  const body = new FormData();
+  body.append('file', file);
+
+  const response = await fetch(`${getBackendUrl()}/api/ai-playground/company-logo`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    body,
+  });
+
+  let parsed: any = null;
+  try {
+    parsed = await response.json();
+  } catch {
+    /* no JSON body */
+  }
+
+  if (!response.ok || !parsed?.url) {
+    const message =
+      parsed?.error || parsed?.message || `HTTP ${response.status} ${response.statusText}`;
+    const err = new Error(message) as Error & { status?: number };
+    err.status = response.status;
+    throw err;
+  }
+
+  return parsed.url as string;
+}

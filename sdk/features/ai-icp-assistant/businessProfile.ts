@@ -52,6 +52,17 @@ export interface BusinessProfile {
   competitors?: string;
   campaignTone?: string;
 
+  // ── Company basics ────────────────────────────────────────────────────────
+  // Operational fields rendered by the "Company basics" card in Settings.
+  // Declared here (rather than left to the index signature) so every surface
+  // agrees on the key names, but deliberately OUTSIDE the canonical arrays so
+  // they neither move the "X / 14" denominator nor get rendered a second time
+  // as plain text inputs by the section-driven form.
+  /** Free-text HQ location, e.g. "Dubai, UAE". */
+  companyLocation?: string;
+  /** Public URL of the uploaded logo (GCS). Written by the logo upload endpoint. */
+  companyLogoUrl?: string;
+
   /**
    * Allow non-canonical extras the chat may add (linkedinUrl, blogUrls,
    * linkedinAudit, etc.) to round-trip through the form surfaces without
@@ -59,6 +70,15 @@ export interface BusinessProfile {
    */
   [extraKey: string]: string | undefined | unknown;
 }
+
+/**
+ * Company-basics keys — persisted in the same `icp_data` blob but excluded
+ * from the canonical field list (and therefore from completeness math).
+ */
+export const BUSINESS_PROFILE_BASICS_FIELDS: ReadonlyArray<keyof BusinessProfile> = [
+  'companyLocation',
+  'companyLogoUrl',
+];
 
 /**
  * Optional fields excluded from the completeness denominator.

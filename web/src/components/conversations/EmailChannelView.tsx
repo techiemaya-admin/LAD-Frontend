@@ -1046,7 +1046,7 @@ function InlineTemplatePicker({ onSelect, onClose, anchorRef }: { onSelect: (tpl
   return (
     <div
       ref={ref}
-      className="w-80 bg-white dark:bg-[#2d2d2d] border border-[#dadce0] dark:border-[#3c4043] rounded-xl shadow-xl overflow-hidden"
+      className="w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#2d2d2d] border border-[#dadce0] dark:border-[#3c4043] rounded-xl shadow-xl overflow-hidden max-sm:!fixed max-sm:!left-1/2 max-sm:!-translate-x-1/2"
       style={
         pos
           ? { position: 'fixed', bottom: pos.bottom, left: pos.left, zIndex: 9999 }
@@ -2480,16 +2480,16 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
       {/* ── Top Bar ── */}
       <header className="h-[64px] flex-shrink-0 flex items-center px-3 gap-2 bg-[#F6F8FC] dark:bg-[#1f1f1f]">
         {/* Left: fixed width matching sidebar so search aligns with email list */}
-        <div className="flex items-center gap-1 flex-shrink-0 w-[240px]">
+        <div className="flex items-center gap-1 flex-shrink-0 w-auto md:w-[240px]">
           <button
             onClick={() => setSidebarOpen(v => !v)}
             title="Main menu"
             aria-label="Toggle main menu"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]"
           >
-            <Menu className="h-5 w-5 text-[#444746] dark:text-[#9aa0a6]" />
+            <Menu className="h-4 w-4 md:h-5 md:w-5 text-[#444746] dark:text-[#9aa0a6]" />
           </button>
-          <div className="flex items-center gap-2 ml-1">
+          <div className="hidden md:flex items-center gap-2 ml-1">
             {provider === 'gmail' ? (
               <>
                 <svg viewBox="0 0 24 24" className="h-7 w-auto flex-shrink-0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -2516,23 +2516,23 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
         </div>
         {/* Search: flex-1 so it starts right after logo, matching Gmail */}
         <div className="flex-1 min-w-0 max-w-[720px]">
-          <div className="relative h-[46px] flex items-center bg-[#EAF1FB] dark:bg-[#2d2d2d] hover:bg-[#E0EBF5] focus-within:bg-white dark:focus-within:bg-[#2d2d2d] focus-within:shadow-[0_1px_3px_rgba(60,64,67,.3)] rounded-full transition-all">
-            <Search className="absolute left-4 h-5 w-5 text-[#444746] dark:text-[#9aa0a6] pointer-events-none" aria-hidden="true" />
+          <div className="relative h-10 md:h-[46px] flex items-center bg-[#EAF1FB] dark:bg-[#2d2d2d] hover:bg-[#E0EBF5] focus-within:bg-white dark:focus-within:bg-[#2d2d2d] focus-within:shadow-[0_1px_3px_rgba(60,64,67,.3)] rounded-full transition-all">
+            <Search className="absolute left-3 md:left-4 h-4 w-4 md:h-5 md:w-5 text-[#444746] dark:text-[#9aa0a6] pointer-events-none" aria-hidden="true" />
             <input
               type="search"
               placeholder="Search in mail"
               value={contactSearch}
               onChange={e => setContactSearch(e.target.value)}
               aria-label="Search in mail"
-              className="w-full h-full bg-transparent pl-12 pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none"
+              className="w-full h-full bg-transparent pl-9 pr-9 md:pl-12 md:pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none"
             />
             <button
               title="Search options"
               aria-label="Search options"
               onClick={() => setShowSearchFilter(v => !v)}
-              className="absolute right-3 h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+              className="absolute right-2 md:right-3 h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
             >
-              <SlidersHorizontal className="h-4 w-4" />
+              <SlidersHorizontal className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </button>
           </div>
         </div>
@@ -2659,39 +2659,39 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
           </div>
         )}
         {/* Right: icons — Gmail order: Help → Settings → Apps → Avatar */}
-        <div className="flex items-center gap-0.5 flex-shrink-0 pl-2 ml-auto">
+        <div className="flex items-center gap-0.5 flex-shrink-0 pl-1 md:pl-2 ml-auto">
           <button
             onClick={() => setShowImport(true)}
             title="Import leads"
             aria-label="Import leads"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Help"
             aria-label="Help"
-            className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="hidden sm:flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <HelpCircle className="h-5 w-5" />
+            <HelpCircle className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Settings"
             aria-label="Settings"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Profile"
             aria-label="View profile"
             onClick={() => setShowProfileModal(v => !v)}
-            className="ml-1 h-8 w-8 flex-shrink-0 rounded-full overflow-hidden hover:ring-2 hover:ring-[#dadce0] dark:hover:ring-[#3c4043] transition-all"
+            className="ml-1 h-7 w-7 md:h-8 md:w-8 flex-shrink-0 rounded-full overflow-hidden hover:ring-2 hover:ring-[#dadce0] dark:hover:ring-[#3c4043] transition-all"
           >
             {userImage
               ? <Image src={userImage} alt={connectedEmail?.charAt(0) ?? 'User'} width={32} height={32} className="h-full w-full object-cover" />
               : (
-                <div className="h-full w-full flex items-center justify-center bg-[#1a73e8] text-white text-sm font-medium uppercase select-none">
+                <div className="h-full w-full flex items-center justify-center bg-[#1a73e8] text-white text-xs md:text-sm font-medium uppercase select-none">
                   {connectedEmail?.charAt(0) ?? '?'}
                 </div>
               )}
@@ -2722,7 +2722,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
           {/* Compose Button */}
           <div className={cn('pb-4 flex flex-shrink-0', sidebarOpen ? 'px-3 justify-start' : 'px-0 justify-center')}>
             <button
-              onClick={() => openCompose()}
+              onClick={() => { openCompose(); if (window.innerWidth < 768) setSidebarOpen(false); }}
               title="Compose new email"
               aria-label="Compose new email"
               className={cn(
@@ -2748,7 +2748,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                       setActiveFolder(f.id);
                       setActiveContact(null);
                       setPage(0);
-
+                      if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
                     aria-label={`${f.label}${f.count > 0 ? `, ${f.count} unread` : ''}`}
                     aria-current={isActive ? 'page' : undefined}
@@ -2824,7 +2824,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                     {labels.length === 0
                       ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No labels — create one above</p>
                       : labels.map(g => (
-                        <button key={g.id} onClick={() => setActiveGroup(g as unknown as EmailGroup)}
+                        <button key={g.id} onClick={() => { setActiveGroup(g as unknown as EmailGroup); if (window.innerWidth < 768) setSidebarOpen(false); }}
                           aria-label={`Open label: ${g.name}`}
                           className="w-full flex items-center gap-3 pl-6 pr-4 py-1.5 hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] transition-colors text-left rounded-r-full">
                           <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2836,7 +2836,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
                   {labels.map(g => (
-                    <button key={g.id} onClick={() => setActiveGroup(g as unknown as EmailGroup)}
+                    <button key={g.id} onClick={() => { setActiveGroup(g as unknown as EmailGroup); if (window.innerWidth < 768) setSidebarOpen(false); }}
                       title={g.name} aria-label={`Open label: ${g.name}`}
                       className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]">
                       <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2890,7 +2890,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                     {groups.length === 0
                       ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No groups — create one above</p>
                       : groups.map(g => (
-                        <button key={g.id} onClick={() => setActiveGroup(g)}
+                        <button key={g.id} onClick={() => { setActiveGroup(g); if (window.innerWidth < 768) setSidebarOpen(false); }}
                           aria-label={`Open group: ${g.name}, ${g.member_count} members`}
                           className="w-full flex items-center gap-3 pl-6 pr-4 py-1.5 hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] transition-colors text-left rounded-r-full">
                           <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2903,7 +2903,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
                   {groups.map(g => (
-                    <button key={g.id} onClick={() => setActiveGroup(g)}
+                    <button key={g.id} onClick={() => { setActiveGroup(g); if (window.innerWidth < 768) setSidebarOpen(false); }}
                       title={g.name} aria-label={`Open group: ${g.name}`}
                       className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]">
                       <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -3003,7 +3003,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                       });
                     }}
                     aria-label="Select all emails on this page"
-                    className="rounded border-[#dadce0] dark:border-[#3c4043] text-[#0b57d0] h-4 w-4 cursor-pointer ml-1"
+                    className="appearance-none h-4 w-4 rounded border border-[#747775] dark:border-[#3b82f6] dark:bg-transparent checked:bg-[#0b57d0] dark:checked:bg-[#3b82f6] checked:border-[#0b57d0] dark:checked:border-[#3b82f6] cursor-pointer ml-1 relative transition-colors bg-no-repeat bg-center bg-[length:10px_10px] checked:bg-[url('data:image/svg+xml;utf8,<svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%20%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22><polyline%20points=%2220%206%209%2017%204%2012%22/></svg>')]"
                   />
                   <button onClick={() => { loadContacts(contactSearch); loadGroups(); }}
                     title="Refresh" aria-label="Refresh email list"
@@ -3171,7 +3171,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                               checked={isSelected}
                               onChange={() => handleToggleSelect(c.id)}
                               aria-label={`Select email from ${c.contact_name ?? c.email}`}
-                              className="rounded border-[#dadce0] dark:border-[#3c4043] text-[#0b57d0] h-3.5 w-3.5 cursor-pointer"
+                              className="appearance-none h-3.5 w-3.5 rounded border border-[#747775] dark:border-[#3b82f6] dark:bg-transparent checked:bg-[#0b57d0] dark:checked:bg-[#3b82f6] checked:border-[#0b57d0] dark:checked:border-[#3b82f6] cursor-pointer relative transition-colors bg-no-repeat bg-center bg-[length:9px_9px] checked:bg-[url('data:image/svg+xml;utf8,<svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%20%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22><polyline%20points=%2220%206%209%2017%204%2012%22/></svg>')]"
                             />
                             <button onClick={e => toggleStar(c.id, e)}
                               title={isStarred ? 'Unstar' : 'Star'}

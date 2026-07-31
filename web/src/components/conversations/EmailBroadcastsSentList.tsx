@@ -136,6 +136,17 @@ function statusBadgeVariant(
   }
 }
 
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case 'running':
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800';
+    case 'queued':
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900/50';
+    default:
+      return '';
+  }
+}
+
 function statusLabel(status: string): string {
   return (
     {
@@ -246,52 +257,113 @@ function BroadcastRow({
         }
       }}
       aria-label={`Open broadcast: ${run.subject || '(no subject)'}`}
-      className="group flex items-center gap-3 px-4 py-2 border-b border-[#f0f0f0] dark:border-white/5 text-sm hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] dark:hover:shadow-[inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(255,255,255,0.06),0_1px_2px_0_rgba(0,0,0,.4)] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group border-b border-[#f0f0f0] dark:border-white/5 text-sm hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] dark:hover:shadow-[inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(255,255,255,0.06),0_1px_2px_0_rgba(0,0,0,.4)] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
-      {/* Avatar — sender initials */}
-      <div
-        className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
-          run.from_email,
-        )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
-        aria-hidden
-      >
-        {avatarInitials(run.from_email)}
+      {/* ── Desktop view (>= sm) — Original untouched layout ── */}
+      <div className="hidden sm:flex items-center gap-3 px-4 py-2">
+        {/* Avatar — sender initials */}
+        <div
+          className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
+            run.from_email,
+          )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
+          aria-hidden
+        >
+          {avatarInitials(run.from_email)}
+        </div>
+
+        {/* Sender + recipients pill */}
+        <div className="min-w-0 w-44 flex flex-col">
+          <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed]">
+            {run.from_email}
+          </span>
+          <span className="mt-0.5">
+            <RecipientsPill run={run} />
+          </span>
+        </div>
+
+        {/* Subject + counts */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="truncate text-[#202124] dark:text-[#e8eaed]">
+            {run.subject || '(no subject)'}
+          </span>
+          <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0">
+            · {run.sent_count}/{run.recipient_count} sent
+            {run.failed_count > 0 && (
+              <span className="text-destructive ml-1">· {run.failed_count} failed</span>
+            )}
+            {run.unsubscribed_skipped_count > 0 && (
+              <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
+            )}
+          </span>
+        </div>
+
+        {/* Time + status */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge
+            variant={statusBadgeVariant(run.status)}
+            className={statusBadgeClass(run.status)}
+          >
+            {statusLabel(run.status)}
+          </Badge>
+          <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums w-16 text-right">
+            {relativeTime(run.created_at)}
+          </span>
+        </div>
       </div>
 
-      {/* Sender + recipients pill */}
-      <div className="min-w-0 w-44 flex flex-col">
-        <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed]">
-          {run.from_email}
-        </span>
-        <span className="mt-0.5">
-          <RecipientsPill run={run} />
-        </span>
-      </div>
+      {/* ── Mobile view (< sm) — 2-line compact responsive layout ── */}
+      <div className="flex sm:hidden items-start gap-3 px-3 py-2.5">
+        {/* Avatar */}
+        <div
+          className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
+            run.from_email,
+          )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0 mt-0.5`}
+          aria-hidden
+        >
+          {avatarInitials(run.from_email)}
+        </div>
 
-      {/* Subject + counts */}
-      <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="truncate text-[#202124] dark:text-[#e8eaed]">
-          {run.subject || '(no subject)'}
-        </span>
-        <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0">
-          · {run.sent_count}/{run.recipient_count} sent
-          {run.failed_count > 0 && (
-            <span className="text-destructive ml-1">· {run.failed_count} failed</span>
-          )}
-          {run.unsubscribed_skipped_count > 0 && (
-            <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
-          )}
-        </span>
-      </div>
+        {/* Content container */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          {/* Line 1: Sender (left) & Badge + Date (right) */}
+          <div className="flex items-center justify-between min-w-0">
+            <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed] min-w-0 flex-1">
+              {run.from_email}
+            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+              <Badge
+                variant={statusBadgeVariant(run.status)}
+                className={statusBadgeClass(run.status)}
+              >
+                {statusLabel(run.status)}
+              </Badge>
+              <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums">
+                {relativeTime(run.created_at)}
+              </span>
+            </div>
+          </div>
 
-      {/* Time + status */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <Badge variant={statusBadgeVariant(run.status)}>
-          {statusLabel(run.status)}
-        </Badge>
-        <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums w-16 text-right">
-          {relativeTime(run.created_at)}
-        </span>
+          {/* Line 2: Subject (left) & Recipients pill + Sent counts (right) */}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="truncate text-[#202124] dark:text-[#e8eaed] min-w-0 flex-1">
+              {run.subject || '(no subject)'}
+            </span>
+            <div className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0 flex items-center gap-1.5 ml-auto">
+              <span className="flex-shrink-0">
+                <RecipientsPill run={run} />
+              </span>
+              <span className="flex-shrink-0 whitespace-nowrap">
+                · {run.sent_count}/{run.recipient_count} sent
+                {run.failed_count > 0 && (
+                  <span className="text-destructive ml-1">· {run.failed_count} failed</span>
+                )}
+                {run.unsubscribed_skipped_count > 0 && (
+                  <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -454,16 +526,16 @@ function ComposeBroadcastDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex-col items-start lg:flex-row lg:items-center gap-1 lg:gap-4">
           <DialogTitle>New broadcast</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-[13px] sm:text-sm pr-6 lg:pr-0">
             Send the same message to many recipients via a connected Gmail or Outlook account.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 px-4 sm:px-8">
           <div>
-            <label className="text-sm font-medium">From</label>
+            <label className="text-sm font-medium block mb-2">From</label>
             <Select value={accountId} onValueChange={setAccountId}>
               <SelectTrigger>
                 <SelectValue placeholder="Pick a connected account" />
@@ -485,13 +557,13 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Subject</label>
+            <label className="text-sm font-medium block mb-2">Subject</label>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to Mr LAD" />
           </div>
 
           {/* Recipients — tab toggle between manual list and saved group */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">Recipients</label>
               <div
                 role="tablist"
@@ -503,10 +575,10 @@ function ComposeBroadcastDialog({
                   role="tab"
                   aria-selected={mode === 'manual'}
                   onClick={() => setMode('manual')}
-                  className={`px-2 py-1 rounded ${
+                  className={`px-2 py-1 rounded transition-colors ${
                     mode === 'manual'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
                   Manual list
@@ -516,10 +588,10 @@ function ComposeBroadcastDialog({
                   role="tab"
                   aria-selected={mode === 'group'}
                   onClick={() => setMode('group')}
-                  className={`px-2 py-1 rounded ${
+                  className={`px-2 py-1 rounded transition-colors ${
                     mode === 'group'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
                   From group
@@ -535,7 +607,7 @@ function ComposeBroadcastDialog({
                   rows={3}
                   placeholder={`alice@example.com, "Bob Smith" <bob@example.com>\nor one per line`}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1.5 text-xs text-muted-foreground">
                   {recipients.length} parsed. Names in{' '}
                   <code>{'"Name" <email>'}</code> format are picked up too.
                 </p>
@@ -576,7 +648,7 @@ function ComposeBroadcastDialog({
                   </SelectContent>
                 </Select>
                 {selectedGroup && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     Sending to{' '}
                     <span className="font-medium">{selectedGroup.name}</span>{' '}
                     ({selectedGroup.member_count} recipient
@@ -590,7 +662,7 @@ function ComposeBroadcastDialog({
 
           {/* Start from a saved template — loads its HTML into the editor below */}
           <div>
-            <label className="text-sm font-medium">Template</label>
+            <label className="text-sm font-medium block mb-2">Template</label>
             <Select value={templateId} onValueChange={applyTemplate}>
               <SelectTrigger>
                 <SelectValue placeholder={templates.length ? 'Start from a saved template (optional)' : 'No saved templates yet'} />
@@ -610,7 +682,7 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Body</label>
+            <label className="text-sm font-medium block mb-2">Body</label>
             <div className="mt-1 rounded-lg border border-input bg-muted/20 p-3">
               <DragDropEmailEditor
                 key={editorKey}
@@ -619,7 +691,7 @@ function ComposeBroadcastDialog({
                 onContentChange={setBody}
               />
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-2.5 text-xs text-muted-foreground">
               Build the email with blocks (header, image, button, signature…). Use{' '}
               <code>{'{{first_name}}'}</code> or <code>{'{first_name}'}</code> to personalise —
               unknown placeholders are removed before sending.
@@ -813,7 +885,10 @@ function BroadcastDetailDialog({
             </DialogTitle>
             {data && (
               <DialogDescription className="mt-1 flex items-center gap-2 text-xs">
-                <Badge variant={statusBadgeVariant(data.status)}>
+                <Badge
+                  variant={statusBadgeVariant(data.status)}
+                  className={statusBadgeClass(data.status)}
+                >
                   {statusLabel(data.status)}
                 </Badge>
                 <span>·</span>
@@ -833,13 +908,6 @@ function BroadcastDetailDialog({
               </DialogDescription>
             )}
           </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            aria-label="Close"
-            className="rounded-full p-1.5 hover:bg-[#f6f8fc] dark:hover:bg-[#3c4043] flex-shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </DialogHeader>
 
         {/* Sender + recipient strip */}

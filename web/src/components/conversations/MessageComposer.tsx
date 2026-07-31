@@ -380,23 +380,23 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden flex flex-col max-h-96">
+      <div className="bg-white dark:bg-[#233138] rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden flex flex-col max-h-96">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
-          <h3 className="font-semibold text-[#1E293B]">Stickers</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <div className="px-5 py-3 border-b border-gray-100 dark:border-[#2a3942] flex items-center justify-between shrink-0">
+          <h3 className="font-semibold text-[#1E293B] dark:text-[#e9edef]">Stickers</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search bar */}
-        <div className="px-4 py-2 border-b border-gray-100 shrink-0">
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-[#2a3942] shrink-0">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search via sticker store"
-            className="w-full px-3 py-2 bg-gray-100 rounded-full text-sm text-gray-700 placeholder-gray-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#2a3942] rounded-full text-sm text-gray-700 dark:text-[#e9edef] placeholder-gray-500 dark:placeholder:text-[#8696a0] focus:outline-none"
           />
         </div>
 
@@ -410,7 +410,7 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
                   onSelect(emoji);
                   onClose();
                 }}
-                className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-gray-100 dark:hover:bg-[#2a3942] rounded-lg transition-colors cursor-pointer"
                 title={emoji}
               >
                 {emoji}
@@ -420,15 +420,15 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
         </div>
 
         {/* Pack tabs at bottom */}
-        <div className="px-2 py-2 border-t border-gray-100 flex items-center gap-1 overflow-x-auto shrink-0">
+        <div className="px-2 py-2 border-t border-gray-100 dark:border-[#2a3942] flex items-center gap-1 overflow-x-auto shrink-0">
           {packs.map(([key, pack]) => (
             <button
               key={key}
               onClick={() => setActivePack(key)}
               className={`px-3 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 activePack === key
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'hover:bg-gray-100 text-gray-600'
+                  ? 'bg-blue-100 dark:bg-[#0b1957] text-blue-600 dark:text-white'
+                  : 'hover:bg-gray-100 dark:hover:bg-[#2a3942] text-gray-600 dark:text-[#8696a0]'
               }`}
             >
               {pack.label.split(' ')[0]}
@@ -701,7 +701,7 @@ export const MessageComposer = memo(function MessageComposer({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="border-t border-border bg-white p-3 whatsapp-chat-bg">
+    <div className="border-t border-border dark:border-[#2a3942] bg-[#f0f2f5] dark:bg-[#202c33] p-3 whatsapp-chat-bg">
 
       {/* ── Modals ── */}
       <AlertDialog open={showTakeoverDialog} onOpenChange={setShowTakeoverDialog}>
@@ -773,7 +773,7 @@ export const MessageComposer = memo(function MessageComposer({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon"
-                className={cn('h-9 w-9 flex-shrink-0',
+                className={cn('h-9 w-9 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-[#2a3942]',
                   agentType === 'human' ? 'text-orange-500 hover:text-orange-600' : 'text-green-500 hover:text-green-600')}
                 disabled={disabled}
                 title={agentType === 'human' ? 'Human agent controls this chat' : 'AI agent controls this chat'}>
@@ -804,14 +804,14 @@ export const MessageComposer = memo(function MessageComposer({
               'h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200',
               showAttachMenu
                 ? 'bg-[#0b1957] text-white rotate-45'
-                : 'text-[#64748B] hover:bg-gray-100 hover:text-[#1E293B]'
+                : 'text-[#64748B] dark:text-[#8696a0] hover:bg-gray-100 dark:hover:bg-[#2a3942] hover:text-[#1E293B] dark:hover:text-[#e9edef]'
             )}>
             <Plus className="h-5 w-5"/>
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-3 z-40">
-              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide mb-2 px-1">Attach</p>
+            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-[#233138] border border-gray-200 dark:border-[#2a3942] rounded-2xl shadow-xl p-3 z-40">
+              <p className="text-[10px] font-semibold text-[#94A3B8] dark:text-[#8696a0] uppercase tracking-wide mb-2 px-1">Attach</p>
               <div className="grid grid-cols-3 gap-1">
                 {[
                   // Sticker is emoji-text (inserted into the message input), so it
@@ -823,11 +823,11 @@ export const MessageComposer = memo(function MessageComposer({
                     : []),
                 ].map(item => (
                   <button key={item.id} onClick={()=>handleAttachItem(item.id)}
-                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group">
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors group">
                     <div className={cn('w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-transform group-hover:scale-105', item.bg)}>
                       {item.icon}
                     </div>
-                    <span className="text-[10px] text-[#64748B] font-medium leading-tight text-center">{item.label}</span>
+                    <span className="text-[10px] text-[#64748B] dark:text-[#e9edef] font-medium leading-tight text-center">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -841,7 +841,7 @@ export const MessageComposer = memo(function MessageComposer({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 flex-shrink-0 text-muted-foreground dark:text-[#8696a0] hover:text-foreground dark:hover:text-[#e9edef] hover:bg-gray-100 dark:hover:bg-[#2a3942]"
             disabled={disabled || !conversationId}
             title="Send template message"
             onClick={() => setIsTemplatePickerOpen(true)}
@@ -876,7 +876,7 @@ export const MessageComposer = memo(function MessageComposer({
             disabled={disabled}
             className={cn(
               'min-h-[40px] max-h-[150px] resize-none py-2.5 px-4 rounded-2xl',
-              'bg-white border border-gray-300 focus-visible:ring-1 focus-visible:ring-[#25D366]/30'
+              'bg-white dark:bg-[#2a3942] text-foreground dark:text-[#e9edef] placeholder:text-gray-400 dark:placeholder:text-[#8696a0] border border-gray-300 dark:border-transparent focus-visible:ring-1 focus-visible:ring-[#25D366]/30 focus:outline-none'
             )}
             rows={1}
           />
@@ -885,7 +885,7 @@ export const MessageComposer = memo(function MessageComposer({
         {/* ── Sticker / Emoji button ── */}
         <div className="relative flex-shrink-0 hidden lg:block">
           <Button variant="ghost" size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 text-muted-foreground dark:text-[#8696a0] hover:text-foreground dark:hover:text-[#e9edef] hover:bg-gray-100 dark:hover:bg-[#2a3942]"
             disabled={disabled}
             onClick={()=>setShowStickers(v=>!v)}>
             <Smile className="h-5 w-5"/>
@@ -922,7 +922,7 @@ export const MessageComposer = memo(function MessageComposer({
 
       {/* ── Hint bar (chat only — hidden for group broadcast) ── */}
       {conversationId && (
-        <p className="text-[10px] text-muted-foreground mt-2 px-1 hidden lg:block">
+        <p className="text-[10px] text-muted-foreground dark:text-[#8696a0] mt-2 px-1 hidden lg:block">
           Enter to send · Shift+Enter for new line
           {agentType === 'human' && <span className="ml-2 text-orange-500 font-medium">· You have manual control</span>}
         </p>

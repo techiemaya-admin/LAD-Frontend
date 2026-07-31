@@ -212,7 +212,10 @@ export function AgentForm({
                 value={formData.name}
                 onChange={(e) => onUpdateField('name', e.target.value)}
                 placeholder="e.g., Sales Assistant Alex"
-                className={cn(errors.name && "border-destructive")}
+                className={cn(
+                  "border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]",
+                  errors.name && "border-destructive dark:border-destructive"
+                )}
               />
               {errors.name && (
                 <p className="text-xs text-destructive flex items-center gap-1">
@@ -277,23 +280,30 @@ export function AgentForm({
                 }}
                 disabled={isLoadingVoices || filteredVoices.length === 0}
               >
-                <SelectTrigger id="voice" className="w-full">
+                <SelectTrigger 
+                  id="voice" 
+                  className="w-full border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                >
                   <SelectValue placeholder={isLoadingVoices ? "Loading voices..." : "Select voice"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#132035] dark:border-slate-800 dark:text-slate-100">
                   {filteredVoices.length === 0 && !isLoadingVoices && (
-                    <SelectItem value="no-voices" disabled>
+                    <SelectItem value="no-voices" disabled className="dark:text-slate-400">
                       No voices available for selected gender
                     </SelectItem>
                   )}
                   {filteredVoices.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id}>
+                    <SelectItem 
+                      key={voice.id} 
+                      value={voice.id}
+                      className="dark:focus:bg-slate-800 dark:focus:text-slate-100 cursor-pointer"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="capitalize text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-muted">
+                        <span className="capitalize text-xs text-muted-foreground dark:text-slate-400 px-1.5 py-0.5 rounded bg-muted dark:bg-slate-800 dark:border dark:border-slate-700/60">
                           {voice.gender}
                         </span>
                         <span>{voice.description}</span>
-                        <span>({voice.accent})</span>
+                        <span className="text-muted-foreground dark:text-slate-400">({voice.accent})</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -310,12 +320,19 @@ export function AgentForm({
                 value={formData.language}
                 onValueChange={(value) => onUpdateField('language', value)}
               >
-                <SelectTrigger id="language" className="w-full">
+                <SelectTrigger 
+                  id="language" 
+                  className="w-full border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                >
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#132035] dark:border-slate-800 dark:text-slate-100">
                   {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
+                    <SelectItem 
+                      key={lang.value} 
+                      value={lang.value}
+                      className="dark:focus:bg-slate-800 dark:focus:text-slate-100 cursor-pointer"
+                    >
                       {lang.label}
                     </SelectItem>
                   ))}

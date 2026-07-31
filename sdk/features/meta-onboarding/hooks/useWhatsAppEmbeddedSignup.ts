@@ -19,18 +19,39 @@
  * these are read inside callbacks registered once, where a state closure would
  * capture stale values.
  *
- * ── Cancellation ────────────────────────────────────────────────────────────
- * A user who closes the popup produces a CANCEL event (or a callback with no
- * code). Both are treated as a benign abort — no error surface, no partial
- * state — because a closed popup is a decision, not a failure.
+ * ── Cancellation vs failure ─────────────────────────────────────────────────
+ * Meta reports BOTH as event 'CANCEL'. They are distinguished only by
+ * `error_message` being present in the payload — there is no separate 'ERROR'
+ * event in the documented set. A plain close is a benign abort (no error
+ * surface, no partial state, because closing a dialog is a decision); a CANCEL
+ * carrying an error_message is a real failure and must be shown.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { exchangeWhatsAppSignup, metaOnboardingKeys } from '../api';
 import type { WhatsAppAccount, WhatsAppSignupConfig } from '../types';
 
-/** Origins Meta's Embedded Signup popup posts from. */
-const META_ORIGINS = ['https://www.facebook.com', 'https://web.facebook.com'];
+/**
+ * Is this postMessage really from Meta?
+ *
+ * Meta's own sample uses `event.origin.endsWith('facebook.com')` — which also
+ * accepts `https://evil-facebook.com`, since that string genuinely ends with
+ * those characters. We require a DOT boundary so only real subdomains match,
+ * and https so a downgraded origin cannot impersonate one.
+ *
+ * The previous hardcoded pair (www + web) was safe but too narrow: the dialog
+ * also posts from business.facebook.com, and an unlisted origin is dropped in
+ * silence — the popup completes and the handshake simply never fires.
+ */
+function isMetaOrigin(origin: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(origin);
+    if (protocol !== 'https:') return false;
+    return hostname === 'facebook.com' || hostname.endsWith('.facebook.com');
+  } catch {
+    return false;
+  }
+}
 
 const SDK_SCRIPT_ID = 'facebook-jssdk';
 
@@ -46,6 +67,11 @@ const FINISH_EVENTS = [
   'FINISH',
   'FINISH_ONLY_WABA',
   'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+  // Documented alongside the three above. An unhandled finish event looks
+  // exactly like an abandoned dialog — nothing persists and nothing errors —
+  // so listing all of them is cheaper than diagnosing one later.
+  'FINISH_OBO_MIGRATION',
+  'FINISH_GRANT_ONLY_API_ACCESS',
 ];
 
 /**
@@ -200,7 +226,7 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
 
     const handler = (event: MessageEvent) => {
       // Origin check first — this listener is on window, so anything can post.
-      if (!META_ORIGINS.includes(event.origin)) return;
+      if (!isMetaOrigin(event.origin)) return;
 
       let payload: any;
       try {
@@ -236,13 +262,27 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
         return;
       }
 
+      // Meta reports BOTH abandonment and hard failures as event 'CANCEL'.
+      // The two are told apart by `error_message` being present — there is no
+      // separate 'ERROR' event, so treating every CANCEL as a benign close
+      // swallowed real failures and left the user staring at an unchanged page.
       if (payload.event === 'CANCEL') {
-        // Closing the popup is a decision, not an error.
+        const data = payload.data || {};
         setIsDialogOpen(false);
         clearHandshake();
+
+        if (data.error_message) {
+          const code = data.error_code ? ` (${data.error_code})` : '';
+          setError(`${data.error_message}${code}`);
+        }
+        // Otherwise the user closed the dialog — a decision, not a failure.
+        // `data.current_step` says where they stopped, which is the useful
+        // signal for onboarding drop-off rather than anything to show them.
         return;
       }
 
+      // Retained defensively: 'ERROR' is not in the documented event list, but
+      // an undocumented one must not fall through to silence.
       if (payload.event === 'ERROR') {
         setIsDialogOpen(false);
         clearHandshake();

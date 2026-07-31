@@ -440,28 +440,28 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-xl max-h-[60vh] sm:max-h-[85vh] flex flex-col p-0 gap-0">
         {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b border-border flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+          <DialogTitle className="flex items-start sm:items-center gap-2 text-sm font-semibold">
             {(view === 'compose' || view === 'preview') && (
               <button
                 onClick={() => {
                   if (view === 'preview') { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }
                   else setView('list');
                 }}
-                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1"
+                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1 mt-0.5 sm:mt-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
             <div
-              className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+              className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5 sm:mt-0"
               style={{ backgroundColor: group.color }}
             >
               {group.name.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between pr-6 sm:pr-0 gap-0.5 sm:gap-2">
               <span className="truncate">
                 {view === 'list' && `Send Email to "${group.name}"`}
                 {view === 'compose' && 'New Template'}
@@ -469,10 +469,10 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                 {view === 'sending' && 'Sending…'}
                 {view === 'done' && 'Sent!'}
               </span>
+              <span className="text-xs text-muted-foreground font-normal flex-shrink-0">
+                {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
+              </span>
             </div>
-            <span className="text-xs text-muted-foreground font-normal flex-shrink-0">
-              {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
-            </span>
           </DialogTitle>
         </DialogHeader>
 

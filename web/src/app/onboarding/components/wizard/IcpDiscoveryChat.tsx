@@ -8,18 +8,32 @@
 // Right column: IcpLivePreview reads the in-progress IcpStructured and renders
 // each filled section so the tenant sees the ICP take shape as they answer.
 //
-// On the last answer, fires createIcpDefinition + PATCH /api/onboarding/state.
-// The wizard's useActiveIcpDefinition observer then auto-advances to Review.
+// On the last answer, fires saveBusinessProfile + createIcpDefinition +
+// PATCH /api/onboarding/state. The wizard's useActiveIcpDefinition observer
+// then auto-advances to Review.
+//
+// The profile write is NOT optional: answers land in two stores. IcpStructured
+// (via createIcpDefinition) feeds the search dispatcher; BusinessProfile (via
+// useBusinessProfile) feeds Settings, lead scoring, and message generation.
+// Writing only the first is what left Settings → Business Profile blank.
 
 import * as React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Send, Sparkles, Check, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import {
   createIcpDefinition,
+  useBusinessProfile,
+  type BusinessProfile,
   type IcpStructured,
 } from '@lad/frontend-features/ai-icp-assistant';
 
-import { ICP_QUESTIONS, emptyIcp, parseChips, parseRange, type IcpQuestion } from './icpQuestions';
+import {
+  ICP_QUESTIONS,
+  emptyIcp,
+  parseChips,
+  type AnswerValue,
+  type IcpQuestion,
+} from './icpQuestions';
 import IcpLivePreview from './IcpLivePreview';
 
 interface ChatTurn {
@@ -36,6 +50,7 @@ interface IcpDiscoveryChatProps {
 }
 
 export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDiscoveryChatProps) {
+  const { save: saveProfile } = useBusinessProfile();
   const [icp, setIcp] = useState<IcpStructured>(emptyIcp);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
@@ -49,6 +64,27 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
 
   const turnIdRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // finalize() is invoked from a setTimeout scheduled inside the same handler
+  // that records the final answer, so it closes over a pre-update render. Refs
+  // give it the post-update values — without them the LAST question's answer
+  // was silently dropped from everything we persist.
+  const icpRef = useRef<IcpStructured>(icp);
+  const profilePatchRef = useRef<Partial<BusinessProfile>>({});
+
+  // Keep icpRef pointed at the committed state. advance() waits 250 ms before
+  // calling finalize(), so this has always run by then.
+  useEffect(() => {
+    icpRef.current = icp;
+  }, [icp]);
+
+  /** Record one answer into both destinations. */
+  function recordAnswer(q: IcpQuestion, value: AnswerValue) {
+    if (q.apply) setIcp((prev) => q.apply!(value, prev));
+    if (q.applyProfile) {
+      profilePatchRef.current = { ...profilePatchRef.current, ...q.applyProfile(value) };
+    }
+  }
 
   const totalCount = ICP_QUESTIONS.length;
   const answeredCount = currentIdx;
@@ -87,7 +123,14 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
     pushTurn(
       'assistant',
       <div>
-        <p className="text-[13.5px] text-[#172560] dark:text-white font-medium">{q.prompt}</p>
+        <p className="text-[13.5px] text-[#172560] dark:text-white font-medium">
+          {q.prompt}
+          {q.optional && (
+            <span className="ml-1.5 text-[10px] uppercase tracking-wide font-medium text-slate-400 dark:text-[#7a8ba3]">
+              optional
+            </span>
+          )}
+        </p>
         {q.helper && (
           <p className="text-[11.5px] text-slate-500 dark:text-[#7a8ba3] mt-0.5">{q.helper}</p>
         )}
@@ -104,7 +147,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
     if (!currentQuestion) return;
     const parsed = parseChips(textInput);
     if (parsed.length === 0) return;
-    setIcp((prev) => currentQuestion.apply(parsed, prev));
+    recordAnswer(currentQuestion, parsed);
     pushUserAnswer(
       <div className="flex flex-wrap gap-1.5 justify-end">
         {parsed.map((p) => (
@@ -123,7 +166,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
 
   function handleSubmitPills() {
     if (!currentQuestion || pillSelection.length === 0) return;
-    setIcp((prev) => currentQuestion.apply(pillSelection, prev));
+    recordAnswer(currentQuestion, pillSelection);
     const labels = (currentQuestion.options ?? [])
       .filter((o) => pillSelection.includes(o.value))
       .map((o) => o.label);
@@ -149,7 +192,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
     const max = rangeMax ? Number(rangeMax) : undefined;
     if (min == null && max == null) return;
     const value = { min, max };
-    setIcp((prev) => currentQuestion.apply(value, prev));
+    recordAnswer(currentQuestion, value);
     const label =
       min != null && max != null ? `${min}–${max}` : min != null ? `${min}+` : `up to ${max}`;
     pushUserAnswer(
@@ -159,6 +202,17 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
       >
         {label} employees
       </span>,
+    );
+    advance();
+  }
+
+  function handleSubmitText() {
+    if (!currentQuestion) return;
+    const value = textInput.trim();
+    if (!value) return;
+    recordAnswer(currentQuestion, value);
+    pushUserAnswer(
+      <p className="text-[12.5px] text-[#172560] whitespace-pre-wrap break-words">{value}</p>,
     );
     advance();
   }
@@ -193,8 +247,22 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
     setSubmitting(true);
     setSubmitError(null);
     try {
+      // 1. Business profile FIRST. The save is a merge on both ends (the hook
+      //    merges onto the latest profile, the backend jsonb-merges), so it is
+      //    idempotent and safe to repeat if step 2 fails and the user retries.
+      //    Skipped entirely when every profile-bearing question was skipped.
+      const patch = profilePatchRef.current;
+      const meaningful = Object.fromEntries(
+        Object.entries(patch).filter(([, v]) => typeof v === 'string' && v.trim().length > 0),
+      ) as Partial<BusinessProfile>;
+      if (Object.keys(meaningful).length > 0) {
+        await saveProfile(meaningful);
+      }
+
+      // 2. ICP definition — read from the ref so the final answer is included.
+      const finalIcp = icpRef.current;
       const definition = await createIcpDefinition({
-        icp_definition: { ...icp, metadata: { ...icp.metadata, captured_at: new Date().toISOString() } },
+        icp_definition: { ...finalIcp, metadata: { ...finalIcp.metadata, captured_at: new Date().toISOString() } },
         captured_via: 'signup_wizard',
       });
       fetch('/api/onboarding/state', {
@@ -209,7 +277,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
       pushTurn(
         'assistant',
         <p className="text-[13.5px] text-[#172560] dark:text-white font-medium inline-flex items-center gap-1.5">
-          <Check className="w-4 h-4" style={{ color: '#22c55e' }} /> ICP saved. Taking you to Review…
+          <Check className="w-4 h-4" style={{ color: '#22c55e' }} /> ICP and business profile saved. Taking you to Review…
         </p>,
       );
       setFinished(true);
@@ -305,6 +373,16 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
                 onMaxChange={setRangeMax}
                 onSubmit={handleSubmitRange}
                 onSkip={handleSkipQuestion}
+              />
+            )}
+            {currentQuestion.type === 'text' && (
+              <TextInput
+                value={textInput}
+                onChange={setTextInput}
+                onSubmit={handleSubmitText}
+                onSkip={handleSkipQuestion}
+                placeholder={currentQuestion.placeholder}
+                multiline={currentQuestion.multiline}
               />
             )}
           </div>
@@ -413,6 +491,68 @@ function ChipInput({
       >
         Send <Send className="w-3.5 h-3.5" />
       </button>
+    </div>
+  );
+}
+
+function TextInput({
+  value, onChange, onSubmit, onSkip, placeholder, multiline,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  onSkip: () => void;
+  placeholder?: string;
+  multiline?: boolean;
+}) {
+  // Multi-line boxes take Enter as a newline (Cmd/Ctrl+Enter sends); single-line
+  // ones send on Enter, matching ChipInput.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter') return;
+    if (multiline && !(e.metaKey || e.ctrlKey)) return;
+    e.preventDefault();
+    onSubmit();
+  };
+
+  return (
+    <div className={multiline ? 'space-y-2' : 'flex items-center gap-2'}>
+      {multiline ? (
+        <textarea
+          rows={3}
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={placeholder ?? 'Type your answer…'}
+          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] text-[13px] text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0B1957]/30 resize-none"
+        />
+      ) : (
+        <input
+          type="text"
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={placeholder ?? 'Type your answer…'}
+          className="flex-1 h-10 px-3.5 rounded-xl border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] text-[13px] text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0B1957]/30"
+        />
+      )}
+      <div className={multiline ? 'flex items-center gap-2 justify-end' : 'flex items-center gap-2'}>
+        <button
+          onClick={onSkip}
+          className="h-10 px-3 rounded-xl text-[12.5px] font-medium text-slate-500 dark:text-[#7a8ba3] hover:bg-slate-100 dark:hover:bg-[#1a2a43]"
+        >
+          Skip
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={!value.trim()}
+          className="h-10 px-3.5 rounded-xl text-[13px] font-semibold text-white inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: '#0B1957' }}
+        >
+          Send <Send className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

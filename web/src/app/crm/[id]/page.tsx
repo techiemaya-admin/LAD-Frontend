@@ -108,6 +108,9 @@ export default function CrmDetailPage() {
             quietUntil={detailQuery.data?.quiet_until ?? null}
             followups={followupsQuery.data ?? []}
             followupsLoading={followupsQuery.isLoading}
+            // The report + accelerator API is keyed by the CORE lead id, not
+            // this page's Master Agent prospect id.
+            coreLeadId={detailQuery.data?.core_lead_id ?? null}
           />
         )}
       </main>

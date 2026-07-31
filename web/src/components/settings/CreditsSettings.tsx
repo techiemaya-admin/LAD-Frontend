@@ -1,68 +1,19 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Wallet, Plus, X, Loader2 } from 'lucide-react';
-import { useCreditsBalance, useStripeCheckout } from '@lad/frontend-features/billing';
-import { logger } from '@/lib/logger';
-import { safeStorage } from '@lad/shared/storage';  
+import { Wallet, Plus, Loader2 } from 'lucide-react';
+import { useCreditsBalance } from '@lad/frontend-features/billing';
+import { AddCreditsModal } from '@/components/billing/AddCreditsModal';
 
 export const CreditsSettings: React.FC = () => {
   const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [customAmount, setCustomAmount] = useState('');
 
-  // SDK hooks for wallet and payment
+  // SDK hook for wallet balance. Package selection and checkout now live in
+  // the shared AddCreditsModal, which reads packages from the backend.
   const { data: creditsData, isLoading: isLoadingBalance } = useCreditsBalance();
-  const { mutate: createCheckout, isPending: isProcessing } = useStripeCheckout();
 
-  const presetAmounts = [
-    { value: 99, credits: 1000, label: 'Starter' },
-    { value: 199, credits: 3000, label: 'Professional' },
-    { value: 499, credits: 12000, label: 'Business' },
-    { value: 999, credits: 12000, label: 'Enterprise' },
-  ];
-
-  // Extract balance from SDK response  
+  // Extract balance from SDK response
   const balance = creditsData?.availableBalance ?? creditsData?.currentBalance ?? 0;
   const lastUpdated = 'Just now';
-
-  const handleProceedToPayment = async () => {
-    const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
-    if (!amount || amount <= 0) {
-      alert('Please select or enter a valid amount');
-      return;
-    }
-
-    try {
-      const token = safeStorage.getItem('token');
-      if (!token) {
-        alert('Please log in to proceed with payment');
-        return;
-      }
-
-      // Call SDK hook to create Stripe checkout session
-      createCheckout({
-        amount,
-        successUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/settings?tab=credits&payment=success`,
-        cancelUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/settings?tab=credits&payment=cancelled`,
-        metadata: {
-          credits: amount,
-        },
-      });
-    } catch (error) {
-      logger.error('Error processing payment', { error: error instanceof Error ? error.message : 'Unknown error' });
-      alert(`Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleSelectAmount = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmount(''); // Clear custom amount when preset is selected
-  };
-
-  const handleCustomAmountChange = (value: string) => {
-    setCustomAmount(value);
-    setSelectedAmount(null); // Clear preset selection when custom amount is entered
-  };
 
   // Check URL parameters to auto-open Add Credits modal
   useEffect(() => {
@@ -111,89 +62,8 @@ export const CreditsSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Credits Modal */}
-      {showAddCreditsModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50" onClick={() => setShowAddCreditsModal(false)}>
-          <div className="bg-white dark:bg-[#030a21] rounded-lg p-6 max-w-md w-full mx-4 border border-transparent dark:border-blue-950/50 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Add Credits</h3>
-              <button
-                onClick={() => setShowAddCreditsModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {presetAmounts.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => handleSelectAmount(preset.value)}
-                    className={`p-4 border-2 rounded-lg transition-colors text-center ${
-                      selectedAmount === preset.value
-                        ? 'border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/30'
-                        : 'border-gray-200 dark:border-blue-950/40 bg-transparent hover:border-blue-400 dark:hover:border-blue-900/60'
-                    }`}
-                  >
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{preset.credits.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">credits</p>
-                    <p className="text-sm text-gray-700 dark:text-white mt-1 font-medium">${preset.value}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{preset.label}</p>
-                  </button>
-                ))}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Custom Amount</label>
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={customAmount}
-                  onChange={(e) => handleCustomAmountChange(e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 dark:bg-[#061033]/70 dark:text-white dark:placeholder-gray-600 ${
-                    customAmount ? 'border-blue-600 dark:border-blue-500' : 'border-gray-300 dark:border-blue-950/60'
-                  }`}
-                  min="1"
-                />
-              </div>
-              {(selectedAmount || customAmount) && (
-                <div className="p-3 bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/40 rounded-lg">
-                  <p className="text-sm text-blue-800 dark:text-blue-400">
-                    <span className="font-semibold">You&apos;ll receive: </span>
-                    {(() => {
-                      const amount = parseFloat(customAmount) || selectedAmount || 0;
-                      if (!amount || amount <= 0) return 'Select an amount';
-                      const preset = presetAmounts.find(p => p.value === amount);
-                      const credits = preset ? preset.credits : Math.round(amount * 10.1); // Approximate for custom amounts
-                      return `${credits.toLocaleString()} credits for $${amount}`;
-                    })()}
-                  </p>
-                </div>
-              )}
-              <div className="pt-4">
-                <button
-                  onClick={handleProceedToPayment}
-                  disabled={(!selectedAmount && !customAmount) || isProcessing}
-                  className={`w-full px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center font-medium ${
-                    (selectedAmount || customAmount) && !isProcessing
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
-                      : 'bg-gray-300 text-gray-500 dark:bg-blue-950/40 dark:text-gray-600 cursor-not-allowed'
-                  }`}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Proceed to Payment'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add Credits Modal — shared popup used by every credit CTA. */}
+      <AddCreditsModal open={showAddCreditsModal} onClose={() => setShowAddCreditsModal(false)} />
 
       {/* Credits Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 dark:bg-[#030a21]/60 dark:border-blue-950/40">

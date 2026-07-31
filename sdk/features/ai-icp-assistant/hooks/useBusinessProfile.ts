@@ -9,7 +9,7 @@
  * this SDK (see useActiveIcpDefinition.ts — TanStack Query is intentionally
  * NOT used here).
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   BusinessProfile,
@@ -44,19 +44,41 @@ export function useBusinessProfile(): UseBusinessProfileResult {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Tracks the in-flight initial load so save() can wait for it. Without this a
+  // caller that saves before the GET resolves merges its partial onto
+  // emptyBusinessProfile() — every canonical key set to '' — and the POST then
+  // overwrites the real stored values with blanks. The backend's all-empty
+  // guard does not catch it, because the partial supplies at least one
+  // non-blank field.
+  // Mirror of `profile` that save() can read synchronously.
+  const profileRef = useRef<BusinessProfile>(profile);
+
+  const loadPromiseRef = useRef<Promise<void> | null>(null);
+  // False until a load actually returns. A fresh tenant with no profile row
+  // counts as loaded (getBusinessProfile resolves null); only a thrown request
+  // leaves this false.
+  const loadedRef = useRef(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const result = await getBusinessProfile();
-      // Merge server state on top of the empty defaults so the form always
-      // has every canonical key (avoids `value={undefined}` warnings on inputs).
-      setProfile({ ...emptyBusinessProfile(), ...(result || {}) });
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load business profile'));
-    } finally {
-      setLoading(false);
-    }
+    const run = (async () => {
+      try {
+        const result = await getBusinessProfile();
+        // Merge server state on top of the empty defaults so the form always
+        // has every canonical key (avoids `value={undefined}` warnings on inputs).
+        const next = { ...emptyBusinessProfile(), ...(result || {}) };
+        profileRef.current = next;
+        setProfile(next);
+        loadedRef.current = true;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load business profile'));
+      } finally {
+        setLoading(false);
+      }
+    })();
+    loadPromiseRef.current = run;
+    return run;
   }, []);
 
   useEffect(() => {
@@ -65,24 +87,41 @@ export function useBusinessProfile(): UseBusinessProfileResult {
 
   const save = useCallback(
     async (partial: Partial<BusinessProfile>): Promise<BusinessProfile> => {
-      // The backend does a FULL replace of icp_data (routes/index.js:421), so
-      // we must merge the partial onto the latest local state and POST the
-      // whole object. Use functional setState to grab the latest snapshot
-      // without adding `profile` to the dep array (which would re-create save
-      // on every keystroke).
-      let snapshot: BusinessProfile = emptyBusinessProfile();
-      let merged: BusinessProfile = emptyBusinessProfile();
-      setProfile((prev) => {
-        snapshot = prev;
-        merged = { ...prev, ...partial };
-        return merged;
-      });
+      // Never merge onto the empty defaults — wait for the initial load so the
+      // POST carries the tenant's real stored values, not blanks.
+      if (loadPromiseRef.current) await loadPromiseRef.current;
+      if (!loadedRef.current) {
+        // The load failed, so `profile` is still all-blank defaults. Saving now
+        // would write those blanks over the tenant's real data. Refuse — a
+        // visible "couldn't save" beats a silent wipe. One retry first, in case
+        // the failure was transient.
+        await load();
+        if (!loadedRef.current) {
+          const e = new Error(
+            'Could not load your current profile, so nothing was saved. Check your connection and try again.',
+          );
+          setError(e);
+          throw e;
+        }
+      }
+
+      // The backend merges icp_data, but we still send a fully-merged object so
+      // non-canonical extras (linkedinAudit, blogUrls) survive.
+      //
+      // The snapshot comes from a ref, not from a functional setState — React
+      // does not guarantee the updater runs synchronously, so reading the merged
+      // value straight after setProfile() could send the pre-merge object.
+      const snapshot = profileRef.current;
+      const merged: BusinessProfile = { ...snapshot, ...partial };
+      profileRef.current = merged;
+      setProfile(merged);
       setSaving(true);
       setError(null);
       try {
         await saveBusinessProfile(merged);
         return merged;
       } catch (err) {
+        profileRef.current = snapshot;
         setProfile(snapshot); // rollback
         const e = err instanceof Error ? err : new Error('Failed to save business profile');
         setError(e);
@@ -91,7 +130,7 @@ export function useBusinessProfile(): UseBusinessProfileResult {
         setSaving(false);
       }
     },
-    [],
+    [load],
   );
 
   return {

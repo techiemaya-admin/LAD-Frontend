@@ -123,8 +123,8 @@ export function PromptEditor({
         rows={rows}
         disabled={disabled}
         className={cn(
-          "prompt-textarea",
-          error && "border-destructive focus:ring-destructive/50"
+          "prompt-textarea border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]",
+          error && "border-destructive dark:border-destructive focus:ring-destructive/50"
         )}
       />
 

@@ -17,6 +17,9 @@ import {
   type WarmPath,
 } from './data';
 import WarmPathPanel from './warm-path-panel';
+import LeadReportSection from './lead-report-section';
+import AcceleratorSection from './accelerator-section';
+import { useLeadReport } from '@/hooks/useLeadReport';
 import type { ProspectFollowup } from '@lad/frontend-features/prospects';
 
 interface ProspectDetailProps {
@@ -38,6 +41,12 @@ interface ProspectDetailProps {
   /** Upcoming scheduled automatic follow-ups for this prospect. */
   followups?: ProspectFollowup[];
   followupsLoading?: boolean;
+  /**
+   * The prospect's `core_lead_id` — the id `campaign_leads` and
+   * `campaign_analytics` are keyed by, and the only one the report API resolves.
+   * Omitted or null ⇒ the report + accelerator sections are not rendered.
+   */
+  coreLeadId?: string | null;
 }
 
 function degreeLabel(nd?: string | null): string {
@@ -47,7 +56,7 @@ function degreeLabel(nd?: string | null): string {
   return (nd && (m[nd] || nd.replace(/_/g, ' ').toLowerCase())) || '';
 }
 
-export default function ProspectDetail({ prospect, warmPath, warmPathSample = false, events = [], onClose, onRemove, isRemoving = false, onAction, isActing = false, doNotContact = false, quietUntil = null, followups = [], followupsLoading = false }: ProspectDetailProps) {
+export default function ProspectDetail({ prospect, warmPath, warmPathSample = false, events = [], onClose, onRemove, isRemoving = false, onAction, isActing = false, doNotContact = false, quietUntil = null, followups = [], followupsLoading = false, coreLeadId = null }: ProspectDetailProps) {
   const [warmOpen, setWarmOpen] = useState(false);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -227,6 +236,8 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
 
       <ActivityHeatmap events={events} days={30} />
 
+      <AcceleratorPanels coreLeadId={coreLeadId} firstName={prospect.full_name?.split(' ')[0]} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <FitRadar p={prospect} />
         <ChannelDonut p={prospect} />
@@ -244,6 +255,51 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Lead report + accelerator ────────────────────────────────────────────
+
+/**
+ * The two accelerator sections, sharing one fetch.
+ *
+ * Renders NOTHING when the lead is not enrolled in a campaign — most CRM
+ * contacts are not, and an empty "no sequence" card on every one of them would
+ * be noise rather than information.
+ */
+function AcceleratorPanels({ coreLeadId, firstName }: { coreLeadId: string | null; firstName?: string }) {
+  const {
+    bundle, isLoading, state, refusalMessage, advance, isAdvancing,
+    approve, reject, isDeciding, settledElsewhere, actionError,
+  } = useLeadReport(coreLeadId);
+
+  if (!coreLeadId || isLoading || !bundle?.enrolled) return null;
+
+  return (
+    <>
+      <LeadReportSection
+        state={state}
+        report={bundle.report}
+        grounding={bundle.grounding}
+        leadFirstName={firstName}
+        refusalMessage={refusalMessage}
+        actionError={actionError}
+        settledElsewhere={settledElsewhere}
+        onAdvance={advance}
+        isAdvancing={isAdvancing}
+        onApprove={approve}
+        onReject={reject}
+        isDeciding={isDeciding}
+      />
+      {bundle.sequence && (
+        <AcceleratorSection
+          sequence={bundle.sequence}
+          canAdvance={Boolean(bundle.has_report_step)}
+          onAdvance={advance}
+          isAdvancing={isAdvancing}
+        />
+      )}
+    </>
   );
 }
 

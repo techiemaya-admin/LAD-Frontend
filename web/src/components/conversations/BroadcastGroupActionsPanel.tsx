@@ -100,33 +100,33 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
   }, [busy, channel, groupIds, loadLists]);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-muted/20">
-      <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-sm p-6 space-y-5">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#f0f2f5] dark:bg-[#161717]">
+      <div className="w-full max-w-md bg-white dark:bg-[#161717] border border-gray-200 dark:border-[#222d34] rounded-2xl shadow-sm p-6 space-y-5">
         <div className="flex items-center gap-2">
-          <Megaphone className="h-5 w-5 text-emerald-600" />
-          <h2 className="text-base font-semibold">
+          <Megaphone className="h-5 w-5 text-[#00a884]" />
+          <h2 className="text-base font-semibold text-foreground dark:text-[#e9edef]">
             {groupIds.length} group{groupIds.length === 1 ? '' : 's'} selected
           </h2>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground dark:text-[#8696a0]">
           Organize the selected groups into a broadcast group — or compose a message on the left to broadcast to them.
         </p>
 
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Create new broadcast group</label>
+          <label className="text-xs font-medium text-muted-foreground dark:text-[#8696a0] uppercase tracking-wide">Create new broadcast group</label>
           <div className="flex gap-2">
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') createNew(); }}
               placeholder="Broadcast group name"
-              className="flex-1 text-sm rounded-md border border-border bg-background px-3 py-2"
+              className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-[#2a3942] bg-[#f0f2f5] dark:bg-[#2a3942] text-foreground dark:text-[#e9edef] placeholder:text-gray-400 dark:placeholder:text-[#8696a0] px-3.5 py-2 focus:outline-none"
             />
             <button
               type="button"
               onClick={createNew}
               disabled={busy || !newName.trim()}
-              className="flex items-center gap-1 text-sm px-3 py-2 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-50"
+              className="flex items-center gap-1 text-sm px-4 py-2 rounded-xl bg-[#00a884] hover:bg-[#008f6f] text-white font-medium disabled:opacity-50 transition-colors shrink-0"
             >
               <Plus className="h-4 w-4" /> Create
             </button>
@@ -134,25 +134,25 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add to existing broadcast group</label>
+          <label className="text-xs font-medium text-muted-foreground dark:text-[#8696a0] uppercase tracking-wide">Add to existing broadcast group</label>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-[#8696a0] py-2">
+              <Loader2 className="h-4 w-4 animate-spin text-[#00a884]" /> Loading…
             </div>
           ) : lists.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No broadcast groups yet — create one above.</p>
+            <p className="text-sm text-muted-foreground dark:text-[#8696a0]">No broadcast groups yet — create one above.</p>
           ) : (
-            <div className="max-h-48 overflow-y-auto space-y-1">
+            <div className="max-h-48 overflow-y-auto space-y-1.5 no-scrollbar">
               {lists.map((list) => (
                 <button
                   key={list.id}
                   type="button"
                   onClick={() => addToExisting(list)}
                   disabled={busy}
-                  className="w-full flex items-center justify-between text-sm px-3 py-2 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-between text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-[#222d34] bg-white dark:bg-[#161717] hover:bg-gray-100 dark:hover:bg-[#2a3942] text-foreground dark:text-[#e9edef] transition-colors disabled:opacity-50"
                 >
-                  <span className="truncate">{list.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">{list.member_group_ids.length} groups</span>
+                  <span className="truncate font-medium">{list.name}</span>
+                  <span className="text-xs text-muted-foreground dark:text-[#8696a0] shrink-0 ml-2">{list.member_group_ids.length} groups</span>
                 </button>
               ))}
             </div>
@@ -160,7 +160,7 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
         </div>
 
         {note && (
-          <p className={`text-sm flex items-center gap-1 ${note.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+          <p className={`text-sm flex items-center gap-1 ${note.ok ? 'text-[#00a884]' : 'text-red-500'}`}>
             {note.ok && <Check className="h-4 w-4" />} {note.text}
           </p>
         )}
