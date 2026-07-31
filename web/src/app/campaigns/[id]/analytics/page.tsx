@@ -204,7 +204,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
               <div className="flex justify-between items-start mb-4">
                 <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-10 w-10 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
@@ -216,7 +216,7 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Activity Table */}
-        <div className="bg-white dark:bg-[#1a2a43] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm mb-8">
+        <div className="bg-white dark:bg-[#071131] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm mb-8">
           <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
             <div className="flex justify-between items-center">
               <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -239,7 +239,7 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Charts */}
-        <div className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831] mb-8">
+        <div className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831] mb-8">
           <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -250,7 +250,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton 3-Column Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="bg-white dark:bg-[#1a2a43] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-9 w-9 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
                 <div className="flex-1">
@@ -897,7 +897,7 @@ export default function CampaignAnalyticsPage() {
                           <p className="text-xs text-[#64748B] dark:text-slate-300">Success Rate</p>
                           <p className="text-xs font-bold dark:text-blue-400" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-800">
+                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-600">
                           <div
                             className="absolute h-1.5 rounded-full"
                             style={{
