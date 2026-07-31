@@ -284,7 +284,7 @@ export default function WarmPathPanel({
               )}
             </div>
           </div>
-          <span className="text-[11.5px] font-semibold inline-flex items-center gap-1" style={{ color: T.primary }}>
+          <span className="text-[11.5px] font-semibold inline-flex items-center gap-1 text-[#0B1957] dark:text-blue-400">
             Open graph <ChevronDown className="w-3.5 h-3.5" />
           </span>
         </button>

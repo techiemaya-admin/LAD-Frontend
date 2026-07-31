@@ -778,7 +778,7 @@ export const WhatsAppIntegration: React.FC = () => {
                       {/* AI Agent Option */}
                       <SelectItem
                           value="ai_agent"
-                          className="text-sm text-[#172560] dark:text-white focus:bg-[#22C55E] focus:text-white data-[state=checked]:bg-[#22C55E] data-[state=checked]:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
+                          className="text-sm text-[#172560] dark:text-white focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
                       >
                         <span className="flex items-center gap-2">🤖 AI Agent (release assignment)</span>
                         {bulkAssignUserId === "ai_agent" && (
@@ -805,7 +805,7 @@ export const WhatsAppIntegration: React.FC = () => {
                             <SelectItem
                                 key={m.user_id}
                                 value={m.user_id}
-                                className="text-sm text-[#172560] dark:text-white focus:bg-[#22C55E] focus:text-white data-[state=checked]:bg-[#22C55E] data-[state=checked]:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 mt-0.5 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
+                                className="text-sm text-[#172560] dark:text-white focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 mt-0.5 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
                             >
                 <span className="flex items-center justify-between w-full">
                   <span>{m.name}</span>

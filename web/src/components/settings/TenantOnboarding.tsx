@@ -240,7 +240,7 @@ export function TenantOnboarding() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
+    <div className="bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
       {/* Header */}
       <div className="p-6 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center justify-between">

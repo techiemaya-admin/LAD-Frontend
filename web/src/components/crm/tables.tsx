@@ -288,8 +288,7 @@ function CrmTable<R extends CrmContact>({
               {title}
             </h3>
             <span
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
-              style={{ background: T.badgeBg, color: T.primaryHead }}
+              className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-semibold rounded-full text-[#0B1957] bg-[#e8ebf7] dark:bg-[#2563eb] dark:text-white dark:rounded-md tabular-nums"
             >
               {filtered.length}{filtered.length !== count ? ` / ${count}` : ''}
             </span>
@@ -339,7 +338,7 @@ function CrmTable<R extends CrmContact>({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/70 dark:bg-[#0e1a3a] border-b border-slate-100 dark:border-[#262831]">
+            <tr className="bg-slate-50/70 dark:bg-[#071131] border-b border-slate-100 dark:border-[#262831]">
               <th className="w-9 px-3 py-2.5">
                 <input
                   type="checkbox"

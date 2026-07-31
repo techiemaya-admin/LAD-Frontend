@@ -313,23 +313,37 @@ function KpiSpark({ counts, total }: { counts: number[]; total: number }) {
         </span>
         <span className="text-[11px] text-slate-500 dark:text-slate-300">events</span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-7 mt-2" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-7 mt-2 overflow-visible" preserveAspectRatio="none">
         <defs>
           <linearGradient id="sparkLad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={T.primary} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={T.primary} stopOpacity="0" />
+            {/* Light mode uses T.primary, dark mode switches to bright blue */}
+            <stop offset="0%" className="[stop-color:var(--spark-color,#0B1957)] dark:[stop-color:#3b82f6]" stopOpacity="0.4" />
+            <stop offset="100%" className="[stop-color:var(--spark-color,#0B1957)] dark:[stop-color:#3b82f6]" stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Area Fill */}
         <polyline points={`0,${h} ${pts} ${w},${h}`} fill="url(#sparkLad)" stroke="none" />
+
+        {/* Stroke Line: uses T.primary in light mode, bright blue in dark mode */}
         <polyline
           points={pts}
           fill="none"
           stroke={T.primary}
-          strokeWidth="1.6"
+          className="stroke-[#0B1957] dark:stroke-[#3b82f6]"
+          strokeWidth="1.8"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        <circle cx={lastX} cy={lastY} r="2.2" fill={T.primary} />
+
+        {/* Endpoint Circle */}
+        <circle
+          cx={lastX}
+          cy={lastY}
+          r="2.5"
+          fill={T.primary}
+          className="fill-[#0B1957] dark:fill-[#60a5fa]"
+        />
       </svg>
     </div>
   );
@@ -349,23 +363,22 @@ function KpiRoutes({
           Warm routes
         </p>
         <span
-          className="inline-flex items-center gap-1 text-[10.5px] font-medium opacity-70 group-hover:opacity-100"
-          style={{ color: T.primary }}
+          className="inline-flex items-center gap-1 text-[10.5px] font-medium opacity-70 group-hover:opacity-100 text-[#0B1957] dark:text-slate-400 transition-colors"
         >
           {open ? 'Hide' : 'Open'}
           {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </span>
-      </div>
-      <div className="flex items-baseline gap-2 mt-1">
-        <span
-          className="text-2xl font-bold tabular-nums text-[#1e293b] dark:text-white"
-          style={{ fontFamily: '"Space Grotesk", system-ui' }}
-        >
-          {count}
-        </span>
-        <span className="text-[11px] font-medium" style={{ color: T.primary }}>
-          paths
-        </span>
+        </div>
+        <div className="flex items-baseline gap-2 mt-1">
+          <span
+            className="text-2xl font-bold tabular-nums text-[#1e293b] dark:text-white"
+            style={{ fontFamily: '"Space Grotesk", system-ui' }}
+          >
+            {count}
+          </span>
+          <span className="text-[11px] font-medium text-[#0B1957] dark:text-slate-400">
+            paths
+          </span>
       </div>
       <div className="mt-2 flex items-center gap-1.5">
         <div

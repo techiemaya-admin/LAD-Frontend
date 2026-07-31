@@ -728,7 +728,7 @@ export function CallLogsTable({
       <TableRow
         key={`batch-${batchId}`}
         onClick={() => onToggleBatch?.(batchId)}
-        className="cursor-pointer bg-white dark:bg-[#1a2a43] hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831]"
+        className="cursor-pointer bg-white dark:bg-[#000724] hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831]"
       >
         <TableCell colSpan={columns.length} className="py-4">
           <div className="flex items-center gap-3">
@@ -788,9 +788,9 @@ export function CallLogsTable({
 
     // DEBUG: Log what's happening with batch calls
     const rowClassName = cn(
-        "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] transition-colors",
-        selectedCalls.has(callId) ? "bg-primary/5" : "bg-white dark:bg-[#071131]",
-        indent && "bg-slate-50/40 dark:bg-slate-900/30 border-l-4 border-l-blue-500/50"
+        "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831] transition-colors",
+        selectedCalls.has(callId) ? "bg-primary/5" : "bg-white dark:bg-[#000724]",
+        indent && "border-l-4 border-l-blue-500/50"
     );
 
     if (indent) {
@@ -834,7 +834,7 @@ export function CallLogsTable({
                 }}
                 className={cn(
 
-                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#071131] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
+                  (column.meta as any)?.sticky ? `sticky ${(column.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(column.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
                 )}
               >
                 {flexRender(column.cell, cellContext as any)}
@@ -864,7 +864,7 @@ export function CallLogsTable({
             }}
             className={cn(
               cellIndex === 0 && indent ? "pl-8" : "",
-              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#071131] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
+              (cell.column.columnDef.meta as any)?.sticky ? `sticky ${(cell.column.columnDef.meta as any)?.sticky} bg-white dark:bg-[#000724] ${(cell.column.columnDef.meta as any)?.zIndex || 'z-10'} border-r border-[#E2E8F0] dark:border-[#262831]` : ""
             )}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -875,25 +875,25 @@ export function CallLogsTable({
   };
 
   return (
-    <div id="call-logs-table" className="bg-white dark:bg-[#071131] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
+    <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#071131]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] dark:text-slate-300 h-4 w-4" />
             <input
               type="text"
               placeholder="Search Call Logs..."
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="w-full pl-10 h-10 rounded-md border border-input bg-transparent dark:bg-[#000724] dark:border-[#1c2c4e] dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3] px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full pl-10 h-10 rounded-md border border-[#E2E8F0] dark:border-[#262831] bg-transparent dark:bg-[#1a2a43] dark:text-white placeholder:text-[#64748B] dark:placeholder:text-slate-300 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
 
           {/* Filters grouped together in one row */}
           <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center justify-end">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 dark:bg-[#000724] dark:border-[#1c2c4e] dark:text-white">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -906,7 +906,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={dateFilter} onValueChange={onDateFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 dark:bg-[#000724] dark:border-[#1c2c4e] dark:text-white">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Date Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -917,7 +917,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={callFilter} onValueChange={onCallFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 dark:bg-[#000724] dark:border-[#1c2c4e] dark:text-white">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Call Type" />
               </SelectTrigger>
               <SelectContent>
@@ -997,9 +997,9 @@ export function CallLogsTable({
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full">
           <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#071131] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b border-[#E2E8F0] dark:border-[#1c2c4e]">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#000724] shadow-xs border-b border-[#E2E8F0] dark:border-[#262831]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-transparent border-b border-[#E2E8F0] dark:border-[#1c2c4e]">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#000724] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
@@ -1229,7 +1229,7 @@ export function CallLogsTable({
                   <TableRow
                     key={row.id}
                     onClick={() => onRowClick(row.original.id)}
-                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : "bg-white dark:bg-[#000724]"
                       }`}
                   >
                     {row.getVisibleCells().map((cell, cellIndex) => (
@@ -1257,7 +1257,7 @@ export function CallLogsTable({
       </div>
       {/* Pagination Controls – Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#071131]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page */}
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
             <div className="flex items-center gap-2">
@@ -1269,7 +1269,7 @@ export function CallLogsTable({
                   onPageSizeChange?.(newSize);
                   onPageChange?.(1);
                 }}
-                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white"
+                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-slate-300"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>{size}</option>

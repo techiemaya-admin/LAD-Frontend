@@ -14,6 +14,7 @@ import { type ChannelKey } from './data';
 // LAD brand tokens — kept in sync with globals.css / tailwind config.
 export const T = {
   primary:     '#0B1957',
+  primaryDark: '#3b82f6',
   primaryHead: '#172560',
   badgeBg:     '#e8ebf7',
   badgeBgDk:   '#253456',

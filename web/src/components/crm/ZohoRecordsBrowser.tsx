@@ -8,7 +8,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const ZOHO_API = '/api/social-integration/zoho';
@@ -45,7 +44,7 @@ interface CRMRecord {
   status?: string | null;
 }
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 25;
 
 function initialsOf(name?: string | null): string {
   if (!name) return '??';
@@ -65,10 +64,12 @@ export const ZohoRecordsBrowser: React.FC = () => {
   const [records, setRecords] = useState<CRMRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [recordsLoading, setRecordsLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingRef = useRef(false);
+  const listContainerRef = useRef<HTMLDivElement>(null);
 
   const checkStatus = useCallback(async () => {
     try {
@@ -87,10 +88,11 @@ export const ZohoRecordsBrowser: React.FC = () => {
     (async () => { await checkStatus(); setLoading(false); })();
   }, [checkStatus]);
 
-  const loadRecords = useCallback(async (type: RecordType, p: number, q: string) => {
+  const loadRecords = useCallback(async (type: RecordType, p: number, q: string, size?: number) => {
+    const limit = size ?? pageSize;
     setRecordsLoading(true);
     try {
-      const params = new URLSearchParams({ type, page: String(p), limit: String(PAGE_SIZE) });
+      const params = new URLSearchParams({ type, page: String(p), limit: String(limit) });
       if (q) params.set('search', q);
       const res = await fetchWithTenant(`${ZOHO_API}/records/local?${params.toString()}`);
       const data = await res.json();
@@ -105,11 +107,12 @@ export const ZohoRecordsBrowser: React.FC = () => {
       setRecords([]); setTotal(0);
     } finally {
       setRecordsLoading(false);
+      listContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, []);
+  }, [pageSize]);
 
   useEffect(() => {
-    if (status?.connected) loadRecords(recordType, 1, '');
+    if (status?.connected) loadRecords(recordType, 1, '', pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.connected, recordType]);
 
@@ -139,7 +142,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
             const c = d.counts || {};
             setSuccess(`Synced ${c.contacts || 0} contacts, ${c.leads || 0} leads, ${c.deals || 0} deals, ${c.tasks || 0} tasks.`);
           }
-          loadRecords(recordType, 1, search);
+          loadRecords(recordType, 1, search, pageSize);
           return;
         }
       } catch { /* transient */ }
@@ -147,7 +150,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
       else { pollingRef.current = false; setSyncing(false); setError('Sync is taking longer than expected — refresh shortly.'); }
     };
     setTimeout(tick, 3000);
-  }, [loadRecords, recordType, search]);
+  }, [loadRecords, recordType, search, pageSize]);
 
   // Resume tracking if a sync is already running when the page opens.
   useEffect(() => {
@@ -169,10 +172,10 @@ export const ZohoRecordsBrowser: React.FC = () => {
   const onSearchChange = (value: string) => {
     setSearch(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => loadRecords(recordType, 1, value), 350);
+    searchTimerRef.current = setTimeout(() => loadRecords(recordType, 1, value, pageSize), 350);
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   if (loading) {
     return (
@@ -223,7 +226,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2563eb] hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0"
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
           >
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {syncing ? 'Syncing…' : 'Sync from Zoho'}
@@ -245,16 +248,16 @@ export const ZohoRecordsBrowser: React.FC = () => {
       </div>
 
       {/* Records browser */}
-      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4 shrink-0">
           <div className="flex gap-1.5 bg-slate-100 dark:bg-[#040b25] p-1 rounded-xl border border-slate-200 dark:border-[#1c2c4e]">
             {(['contacts', 'leads', 'deals', 'tasks'] as RecordType[]).map((t) => (
               <button
                 key={t}
                 onClick={() => { setRecordType(t); setSearch(''); }}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize flex items-center gap-1.5 transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize flex items-center gap-1.5 transition-all cursor-pointer ${
                   recordType === t
-                    ? 'bg-[#2563eb] text-white shadow-xs'
+                    ? 'bg-primary/95 dark:bg-[#2563eb] text-white shadow-xs'
                     : 'text-slate-600 dark:text-[#7a8ba3] hover:text-[#172560] dark:hover:text-white hover:bg-white dark:hover:bg-[#0e1d4d]'
                 }`}
               >
@@ -278,106 +281,137 @@ export const ZohoRecordsBrowser: React.FC = () => {
         </div>
 
         {recordsLoading ? (
-          <div className="flex items-center justify-center py-10 text-slate-500 dark:text-[#7a8ba3]">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
+          <div className="flex items-center justify-center py-12 text-slate-500 dark:text-[#7a8ba3]">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading {recordType}…
           </div>
         ) : records.length === 0 ? (
-          <div className="text-center py-10 text-slate-500 dark:text-[#7a8ba3] text-sm">
+          <div className="text-center py-12 text-slate-500 dark:text-[#7a8ba3] text-sm">
             No {recordType} synced yet. Click “Sync from Zoho” to pull them in.
           </div>
         ) : (
-          <ScrollArea className="max-h-[560px]">
-            <div className="divide-y divide-slate-100 dark:divide-[#132247]">
-              {records.map((r) => (
-                <div key={r.id} className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#0a173d]/50 px-2 rounded-lg transition-colors cursor-pointer">
-                  {recordType === 'deals' ? (
-                    <>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
-                          {initialsOf(r.deal_name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.deal_name || 'Untitled deal'}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] truncate">
-                            {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '—'}
-                          </div>
+          <div
+            ref={listContainerRef}
+            className="max-h-[500px] overflow-y-auto custom-scrollbar pr-1 divide-y divide-slate-100 dark:divide-[#132247]"
+          >
+            {records.map((r) => (
+              <div key={r.id} className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#0a173d]/50 px-2 rounded-lg transition-colors cursor-pointer">
+                {recordType === 'deals' ? (
+                  <>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                        {initialsOf(r.deal_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.deal_name || 'Untitled deal'}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] truncate">
+                          {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '—'}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          {r.stage && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.stage}</Badge>}
-                          {r.amount != null && <div className="text-xs font-bold text-[#172560] dark:text-white mt-0.5">{r.amount.toLocaleString()}</div>}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        {r.stage && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.stage}</Badge>}
+                        {r.amount != null && <div className="text-xs font-bold text-[#172560] dark:text-white mt-0.5">{r.amount.toLocaleString()}</div>}
                       </div>
-                    </>
-                  ) : recordType === 'tasks' ? (
-                    <>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
-                          {initialsOf(r.subject)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.subject || 'Untitled task'}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5">
-                            {r.related_to && <span className="truncate">{r.related_to}</span>}
-                            {r.due_date && <span>Due {new Date(r.due_date).toLocaleDateString()}</span>}
-                            {r.priority && <span>{r.priority} priority</span>}
-                          </div>
-                        </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                    </div>
+                  </>
+                ) : recordType === 'tasks' ? (
+                  <>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                        {initialsOf(r.subject)}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {r.status && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.status}</Badge>}
-                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
-                          {initialsOf(r.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.name || '—'}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                            {r.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
-                            {r.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
-                            {r.company_name && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />{r.company_name}</span>}
-                          </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.subject || 'Untitled task'}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5">
+                          {r.related_to && <span className="truncate">{r.related_to}</span>}
+                          {r.due_date && <span>Due {new Date(r.due_date).toLocaleDateString()}</span>}
+                          {r.priority && <span>{r.priority} priority</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {r.title && <span className="text-[11px] text-slate-500 dark:text-[#7a8ba3]">{r.title}</span>}
-                        <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {r.status && <Badge variant="secondary" className="bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 text-[10px]">{r.status}</Badge>}
+                      <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#162752] text-blue-800 dark:text-blue-200 text-xs font-bold grid place-items-center shrink-0">
+                        {initialsOf(r.name)}
                       </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.name || '—'}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                          {r.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
+                          {r.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
+                          {r.company_name && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />{r.company_name}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {r.title && <span className="text-[11px] text-slate-500 dark:text-[#7a8ba3]">{r.title}</span>}
+                      <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-600" />
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         )}
 
-        {total > PAGE_SIZE && (
-          <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-[#132247]">
-            <span className="text-xs text-slate-500 dark:text-[#7a8ba3]">Page {page} of {totalPages} · {total.toLocaleString()} {recordType}</span>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => loadRecords(recordType, page - 1, search)}
-                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] grid place-items-center text-slate-600 dark:text-slate-300 disabled:opacity-40"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => loadRecords(recordType, page + 1, search)}
-                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] grid place-items-center text-slate-600 dark:text-slate-300 disabled:opacity-40"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+        {total > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3.5 mt-3 border-t border-slate-100 dark:border-[#132247] shrink-0">
+            <div className="text-xs text-slate-500 dark:text-[#7a8ba3] font-medium">
+              Showing {Math.min((page - 1) * pageSize + 1, total).toLocaleString()}–{Math.min(page * pageSize, total).toLocaleString()} of {total.toLocaleString()} {recordType}
+              {totalPages > 1 && <span className="ml-1 opacity-80">(Page {page} of {totalPages})</span>}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#7a8ba3]">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    const newSize = Number(e.target.value);
+                    setPageSize(newSize);
+                    loadRecords(recordType, 1, search, newSize);
+                  }}
+                  className="h-7 px-1.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-xs text-[#172560] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={page <= 1 || recordsLoading}
+                  onClick={() => loadRecords(recordType, page - 1, search, pageSize)}
+                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Prev</span>
+                </button>
+                <span className="text-xs px-2 font-semibold text-[#172560] dark:text-white tabular-nums">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || recordsLoading}
+                  onClick={() => loadRecords(recordType, page + 1, search, pageSize)}
+                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  title="Next Page"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}

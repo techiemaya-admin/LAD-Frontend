@@ -261,9 +261,9 @@ export function AgentForm({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
             {/* Voice Selection */}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 w-full">
               <Label htmlFor="voice">Voice</Label>
               <Select
                 value={formData.voice_id}
@@ -304,7 +304,7 @@ export function AgentForm({
               </p>
             </div>
 
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 w-full">
               <Label htmlFor="language">Language</Label>
               <Select
                 value={formData.language}
@@ -322,12 +322,15 @@ export function AgentForm({
                 </SelectContent>
               </Select>
             </div>
-            <div className="sm:self-end">
-              <VoicePreview 
-                language={formData.language} 
-                gender={formData.gender}
-                voice_sample_url={voiceSampleUrl}
-              />
+            <div className="space-y-2 shrink-0">
+              <Label className="invisible hidden sm:block select-none" aria-hidden="true">Preview</Label>
+              <div>
+                <VoicePreview 
+                  language={formData.language} 
+                  gender={formData.gender}
+                  voice_sample_url={voiceSampleUrl}
+                />
+              </div>
             </div>
           </div>
         </CardContent>

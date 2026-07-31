@@ -29,15 +29,15 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-input/30 rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-input/30 rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-input/30 rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -68,8 +68,8 @@ const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected 
       className={`bg-white dark:bg-[#071131] rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer' : ''}
         ${isLeadTag
-          ? `hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98] ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200 dark:border-[#262831]'}`
-          : `${onClick ? 'hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''} border-slate-200 dark:border-[#262831]`
+          ? `hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98] ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200 dark:border-blue-950/40'}`
+          : `${onClick ? 'hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''} border-slate-200 dark:border-blue-950/40`
         }`}
       onClick={onClick}
     >

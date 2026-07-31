@@ -2253,8 +2253,10 @@ export function ChatSettings() {
                             onValueChange={(value: string) => updateStage(key, 'template_name', value === "placeholder-fallback" ? "" : value)}
                           >
                             <SelectTrigger
-                              className={`h-auto flex-1 border-0 rounded-none focus:ring-0 shadow-none bg-transparent px-2 text-left min-h-[38px] ${
-                                templateMissing ? 'border-red-300 text-red-900 dark:text-rose-400 font-medium' : 'border-gray-200 dark:border-blue-950/60 dark:text-slate-200'
+                              className={`h-auto flex-1 border rounded-none focus:ring-0 shadow-none bg-transparent px-2 text-left min-h-[38px] ${
+                                templateMissing
+                                  ? 'border-red-300 dark:border-red-500/50 text-red-900 dark:text-rose-400 font-medium'
+                                  : 'border-gray-200 dark:border-blue-950/60 dark:text-slate-200'
                               }`}
                               title={
                                 needsTemplate
@@ -2323,7 +2325,7 @@ export function ChatSettings() {
             <div className="border border-gray-100 dark:border-blue-950/40 rounded-xl p-5 bg-transparent space-y-4">
               {/* Section Header */}
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-800/30 flex items-center justify-center shrink-0">
+                <div className="p-2.5 rounded-xl dark:bg-blue-950/40 dark:border dark:border-blue-800/30 flex items-center justify-center shrink-0">
                   <Calendar className="h-5 w-5 text-blue-400" />
                 </div>
                 <div>
@@ -2380,7 +2382,7 @@ export function ChatSettings() {
                           }))
                         }
                       >
-                        <SelectTrigger className="w-full h-8 px-3 text-xs bg-transparent border border-gray-200 dark:border-blue-950/60 rounded-md focus:ring-0 shadow-none text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                        <SelectTrigger className="w-full h-8 px-3 text-xs dark:bg-blue-950/20 bg-transparent border border-gray-200 dark:border-blue-950/60 rounded-md focus:ring-0 shadow-none text-slate-700 dark:text-slate-200 flex items-center justify-between">
                           <SelectValue placeholder="Select a template" />
                         </SelectTrigger>
 

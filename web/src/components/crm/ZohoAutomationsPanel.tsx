@@ -194,7 +194,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
         <button
           onClick={handleScan}
           disabled={scanning}
-          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2563eb] hover:bg-blue-700 transition-all disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all disabled:opacity-50"
         >
           {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {scanning ? 'Scanning…' : 'Scan open tasks'}
@@ -301,7 +301,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
                   type="button"
                   disabled={busyId === a.id || !enabled}
                   onClick={() => handleApprove(a)}
-                  className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 inline-flex items-center gap-1.5 disabled:opacity-50"
+                  className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {busyId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                   Approve & send

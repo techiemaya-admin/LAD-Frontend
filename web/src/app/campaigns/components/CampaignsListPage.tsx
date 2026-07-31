@@ -266,7 +266,7 @@ export default function CampaignsListPage() {
             onClick={handleRefreshConnections}
             disabled={syncing}
             variant="outline"
-            className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+            className="bg-[#0b1957] text-white dark:hover:text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Refresh Connections"}
@@ -308,7 +308,7 @@ export default function CampaignsListPage() {
       {(stats as any)?.linkedin_rate_limits && (() => {
         const linkedinStats = (stats as any).linkedin_rate_limits;
         return (
-        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0] dark:border-[#262831]">
+        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0] dark:border-blue-950/40">
           <div className="flex items-center gap-4 mb-6">
             <Avatar className="w-11 h-11 bg-[#0A66C2]/10 border border-[#0A66C2]/30 shadow-sm">
               <AvatarFallback>
@@ -331,7 +331,7 @@ export default function CampaignsListPage() {
           {/* Rate Limits Grid - 2x2 Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Daily Limit Card */}
-            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -356,7 +356,7 @@ export default function CampaignsListPage() {
                   </p>
                   <p className="text-sm text-[#64748B] dark:text-white">connections/day</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-blue-950/40">
                   <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">
                     Total accounts:{" "}
                     {linkedinStats.daily.account_count}
@@ -370,7 +370,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Limit Card */}
-            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -395,7 +395,7 @@ export default function CampaignsListPage() {
                   </p>
                   <p className="text-sm text-[#64748B] dark:text-white">connections/week</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-blue-950/40">
                   <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">
                     Total capacity: {linkedinStats.weekly.total}
                   </p>
@@ -408,7 +408,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Usage Chart */}
-            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl md:col-span-2 overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <Avatar className="w-10 h-10 bg-green-100">
@@ -483,7 +483,7 @@ export default function CampaignsListPage() {
                 </div>
 
                 {/* Weekly Usage Summary */}
-                <div className="mt-6 pt-6 border-t border-[#E2E8F0] dark:border-[#262831] grid grid-cols-3 gap-4">
+                <div className="mt-6 pt-6 border-t border-[#E2E8F0] dark:border-blue-950/40 grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">Total Sent</p>
                     <p className="text-2xl font-bold text-green-600">
