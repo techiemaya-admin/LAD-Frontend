@@ -107,16 +107,15 @@ function SelectItem({
         "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 transition-colors duration-150 group [&_.text-muted-foreground]:group-focus:text-current [&_.text-muted-foreground]:group-focus:opacity-75",
 
                 // --- LIGHT MODE HOVER & TICK MATRIX ---
-                // Selected (Checked) State (Standard Blue background, White text)
-                "data-[state=checked]:bg-blue-600 data-[state=checked]:text-white",
-                // Hovered State (Blue background, White text)
-                "focus:bg-blue-700 focus:text-white data-[state=checked]:focus:bg-blue-700 data-[state=checked]:focus:text-white",
-
+                // Unhovered State
+                "data-[state=checked]:bg-white data-[state=checked]:text-[#000724]",
+                // Hovered State (Deep Navy background, White text)
+                "focus:bg-[#0A1957] focus:text-white data-[state=checked]:focus:bg-[#0A1957] data-[state=checked]:focus:text-white",
                 // --- DARK MODE HOVER & TICK MATRIX ---
-                // Selected (Checked) State (Standard Green background, Dark Blue slate text)
-                "dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724]",
-                // Hovered State (Vibrant Green background, Dark Blue slate text)
-                "dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]",
+                // Selected (Checked) State (Light Blue background, White text)
+                "dark:data-[state=checked]:bg-blue-600 dark:data-[state=checked]:text-white",
+                // Hovered State (Slightly darker Light Blue, White text)
+                "dark:focus:bg-blue-500 dark:focus:text-white dark:data-[state=checked]:focus:bg-blue-500 dark:data-[state=checked]:focus:text-white",
         className
       )}
       {...props}
