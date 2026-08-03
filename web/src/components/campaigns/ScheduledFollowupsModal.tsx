@@ -261,7 +261,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
         </DialogHeader>
 
         {/* Search + summary */}
-        <div className="flex items-center gap-3 px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-[#262831] shrink-0">
+        <div className="flex items-center gap-3 px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-blue-950/40 shrink-0">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
@@ -277,14 +277,14 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
         </div>
 
         {/* Optional template + media applied to follow-ups scheduled below */}
-        <div className="px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-[#262831] shrink-0 space-y-2">
+        <div className="px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-blue-950/40 shrink-0 space-y-2">
           <TemplateSelector
             selectedTemplateId={selectedTemplateId || undefined}
             onTemplateSelect={handleTemplateSelect}
             onManageClick={() => window.open('/conversations/templates', '_blank')}
           />
           {selectedMedia && (
-            <div className="flex items-center gap-2 p-2 rounded-md border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#1a2a43]">
+            <div className="flex items-center gap-2 p-2 rounded-md border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#1a2a43]">
               {selectedMedia.type === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={selectedMedia.url} alt={selectedMedia.filename || 'attachment'} className="h-10 w-10 rounded object-cover border" />
@@ -338,7 +338,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
                 return (
                   <div
                     key={lead.campaignLeadId}
-                    className="rounded-2xl border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#1a2a43] overflow-hidden"
+                    className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] overflow-hidden"
                   >
                     {/* Lead header row */}
                     <div className="flex items-center gap-3 px-4 py-3">
@@ -393,7 +393,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
 
                     {/* Inline scheduler */}
                     {isSchedOpen && (
-                      <div className="px-4 pb-4 pt-1 border-t border-slate-100 dark:border-[#262831] bg-slate-50/60 dark:bg-[#16233a]">
+                      <div className="px-4 pb-4 pt-1 border-t border-slate-100 dark:border-blue-950/40 bg-slate-50/60 dark:bg-[#16233a]">
                         <p className="text-xs font-semibold text-slate-500 dark:text-[#7a8ba3] mt-3 mb-2">
                           Quick schedule
                         </p>
@@ -467,7 +467,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
 
                     {/* Scheduled + sent list */}
                     {(pending.length > 0 || sent.length > 0) && (
-                      <div className="px-4 pb-3 pt-1 border-t border-slate-100 dark:border-[#262831]">
+                      <div className="px-4 pb-3 pt-1 border-t border-slate-100 dark:border-blue-950/40">
                         {pending.map((f) => {
                           const rmBusy = busy.has(`rm:${f.id}`);
                           return (

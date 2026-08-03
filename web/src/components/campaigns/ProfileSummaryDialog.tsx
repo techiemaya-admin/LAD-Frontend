@@ -142,7 +142,7 @@ function ContentCard({ item, urlLabel }: { item: ContentItem; urlLabel?: string 
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg border border-[#E2E8F0] dark:border-[#262831] hover:border-[#0b1957] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all group"
+      className="block p-3 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 hover:border-[#0b1957] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all group"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-[#1E293B] dark:text-white group-hover:text-[#0b1957] dark:group-hover:text-blue-300 leading-snug line-clamp-2">
@@ -182,7 +182,7 @@ function PostCard({ post }: { post: RecentPost }) {
   const reactions = post.likes_count ?? post.reactions;
 
   return (
-    <div className="p-3 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all">
+    <div className="p-3 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] transition-all">
       <p className="text-sm text-[#1E293B] dark:text-[#E0E0E0] leading-relaxed whitespace-pre-wrap line-clamp-4">{text}</p>
       <div className="flex items-center gap-3 mt-2">
         {displayDate && (
@@ -330,12 +330,12 @@ export default function ProfileSummaryDialog({
               {/* ── Knowledge Graph attributes ── */}
               {hasKg && (
                 <section>
-                  <div className="rounded-xl bg-[#F8FAFF] dark:bg-[#0d1b3e] border border-[#E2E8F0] dark:border-[#262831] p-4 space-y-2">
+                  <div className="rounded-xl bg-[#F8FAFF] dark:bg-[#0d1b3e] border border-[#E2E8F0] dark:border-blue-950/40 p-4 space-y-2">
                     {kg?.description && (
                       <p className="text-sm text-[#475569] dark:text-slate-300 leading-relaxed">{kg.description}</p>
                     )}
                     {kg?.attributes && Object.keys(kg.attributes).length > 0 && (
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-2 border-t border-[#E2E8F0] dark:border-[#262831]">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-2 border-t border-[#E2E8F0] dark:border-blue-950/40">
                         {Object.entries(kg.attributes).slice(0, 8).map(([k, v]) => (
                           <div key={k} className="flex items-start gap-1.5">
                             <span className="text-xs font-medium text-[#64748B] shrink-0">{k}:</span>
@@ -368,7 +368,7 @@ export default function ProfileSummaryDialog({
                           href={profile.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-[#262831]
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40
                                      bg-white dark:bg-[#1a2a43] hover:bg-[#F8FAFF] dark:hover:bg-[#253456] hover:border-[#0b1957] transition-all text-sm font-medium text-[#1E293B] dark:text-white"
                         >
                           <Icon className="w-4 h-4" style={{ color: cfg.color }} />

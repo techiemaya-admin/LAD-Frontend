@@ -890,9 +890,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
     );
   }
   return (
-    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm overflow-hidden">
       {/* Header with filters */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724] gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724] gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
           <h6 className="text-base sm:text-lg font-semibold text-[#1E293B] dark:text-slate-100">
             Live Activity Feed
@@ -962,9 +962,9 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Campaign Accelerator Stepper - Display if steps are configured */}
       {workflowSteps.length > 0 && (
-        <div className="px-4 py-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+        <div className="px-4 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724]">
           <p className="text-xs font-semibold text-[#64748B] dark:text-slate-400 mb-3 uppercase tracking-wide">Campaign Accelerator</p>
-          <div className="bg-white dark:bg-[#000724] rounded-lg p-4 border border-[#E2E8F0] dark:border-[#262831]">
+          <div className="bg-white dark:bg-[#000724] rounded-lg p-4 border border-[#E2E8F0] dark:border-blue-950/40">
             <StatusStepper
               currentStep={
                 groupedLeads.length > 0
@@ -981,7 +981,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
       {/* Merged: develop's sortable-header / sticky / overflow scaffold
           + HEAD's dark-mode classes + HEAD's wider State column (150px)
           so the Retry button has room to render. */}
-      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
+      <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-blue-950/40 relative">
         <div className="min-w-[1000px] w-full">
           <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
           <TableHeader className="sticky top-0 z-40 bg-[#F8FAFC] dark:bg-[#000724] shadow-sm">
@@ -1405,7 +1405,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
 
       {/* Pagination Controls */}
       {totalLeads > 0 && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724]">
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
               <span>Show</span>
             <Select
@@ -1415,12 +1415,12 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-[75px] h-8 text-xs bg-transparent border-slate-200 dark:border-[#262831] text-slate-800 dark:text-white">
+              <SelectTrigger className="w-[75px] h-8 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
                 <SelectValue placeholder={currentPageSize} />
               </SelectTrigger>
 
               {/* Apply strict minimum/maximum width parameters directly to the content card wrapper */}
-              <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831] min-w-[75px] max-w-[75px] w-[75px] p-0">
+              <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-blue-950/40 min-w-[75px] max-w-[75px] w-[75px] p-0">
                 {/* Explicitly target the underlying Radix Viewport container element to prevent hidden stretching padding metrics */}
                 <div className="*:data-[slot=select-viewport]:min-w-[75px] *:data-[slot=select-viewport]:w-[75px] *:data-[slot=select-viewport]:p-1">
                   {[10, 20, 50, 100].map((size) => (

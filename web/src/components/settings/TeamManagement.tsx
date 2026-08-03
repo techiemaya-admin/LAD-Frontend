@@ -319,43 +319,43 @@ export const TeamManagement: React.FC = () => {
       {loading && users.length === 0 ? (
         <TeamManagementSkeleton />
       ) : (
-        <div className="bg-[#071131]/60 rounded-2xl border border-blue-950/40 shadow-sm overflow-hidden text-slate-100">
+        <div className="bg-white dark:bg-[#071131]/60 rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full min-w-[700px]">
-              <thead className="bg-transparent border-b border-blue-950/40">
+              <thead className="bg-slate-50/50 dark:bg-transparent border-b border-slate-200 dark:border-blue-950/40">
                 <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Member</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role &amp; Status</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Permissions</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Privacy</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actions</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Team Member</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Role &amp; Status</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Permissions</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Privacy</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-blue-950/30">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-950/30">
                 {users.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-8 py-16 text-center">
                       <div className="flex flex-col items-center">
-                        <div className="p-4 rounded-full bg-[#030a21] mb-4 border border-blue-950/40">
-                          <UserPlus className="h-8 w-8 text-slate-500" />
+                        <div className="p-4 rounded-full bg-slate-100 dark:bg-[#030a21] mb-4 border border-slate-200 dark:border-blue-950/40">
+                          <UserPlus className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                         </div>
-                        <h3 className="text-lg font-bold text-white">No team members</h3>
-                        <p className="text-slate-400 text-sm mt-1 max-w-xs">Start by adding your first team member to collaborate on conversations.</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No team members</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 max-w-xs">Start by adding your first team member to collaborate on conversations.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   users.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-900/30 transition-colors">
+                    <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                       {/* Team Member */}
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-3.5">
-                          <div className="h-10 w-10 rounded-full bg-[#030a21] border border-blue-900/40 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-[#030a21] border border-slate-200 dark:border-blue-900/40 flex items-center justify-center text-slate-800 dark:text-white font-bold text-sm shrink-0">
                             {(user.name || user.email || '?').charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm text-white">{user.name || '—'}</span>
-                            <span className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{user.name || '—'}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                               <Mail className="h-3 w-3 opacity-60 text-slate-400" />
                               {user.email}
                             </span>
@@ -367,7 +367,7 @@ export const TeamManagement: React.FC = () => {
                       <td className="px-6 py-6">
                         <div className="flex flex-col gap-2.5">
                           {user.role === 'owner' ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold text-blue-400 bg-blue-950/40 border border-blue-800/40 w-fit">
+                            <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-800/40 w-fit">
                               Owner
                             </span>
                           ) : (
@@ -375,10 +375,10 @@ export const TeamManagement: React.FC = () => {
                               value={user.role}
                               onValueChange={(val) => handleUpdateRole(user.id, val)}
                             >
-                              <SelectTrigger className="h-9 w-fit min-w-[140px] bg-[#030a21] border border-[#1e293b] text-blue-400 font-semibold text-xs rounded-xl px-3.5 shadow-none focus:ring-0">
+                              <SelectTrigger className="h-9 w-fit min-w-[140px] bg-slate-50 dark:bg-[#030a21] border border-slate-200 dark:border-[#1e293b] text-blue-600 dark:text-blue-400 font-semibold text-xs rounded-xl px-3.5 shadow-none focus:ring-0">
                                 <SelectValue placeholder="Select role" />
                               </SelectTrigger>
-                              <SelectContent className="bg-[#000724] border-slate-800 text-slate-200">
+                              <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
                                 {ROLE_OPTIONS.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value} className="text-xs focus:bg-blue-600 focus:text-white cursor-pointer">
                                     {opt.label}
@@ -389,8 +389,8 @@ export const TeamManagement: React.FC = () => {
                           )}
 
                           <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide uppercase pl-0.5">
-                            <span className={cn("h-1.5 w-1.5 rounded-full", user.status === 'inactive' ? "bg-rose-500" : "bg-emerald-400")} />
-                            <span className={user.status === 'inactive' ? "text-rose-400" : "text-emerald-400"}>
+                            <span className={cn("h-1.5 w-1.5 rounded-full", user.status === 'inactive' ? "bg-rose-500" : "bg-emerald-500 dark:bg-emerald-400")} />
+                            <span className={user.status === 'inactive' ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
                               {user.status || 'ACTIVE'}
                             </span>
                           </div>
@@ -409,12 +409,12 @@ export const TeamManagement: React.FC = () => {
                                     "w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0",
                                     isChecked
                                       ? "border-blue-500 bg-blue-500 shadow-sm shadow-blue-500/50"
-                                      : "border-slate-700 bg-[#030a21] group-hover:border-slate-500"
+                                      : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-[#030a21] group-hover:border-slate-400 dark:group-hover:border-slate-500"
                                   )}
                                 >
                                   {isChecked && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                                 </div>
-                                <span className="text-xs font-medium text-slate-300 group-hover:text-white transition-colors">
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                                   {page.label}
                                 </span>
                                 <input
@@ -436,7 +436,7 @@ export const TeamManagement: React.FC = () => {
                             onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
                             className={cn(
                               "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                              user.maskPhoneNumber ? "bg-blue-600" : "bg-slate-800"
+                              user.maskPhoneNumber ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-800"
                             )}
                           >
                             <span
@@ -446,7 +446,7 @@ export const TeamManagement: React.FC = () => {
                               )}
                             />
                           </button>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                          <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                             {user.maskPhoneNumber ? 'Phone Masked' : 'Phone Visible'}
                           </span>
                         </div>
@@ -454,7 +454,7 @@ export const TeamManagement: React.FC = () => {
 
                       {/* Actions */}
                       <td className="px-6 py-6 text-right">
-                        <button className="p-2 rounded-xl bg-[#030a21] border border-blue-950/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer inline-flex items-center justify-center">
+                        <button className="p-2 rounded-xl bg-slate-100 dark:bg-[#030a21] border border-slate-200 dark:border-blue-950/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center justify-center">
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
                       </td>

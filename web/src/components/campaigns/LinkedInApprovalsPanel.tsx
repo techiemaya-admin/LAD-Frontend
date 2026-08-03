@@ -122,11 +122,11 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
   }, {});
 
   return (
-    <div className="absolute top-4 right-4 w-[22rem] max-h-[calc(100%-2rem)] flex flex-col rounded-2xl border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] shadow-xl z-20 overflow-hidden">
+    <div className="absolute top-4 right-4 w-[22rem] max-h-[calc(100%-2rem)] flex flex-col rounded-2xl border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] shadow-xl z-20 overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2.5 px-4 py-3 border-b border-[#E2E8F0] dark:border-[#262831] text-left w-full hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+        className="flex items-center gap-2.5 px-4 py-3 border-b border-[#E2E8F0] dark:border-blue-950/40 text-left w-full hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
       >
         <span className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
           <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -169,7 +169,7 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
           {rows.length > 0 && (
             <div className="grid grid-cols-3 gap-2 px-3 pb-1">
               {(['approved', 'rejected', 'expired'] as ApprovalStatus[]).map((s) => (
-                <div key={s} className="rounded-lg border border-[#E2E8F0] dark:border-[#262831] px-2 py-2 text-center">
+                <div key={s} className="rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 px-2 py-2 text-center">
                   <div className="text-[15px] font-bold text-slate-900 dark:text-white">{counts[s] || 0}</div>
                   <div className="text-[10.5px] text-slate-500 dark:text-slate-400">{STATUS_STYLE[s].label}</div>
                 </div>
@@ -203,7 +203,7 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
                   const st = STATUS_STYLE[r.status] || STATUS_STYLE.expired;
                   const Icon = st.icon;
                   return (
-                    <li key={r.id} className="rounded-xl border border-[#E2E8F0] dark:border-[#262831] p-2.5">
+                    <li key={r.id} className="rounded-xl border border-[#E2E8F0] dark:border-blue-950/40 p-2.5">
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold ${st.cls}`}>
                           <Icon className="h-3 w-3" /> {st.label}

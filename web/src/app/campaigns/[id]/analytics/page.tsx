@@ -204,7 +204,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40">
               <div className="flex justify-between items-start mb-4">
                 <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-10 w-10 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
@@ -216,8 +216,8 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Activity Table */}
-        <div className="bg-white dark:bg-[#071131] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm mb-8">
-          <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831]">
+        <div className="bg-white dark:bg-[#071131] rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm mb-8">
+          <div className="p-4 border-b border-[#E2E8F0] dark:border-blue-950/40">
             <div className="flex justify-between items-center">
               <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
               <div className="flex gap-2">
@@ -228,7 +228,7 @@ export default function CampaignAnalyticsPage() {
           </div>
           <div className="p-4">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex gap-4 py-3 border-b border-gray-100 dark:border-[#262831]">
+              <div key={index} className="flex gap-4 py-3 border-b border-gray-100 dark:border-blue-950/40">
                 <div className="h-4 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-4 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -239,7 +239,7 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Charts */}
-        <div className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831] mb-8">
+        <div className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40 mb-8">
           <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -250,7 +250,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton 3-Column Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-[#262831]">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-9 w-9 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
                 <div className="flex-1">
@@ -403,12 +403,12 @@ export default function CampaignAnalyticsPage() {
   const theme = {
     bg: isDarkMode ? '#1644ad' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
     cardBg: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
-    cardBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+    cardBorder: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#E2E8F0',
     textPrimary: isDarkMode ? 'white' : '#1E293B',
     textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : '#64748B',
     textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : '#94A3B8',
     statBg: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
-    statBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+    statBorder: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#E2E8F0',
     progressBg: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
   };
 
@@ -464,7 +464,7 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=all`)}
         >
-          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#1E293B] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
@@ -492,7 +492,7 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=sent`)}
         >
-          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#1E293B] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
@@ -520,7 +520,7 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=connected`)}
         >
-          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#1E293B] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
@@ -548,7 +548,7 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=replied`)}
         >
-          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#1E293B] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
@@ -593,7 +593,7 @@ export default function CampaignAnalyticsPage() {
         <div className="flex items-stretch gap-2">
           <button
             onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
-            className="flex-1 flex items-center justify-between px-5 py-4 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-[#1E293B] shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all"
+            className="flex-1 flex items-center justify-between px-5 py-4 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 dark:bg-blue-500/20 flex items-center justify-center transition-colors">
@@ -617,7 +617,7 @@ export default function CampaignAnalyticsPage() {
           <button
             onClick={() => setScheduleManagerOpen(true)}
             title="View & manage scheduled follow-ups for connection-accepted leads"
-            className="flex items-center gap-2 px-4 rounded-2xl border border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#071131] text-sm font-semibold text-[#0b1957] dark:text-white shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all whitespace-nowrap"
+            className="flex items-center gap-2 px-4 rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] text-sm font-semibold text-[#0b1957] dark:text-white shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all whitespace-nowrap"
           >
             <CalendarClock className="w-4 h-4" />
             <span className="hidden sm:inline">Manage schedule</span>
@@ -626,7 +626,7 @@ export default function CampaignAnalyticsPage() {
 
         {/* Expanded panel */}
         {followupPanelOpen && (
-          <div className="mt-2 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-[#262831] shadow-sm overflow-hidden">
+          <div className="mt-2 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
               {/* Select all */}
@@ -800,7 +800,7 @@ export default function CampaignAnalyticsPage() {
       {/* Analytics Charts Section */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
-          <Avatar className="w-11 h-11 bg-white dark:bg-[#071131] border border-slate-200 dark:border-[#262831] shadow-sm">
+          <Avatar className="w-11 h-11 bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 shadow-sm">
             <AvatarFallback><BarChart className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
           </Avatar>
           <div className="flex-1">
@@ -830,7 +830,7 @@ export default function CampaignAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Channel Performance */}
         {platformAnalytics.length > 0 && (
-          <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
+          <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
@@ -855,7 +855,7 @@ export default function CampaignAnalyticsPage() {
                   const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
 
                   return (
-                    <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1b2745]">
+                    <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-transparent">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8 dark:!bg-blue-500/20 text-white flex items-center justify-center" style={{ backgroundColor: `${config.color}20` }}>
@@ -916,10 +916,10 @@ export default function CampaignAnalyticsPage() {
         )}
 
 
-        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-[#262831] shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-blue-950/40 shadow-sm">
                 <AvatarFallback><BarChart className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -937,7 +937,7 @@ export default function CampaignAnalyticsPage() {
                 { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
                 { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
               ].map((metric) => (
-                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1b2745]">
+                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-transparent">
                   <div className="flex items-center gap-4">
                     <Avatar className="w-9 h-9 dark:!bg-blue-500/20" style={{ backgroundColor: `${metric.color}20` }}>
                       <AvatarFallback className="bg-transparent"><metric.icon className="w-4 h-4 dark:!text-blue-400" style={{ color: metric.color }} /></AvatarFallback>
@@ -951,10 +951,10 @@ export default function CampaignAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-[#262831] shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-blue-950/40 shadow-sm">
                 <AvatarFallback><Gauge className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">

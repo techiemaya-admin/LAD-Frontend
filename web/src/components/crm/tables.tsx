@@ -13,6 +13,13 @@ import {
   VerifiedTag, Pager, type CrmPagination,
 } from './shared';
 import { CRM_OWNERS, NOW, type CrmContact } from './data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // ── Building blocks ──────────────────────────────────────────────────────
 function TypePill({ type }: { type: CrmContact['type'] }) {
@@ -428,21 +435,32 @@ function FilterDropdown({
   onChange: (v: string | null) => void;
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value || null)}
-        className="h-9 pl-3 pr-8 rounded-lg text-[12.5px] border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] text-[#172560] dark:text-white appearance-none focus:outline-none focus:ring-2 focus:ring-[#0B1957]/30"
-      >
-        <option value="">{label}: All</option>
+    <Select
+      value={value || "ALL"}
+      onValueChange={(val) => onChange(val === "ALL" ? null : val)}
+    >
+      <SelectTrigger className="h-9 pl-3 pr-8 rounded-lg text-[12.5px] border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] text-[#172560] dark:text-white focus:ring-2 focus:ring-[#0B1957]/30 shadow-none">
+        <SelectValue placeholder={`${label}: All`} />
+      </SelectTrigger>
+      
+      <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+        <SelectItem
+          value="ALL"
+          className="text-[12.5px] cursor-pointer focus:bg-primary/95 focus:text-white data-[state=checked]:bg-primary/95 data-[state=checked]:text-white"
+        >
+          {label}: All
+        </SelectItem>
         {options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <SelectItem
+            key={o.value}
+            value={o.value}
+            className="text-[12.5px] cursor-pointer focus:bg-primary/95 focus:text-white data-[state=checked]:bg-primary/95 data-[state=checked]:text-white"
+          >
             {label}: {o.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
-      <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-    </div>
+      </SelectContent>
+    </Select>
   );
 }
 

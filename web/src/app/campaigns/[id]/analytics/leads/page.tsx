@@ -493,7 +493,7 @@ export default function CampaignLeadsPage() {
         <Button
           variant="outline"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-          className="min-w-auto dark:bg-[#071131] dark:border-[#1e293b] dark:text-white"
+          className="min-w-auto dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
         </Button>
@@ -522,7 +522,7 @@ export default function CampaignLeadsPage() {
           className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
             filterParams === tab.key
               ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
-              : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white'
+              : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white'
           }`}
         >
           {tab.label}
@@ -535,7 +535,7 @@ export default function CampaignLeadsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
         <Input
-          className="pl-10 bg-white dark:bg-[#071131] border-slate-200 dark:border-[#1e293b]/60 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
+          className="pl-10 bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
           placeholder="Search leads by name, email, company, or title..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -545,7 +545,7 @@ export default function CampaignLeadsPage() {
 
     {/* Employee Cards Grid */}
     {filteredLeads.length === 0 ? (
-      <Card className="rounded-2xl border border-slate-200 dark:border-[#1e293b]/60 bg-white dark:bg-[#071131] shadow-sm">
+      <Card className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] shadow-sm">
         <CardContent className="text-center py-12">
           <Users className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h6 className="text-lg font-semibold text-slate-500 dark:text-slate-300 mb-2">
@@ -610,7 +610,7 @@ export default function CampaignLeadsPage() {
                   <button
                     onClick={() => openFollowupDialog(lead as ExtendedCampaignLead, 'email')}
                     title="Email follow-up"
-                    className="flex items-center justify-center w-9 rounded-xl bg-slate-100 dark:bg-[#071131] dark:border dark:border-[#1e293b]/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1e293b] active:scale-95 transition-all shadow-sm cursor-pointer"
+                    className="flex items-center justify-center w-9 rounded-xl bg-slate-100 dark:bg-[#071131] dark:border dark:border-blue-950/40 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1e293b] active:scale-95 transition-all shadow-sm cursor-pointer"
                   >
                     <Mail className="w-3.5 h-3.5" />
                   </button>

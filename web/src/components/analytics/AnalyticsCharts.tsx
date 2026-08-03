@@ -96,7 +96,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Conversion Funnel */}
-        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#071131]">
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Conversion Funnel</CardTitle>
             <p className="text-xs text-slate-400 dark:text-slate-300">Stage-by-stage drop-off</p>
@@ -123,7 +123,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
         </Card>
 
         {/* Step Performance */}
-        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#071131]">
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Step Performance</CardTitle>
             <p className="text-xs text-slate-400 dark:text-slate-300">Success vs errors per step</p>
@@ -163,7 +163,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
         </Card>
 
         {/* Lead Status Donut */}
-        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#071131]">
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Lead Status</CardTitle>
             <p className="text-xs text-slate-400 dark:text-slate-300">Current distribution across states</p>
@@ -205,7 +205,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
 
       {/* ── Row 3: Channel Comparison (only when multi-channel) ───────────── */}
       {hasMultiChan && (
-        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#071131]">
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Channel Comparison</CardTitle>
             <p className="text-xs text-slate-400 dark:text-slate-300">Sent · Connected · Replied across channels</p>

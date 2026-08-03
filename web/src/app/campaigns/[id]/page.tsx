@@ -174,7 +174,7 @@ export default function CampaignDetailPage() {
   return (
     <div className="h-screen flex flex-col bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
-      <div className="border-b border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] px-6 py-4 z-10">
+      <div className="border-b border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] px-6 py-4 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
