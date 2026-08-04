@@ -2991,7 +2991,8 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               {/* Toolbar */}
               <div className="h-12 px-3 flex items-center justify-between border-b border-[#e0e0e0] dark:border-[#3c4043] flex-shrink-0" role="toolbar" aria-label="Email list toolbar">
                 <div className="flex items-center gap-1">
-                  <input
+                  {/* Removed checkbox but can be put if needed */}
+                  {/* <input
                     type="checkbox"
                     checked={paginatedContacts.length > 0 && paginatedContacts.every(c => selectedIds.has(c.id))}
                     onChange={() => {
@@ -3004,7 +3005,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                     }}
                     aria-label="Select all emails on this page"
                     className="appearance-none h-4 w-4 rounded border border-[#747775] dark:border-[#3b82f6] dark:bg-transparent checked:bg-[#0b57d0] dark:checked:bg-[#3b82f6] checked:border-[#0b57d0] dark:checked:border-[#3b82f6] cursor-pointer ml-1 relative transition-colors bg-no-repeat bg-center bg-[length:10px_10px] checked:bg-[url('data:image/svg+xml;utf8,<svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%20%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22><polyline%20points=%2220%206%209%2017%204%2012%22/></svg>')]"
-                  />
+                  /> */}
                   <button onClick={() => { loadContacts(contactSearch); loadGroups(); }}
                     title="Refresh" aria-label="Refresh email list"
                     className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]">

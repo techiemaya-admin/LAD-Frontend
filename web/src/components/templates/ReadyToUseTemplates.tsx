@@ -104,7 +104,7 @@ export default function ReadyToUseTemplates({
             onClick={() => setSelectedCategory(category)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === category
-                ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                ? 'bg-primary dark:bg-blue-500 text-white'
                 : 'bg-gray-200 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-[#0b1957]/50'
             }`}
           >
@@ -141,7 +141,7 @@ export default function ReadyToUseTemplates({
 
             <button
               onClick={() => onSelectTemplate(template)}
-              className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 font-medium text-sm"
+              className="w-full px-4 py-2 bg-primary dark:bg-blue-500 text-white rounded-lg hover:bg-primary/90 dark:hover:bg-blue-600 font-medium text-sm cursor-pointer"
             >
               Use This Template
             </button>

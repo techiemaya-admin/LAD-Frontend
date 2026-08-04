@@ -11,18 +11,15 @@
  *                            inserts into the message input)
  *  - Assign to team member  (placeholder until LinkedIn assignment route ships)
  *  - Toggle context panel   (eye icon)
- */
-
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+ */import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, Paperclip, FileText, UserPlus, PanelRightOpen, PanelRightClose,
-  Loader2, ChevronDown, AlertCircle,
+  Loader2, ChevronDown, ChevronRight, AlertCircle, Search, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -112,6 +109,7 @@ export function LinkedInChatToolbar({
   const [templates, setTemplates] = useState<LinkedInTemplate[]>([]);
   const [tplLoading, setTplLoading] = useState(false);
   const [tplLoaded, setTplLoaded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadTemplates = useCallback(async () => {
     if (tplLoaded) return;
@@ -126,6 +124,16 @@ export function LinkedInChatToolbar({
       setTplLoading(false);
     }
   }, [tplLoaded]);
+
+  const filteredTemplates = templates.filter(t => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const nameMatch = t.name?.toLowerCase().includes(q);
+    const contentMatch = t.content?.toLowerCase().includes(q);
+    const mediaMatch = t.metadata?.media_filename?.toLowerCase().includes(q);
+    const categoryMatch = t.category?.toLowerCase().includes(q);
+    return nameMatch || contentMatch || mediaMatch || categoryMatch;
+  });
 
   // ── Attach media (stubbed) ──────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +156,7 @@ export function LinkedInChatToolbar({
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1 px-3 py-1.5 border-t border-border bg-slate-50/50 dark:bg-slate-700/50 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-border dark:border-slate-800 bg-slate-50/50 dark:bg-[#101C36] overflow-x-auto no-scrollbar">
         {/* AI Agent pill */}
         <div>
           <Tooltip>
@@ -158,10 +166,10 @@ export function LinkedInChatToolbar({
                 onClick={toggleAgent}
                 disabled={agentEnabled === null || agentSaving}
                 className={cn(
-                  'inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-medium transition-colors',
+                  'inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-medium transition-colors shadow-2xs',
                   agentEnabled
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200',
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80',
                   agentSaving && 'opacity-60'
                 )}
               >
@@ -190,11 +198,11 @@ export function LinkedInChatToolbar({
             <TooltipTrigger asChild>
               <Button
                 variant="ghost" size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/40"
                 onClick={handleAttachClick}
                 disabled={!chatEnabled}
               >
-                <Paperclip className="w-3.5 h-3.5" />
+                <Paperclip className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Attach media (image / PDF)</TooltipContent>
@@ -203,61 +211,126 @@ export function LinkedInChatToolbar({
 
         {/* Templates */}
         <div>
-          <DropdownMenu onOpenChange={(open) => open && loadTemplates()}>
+          <DropdownMenu onOpenChange={(open) => {
+            if (open) {
+              loadTemplates();
+              setSearchQuery('');
+            }
+          }}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-[11px]"
+                    className="h-7 px-2.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/40 shadow-2xs"
                     disabled={!chatEnabled}
                   >
-                    <FileText className="w-3.5 h-3.5 mr-1" />
+                    <FileText className="w-3.5 h-3.5 mr-1 text-slate-600 dark:text-slate-300" />
                     Templates
-                    <ChevronDown className="w-3 h-3 ml-0.5" />
+                    <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent side="top">Insert a saved LinkedIn template</TooltipContent>
             </Tooltip>
-            <DropdownMenuContent align="start" className="w-64 max-h-[320px] overflow-y-auto">
-              <DropdownMenuLabel className="text-xs">LinkedIn templates</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {tplLoading && (
-                <DropdownMenuItem disabled className="text-xs text-slate-500">
-                  <Loader2 className="w-3 h-3 animate-spin mr-1" /> Loading…
-                </DropdownMenuItem>
-              )}
-              {!tplLoading && templates.length === 0 && (
-                <DropdownMenuItem disabled className="text-xs text-slate-500">
-                  No templates configured
-                </DropdownMenuItem>
-              )}
-              {templates.map(t => {
-                const media = t.metadata || {};
-                const hasMedia = !!media.media_url;
-                return (
-                  <DropdownMenuItem
-                    key={t.id}
-                    className="text-xs flex flex-col items-start gap-0.5 py-1.5"
-                    onClick={() => onInsertTemplate({
-                      text: t.content || '',
-                      mediaUrl: media.media_url ?? null,
-                      mediaType: media.media_type ?? null,
-                      mediaFilename: media.media_filename ?? null,
-                    })}
+            <DropdownMenuContent align="start" className="w-72 p-2 bg-white dark:bg-[#091122] border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl text-slate-900 dark:text-slate-100">
+              {/* Header */}
+              <div className="flex items-center justify-between px-1.5 py-1 mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-center flex-shrink-0 text-slate-600 dark:text-slate-300">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-semibold text-xs text-slate-800 dark:text-slate-100">LinkedIn templates</span>
+                </div>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60">
+                  {templates.length} {templates.length === 1 ? 'template' : 'templates'}
+                </span>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative mb-2 px-0.5" onClick={(e) => e.stopPropagation()}>
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Escape') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-[#0D1527] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery('');
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded transition-colors"
                   >
-                    <span className="font-medium text-slate-800 truncate w-full flex items-center gap-1">
-                      {hasMedia && <Paperclip className="w-3 h-3 flex-shrink-0 text-slate-400" />}
-                      <span className="truncate">{t.name}</span>
-                    </span>
-                    <span className="text-[10px] text-slate-500 truncate w-full">
-                      {t.content || (hasMedia ? (media.media_filename || 'Attachment') : '')}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Separator between search and template list */}
+              <div className="h-px bg-slate-200/80 dark:bg-slate-800/80 -mx-2 mb-1" />
+
+              {/* Template Items List */}
+              <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-200/60 dark:divide-slate-800/80">
+                {tplLoading && (
+                  <div className="flex items-center justify-center py-6 text-xs text-slate-500">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> Loading…
+                  </div>
+                )}
+                {!tplLoading && templates.length === 0 && (
+                  <div className="py-6 text-center text-xs text-slate-500">
+                    No templates configured
+                  </div>
+                )}
+                {!tplLoading && templates.length > 0 && filteredTemplates.length === 0 && (
+                  <div className="py-6 text-center text-xs text-slate-500">
+                    No templates match your search
+                  </div>
+                )}
+                {filteredTemplates.map(t => {
+                  const media = t.metadata || {};
+                  const hasMedia = !!media.media_url;
+                  return (
+                    <DropdownMenuItem
+                      key={t.id}
+                      className="group text-xs flex items-center justify-between gap-2.5 px-2 py-2.5 rounded-none hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer outline-none focus:bg-slate-100/70 dark:focus:bg-slate-800/50"
+                      onClick={() => onInsertTemplate({
+                        text: t.content || '',
+                        mediaUrl: media.media_url ?? null,
+                        mediaType: media.media_type ?? null,
+                        mediaFilename: media.media_filename ?? null,
+                      })}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-7 h-7 rounded-lg bg-slate-200/60 dark:bg-slate-800/80 border border-slate-300/40 dark:border-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-400">
+                          {hasMedia ? <Paperclip className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-semibold text-slate-800 dark:text-slate-100 truncate text-xs">
+                            {t.name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {t.content || (hasMedia ? (media.media_filename || 'Attachment') : '')}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                    </DropdownMenuItem>
+                  );
+                })}
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -269,11 +342,11 @@ export function LinkedInChatToolbar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[11px]"
+                className="h-7 px-2.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/40 shadow-2xs"
                 onClick={() => alert('Assignment for LinkedIn is queued for the next backend release.')}
                 disabled={!chatEnabled}
               >
-                <UserPlus className="w-3.5 h-3.5 mr-1" />
+                <UserPlus className="w-3.5 h-3.5 mr-1 text-slate-600 dark:text-slate-300" />
                 Assign
               </Button>
             </TooltipTrigger>
@@ -289,12 +362,12 @@ export function LinkedInChatToolbar({
           <TooltipTrigger asChild>
             <Button
               variant="ghost" size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/40"
               onClick={onToggleContextPanel}
             >
               {contextPanelOpen
-                ? <PanelRightClose className="w-3.5 h-3.5" />
-                : <PanelRightOpen  className="w-3.5 h-3.5" />}
+                ? <PanelRightClose className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                : <PanelRightOpen  className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">

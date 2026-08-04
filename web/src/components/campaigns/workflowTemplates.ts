@@ -258,6 +258,163 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     ],
   },
   {
+    // A 21-day, signal-triggered sequence. Two engine facts shape its layout,
+    // and changing the order will quietly break it:
+    //
+    //  1. `wait_for_condition` is a HARD BLOCK with no timeout — a lead that
+    //     never satisfies it is parked forever, and EVERY later step is
+    //     starved. So there is exactly one gate here and it is the LAST thing
+    //     in the pipeline: the cheap channel is the only thing behind it.
+    //  2. A LinkedIn DM to someone who never accepted FAILS, and a plain failed
+    //     step halts the lead and retries forever. Both DMs are therefore
+    //     Router-guarded: after 2 tries the engine gives up on that step, sends
+    //     the email fallback, and the lead carries on down the sequence.
+    //
+    // The email track is the backbone precisely because nothing gates it.
+    key: 'signal_to_audit',
+    category: 'general',
+    badge: { label: 'Advanced', tone: 'violet' },
+    meta: { cycleDays: 21, channels: 4 },
+    accent: '#4338CA',
+    name: 'Signal-to-Audit Accelerator',
+    tagline: 'Catch a buying signal, research the account, earn the reply with an audit — 21 days across four channels',
+    chain: [
+      'Signal Search', 'Scrape site', 'Research', 'Profile visit', 'Connect (no note)',
+      'Email 1', 'LinkedIn DM', 'Audit report', 'Email the report', 'Trend touch',
+      'Break-up email', 'Wait: email read', 'WhatsApp',
+    ],
+    source: {
+      key: 'linkedin_signal',
+      title: 'LinkedIn Signal Search', description: 'Hiring / buying signals · recurring',
+      cfg: { signal_query: '', decision_maker_titles: '' },
+    },
+    inputs: [
+      { key: 'signal_query', question: 'What **signal** should I watch for? (e.g. "companies hiring revenue operations or SDR roles")' },
+      { key: 'decision_maker_titles', question: 'Which **decision-maker titles** should I reach at those companies? Comma-separate several.' },
+    ],
+    nodes: [
+      // ── Day 0 · research ───────────────────────────────────────────────────
+      // Both are emitted before any outreach regardless of canvas position, so
+      // every message below is written against what they found.
+      { type: 'web_scrape', macroId: SCRAPE_STEP_ID, title: 'Scrape their site', description: 'Their positioning and stack' },
+      { type: 'web_research', macroId: RESEARCH_STEP_ID, title: 'Research the company', description: 'Recent news, funding, hiring' },
+
+      // ── Day 1–2 · warm up, then ask ────────────────────────────────────────
+      { type: 'linkedin_visit', title: 'Profile visit', description: 'Day 1 · warms before the ask', cfg: { delayDays: 1 } },
+      {
+        // Deliberately note-less. The builder sets no AI-personalisation flag,
+        // so an empty message really does send a bare invite — do not "helpfully"
+        // fill this in.
+        type: 'linkedin_connect', title: 'Connection request', description: 'Day 2 · no note',
+        cfg: { message: '', delayDays: 1 },
+      },
+
+      // ── Day 4 · one observation, one question ──────────────────────────────
+      // {{web_insight}} is filled from the scrape/research above. It is a
+      // whole sentence on purpose: when a lead has no site to scrape the token
+      // resolves empty and the personalizer removes that sentence, leaving the
+      // rest of the email intact rather than a gap.
+      {
+        type: 'email_send', title: 'Email 1', description: 'Day 4 · no attachment',
+        cfg: {
+          subject: 'Something I noticed about {{company_name}}',
+          body: 'Hi {{first_name}},\n\nOne thing that stood out from your site: {{web_insight}}.\n\nI came across {{company_name}} while looking at teams growing their revenue function this quarter — the hiring pattern usually means the pipeline is about to be asked for more than it can carry.\n\nIs that the shape of it on your side, or is the pressure somewhere else?\n\n',
+          delayDays: 2,
+        },
+      },
+
+      // ── Day 7 · the DM, guarded ────────────────────────────────────────────
+      {
+        type: 'linkedin_message', title: 'LinkedIn DM', description: 'Day 7 · under 400 characters',
+        cfg: {
+          message: 'Hi {{first_name}}, thanks for connecting. Most {{title}}s I speak with are being asked to grow output without growing the team. Curious whether that is landing on you at {{company_name}} too — and what you have tried so far.',
+          delayDays: 3,
+        },
+      },
+      {
+        // Guards the DM above: no acceptance → 2 failed sends → email fallback,
+        // and the lead moves on instead of stalling here forever.
+        type: 'condition', macroId: 'rt-dm-guard',
+        title: 'Router — fallback', description: '2 tries → Email',
+        cfg: {
+          attempts: 2, fallback_channel: 'email',
+          subject: 'Following up — {{company_name}}',
+          message: 'Hi {{first_name}},\n\nI tried reaching you on LinkedIn — sending it here instead in case this is easier.\n\nMost teams in your position are being asked to grow output without growing headcount. Is that the trade-off you are working with?\n\n',
+        },
+      },
+
+      // ── Day 9–10 · the give ────────────────────────────────────────────────
+      {
+        type: 'lead_report', macroId: REPORT_STEP_ID,
+        title: 'Audit report', description: 'Day 9 · per lead · reviewed',
+        cfg: {
+          scope: 'lead',
+          report_type: 'growth_opportunity_audit',
+          context: 'Focus on where outbound capacity could grow without adding headcount, grounded in the signal that surfaced this account.',
+          email_now: false,
+          require_approval: true, approval_channel: 'email', approval_to: '',
+        },
+      },
+      {
+        // The link is stamped on the lead only once the report is APPROVED, and
+        // this step is one day behind it — approve inside that window or the
+        // email goes out without a working link.
+        type: 'email_send', title: 'Email 2 — the give', description: 'Day 10 · attaches the report',
+        cfg: {
+          subject: 'A short analysis of {{company_name}}',
+          body: 'Hi {{first_name}},\n\nWe put together a short analysis of {{company_name}} from publicly available information — where the outbound motion could carry more without more headcount.\n\n{{report_url}}\n\nNo ask attached. If any of it is wrong, I would genuinely like to know.\n\n',
+          delayDays: 1,
+        },
+      },
+
+      // ── Day 14 · the trend touch ───────────────────────────────────────────
+      // Written as a plain DM rather than a followup_sequence touch on purpose:
+      // the follow-up macro always emits AFTER every outreach step, so a touch
+      // placed here would actually fire after the break-up email — and its
+      // `touch_type` is dropped at launch (that machinery belongs to the
+      // scheduled follow-ups in Chat Settings, not to campaign steps).
+      {
+        type: 'linkedin_message', title: 'Trend touch', description: 'Day 14 · industry, not product',
+        cfg: {
+          message: 'Hi {{first_name}}, one pattern across {{industry}} this year: the teams holding conversion are the ones cutting sequence length, not adding channels. Thought of the analysis we sent — happy to talk through where {{company_name}} sits.',
+          delayDays: 4,
+        },
+      },
+      {
+        type: 'condition', macroId: 'rt-trend-guard',
+        title: 'Router — fallback', description: '2 tries → Email',
+        cfg: {
+          attempts: 2, fallback_channel: 'email',
+          subject: 'One pattern worth a look',
+          message: 'Hi {{first_name}},\n\nOne pattern we keep seeing: the teams holding conversion this year are cutting sequence length rather than adding channels.\n\nIt is the thread running through the analysis we sent over. Worth twenty minutes?\n\n',
+        },
+      },
+
+      // ── Day 21 · break-up ──────────────────────────────────────────────────
+      // Ahead of the gate deliberately: everyone should get this, engaged or not.
+      {
+        type: 'email_send', title: 'Break-up', description: 'Day 21 · closes the loop',
+        cfg: {
+          subject: 'Closing the loop, {{first_name}}',
+          body: 'Hi {{first_name}},\n\nI have not heard back, so I will assume the timing is wrong and stop here.\n\nThe analysis stays live if you want it later, and if this becomes a priority in a couple of quarters I am easy to find.\n\nAll the best,\n',
+          delayDays: 7,
+        },
+      },
+
+      // ── Terminal · engaged only ────────────────────────────────────────────
+      // The one gate in the pipeline, and nothing follows it. A lead who never
+      // opened an email simply parks here, having already received everything.
+      { type: 'condition', title: 'Wait for condition', description: 'Email read', cfg: { condition: 'email_read' } },
+      {
+        type: 'whatsapp_send', title: 'WhatsApp', description: 'Only after engagement · easy to burn',
+        cfg: {
+          message: 'Hi {{first_name}}, {{company_name}} came up in something we were looking at and I sent a short analysis across by email. Happy to walk you through it here if that is easier.',
+          delayDays: 0,
+        },
+      },
+    ],
+  },
+  {
     key: 'linkedin_accelerator',
     category: 'general',
     badge: { label: 'Popular', tone: 'blue' },

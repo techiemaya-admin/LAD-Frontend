@@ -409,10 +409,10 @@ export function TemplatePicker({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2 hover:bg-white shadow-sm"
+                    className="h-8 px-2 hover:bg-gray-200/50 dark:hover:bg-[#3d3d3d] shadow-sm"
                     onClick={() => setSelectedTemplate(null)}
                   >
-                    <ChevronDown className="h-4 w-4 rotate-90" />
+                    <ChevronDown className="h-4 w-4 rotate-90 text-gray-700 dark:text-gray-200" />
                   </Button>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedTemplate.name}</span>

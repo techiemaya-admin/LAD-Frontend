@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 
 type DeviceType = 'mobile' | 'tablet' | 'desktop';
@@ -18,6 +18,20 @@ export default function EmailPreview({
 }: EmailPreviewProps) {
   const [device, setDevice] = useState<DeviceType>('desktop');
   const [error, setError] = useState('');
+  // Track parent app's dark mode via MutationObserver — drives iframe theme
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('dark')
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() =>
+      setIsDark(root.classList.contains('dark'))
+    );
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Sanitize HTML content
   const sanitizeHtml = (dirtyHtml: string) => {
@@ -42,29 +56,11 @@ export default function EmailPreview({
   // Add basic email styles and make it responsive
   const htmlWithStyles = `
     <!DOCTYPE html>
-    <html id="iframe-root">
+    <html id="iframe-root"${isDark ? ' data-theme="dark"' : ''}>
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="color-scheme" content="light dark">
-      <script>
-        // Inline syncing runtime: checks if parent window has dark mode enabled
-        (function() {
-          try {
-            const isParentDark = window.parent.document.documentElement.classList.contains('dark');
-            const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (isParentDark || isSystemDark) {
-              document.documentElement.setAttribute('data-theme', 'dark');
-              document.documentElement.style.backgroundColor = '#000724';
-            }
-          } catch (e) {
-            // Safe fallback if cross-origin rules block checking parent window directly
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.setAttribute('data-theme', 'dark');
-            }
-          }
-        })();
-      </script>
+      <meta name="color-scheme" content="light">
       <style>
         /* Modern customized scrollbar tracking inside the preview iframe */
         ::-webkit-scrollbar {
@@ -112,7 +108,7 @@ export default function EmailPreview({
         }
         .email-body {
           font-size: 14px;
-          color: #555555;
+          color: #333333;
         }
         .email-body p {
           margin: 0 0 16px 0;
@@ -178,25 +174,7 @@ export default function EmailPreview({
           background: #1e293b;
         }
 
-        /* Standard Media Queries fallback cascade */
-        @media (prefers-color-scheme: dark) {
-          ::-webkit-scrollbar-track { background: #000724; }
-          ::-webkit-scrollbar-thumb { background: #1e293b; }
-          ::-webkit-scrollbar-thumb:hover { background: #334155; }
-          html, body {
-            background-color: #000724 !important;
-            color: #f3f4f6 !important;
-          }
-          .email-container {
-            background-color: #000c3b !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-          }
-          .email-header { border-bottom: 1px solid #1e293b !important; }
-          .email-subject { color: #ffffff !important; }
-          .email-body { color: #cbd5e1 !important; }
-          .email-body h1, .email-body h2, .email-body h3 { color: #ffffff !important; }
-          .email-body a { color: #38bdf8 !important; }
-        }
+        /* No OS-level dark media query — theme is driven solely by parent app class */
       </style>
     </head>
     <body>
@@ -223,7 +201,7 @@ export default function EmailPreview({
   };
 
     // Snapshot state-tracking rendering key used to force structural remount updates
-    const renderingKey = `${subject?.length || 0}_${sanitized.length}_${device}`;
+    const renderingKey = `${subject?.length || 0}_${sanitized.length}_${device}_${isDark}`;
 
   return (
     <div className="flex flex-col gap-4 bg-transparent">

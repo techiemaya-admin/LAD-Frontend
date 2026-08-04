@@ -136,8 +136,8 @@ const STATUS_CONFIG: Record<ConnectionStatus, {
   pending: {
     label:      'Awaiting acceptance',
     icon:       <Clock className="w-3 h-3" />,
-    dotClass:   'bg-slate-300',
-    badgeClass: 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-400',
+    dotClass:   'bg-slate-300 dark:bg-slate-500',
+    badgeClass: 'bg-slate-100 text-slate-500 dark:bg-slate-800/80 dark:text-slate-300',
     bannerText: 'Connection request sent — chat will be available once they accept.',
   },
   accepted: {
@@ -301,8 +301,8 @@ function ConvListItem({
       className={cn(
         'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors',
         isSelected
-        ? 'bg-blue-50 dark:bg-blue-500/30 border-l-2 border-blue-600'
-        : 'hover:bg-slate-200 dark:hover:bg-slate-900/50 border-l-2 border-transparent',
+          ? 'bg-blue-50 dark:bg-[#1A294C] border-l-2 border-blue-600 dark:border-blue-500'
+          : 'hover:bg-slate-200 dark:hover:bg-[#132242] border-l-2 border-transparent',
         isPending && 'opacity-70',
       )}
     >
@@ -311,7 +311,7 @@ function ConvListItem({
         <ContactAvatar contact={conv.contact} />
         <span
           className={cn(
-            'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white',
+            'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#0C162F]',
             cfg.dotClass,
           )}
         />
@@ -322,7 +322,7 @@ function ConvListItem({
         <div className="flex items-center justify-between gap-2">
           <span className={cn(
             'text-sm font-medium truncate',
-            isSelected ? 'text-blue-900 dark:text-blue-300' : 'text-slate-900 dark:text-white',
+            isSelected ? 'text-blue-900 dark:text-white dark:font-semibold' : 'text-slate-900 dark:text-slate-200',
           )}>
             {conv.contact.name}
           </span>
@@ -342,7 +342,7 @@ function ConvListItem({
           </span>
         </div>
 
-        <p className="text-xs text-slate-500 truncate mt-0.5">
+        <p className={cn("text-xs truncate mt-0.5", isSelected ? "text-slate-500 dark:text-slate-300" : "text-slate-500 dark:text-slate-400")}>
           {conv.last_message || 'Connection request sent'}
         </p>
       </div>
@@ -401,10 +401,10 @@ function ChatDisabledBanner({ conv }: { conv: LinkedInConversation }) {
 
   return (
     <div className={cn(
-      'flex items-start gap-2 mx-4 my-3 px-3 py-2.5 rounded-lg text-xs',
+      'flex items-start gap-2 mx-4 my-3 px-3 py-2.5 rounded-lg text-xs border',
       conv.connection_status === 'pending'
-        ? 'bg-slate-50 text-slate-600 border border-slate-200'
-        : 'bg-amber-50 text-amber-700 border border-amber-200',
+        ? 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700/60'
+        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50',
     )}>
       <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
       <span>{cfg.bannerText}</span>
@@ -662,33 +662,32 @@ export function LinkedInConversationView({
 
       {/* ── Left sidebar ─────────────────────────────────────────────────── */}
       <div className={cn(
-        "w-full lg:w-[340px] flex-shrink-0 flex flex-col border-r border-border bg-card transition-all",
+        "w-full lg:w-[340px] flex-shrink-0 flex flex-col border-r border-border dark:border-slate-800 bg-card dark:bg-[#0C162F] transition-all",
         isMobile && selectedId ? "hidden" : "flex"
       )}>
 
 
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 md:px-4 py-2 md:py-3 border-b border-border bg-card">
+        <div className="flex items-center gap-2 px-4 md:px-4 py-2 md:py-3 border-b border-border dark:border-slate-800 bg-card dark:bg-[#0C162F]">
           <div className="flex items-center gap-1.5 md:gap-2 mr-1 md:mr-2">
-            <Linkedin className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
-            <span className="font-semibold text-xs md:text-sm text-slate-800 whitespace-nowrap dark:text-white">LinkedIn</span>
+            <Linkedin className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600 dark:text-blue-500" />
+            <span className="font-semibold text-xs md:text-sm text-slate-800 dark:text-white whitespace-nowrap">LinkedIn</span>
           </div>
 
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground dark:text-slate-400" />
             <Input
               placeholder="Search conversations..."
-              className="pl-8 md:pl-9 h-8 md:h-9 text-xs md:text-sm bg-secondary/50 border-none shadow-none focus-visible:ring-1"
+              className="pl-8 md:pl-9 h-8 md:h-9 text-xs md:text-sm bg-secondary/50 dark:bg-slate-900/90 border border-transparent dark:border-slate-800/80 text-slate-900 dark:text-white placeholder:text-muted-foreground dark:placeholder:text-slate-400 shadow-none focus-visible:ring-1"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-
+          
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 md:h-8 md:w-8 rounded-full flex-shrink-0"
-            className="h-8 w-8 rounded-full"
+            className="h-7 w-7 md:h-8 md:w-8 rounded-full flex-shrink-0 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
             onClick={() => setBroadcastOpen(true)}
             title="New Broadcast"
           >
@@ -698,7 +697,7 @@ export function LinkedInConversationView({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full"
+            className="h-7 w-7 md:h-8 md:w-8 rounded-full flex-shrink-0 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
             onClick={loadConversations}
             disabled={loadingConvs}
             title="Refresh"
@@ -712,7 +711,7 @@ export function LinkedInConversationView({
         {/* Status summary pills — clickable: tap to filter the list to that status,
             tap the same chip again (or "All") to clear the filter. */}
         {conversations.length > 0 && (
-          <div className="flex gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
+          <div className="flex gap-1.5 px-3 py-2 border-b border-border dark:border-slate-800 overflow-x-auto">
             {/* All */}
             <button
               type="button"
@@ -721,7 +720,7 @@ export function LinkedInConversationView({
                 'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors',
                 statusFilter === null
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/80'
               )}
               title="Show all conversations"
             >
@@ -736,7 +735,7 @@ export function LinkedInConversationView({
                   'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
                   statusFilter === 'pending'
                     ? 'bg-slate-600 text-white shadow-sm ring-2 ring-slate-300 ring-offset-1'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/80 cursor-pointer'
                 )}
                 title={statusFilter === 'pending' ? 'Click to clear filter' : 'Show only pending requests'}
               >
@@ -751,7 +750,7 @@ export function LinkedInConversationView({
                   'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
                   statusFilter === 'accepted'
                     ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-300 ring-offset-1'
-                    : 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer'
+                    : 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-transparent dark:border-amber-800/40 cursor-pointer'
                 )}
                 title={statusFilter === 'accepted' ? 'Click to clear filter' : 'Show only connected (awaiting follow-up)'}
               >
@@ -766,7 +765,7 @@ export function LinkedInConversationView({
                   'flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
                   statusFilter === 'active'
                     ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300 ring-offset-1'
-                    : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 cursor-pointer'
+                    : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 border border-transparent dark:border-emerald-800/40 cursor-pointer'
                 )}
                 title={statusFilter === 'active' ? 'Click to clear filter' : 'Show only active conversations'}
               >
@@ -840,7 +839,7 @@ export function LinkedInConversationView({
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-3 py-3 md:px-5 md:py-3.5 border-b border-border bg-card">
+            <div className="flex items-center gap-3 px-3 py-3 md:px-5 md:py-3.5 border-b border-border dark:border-slate-800 bg-card dark:bg-[#101C36]">
               {isMobile && (
                 <Button 
                   variant="ghost" 
@@ -997,7 +996,7 @@ export function LinkedInConversationView({
 
             {/* Message input */}
             <div className={cn(
-              'px-4 py-3 border-t border-border bg-card',
+              'px-4 py-3 border-t border-border dark:border-slate-800 bg-card dark:bg-[#101C36]',
               !chatEnabled && 'opacity-60',
             )}>
               {!chatEnabled && (
@@ -1032,7 +1031,7 @@ export function LinkedInConversationView({
                 <textarea
                   className={cn(
                     'flex-1 resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm leading-snug placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 min-h-[40px] max-h-[120px]',
-                    !chatEnabled && 'cursor-not-allowed bg-slate-50',
+                    !chatEnabled && 'cursor-not-allowed',
                   )}
                   placeholder={
                     chatEnabled

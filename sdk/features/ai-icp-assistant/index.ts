@@ -135,10 +135,12 @@ export {
   BUSINESS_PROFILE_OPTIONAL_FIELDS,
   BUSINESS_PROFILE_COMPANY_HALF,
   BUSINESS_PROFILE_ICP_HALF,
+  BUSINESS_PROFILE_OFFER_HALF,
   BUSINESS_PROFILE_ALL_FIELDS,
   BUSINESS_PROFILE_BASICS_FIELDS,
   emptyBusinessProfile,
   computeCompleteness,
+  computeOfferCompleteness,
 } from './businessProfile';
 export { getBusinessProfile, saveBusinessProfile, uploadCompanyLogo } from './businessProfileApi';
 export { useBusinessProfile } from './hooks/useBusinessProfile';

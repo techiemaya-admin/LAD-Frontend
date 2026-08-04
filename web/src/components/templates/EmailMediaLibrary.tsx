@@ -199,7 +199,7 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
               type="button"
               onClick={() => fileRefs.current[section.key]?.click()}
               disabled={uploading === section.key}
-              className="flex-shrink-0 px-2 py-1 text-xs bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 whitespace-nowrap font-medium"
+              className="flex-shrink-0 px-2 py-1 text-xs bg-primary dark:bg-blue-500 text-white rounded hover:bg-primary/90 active:bg-primary/80 dark:hover:bg-blue-600 dark:active:bg-blue-700 disabled:opacity-50 whitespace-nowrap font-medium transition-all active:scale-95 cursor-pointer"
             >
               {uploading === section.key ? '⏳' : '+ Upload'}
             </button>

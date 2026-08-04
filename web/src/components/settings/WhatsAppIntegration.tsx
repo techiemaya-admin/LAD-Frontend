@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from '@/contexts/TenantContext';
+import { WhatsAppRelinkBanner, type LinkState } from './WhatsAppRelinkBanner';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -232,21 +233,22 @@ async function logoutAccount(accountId: string, tenantId: string | null): Promis
   }
 }
 
+/** Read the auth token from the `token` cookie. Null during SSR. */
+function readTokenCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    if (rawName?.trim() === 'token') {
+      return decodeURIComponent(rawValueParts.join('=') || '');
+    }
+  }
+  return null;
+}
+
 async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]> {
   try {
-    const token = typeof document !== 'undefined'
-      ? (() => {
-          const cookies = document.cookie ? document.cookie.split(';') : [];
-          for (const cookie of cookies) {
-            const [rawName, ...rawValueParts] = cookie.trim().split('=');
-            const name = rawName?.trim();
-            if (name === 'token') {
-              return decodeURIComponent(rawValueParts.join('=') || '');
-            }
-          }
-          return null;
-        })()
-      : null;
+    const token = readTokenCookie();
 
     const headers: Record<string, string> = {};
     if (tenantId) headers['X-Tenant-ID'] = tenantId;
@@ -261,6 +263,35 @@ async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]>
   }
 }
 
+/**
+ * Durable link state, from WAPA's GET /accounts/link-state.
+ *
+ * Why this exists alongside listAccounts(): when WhatsApp revokes the linked
+ * device the service wipes the credentials, so the account DISAPPEARS from
+ * /accounts entirely. An empty account list therefore looks identical to "never
+ * connected", and the page just shows Disconnected with no explanation — which
+ * is how one tenant sat dead for three days without anyone realising the link
+ * had been revoked rather than never set up. This endpoint reads the state that
+ * survives the wipe, so we can say what actually happened and when.
+ */
+async function fetchLinkState(tenantId: string | null): Promise<LinkState | null> {
+  try {
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const token = readTokenCookie();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${PERSONAL_WA_API}/accounts/link-state`, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || data.success === false) return null;
+    return data as LinkState;
+  } catch {
+    // Fail open: a banner is an extra, it must never break the settings page.
+    return null;
+  }
+}
+
 // ── Component ────────────────────────────────────────────────────
 
 export const WhatsAppIntegration: React.FC = () => {
@@ -268,6 +299,7 @@ export const WhatsAppIntegration: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [account, setAccount] = useState<PersonalAccount | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [linkState, setLinkState] = useState<LinkState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
@@ -364,6 +396,11 @@ export const WhatsAppIntegration: React.FC = () => {
         // Load contacts when connected
         await loadContacts();
       }
+
+      // Independent of the account list on purpose: the interesting case is
+      // when that list came back EMPTY because the credentials were revoked.
+      const ls = await fetchLinkState(tenantId);
+      setLinkState(ls);
     };
 
     const loadAutoAssign = async () => {
@@ -451,6 +488,9 @@ export const WhatsAppIntegration: React.FC = () => {
         setQrImage(null);
         setPairingCode(null);
         setStatus('connected');
+        // The re-link the banner was asking for just happened — drop it now
+        // rather than waiting for a reload to refetch the state.
+        setLinkState(null);
         // Load contacts after successful connection
         loadContacts();
       } else if (statusResult.status === 'error' || statusResult.status === 'disconnected' || statusResult.status === 'expired') {
@@ -600,6 +640,11 @@ export const WhatsAppIntegration: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Re-link required — WhatsApp revoked the device (or another client took
+            it over). Nothing recovers this on its own. Suppressed once we're
+            connected again; the banner itself no-ops for a deliberate logout. */}
+        {status !== 'connected' && <WhatsAppRelinkBanner linkState={linkState} />}
 
         {/* Error Message */}
         {error && (

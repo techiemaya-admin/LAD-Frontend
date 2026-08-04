@@ -63,6 +63,43 @@ export interface BusinessProfile {
   /** Public URL of the uploaded logo (GCS). Written by the logo upload endpoint. */
   companyLogoUrl?: string;
 
+  // ── Offer ─────────────────────────────────────────────────────────────────
+  // What a persuasive page needs and the 14 canonical fields cannot supply.
+  // The ICP half describes WHO the buyer is; these describe WHY they act — the
+  // segments they fall into, what standing still costs them, the proof that the
+  // claim is true, and who should walk away.
+  //
+  // Deliberately OUTSIDE the canonical arrays. Adding nine required fields would
+  // drop every existing tenant from 14/14 to 14/23 with no change on their part,
+  // across all three surfaces. They get their own denominator instead — see
+  // BUSINESS_PROFILE_OFFER_HALF and computeOfferCompleteness().
+  //
+  // Consumed by LandingPageContentService (grounding for the generated page) and
+  // available to the lead-report generator for the same reason.
+
+  /** 2-4 distinct buyer profiles, one per line. Drives the audience section. */
+  icpSegments?: string;
+  /** What it costs the buyer to change nothing. Drives the symptoms section. */
+  costOfInaction?: string;
+  /** The questions the tenant asks on a real sales call, one per line. */
+  discoveryQuestions?: string;
+  /** What actually happens after someone signs. Drives the how-it-works steps. */
+  deliveryProcess?: string;
+  /**
+   * Substantiable outcomes — the ONLY sanctioned source of a number on a page.
+   * The generator is forbidden from inventing statistics, so with this empty a
+   * page carries no figures at all. That is the intended failure mode.
+   */
+  proofPoints?: string;
+  /** Who should not buy. A real disqualifier reads as confidence, not modesty. */
+  notAGoodFit?: string;
+  /** Objections heard in the field, so the FAQ answers real doubts. */
+  commonObjections?: string;
+  /** Why this tenant over the alternative the buyer is actually considering. */
+  differentiators?: string;
+  /** Guarantee or risk reversal, if one is genuinely offered. */
+  guarantee?: string;
+
   /**
    * Allow non-canonical extras the chat may add (linkedinUrl, blogUrls,
    * linkedinAudit, etc.) to round-trip through the form surfaces without
@@ -130,6 +167,25 @@ export const BUSINESS_PROFILE_ICP_HALF: ReadonlyArray<keyof BusinessProfile> = [
   'campaignTone',
 ];
 
+/**
+ * Offer fields — grounding for generated pages and reports.
+ *
+ * NOT part of BUSINESS_PROFILE_ALL_FIELDS, and therefore not part of the "X / 14"
+ * math. They carry their own meter via computeOfferCompleteness() so a tenant who
+ * never generates a landing page is never told their profile is incomplete.
+ */
+export const BUSINESS_PROFILE_OFFER_HALF: ReadonlyArray<keyof BusinessProfile> = [
+  'icpSegments',
+  'costOfInaction',
+  'discoveryQuestions',
+  'deliveryProcess',
+  'proofPoints',
+  'notAGoodFit',
+  'commonObjections',
+  'differentiators',
+  'guarantee',
+];
+
 /** Full canonical list (company half ∪ ICP half). */
 export const BUSINESS_PROFILE_ALL_FIELDS: ReadonlyArray<keyof BusinessProfile> = [
   ...BUSINESS_PROFILE_COMPANY_HALF,
@@ -178,4 +234,32 @@ export function computeCompleteness(profile: BusinessProfile | null | undefined)
   }
   const pct = Math.round((filled / total) * 100);
   return { filled, total, pct };
+}
+
+/**
+ * Compute completeness over the offer fields.
+ *
+ * Separate denominator, deliberately. A tenant running LinkedIn outreach and
+ * nothing else has a complete profile at 14/14 and should not be nagged about
+ * fields that only a generated page or report consumes. Surfaces that show this
+ * should label it for what it is ("Offer 4/9"), never fold it into the 14.
+ *
+ * Every offer field counts — none is optional within its own group, since a page
+ * section is simply omitted when its field is blank.
+ */
+export function computeOfferCompleteness(
+  profile: BusinessProfile | null | undefined,
+): BusinessProfileCompleteness {
+  const total = BUSINESS_PROFILE_OFFER_HALF.length;
+  if (!profile || total === 0) {
+    return { filled: 0, total, pct: 0 };
+  }
+  let filled = 0;
+  for (const k of BUSINESS_PROFILE_OFFER_HALF) {
+    const v = (profile as Record<string, unknown>)[k as string];
+    if (typeof v === 'string' && v.trim().length > 0) {
+      filled += 1;
+    }
+  }
+  return { filled, total, pct: Math.round((filled / total) * 100) };
 }

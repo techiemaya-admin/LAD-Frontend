@@ -301,11 +301,11 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-card  border-l border-border w-full sm:w-[340px] flex-shrink-0",
+      "flex flex-col h-full bg-card dark:bg-[#101C36] border-l border-border dark:border-slate-800 w-full sm:w-[340px] flex-shrink-0",
       "fixed top-14 bottom-0 right-0 z-50 lg:static lg:z-0 lg:flex"
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -331,7 +331,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
       <div className="flex-1 overflow-y-auto">
         {/* Profile */}
-        <div className="flex flex-col items-center px-4 pt-6 pb-4 border-b border-border">
+        <div className="flex flex-col items-center px-4 pt-6 pb-4 border-b border-border dark:border-slate-800">
           <div className="relative">
             {proxied ? (
               <img
@@ -370,7 +370,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* Labels */}
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">Labels</p>
             <Button
@@ -450,7 +450,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* Metadata */}
-        <div className="px-4 py-4 border-b border-border space-y-2">
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800 space-y-2">
           <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase mb-2">Metadata</p>
           <Row label="Status" value={
             <span className={cn(
@@ -482,7 +482,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* AI Chat Agent toggle */}
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -520,7 +520,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
         {/* Per-lead follow-up pause toggle */}
         {followupSupported && (
-          <div className="px-4 py-4 border-b border-border">
+          <div className="px-4 py-4 border-b border-border dark:border-slate-800">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />

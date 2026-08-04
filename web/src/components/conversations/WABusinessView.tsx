@@ -39,7 +39,7 @@ type ExtendedConversation = Conversation & {
 import { formatDistanceToNow } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarColor } from '@/lib/utils';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -1853,7 +1853,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#161717] border-l border-border dark:border-[#222d34]">
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#161717]">
         <div className="flex gap-6 mt-8">
           <div className="flex flex-col items-center gap-2.5">
             <div className="w-[62px] h-12 bg-black/4 dark:bg-[#35373b] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#d8dadf] dark:hover:bg-[#323436] transition-colors">
@@ -1878,7 +1878,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#efeae2] dark:bg-[#161717] border-l border-border dark:border-[#222d34] relative">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#efeae2] dark:bg-[#161717] relative">
       {/* Background */}
       <div
         className="absolute inset-0 pointer-events-none z-0 bg-repeat opacity-[0.4] dark:opacity-[0.06]"
@@ -3638,6 +3638,8 @@ function WABASidebar({
               ? formatDistanceToNow(new Date(lastMsg.timestamp || (lastMsg as Message & { created_at?: string }).created_at || new Date()), { addSuffix: false })
               : '';
 
+            const avatarColor = getAvatarColor(conv.contact?.phone || conv.contact?.name || conv.id);
+
             return (
               <div
                 key={conv.id}
@@ -3663,7 +3665,17 @@ function WABASidebar({
                 )}
                 <Avatar className="w-11 h-11 shrink-0">
                   <AvatarImage src={conv.contact?.avatar} />
-                  <AvatarFallback>{initials}</AvatarFallback>
+                  <AvatarFallback 
+                    style={{
+                      '--av-bg-light': `color-mix(in srgb, ${avatarColor} 20%, white)`,
+                      '--av-text-light': `color-mix(in srgb, ${avatarColor} 70%, black)`,
+                      '--av-bg-dark': `color-mix(in srgb, ${avatarColor} 30%, black)`,
+                      '--av-text-dark': `color-mix(in srgb, ${avatarColor} 80%, white)`,
+                    } as React.CSSProperties}
+                    className="bg-[var(--av-bg-light)] text-[var(--av-text-light)] dark:bg-[var(--av-bg-dark)] dark:text-[var(--av-text-dark)]"
+                  >
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0 py-1">
                   <div className="flex justify-between items-center mb-0.5 gap-2">
@@ -3965,15 +3977,27 @@ function WABASidebar({
                       </div>
 
                       {contactsSectionExpanded && filteredContacts.map((conv) => {
+                        const contactAvatarColor = getAvatarColor(conv.contact?.phone || conv.contact?.name || conv.id);
                         return (
                           <button
                             key={conv.id}
                             onClick={() => openChatFromNewContact(conv)}
                             className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted dark:hover:bg-[#202c33] transition-colors"
                           >
-                            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                              {(conv.contact?.name || '?')[0]?.toUpperCase()}
-                            </div>
+                            <Avatar className="h-10 w-10 shrink-0">
+                              <AvatarImage src={conv.contact?.avatar} />
+                              <AvatarFallback 
+                                style={{
+                                  '--av-bg-light': `color-mix(in srgb, ${contactAvatarColor} 20%, white)`,
+                                  '--av-text-light': `color-mix(in srgb, ${contactAvatarColor} 70%, black)`,
+                                  '--av-bg-dark': `color-mix(in srgb, ${contactAvatarColor} 30%, black)`,
+                                  '--av-text-dark': `color-mix(in srgb, ${contactAvatarColor} 80%, white)`,
+                                } as React.CSSProperties}
+                                className="bg-[var(--av-bg-light)] text-[var(--av-text-light)] dark:bg-[var(--av-bg-dark)] dark:text-[var(--av-text-dark)]"
+                              >
+                                {(conv.contact?.name || '?')[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex flex-col items-start overflow-hidden">
                               <span className="text-sm font-medium truncate w-full text-left">
                                 {conv.contact?.name || conv.contact?.phone || 'Unknown'}
@@ -4973,7 +4997,7 @@ const handleFavorite = useCallback(
       {/* Draggable divider — desktop only, visible when sidebar is open */}
       {!isMobileViewport && !isSidebarCollapsed && (
         <div
-          className="hidden lg:flex w-1 h-full shrink-0 cursor-col-resize z-20 group relative select-none items-center justify-center"
+          className="hidden lg:flex w-1 h-full shrink-0 cursor-col-resize z-20 group relative select-none items-center justify-center bg-background dark:bg-[#161717]"
           onMouseDown={(e) => {
             dividerDragRef.current = { isDragging: true, startX: e.clientX, startWidth: sidebarWidth };
             e.preventDefault();

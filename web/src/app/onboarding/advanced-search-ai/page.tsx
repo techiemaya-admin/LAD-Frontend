@@ -47,6 +47,7 @@ import {
     useBilling,
     useBusinessProfile,
     computeCompleteness,
+    computeOfferCompleteness,
     type BusinessProfile,
 } from '@lad/frontend-features/ai-icp-assistant';
 import { getCampaign, updateCampaign, updateCampaignSteps, startCampaign } from '@lad/frontend-features/campaigns';
@@ -5921,8 +5922,12 @@ export default function AdvancedSearchAIPage() {
                                     placeholder={mediaMode ? (mb.step === 'builder-image-output' ? 'Type feedback to refine generated images...' : mediaPlaceholder) : (creditBalance !== null && creditBalance <= 0 && msgCount >= 10 ? 'Message limit reached — add credits to continue' : (typedPlaceholder || 'Ask Mr LAD...'))}
                                     className="adv-chat-ta" />
                                 <div className="adv-chat-input-foot">
-                                  {/* Left cluster — Accelerators sits beside + (foot is space-between). */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {/* Left cluster — Accelerators sits beside +.
+                                      The flanks share `adv-foot-side` so they resolve to equal
+                                      widths, which is what puts Premium Search on the true centre
+                                      line of the box. Under space-between alone it only centred in
+                                      the leftover gap, so this wide cluster shoved it right. */}
+                                  <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <div style={{ position: 'relative' }}>
                                         {mediaMode ? (
                                             <button 
@@ -6037,9 +6042,13 @@ export default function AdvancedSearchAIPage() {
                                             {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
                                         </button>
                                     )}
-                                    <button 
-                                        className="adv-send-circle adv-send-sm" 
-                                        disabled={mediaMode ? ((!input.trim() && (!mb.references || mb.references.length === 0)) || mb.generating || mb.step === 'loading' || (mb.step === 'builder-brand-dna' && !brandDnaRequestedChanges)) : (!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10))} 
+                                    {/* Right flank — a wrapper, not flex on the button itself:
+                                        a flex-basis would override adv-send-sm's fixed 34px and
+                                        stretch the send circle into an oval. */}
+                                    <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <button
+                                        className="adv-send-circle adv-send-sm"
+                                        disabled={mediaMode ? ((!input.trim() && (!mb.references || mb.references.length === 0)) || mb.generating || mb.step === 'loading' || (mb.step === 'builder-brand-dna' && !brandDnaRequestedChanges)) : (!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10))}
                                         onClick={mediaMode ? () => { if (input.trim() || (mb.references && mb.references.length > 0)) { submitMediaInput(input.trim()); setInput(''); if (taRef.current) taRef.current.style.height = 'auto'; } } : onChatSend}
                                         style={{ 
                                             background: (mediaMode ? ((!input.trim() && (!mb.references || mb.references.length === 0)) || mb.generating || mb.step === 'loading' || (mb.step === 'builder-brand-dna' && !brandDnaRequestedChanges)) : (!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10))) ? '#e5e7eb' : '#172560', 
@@ -6048,6 +6057,7 @@ export default function AdvancedSearchAIPage() {
                                     >
                                         {mediaMode && mb.generating ? <div className="adv-spinner" /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
                                     </button>
+                                    </div>
                                 </div>
                                 {!mediaMode && (
                                     <div className="adv-msg-counter">{creditBalance !== null && creditBalance > 0 ? `${msgCount} messages used` : `${msgCount}/10 messages used`}</div>
@@ -6735,6 +6745,26 @@ export default function AdvancedSearchAIPage() {
                                               style={{ width: `${pct}%` }}
                                             />
                                             </div>
+
+                                            {/* Offer progress — shown only once the 14 are done, which is
+                                                also when the chat starts asking the offer questions. Without
+                                                it the bar reads 100% while the assistant carries on asking,
+                                                which looks like a bug. Separate denominator on purpose: these
+                                                fields only matter to generated pages and reports. */}
+                                            {(() => {
+                                                const o = computeOfferCompleteness(businessProfile as BusinessProfile);
+                                                if (!pgIsComplete && o.filled === 0) return null;
+                                                return (
+                                                    <div className="mt-2 flex justify-between items-center">
+                                                        <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+                                                            Offer details <span className="font-normal">(for landing pages &amp; reports)</span>
+                                                        </span>
+                                                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
+                                                            {o.filled}/{o.total}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* Edit affordance — once any field is filled, the tenant can jump
                                                 to the full editor (Settings → Business Profile) to change any of
@@ -12973,6 +13003,14 @@ const css = `
             .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
             .adv-chat-ta::placeholder {color:#0b1957; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
+            /* Equal-width flanks put the middle child (Premium Search / the mic)
+               on the box's true centre line. flex-basis 0 means the two sides split
+               the free space evenly regardless of how wide their contents are.
+               No min-width:0 on purpose: the default min-width:auto stops either
+               flank shrinking under its content, so on a narrow window the pill
+               drifts off centre rather than sliding under the Accelerators button. */
+            .adv-foot-side {flex:1 1 0; }
+            .adv-chat-input-foot > .adv-premium-btn {flex:0 0 auto; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
             .adv-roles-btn {display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:7px 14px; border-radius:999px; border:1.5px solid #e5e7eb; background:#fff; color:#0b1957; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s ease; }
@@ -13235,6 +13273,9 @@ const css = `
                 .adv-input-central-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
                 .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 11px !important; text-align: left !important; padding: 2px 0 !important; min-height: 24px !important; height: 24px !important; line-height: 24px !important; }
                 .adv-chat-input-foot { padding: 4px 0 2px !important; margin-top: 4px !important; border: none !important; background: none !important; justify-content: space-between !important; gap: 10px !important; }
+                /* Mobile keeps the tuned space-between layout — at this width equal
+                   flanks would squeeze the pill against its 95px min-width. */
+                .adv-foot-side { flex: 0 1 auto !important; }
                 .adv-premium-btn { width: auto !important; min-width: 95px !important; justify-content: center !important; padding: 3px 10px !important; margin: 0 !important; font-size: 10px !important; }
                 .adv-chat-attach-btn, .adv-send-sm { width: 28px !important; height: 28px !important; }
                 .adv-chat-attach-btn svg, .adv-send-sm svg { width: 13px !important; height: 13px !important; }

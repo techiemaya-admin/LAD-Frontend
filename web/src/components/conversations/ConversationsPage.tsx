@@ -199,7 +199,7 @@ export function ConversationsPage() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Top bar: WA channel tabs + AI toggle — now always visible */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0 gap-2">
+      <div className="h-10 flex items-center justify-between px-3 border-b border-border dark:border-slate-800 bg-card dark:bg-[#0C162F] shrink-0 gap-2">
         {/* Channel tabs — only connected channels are rendered */}
         <div className="flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
           {/* Loading skeleton while connection status is being resolved */}

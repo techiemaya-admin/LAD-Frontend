@@ -525,19 +525,19 @@ function ComposeBroadcastDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex-col items-start lg:flex-row lg:items-center gap-1 lg:gap-4">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-zinc-800 focus:outline-none focus-visible:ring-0 focus:ring-0">
+        <DialogHeader className="flex-col items-start lg:flex-row lg:items-center gap-1 lg:gap-4 mb-6 pr-10 lg:pr-0 pt-6">
           <DialogTitle>New broadcast</DialogTitle>
-          <DialogDescription className="text-[13px] sm:text-sm pr-6 lg:pr-0">
+          <DialogDescription className="text-[13px] sm:text-sm">
             Send the same message to many recipients via a connected Gmail or Outlook account.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 px-4 sm:px-8">
+        <div className="space-y-6 px-4 sm:px-8 pb-6">
           <div>
-            <label className="text-sm font-medium block mb-2">From</label>
+            <label className="text-sm font-medium block mb-1.5">From</label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
+              <SelectTrigger className="border-gray-200 dark:border-input">
                 <SelectValue placeholder="Pick a connected account" />
               </SelectTrigger>
               <SelectContent>
@@ -557,18 +557,18 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Subject</label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to Mr LAD" />
+            <label className="text-sm font-medium block mb-1.5">Subject</label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to Mr LAD" className="border-gray-200 dark:border-input" />
           </div>
 
           {/* Recipients — tab toggle between manual list and saved group */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium">Recipients</label>
               <div
                 role="tablist"
                 aria-label="Recipient source"
-                className="inline-flex items-center rounded-md border border-input p-0.5 text-xs"
+                className="inline-flex items-center rounded-md border border-gray-200 dark:border-input p-0.5 text-xs"
               >
                 <button
                   type="button"
@@ -578,10 +578,10 @@ function ComposeBroadcastDialog({
                   className={`px-2 py-1 rounded transition-colors ${
                     mode === 'manual'
                       ? 'bg-primary text-primary-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
-                  Manual list
+                  Manual List
                 </button>
                 <button
                   type="button"
@@ -591,10 +591,10 @@ function ComposeBroadcastDialog({
                   className={`px-2 py-1 rounded transition-colors ${
                     mode === 'group'
                       ? 'bg-primary text-primary-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
-                  From group
+                  From Group
                 </button>
               </div>
             </div>
@@ -606,8 +606,9 @@ function ComposeBroadcastDialog({
                   onChange={(e) => setRecipientsRaw(e.target.value)}
                   rows={3}
                   placeholder={`alice@example.com, "Bob Smith" <bob@example.com>\nor one per line`}
+                  className="border-gray-200 dark:border-input"
                 />
-                <p className="mt-1.5 text-xs text-muted-foreground">
+                <p className="mt-3 text-xs text-muted-foreground">
                   {recipients.length} parsed. Names in{' '}
                   <code>{'"Name" <email>'}</code> format are picked up too.
                 </p>
@@ -615,7 +616,7 @@ function ComposeBroadcastDialog({
             ) : (
               <>
                 <Select value={groupId} onValueChange={setGroupId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-200 dark:border-input">
                     <SelectValue
                       placeholder={
                         !accountId
@@ -648,7 +649,7 @@ function ComposeBroadcastDialog({
                   </SelectContent>
                 </Select>
                 {selectedGroup && (
-                  <p className="mt-1.5 text-xs text-muted-foreground">
+                  <p className="mt-3 text-xs text-muted-foreground">
                     Sending to{' '}
                     <span className="font-medium">{selectedGroup.name}</span>{' '}
                     ({selectedGroup.member_count} recipient
@@ -662,9 +663,9 @@ function ComposeBroadcastDialog({
 
           {/* Start from a saved template — loads its HTML into the editor below */}
           <div>
-            <label className="text-sm font-medium block mb-2">Template</label>
+            <label className="text-sm font-medium block mb-1.5">Template</label>
             <Select value={templateId} onValueChange={applyTemplate}>
-              <SelectTrigger>
+              <SelectTrigger className="border-gray-200 dark:border-input">
                 <SelectValue placeholder={templates.length ? 'Start from a saved template (optional)' : 'No saved templates yet'} />
               </SelectTrigger>
               <SelectContent>
@@ -682,8 +683,8 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Body</label>
-            <div className="mt-1 rounded-lg border border-input bg-muted/20 p-3">
+            <label className="text-sm font-medium block mb-1.5">Body</label>
+            <div className="rounded-lg border border-gray-200 dark:border-input bg-zinc-100 dark:bg-black/20 p-3">
               <DragDropEmailEditor
                 key={editorKey}
                 htmlContent={body}
@@ -691,7 +692,7 @@ function ComposeBroadcastDialog({
                 onContentChange={setBody}
               />
             </div>
-            <p className="mt-2.5 text-xs text-muted-foreground">
+            <p className="mt-3.5 text-xs text-muted-foreground">
               Build the email with blocks (header, image, button, signature…). Use{' '}
               <code>{'{{first_name}}'}</code> or <code>{'{first_name}'}</code> to personalise —
               unknown placeholders are removed before sending.

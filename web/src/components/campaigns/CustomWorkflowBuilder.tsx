@@ -1575,16 +1575,70 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (step === 'loading' || mb.generating) return;
     if (mb.error) { setAutoMedia(false); return; }
 
-    // Steps the driver deliberately leaves alone. builder-image-output is the
-    // intended stop — picking the picture is the user's call. Brand-DNA
-    // extraction is a genuine wait, and the hook already polls it.
-    if (step === 'builder-image-output' || step === 'builder-video-progress') return;
+    // Steps the driver waits through rather than acts on:
+    //   welcome  — startFlow sets this BEFORE selectImageCreation opens the
+    //              conversation. Treating it as unanswerable switched auto mode
+    //              off on the very first render, every time, and the user got
+    //              the questionnaire they had just asked the agent to fill in.
+    //   gallery  — not part of the flow.
+    //   progress — brand-DNA extraction or generation; the hook polls it.
+    if (step === 'welcome' || step === 'gallery' || step === 'builder-video-progress') return;
 
-    // The brand-DNA review is a confirmation screen, not a question: the wizard
-    // parks there until something sends "Select this & start". Nothing polls it,
-    // so leaving it unanswered surfaced three minutes later as "the image
-    // service stopped responding" when the service was perfectly healthy.
-    const isConfirm = step === 'builder-brand-dna';
+    // The image grid. This used to be where the run stopped and waited, on the
+    // theory that picking the picture was a choice worth keeping. It isn't one
+    // anybody asked for: the four are renders of a single brief, and the only
+    // real judgement is spotting the one with garbled text or a mangled face —
+    // which a model can do by looking. Choose, attach, close.
+    if (step === 'builder-image-output') {
+      const urls: string[] = (p.images || [])
+        .map((im: any) => (typeof im === 'string' ? im : (im?.url || im?.signed_url || '')))
+        .filter(Boolean);
+      if (!urls.length || autoBusyRef.current || autoKeyRef.current === 'picked') return;
+      autoBusyRef.current = true;
+      autoKeyRef.current = 'picked';
+      (async () => {
+        const post = (configs[CONTENT_STEP_ID]?.content || configs[AUTOPOST_STEP_ID]?.content || '').trim();
+        let chosen = urls[0];
+        let how = 'first';
+        try {
+          const res = await fetchWithTenant('/api/campaigns/linkedin-post/media-pick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: urls, post_content: post }),
+          });
+          const data = await res.json();
+          if (data?.success && data.url) { chosen = data.url; how = data.source || 'vision'; }
+        } catch {
+          // Fall back to the first — an unvetted picture still beats none.
+        }
+        setAutoMediaLog((l) => [...l, {
+          phase: p.phase || 'Image',
+          answer: `picked ${urls.indexOf(chosen) + 1} of ${urls.length}${how === 'vision' ? '' : ' (first)'}`,
+        }]);
+        importGenerated(chosen, CONTENT_STEP_ID);
+        setInlineMedia(false);
+        setAutoMedia(false);
+        mb.closeFlow?.();
+        autoBusyRef.current = false;
+      })();
+      return;
+    }
+    // Nothing has come back from the worker yet — there is no question here to
+    // fail to answer.
+    if (!mb.uiPayload) return;
+
+    // Steps that are not questions but still need a specific answer sent, or
+    // the wizard parks there forever — nothing polls them.
+    //   brand-dna      — a review screen; it waits for this exact label.
+    //   trend-options  — the creative-direction picker Phase 1.5 ends on. The
+    //                    drawer cannot render it at all, and the post copy is
+    //                    already the brief, so take the skip.
+    const CANNED: Record<string, string> = {
+      'builder-brand-dna': 'Select this & start',
+      'builder-trend-options': 'Start Directly (Skip Trends)',
+    };
+    const canned = CANNED[step];
+    const isConfirm = !!canned;
     // Hand back to the manual UI on anything else we can't answer — a video or
     // keyframe phase has no question, and pretending to work is worse than
     // showing the real screen.
@@ -1602,10 +1656,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     (async () => {
       const post = (configs[CONTENT_STEP_ID]?.content || configs[AUTOPOST_STEP_ID]?.content || '').trim();
       let answer = '';
-      if (isConfirm) {
-        // The exact label the worker matches on — the full studio sends the same.
-        answer = 'Select this & start';
-        setAutoMediaLog((l) => [...l, { phase: p.phase || 'Brand DNA', answer }]);
+      if (canned) {
+        // The exact labels the worker matches on — the full studio sends these too.
+        answer = canned;
+        setAutoMediaLog((l) => [...l, { phase: p.phase || 'Confirm', answer }]);
         try { await mb.advanceStep?.(answer); } catch { /* surfaced via mb.error */ }
         autoBusyRef.current = false;
         return;
@@ -2309,6 +2363,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 // generator to the heading + numbered-list shape AI search cites.
                 post_format: pc.post_format === 'structured' ? 'structured' : undefined,
                 media_url: (pc.media_url || '').trim() || undefined,
+                // Read by linkedinAutopostCron → LinkedInPostMediaService: each
+                // run rewrites that run's copy as an image brief and generates
+                // from it, falling back to media_url above.
+                media_ai_generate: !!pc.media_ai_generate,
                 // The cron passes this to publishPost, which derives the MIME
                 // type from the extension — without it the filename is guessed
                 // from the URL, which loses it for signed/query-string URLs.
@@ -3328,7 +3386,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                       // worse than the form it replaced. Stops at the image
                       // grid, which is a real choice and was never the tedious
                       // part.
-                      if (autoMedia && !mb.error && step !== 'builder-image-output') return (
+                      if (autoMedia && !mb.error) return (
                         shell(<>
                           <p className="flex items-center gap-2 text-[12.5px] font-medium text-foreground">
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-fuchsia-600" />
@@ -3407,8 +3465,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                         const outImgs: any[] = p.images || [];
                         return (
                           shell(<>
+                            {/* Only reachable once the user has taken over —
+                                the agent picks and closes without showing this. */}
                             <p className="text-[13px] font-medium text-foreground leading-snug">
-                              {autoMedia ? 'Configured from your post — pick your favourite' : (p.question || 'Pick an image for your post')}
+                              {p.question || 'Pick an image for your post'}
                             </p>
                             {!outImgs.length ? (
                               <p className="text-[12px] text-muted-foreground">No images came back — try the full studio.</p>
@@ -3490,6 +3550,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
                     <input className={field} value={cfg.media_url || ''} onChange={(e) => setCfg(eid, { media_url: e.target.value })}
                       placeholder="…or paste an image / video URL" />
+
+                    {/* The visual counterpart of "write a fresh post". Without
+                        it a recurring series posts new copy against the same
+                        picture every time, which reads as automated faster than
+                        repeated words do. */}
+                    <label className="flex items-start gap-2.5 rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                      <input type="checkbox" className="mt-0.5 h-4 w-4" checked={!!cfg.media_ai_generate}
+                        onChange={(e) => setCfg(eid, { media_ai_generate: e.target.checked })} />
+                      <span className="min-w-0">
+                        <span className="block text-sm text-foreground">Make a fresh image with AI each time</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Each scheduled run turns that run&apos;s post copy into an image brief and generates
+                          a new picture from it. The image above is the fallback if a run can&apos;t produce one.
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 );
               })()}
