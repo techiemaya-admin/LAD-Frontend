@@ -283,7 +283,7 @@ export default function CampaignsListPage() {
 
             <Button
               onClick={() => router.push("/onboarding/advanced-search-ai")}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
+              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-1" />
               Campaign
@@ -293,7 +293,7 @@ export default function CampaignsListPage() {
             <Button
               onClick={() => router.push("/campaigns/workflow")}
               variant="outline"
-              className="rounded-xl font-semibold px-3 py-1.5 flex-1 sm:w-auto border-[#0b1957] text-[#0b1957] hover:text-[#0b1957] dark:text-white dark:hover:text-white hover:bg-[#0b1957]/10 hover:cursor-pointer"
+              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-1" />
               Custom Accelerator

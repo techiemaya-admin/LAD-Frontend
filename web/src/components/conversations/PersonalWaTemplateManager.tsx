@@ -553,21 +553,30 @@ export function PersonalWaTemplateManager() {
 
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#00051d] rounded-2xl border border-slate-200 dark:border-slate-800/80 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none">
+    <div className="flex flex-col h-full bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
-        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
-          Saved messages — no Meta approval required
-        </p>
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-blue-950/40 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+            <FileText className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
+              Saved messages — no Meta approval required
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search & Action Row */}
-      <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800/60 shrink-0 flex items-center gap-3 bg-slate-50/50 dark:bg-[#000724]/40">
+      <div className="px-5 py-3 border-b border-slate-100 dark:border-blue-950/40 shrink-0 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/50">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-400/80" />
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full">
+            <Search className="h-4 w-4 text-slate-400 dark:text-slate-400/80" />
+          </div>
           <Input
-            className="pl-9 h-10 text-sm bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 rounded-xl text-white focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
+            className="pl-11 h-10 text-sm bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 rounded-xl text-slate-900 dark:text-white focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
             placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

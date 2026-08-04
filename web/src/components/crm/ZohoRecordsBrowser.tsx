@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const ZOHO_API = '/api/social-integration/zoho';
@@ -187,7 +188,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
 
   if (!status?.connected) {
     return (
-      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-8 text-center space-y-2">
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-8 text-center space-y-2">
         <div className="text-sm font-medium text-[#172560] dark:text-white">Zoho CRM isn’t connected</div>
         <p className="text-sm text-slate-500 dark:text-[#7a8ba3]">
           Connect Zoho in <a href="/settings?tab=integrations" className="underline text-blue-600 dark:text-blue-400">Settings → Integrations</a> to sync and browse your Contacts, Leads, Deals, and Tasks here.
@@ -208,11 +209,11 @@ export const ZohoRecordsBrowser: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header: counts + sync */}
-      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5 space-y-4">
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 min-w-[280px]">
             {(['contacts', 'leads', 'deals', 'tasks'] as const).map((k) => (
-              <div key={k} className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-slate-50 dark:bg-[#040b25] p-3.5 flex items-center gap-3.5">
+              <div key={k} className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#040b25] p-3.5 flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#0e1d4d] text-blue-600 dark:text-blue-400 grid place-items-center shrink-0">
                   {iconForKey(k)}
                 </div>
@@ -248,9 +249,9 @@ export const ZohoRecordsBrowser: React.FC = () => {
       </div>
 
       {/* Records browser */}
-      <div className="rounded-xl border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#071131] p-5 overflow-hidden flex flex-col">
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4 shrink-0">
-          <div className="flex gap-1.5 bg-slate-100 dark:bg-[#040b25] p-1 rounded-xl border border-slate-200 dark:border-[#1c2c4e]">
+          <div className="flex gap-1.5 bg-slate-100 dark:bg-[#040b25] p-1 rounded-xl border border-slate-200 dark:border-blue-950/40">
             {(['contacts', 'leads', 'deals', 'tasks'] as RecordType[]).map((t) => (
               <button
                 key={t}
@@ -272,7 +273,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
           <div className="relative flex items-center w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
-              className="w-full pl-9 pr-3 h-9 rounded-lg text-xs border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="w-full pl-9 pr-3 h-9 rounded-lg text-xs border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder={`Search ${recordType}…`}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
@@ -371,28 +372,43 @@ export const ZohoRecordsBrowser: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#7a8ba3]">
                 <span>Per page:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    const newSize = Number(e.target.value);
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(val) => {
+                    const newSize = Number(val);
                     setPageSize(newSize);
                     loadRecords(recordType, 1, search, newSize);
                   }}
-                  className="h-7 px-1.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] text-xs text-[#172560] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value={15}>15</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
+                  <SelectTrigger className="w-[70px] h-7 text-xs border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white focus:ring-0 shadow-none">
+                    <SelectValue placeholder={String(pageSize)} />
+                  </SelectTrigger>
+                  
+                  <SelectContent 
+                    position="popper" 
+                    side="top" 
+                    sideOffset={4}
+                    className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] w-[70px] p-1"
+                  >
+                    {[15, 25, 50, 100].map((size) => (
+                      <SelectItem
+                        key={size}
+                        value={String(size)}
+                        className="text-xs text-slate-800 dark:text-slate-100 cursor-pointer rounded-sm pl-2 pr-5 py-1 transition-colors hover:bg-[#0B1957] hover:text-white focus:bg-[#0B1957] focus:text-white data-[state=checked]:font-semibold data-[state=checked]:bg-[#0B1957] data-[state=checked]:text-white dark:hover:bg-[#2563eb] dark:hover:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:bg-[#2563eb] dark:data-[state=checked]:text-white"
+                      >
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+            </div>
 
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   disabled={page <= 1 || recordsLoading}
                   onClick={() => loadRecords(recordType, page - 1, search, pageSize)}
-                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
                   title="Previous Page"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -405,7 +421,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
                   type="button"
                   disabled={page >= totalPages || recordsLoading}
                   onClick={() => loadRecords(recordType, page + 1, search, pageSize)}
-                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-[#1c2c4e] bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#03091e] flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-colors cursor-pointer disabled:cursor-not-allowed"
                   title="Next Page"
                 >
                   <span className="hidden sm:inline">Next</span>

@@ -886,7 +886,7 @@ export function CallLogsTable({
               placeholder="Search Call Logs..."
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="w-full pl-10 h-10 rounded-md border border-[#E2E8F0] dark:border-[#262831] bg-transparent dark:bg-[#1a2a43] dark:text-white placeholder:text-[#64748B] dark:placeholder:text-slate-300 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full pl-10 h-10 rounded-md border border-[#E2E8F0] dark:border-blue-950/40 bg-transparent dark:bg-slate-800/50 dark:text-white placeholder:text-[#64748B] dark:placeholder:text-slate-300 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
 
@@ -1262,19 +1262,31 @@ export function CallLogsTable({
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
             <div className="flex items-center gap-2">
               <span>Show</span>
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  const newSize = parseInt(e.target.value, 10);
+              <Select
+                value={String(perPage)}
+                onValueChange={(val) => {
+                  const newSize = parseInt(val, 10);
                   onPageSizeChange?.(newSize);
                   onPageChange?.(1);
                 }}
-                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-slate-300"
               >
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-[70px] h-7 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
+                  <SelectValue placeholder={perPage} />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] max-w-[70px] w-[70px] p-0">
+                  <div className="*:data-[slot=select-viewport]:min-w-[70px] *:data-[slot=select-viewport]:w-[70px] *:data-[slot=select-viewport]:p-1">
+                    {[10, 20, 50, 100].map((size) => (
+                      <SelectItem
+                        key={size}
+                        value={String(size)}
+                        className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
+                      >
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
               <span className="whitespace-nowrap">of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
             </div>
             {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (

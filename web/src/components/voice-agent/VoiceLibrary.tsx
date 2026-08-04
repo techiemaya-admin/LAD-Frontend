@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Square, Volume2, Upload, Plus, Loader2, Mic, StopCircle, Scissors, Settings2 } from 'lucide-react';
+import { Play, Pause, Square, Volume2, Upload, Plus, Loader2, Mic, StopCircle, Scissors, Settings2, Sparkles, AudioLines } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -645,383 +645,390 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 animate-fade-in">
+    <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 animate-fade-in dark:text-slate-100">
       {/* Sidebar - Voice List */}
-      <aside className="w-full lg:w-[320px] space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold font-display">Voices</h2>
+      <aside className="w-full lg:w-[320px]">
+        <div className="bg-card border rounded-xl overflow-hidden shadow-sm h-[calc(100vh-10rem)] flex flex-col p-4 dark:bg-[#071131] dark:border-blue-900/40 dark:rounded-2xl dark:shadow-lg">
           
-          <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gradient-primary">
-                <Plus className="h-4 w-4 mr-1" /> Clone Voice
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[560px] p-6 rounded-3xl">
-              <DialogHeader className="flex-col items-start gap-1.5 pb-4 border-none">
-                <DialogTitle>Clone a New Voice</DialogTitle>
-                <DialogDescription>
-                  Upload or record a clean audio clip. Use the handles to trim it to the required length.
-                </DialogDescription>
-              </DialogHeader>
-              <div ref={dialogScrollContainerRef} className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2 custom-scrollbar">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Voice Name</Label>
-                  <Input 
-                    id="name" 
-                    value={cloneName} 
-                    onChange={(e) => setCloneName(e.target.value)} 
-                    placeholder="e.g. Sales Alex" 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          {/* Header Inside Container (Unified Structure for Light & Dark) */}
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50 dark:border-blue-900/40">
+            <h2 className="text-lg font-bold font-display text-foreground dark:text-white">Voices</h2>
+
+            <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gradient-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white">
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Clone Voice
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[560px] p-6 rounded-3xl bg-background text-foreground dark:bg-[#071131] dark:text-white dark:border-blue-900/40">
+                <DialogHeader className="flex-col items-start gap-1.5 pb-4 border-none">
+                  <DialogTitle>Clone a New Voice</DialogTitle>
+                  <DialogDescription className="text-muted-foreground dark:text-slate-400">
+                    Upload or record a clean audio clip. Use the handles to trim it to the required length.
+                  </DialogDescription>
+                </DialogHeader>
+                <div ref={dialogScrollContainerRef} className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2 custom-scrollbar">
                   <div className="grid gap-2">
-                    <Label htmlFor="desc">Description (Optional)</Label>
+                    <Label htmlFor="name">Voice Name</Label>
                     <Input 
-                      id="desc" 
-                      value={cloneDesc} 
-                      onChange={(e) => setCloneDesc(e.target.value)} 
-                      placeholder="e.g. Energetic" 
+                      id="name" 
+                      value={cloneName} 
+                      onChange={(e) => setCloneName(e.target.value)} 
+                      placeholder="e.g. Sales Alex" 
+                      className="bg-background border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="desc">Description (Optional)</Label>
+                      <Input 
+                        id="desc" 
+                        value={cloneDesc} 
+                        onChange={(e) => setCloneDesc(e.target.value)} 
+                        placeholder="e.g. Energetic" 
+                        className="bg-background border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="gender">Gender</Label>
+                      <div className="flex bg-muted/50 rounded-lg p-1 border border-border dark:bg-slate-900/80 dark:border-blue-900/40">
+                        {(["male", "female", "neutral"] as const).map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setCloneGender(g)}
+                            className={cn(
+                              "flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-all",
+                              cloneGender === g 
+                                ? "bg-background shadow-sm text-foreground dark:bg-blue-600 dark:text-white dark:shadow-sm" 
+                                : "text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-white"
+                            )}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid gap-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <div className="flex bg-muted/50 rounded-lg p-1 border">
-                      {(["male", "female", "neutral"] as const).map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setCloneGender(g)}
-                          className={cn(
-                            "flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-all",
-                            cloneGender === g ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                          )}
+                    <Label htmlFor="cloneLanguage">Accent / Dialect</Label>
+                    <Select value={cloneLanguage} onValueChange={setCloneLanguage}>
+                      <SelectTrigger id="cloneLanguage" className="h-10 rounded-lg border-input focus:ring-2 focus:ring-primary w-full bg-background text-sm dark:border-blue-900/50 dark:focus:ring-blue-500 dark:bg-slate-900/50 dark:text-white">
+                        <SelectValue placeholder="Select accent / dialect" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover text-popover-foreground dark:bg-[#071131] dark:border-blue-900/50 dark:text-white">
+                        {CLONE_LANGUAGES.map((lang) => (
+                          <SelectItem key={lang.value} value={lang.value}>
+                            {lang.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-4 bg-muted/30 p-4 rounded-lg border border-border dark:bg-slate-900/40 dark:border-blue-900/40">
+                    {/* Clone Mode */}
+                    <div className="space-y-3">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">Clone Mode</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          variant={cloneMode === "instant" ? "default" : "outline"} 
+                          size="sm" 
+                          onClick={() => setCloneMode("instant")}
+                          className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1 dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white"
                         >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="cloneLanguage">Accent / Dialect</Label>
-                  <Select value={cloneLanguage} onValueChange={setCloneLanguage}>
-                    <SelectTrigger id="cloneLanguage" className="h-10 rounded-lg border-gray-200 focus:ring-2 focus:ring-primary w-full bg-background text-sm">
-                      <SelectValue placeholder="Select accent / dialect" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CLONE_LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.value} value={lang.value}>
-                          {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-col gap-4 bg-muted/30 p-4 rounded-lg border">
-                  {/* Clone Mode */}
-                  <div className="space-y-3">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Clone Mode</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button 
-                        variant={cloneMode === "instant" ? "default" : "outline"} 
-                        size="sm" 
-                        onClick={() => setCloneMode("instant")}
-                        className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1"
-                      >
-                        <span className="font-semibold text-xs">Instant Clone</span>
-                        <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
-                          6-15s audio • 1 credit / char
-                        </span>
-                      </Button>
-                      <Button 
-                        variant={cloneMode === "pro" ? "default" : "outline"} 
-                        size="sm" 
-                        onClick={() => setCloneMode("pro")}
-                        disabled
-                        className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1 opacity-60"
-                      >
-                        <span className="font-semibold text-xs">Pro Voice Clone</span>
-                        <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
-                          30m audio • Coming Soon
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-px bg-border/50" />
-
-                  {/* Enhance Audio */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor="enhance" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
-                        <Settings2 className="w-4 h-4 text-primary" /> Enhance Audio
-                      </Label>
-                      <p className="text-xs text-muted-foreground leading-tight">
-                        Applies AI noise reduction. Leads to cleaner speech but may slightly reduce similarity.
-                      </p>
-                    </div>
-                    <Switch id="enhance" checked={cloneEnhance} onCheckedChange={setCloneEnhance} className="mt-1" />
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label className="flex justify-between items-center">
-                    <span>Audio Clip</span>
-                    {cloneFile && (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        Selected: {(trimEnd - trimStart).toFixed(1)}s
-                      </span>
-                    )}
-                  </Label>
-                                 {recordingStep === "script_select" ? (
-                    <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in">
-                      <div className="space-y-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          1. Select a script to speak aloud
-                        </span>
-                        <div className="grid grid-cols-1 gap-2">
-                          {READING_SCRIPTS.map((script, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setSelectedScriptIndex(idx)}
-                              className={cn(
-                                "flex flex-col items-start text-left p-3 rounded-lg border transition-all duration-200",
-                                selectedScriptIndex === idx
-                                  ? "border-primary bg-primary/5 shadow-sm"
-                                  : "border-border hover:bg-muted/50"
-                              )}
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="font-semibold text-sm text-foreground">{script.title}</span>
-                                <span className={cn(
-                                  "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                                  script.type === "Privacy" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" :
-                                  script.type === "Phonetic" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
-                                  "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                                )}>
-                                  {script.type}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1 leading-normal">
-                                {script.description}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 mt-1">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Script Preview
-                        </span>
-                        <div className="p-3.5 rounded-lg bg-muted/40 border text-sm text-foreground leading-relaxed font-medium min-h-[5rem] flex items-center">
-                          &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 mt-2 border-t pt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={cancelScriptSelect}
-                          className="h-9 px-4 text-xs"
-                        >
-                          Back
+                          <span className="font-semibold text-xs">Instant Clone</span>
+                          <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
+                            6-15s audio • 1 credit / char
+                          </span>
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={startRecording}
-                          className="h-9 px-4 font-semibold gradient-primary"
+                        <Button 
+                          variant={cloneMode === "pro" ? "default" : "outline"} 
+                          size="sm" 
+                          onClick={() => setCloneMode("pro")}
+                          disabled
+                          className="w-full h-auto py-2 flex flex-col items-center justify-center gap-1 opacity-60 dark:border-blue-900/50 dark:text-slate-400"
                         >
-                          <Mic className="w-4 h-4 mr-1.5" /> Start Recording
+                          <span className="font-semibold text-xs">Pro Voice Clone</span>
+                          <span className="text-[10px] font-normal opacity-80 whitespace-normal text-center leading-tight">
+                            30m audio • Coming Soon
+                          </span>
                         </Button>
                       </div>
                     </div>
-                  ) : recordingStep === "recording" ? (
-                    <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Reading Script ({READING_SCRIPTS[selectedScriptIndex].type})
-                        </span>
-                        <span className="text-xs font-semibold text-primary">
-                          {READING_SCRIPTS[selectedScriptIndex].title}
-                        </span>
-                      </div>
 
-                      <div className="p-4 rounded-lg bg-muted/40 border text-sm sm:text-base text-foreground leading-relaxed font-medium min-h-[5.5rem] flex items-center shadow-inner">
-                        &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
-                      </div>
+                    <div className="w-full h-px bg-border/50 dark:bg-blue-900/40" />
 
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1.5 font-semibold text-red-600">
-                            <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
-                            Recording...
+                    {/* Enhance Audio */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="enhance" className="text-sm font-semibold flex items-center gap-2 cursor-pointer dark:text-white">
+                          <Settings2 className="w-4 h-4 text-primary dark:text-blue-400" /> Enhance Audio
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-tight dark:text-slate-400">
+                          Applies AI noise reduction. Leads to cleaner speech but may slightly reduce similarity.
+                        </p>
+                      </div>
+                      <Switch id="enhance" checked={cloneEnhance} onCheckedChange={setCloneEnhance} className="mt-1" />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label className="flex justify-between items-center dark:text-white">
+                      <span>Audio Clip</span>
+                      {cloneFile && (
+                        <span className="text-xs font-normal text-muted-foreground dark:text-slate-400">
+                          Selected: {(trimEnd - trimStart).toFixed(1)}s
+                        </span>
+                      )}
+                    </Label>
+
+                    {recordingStep === "script_select" ? (
+                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-slate-900/40">
+                        <div className="space-y-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
+                            1. Select a script to speak aloud
+                          </span>
+                          <div className="grid grid-cols-1 gap-2">
+                            {READING_SCRIPTS.map((script, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSelectedScriptIndex(idx)}
+                                className={cn(
+                                  "flex flex-col items-start text-left p-3 rounded-lg border transition-all duration-200",
+                                  selectedScriptIndex === idx
+                                    ? "border-primary bg-primary/5 shadow-sm dark:border-blue-500 dark:bg-blue-500/10"
+                                    : "border-border hover:bg-muted/50 dark:border-blue-900/40 dark:hover:bg-slate-800/40"
+                                )}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-semibold text-sm text-foreground dark:text-white">{script.title}</span>
+                                  <span className={cn(
+                                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                                    script.type === "Privacy" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" :
+                                    script.type === "Phonetic" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" :
+                                    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                  )}>
+                                    {script.type}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 leading-normal dark:text-slate-400">
+                                  {script.description}
+                                </p>
+                              </button>
+                            ))}
                           </div>
-                          <span>
-                            0:{recordingSeconds < 10 ? `0${recordingSeconds}` : recordingSeconds} / 0:25
+                        </div>
+
+                        <div className="space-y-1.5 mt-1">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
+                            Script Preview
+                          </span>
+                          <div className="p-3.5 rounded-lg bg-muted/40 border text-sm text-foreground leading-relaxed font-medium min-h-[5rem] flex items-center dark:bg-slate-900/60 dark:border-blue-900/40 dark:text-white">
+                            &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-2 border-t pt-3 border-border dark:border-blue-900/40">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelScriptSelect}
+                            className="h-9 px-4 text-xs border-input dark:border-blue-900/50 dark:text-slate-300"
+                          >
+                            Back
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={startRecording}
+                            className="h-9 px-4 font-semibold gradient-primary dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white"
+                          >
+                            <Mic className="w-4 h-4 mr-1.5" /> Start Recording
+                          </Button>
+                        </div>
+                      </div>
+                    ) : recordingStep === "recording" ? (
+                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-slate-900/40">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
+                            Reading Script ({READING_SCRIPTS[selectedScriptIndex].type})
+                          </span>
+                          <span className="text-xs font-semibold text-primary dark:text-blue-400">
+                            {READING_SCRIPTS[selectedScriptIndex].title}
                           </span>
                         </div>
+
+                        <div className="p-4 rounded-lg bg-muted/40 border text-sm sm:text-base text-foreground leading-relaxed font-medium min-h-[5.5rem] flex items-center shadow-inner dark:bg-slate-900/60 dark:border-blue-900/40 dark:text-white">
+                          &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-slate-400">
+                            <div className="flex items-center gap-1.5 font-semibold text-red-600 dark:text-red-500">
+                              <span className="h-2.5 w-2.5 rounded-full bg-red-600 dark:bg-red-500 animate-pulse" />
+                              Recording...
+                            </div>
+                            <span>
+                              0:{recordingSeconds < 10 ? `0${recordingSeconds}` : recordingSeconds} / 0:25
+                            </span>
+                          </div>
+                          
+                          {/* Real-time Voice Responsive Wave Progress Visualizer */}
+                          <div className="relative">
+                            <div className="flex items-center justify-between gap-1 h-14 w-full px-3 bg-muted/20 rounded-xl border border-muted/50 overflow-hidden dark:bg-slate-900/40 dark:border-blue-900/40">
+                              {Array.from({ length: 32 }).map((_, idx) => {
+                                const barProgress = (idx / 31) * 100;
+                                const progress = Math.min(100, (recordingSeconds / 25) * 100);
+                                const isActive = progress >= barProgress;
+                                const level = audioLevels[idx] || 0;
+                                const baseHeight = idx % 4 === 0 ? 32 : idx % 3 === 0 ? 24 : idx % 2 === 0 ? 16 : 40;
+                                const visualHeight = Math.max(6, baseHeight * (0.15 + level * 0.85));
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={cn(
+                                      "w-1.5 rounded-full transition-all duration-75 shadow-sm",
+                                      isActive 
+                                        ? "bg-red-600 dark:bg-red-500 shadow-red-500/10" 
+                                        : "bg-muted-foreground/35 dark:bg-slate-700/50"
+                                    )}
+                                    style={{ height: `${visualHeight}px` }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={cancelRecording}
+                            className="text-xs text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-white"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={stopRecording}
+                            className="h-9 px-4 font-semibold bg-red-600 hover:bg-red-700 text-white border border-red-700 hover:text-white shadow-sm transition-colors dark:border-transparent"
+                          >
+                            <StopCircle className="w-4 h-4 mr-1.5" /> Stop & Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : !cloneFile ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 border-border hover:bg-muted/50 transition-colors dark:border-blue-900/50 dark:bg-slate-900/30 dark:hover:bg-slate-900/60">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-6 h-6 mb-2 text-muted-foreground dark:text-slate-400" />
+                            <p className="text-xs font-semibold text-foreground dark:text-slate-300">Upload Audio</p>
+                          </div>
+                          <input 
+                            id="dropzone-file" 
+                            type="file" 
+                            className="hidden" 
+                            accept="audio/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setCloneFile(e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </label>
                         
-                        {/* Real-time Voice Responsive Wave Progress Visualizer */}
-                        <div className="relative">
-                          <div className="flex items-center justify-between gap-1 h-14 w-full px-3 bg-muted/20 rounded-xl border border-muted/50 overflow-hidden">
-                            {Array.from({ length: 32 }).map((_, idx) => {
-                              const barProgress = (idx / 31) * 100;
-                              const progress = Math.min(100, (recordingSeconds / 25) * 100);
-                              const isActive = progress >= barProgress;
-                              
-                              // Real-time audio pitch/loudness level (0 to 1) for this bin
-                              const level = audioLevels[idx] || 0;
-                              
-                              // Oscillating base height configuration (between 16px and 40px)
-                              const baseHeight = idx % 4 === 0 ? 32 : idx % 3 === 0 ? 24 : idx % 2 === 0 ? 16 : 40;
-                              
-                              // Calculate dynamic height based on active mic input (with a sleek 15% baseline)
-                              const visualHeight = Math.max(6, baseHeight * (0.15 + level * 0.85));
-
-                              return (
-                                <div
-                                  key={idx}
-                                  className={cn(
-                                    "w-1.5 rounded-full transition-all duration-75 shadow-sm",
-                                    isActive 
-                                      ? "bg-red-600 dark:bg-red-500 shadow-red-500/10" 
-                                      : "bg-muted-foreground/35"
-                                  )}
-                                  style={{
-                                    height: `${visualHeight}px`,
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 mt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={cancelRecording}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={stopRecording}
-                          className="h-9 px-4 font-semibold bg-red-600 hover:bg-red-700 active:bg-red-800 text-white border border-red-700 hover:text-white shadow-sm transition-colors"
-                        >
-                          <StopCircle className="w-4 h-4 mr-1.5" /> Stop & Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : !cloneFile ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/50 transition-colors">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-6 h-6 mb-2 text-muted-foreground" />
-                          <p className="text-xs font-semibold">Upload Audio</p>
-                        </div>
-                        <input 
-                          id="dropzone-file" 
-                          type="file" 
-                          className="hidden" 
-                          accept="audio/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setCloneFile(e.target.files[0]);
-                            }
-                          }}
-                        />
-                      </label>
-                      
-                      <button 
-                        type="button"
-                        onClick={checkMicPermission}
-                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/50 border-muted-foreground/25 transition-colors"
-                      >
-                        <Mic className="w-6 h-6 mb-2 text-muted-foreground" />
-                        <p className="text-xs font-semibold">Record Mic</p>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 transition-all duration-300 hover:shadow-soft font-[Segoe UI]">
-                        <button
+                        <button 
                           type="button"
-                          onClick={() => {
-                            if (wavesurferRef.current) {
-                              wavesurferRef.current.playPause();
-                            }
-                          }}
-                          className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground hover:scale-105 transition-transform duration-200 shadow-md"
+                          onClick={checkMicPermission}
+                          className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/50 border-border transition-colors dark:border-blue-900/50 dark:bg-slate-900/30 dark:hover:bg-slate-900/60"
                         >
-                          {isWsPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                          <Mic className="w-6 h-6 mb-2 text-muted-foreground dark:text-slate-400" />
+                          <p className="text-xs font-semibold text-foreground dark:text-slate-300">Record Mic</p>
                         </button>
-                        <div className="flex-1 min-w-0 w-full">
-                          <div className="flex items-center justify-between text-sm font-medium text-foreground mb-2">
-                            <span className="flex items-center gap-1 text-primary"><Scissors className="w-4 h-4" /> Trim Audio</span>
-                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setCloneFile(null)}>
-                              Clear
-                            </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20 transition-all duration-300 hover:shadow-sm font-[Segoe UI] dark:bg-blue-950/40 dark:border-blue-800/40">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (wavesurferRef.current) {
+                                wavesurferRef.current.playPause();
+                              }
+                            }}
+                            className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground hover:scale-105 transition-transform duration-200 shadow-md dark:bg-blue-600 dark:text-white"
+                          >
+                            {isWsPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                          </button>
+                          <div className="flex-1 min-w-0 w-full">
+                            <div className="flex items-center justify-between text-sm font-medium text-foreground mb-2 dark:text-white">
+                              <span className="flex items-center gap-1 text-primary dark:text-blue-400"><Scissors className="w-4 h-4" /> Trim Audio</span>
+                              <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-white" onClick={() => setCloneFile(null)}>
+                                Clear
+                              </Button>
+                            </div>
+                            <div ref={waveformRef} className="w-full bg-background rounded border border-border overflow-hidden h-[60px] dark:bg-slate-950 dark:border-blue-900/40" />
                           </div>
-                          {/* Wavesurfer Container */}
-                          <div ref={waveformRef} className="w-full bg-background rounded border overflow-hidden h-[60px]" />
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-              {!isRecording && recordingStep === "idle" && (
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)} disabled={isCloning}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCloneSubmit} disabled={isCloning || !cloneName || !cloneFile} className="gradient-primary">
-                    {isCloning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cloning...</> : 'Clone Selected Region'}
-                  </Button>
-                </DialogFooter>
-              )}
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="bg-card border rounded-xl overflow-hidden shadow-sm h-[calc(100vh-12rem)] flex flex-col">
-          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {voices.map((voice) => (
-              <button
-                key={voice.id}
-                onClick={() => setSelectedVoice(voice)}
-                className={cn(
-                  "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 border border-transparent",
-                  selectedVoice?.id === voice.id
-                    ? "bg-primary/5 border-primary/20 shadow-sm"
-                    : "hover:bg-muted"
+                {!isRecording && recordingStep === "idle" && (
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)} disabled={isCloning} className="border-input dark:border-blue-900/50 dark:text-slate-300">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCloneSubmit} disabled={isCloning || !cloneName || !cloneFile} className="gradient-primary dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white">
+                      {isCloning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cloning...</> : 'Clone Selected Region'}
+                    </Button>
+                  </DialogFooter>
                 )}
-              >
-                <div className="font-medium text-sm flex items-center justify-between">
-                  <span>{voice.description || "Unnamed Voice"}</span>
-                  {selectedVoice?.id === voice.id && (
-                    <div className="h-2 w-2 rounded-full bg-primary" />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Voice List Content */}
+          <div className="flex-1 overflow-y-auto p-1 space-y-1 custom-scrollbar">
+            {voices.length > 0 ? (
+              voices.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => setSelectedVoice(voice)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 border border-transparent",
+                    selectedVoice?.id === voice.id
+                      ? "bg-primary/10 border-primary/20 text-foreground shadow-sm dark:bg-blue-600/15 dark:border-blue-500/40 dark:text-white"
+                      : "hover:bg-muted text-foreground/80 dark:text-slate-300 dark:hover:bg-slate-800/40"
                   )}
+                >
+                  <div className="font-medium text-sm flex items-center justify-between">
+                    <span>{voice.description || "Unnamed Voice"}</span>
+                    {selectedVoice?.id === voice.id && (
+                      <div className="h-2 w-2 rounded-full bg-primary dark:bg-blue-500" />
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 dark:text-slate-400">
+                    <span className="capitalize">{voice.gender}</span>
+                    <span>•</span>
+                    <span>{voice.provider}</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              /* Empty State for Sidebar (Updated with AudioLines icon for both modes) */
+              <div className="flex flex-col items-center justify-center h-full text-center px-4 py-8">
+                <div className="relative mb-3 flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 border border-primary/20 dark:bg-blue-950/40 dark:border-blue-900/30">
+                  <AudioLines className="w-8 h-8 text-primary/80 dark:text-blue-400/80" />
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                  <span className="capitalize">{voice.gender}</span>
-                  <span>•</span>
-                  <span>{voice.provider}</span>
-                </div>
-              </button>
-            ))}
-            {voices.length === 0 && (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No voices found.
+                <h3 className="font-semibold text-foreground text-base mb-1 dark:text-white">No voices found.</h3>
+                <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px] dark:text-slate-400">
+                  Create your first voice or clone an existing one to get started.
+                </p>
               </div>
             )}
           </div>
@@ -1030,38 +1037,39 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
 
       {/* Main Content - Voice Tester */}
       <main>
-        <Card className="form-section h-full">
+        <Card className="form-section h-full bg-card border rounded-xl shadow-sm dark:bg-[#071131] dark:border-blue-900/40 dark:rounded-2xl dark:shadow-lg dark:flex dark:flex-col dark:justify-between">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="icon-container bg-primary/10">
-                <Volume2 className="h-5 w-5 text-primary" />
+              {/* Enhanced Icon Container for both Light & Dark modes */}
+              <div className="icon-container p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary dark:bg-blue-950/80 dark:border-blue-800/40 dark:text-blue-400">
+                <Volume2 className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">Test Voice</CardTitle>
-                <CardDescription>Select a voice from the library to test it with custom text</CardDescription>
+                <CardTitle className="text-lg font-semibold text-foreground dark:text-white">Test Voice</CardTitle>
+                <CardDescription className="text-muted-foreground text-xs dark:text-slate-400">Select a voice from the library to test it with custom text</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 dark:flex-1 dark:flex dark:flex-col dark:justify-center">
             {selectedVoice ? (
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-4 bg-muted/30 rounded-lg border">
-                  <h3 className="font-medium">{selectedVoice.description || "Unnamed Voice"}</h3>
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm text-muted-foreground">
-                    <div><span className="font-medium">Provider ID:</span> {selectedVoice.provider_voice_id || 'N/A'}</div>
-                    <div><span className="font-medium">Provider:</span> {selectedVoice.provider}</div>
-                    <div><span className="font-medium">Dialect / Accent:</span> {CLONE_LANGUAGES.find(l => l.value === selectedVoice.accent)?.label || selectedVoice.accent || 'Default (US Accent)'}</div>
+              <div className="space-y-4 animate-fade-in dark:w-full">
+                <div className="p-4 bg-muted/30 rounded-lg border border-border dark:bg-slate-900/50 dark:rounded-xl dark:border-blue-900/40">
+                  <h3 className="font-medium text-foreground dark:text-white">{selectedVoice.description || "Unnamed Voice"}</h3>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm text-muted-foreground dark:text-slate-400">
+                    <div><span className="font-medium text-foreground dark:text-slate-300">Provider ID:</span> {selectedVoice.provider_voice_id || 'N/A'}</div>
+                    <div><span className="font-medium text-foreground dark:text-slate-300">Provider:</span> {selectedVoice.provider}</div>
+                    <div><span className="font-medium text-foreground dark:text-slate-300">Dialect / Accent:</span> {CLONE_LANGUAGES.find(l => l.value === selectedVoice.accent)?.label || selectedVoice.accent || 'Default (US Accent)'}</div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="test-text">Text to Speak</Label>
+                    <Label htmlFor="test-text" className="text-foreground dark:text-white">Text to Speak</Label>
                     <span className={cn(
                       "text-xs transition-colors duration-200",
                       testText.length >= 450 
-                        ? "text-amber-600 dark:text-amber-500 font-semibold" 
-                        : "text-muted-foreground"
+                        ? "text-amber-600 dark:text-amber-400 font-semibold" 
+                        : "text-muted-foreground dark:text-slate-400"
                     )}>
                       {testText.length} / 500 characters
                     </span>
@@ -1073,15 +1081,15 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                     onChange={(e) => setTestText(e.target.value.slice(0, 500))}
                     maxLength={500}
                     placeholder="Enter the text you want the voice to say..."
-                    className="resize-none"
+                    className="resize-none bg-background border-input dark:bg-slate-900/50 dark:border-blue-900/40 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500"
                   />
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
                   <div className="text-xs">
                     {isCached && !isGenerating && !isPlaying && (
-                      <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 font-medium animate-fade-in">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium animate-fade-in">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                         Audio cached browser-side
                       </span>
                     )}
@@ -1090,9 +1098,9 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                     onClick={handleTestVoice} 
                     disabled={isGenerating || !testText}
                     className={cn(
-                      "min-w-36 transition-all duration-300 shadow-sm",
-                      isPlaying && "bg-primary/10 border-primary text-primary hover:bg-primary/20",
-                      isCached && !isPlaying && !isGenerating && "bg-emerald-600 hover:bg-emerald-700 hover:text-white text-white border-emerald-700"
+                      "min-w-36 transition-all duration-300 shadow-sm dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white",
+                      isPlaying && "bg-primary/10 border-primary text-primary hover:bg-primary/20 dark:bg-blue-950/80 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/60",
+                      isCached && !isPlaying && !isGenerating && "bg-emerald-600 hover:bg-emerald-700 hover:text-white text-white border-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                     )}
                     variant={isPlaying ? "outline" : "default"}
                   >
@@ -1109,10 +1117,17 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                <Volume2 className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                <h3 className="font-medium text-lg mb-1">No Voice Selected</h3>
-                <p className="text-muted-foreground text-sm max-w-sm">
+              /* Main Empty State (Updated with Sparkles & Glowing Circle for both Light and Dark Modes) */
+              <div className="flex flex-col items-center justify-center my-auto py-16 text-center border-2 border-dashed border-border rounded-2xl bg-muted/20 dark:border-blue-900/40 dark:bg-slate-950/20">
+                <div className="relative mb-5 flex items-center justify-center">
+                  <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-primary animate-pulse dark:text-blue-400" />
+                  <Sparkles className="absolute -bottom-1 -left-1 w-3.5 h-3.5 text-primary/70 dark:text-blue-400/70" />
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-b from-primary/10 to-primary/20 border border-primary/30 flex items-center justify-center shadow-md dark:from-blue-600/20 dark:to-blue-900/40 dark:border-blue-500/30 dark:shadow-blue-900/20">
+                    <Volume2 className="h-10 w-10 text-primary dark:text-blue-400" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-foreground text-xl mb-2 dark:text-white">No Voice Selected</h3>
+                <p className="text-muted-foreground text-sm max-w-md leading-relaxed dark:text-slate-400">
                   Select a voice from the library list on the left to preview it with custom text.
                 </p>
               </div>

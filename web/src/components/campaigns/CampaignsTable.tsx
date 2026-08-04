@@ -369,19 +369,29 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
               <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724]">
                 <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
                   <span>Show</span>
-                  <select
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e) => {
-                      table.setPageSize(Number(e.target.value));
+                  <Select
+                    value={String(table.getState().pagination.pageSize)}
+                    onValueChange={(val) => {
+                      table.setPageSize(Number(val));
                     }}
-                    className="border border-[#E2E8F0] dark:border-blue-950/40 rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-slate-300"
                   >
-                  {[10, 20, 50, 100].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                  </select>
+                    <SelectTrigger className="w-[70px] h-7 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
+                      <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] max-w-[70px] w-[70px] p-0">
+                      <div className="*:data-[slot=select-viewport]:min-w-[70px] *:data-[slot=select-viewport]:w-[70px] *:data-[slot=select-viewport]:p-1">
+                        {[10, 20, 50, 100].map((pageSize) => (
+                          <SelectItem
+                            key={pageSize}
+                            value={String(pageSize)}
+                            className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
+                          >
+                            {pageSize}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    </SelectContent>
+                  </Select>
                   <span className="whitespace-nowrap">
                     of {table.getFilteredRowModel().rows.length} campaigns
                   </span>

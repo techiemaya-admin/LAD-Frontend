@@ -90,7 +90,7 @@ export function LadCard({
   return (
     <section
       id={id}
-      className={`bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-[#1c2c4e] ${
+      className={`bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 ${
         padded ? 'p-5 sm:p-6' : ''
       } ${className}`}
     >

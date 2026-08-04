@@ -1474,7 +1474,7 @@ export function ChatSettings() {
                         <SelectItem
                             key={ch.id}
                             value={ch.id}
-                            className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                            className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
                           {ch.label}
                         </SelectItem>
                     ))}
@@ -2292,7 +2292,7 @@ export function ChatSettings() {
                             <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
                               <SelectItem
                                 value="placeholder-fallback"
-                                className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724]"
+                                className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white"
                               >
                                 {loadingTemplates
                                   ? 'Loading templates…'
@@ -2305,7 +2305,7 @@ export function ChatSettings() {
                                 <SelectItem
                                   key={`${t.name}-${t.language}`}
                                   value={t.name}
-                                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724]"
+                                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white"
                                 >
                                   {t.name} {t.parameter_count > 0 ? `({{${t.parameter_count}}})` : ''}
                                 </SelectItem>

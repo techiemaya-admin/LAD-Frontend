@@ -9921,7 +9921,7 @@ function CheckpointFormInline({
                                                         <SelectItem
                                                           key={s.email}
                                                           value={s.email}
-                                                          className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                                                          className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
                                                             <div className="flex items-center gap-3">
                                                               <span className="text-sm">
                                                                 {s.provider === 'google' ? '📧 Gmail' : '📨 Outlook'} — {s.email}
@@ -9963,7 +9963,7 @@ function CheckpointFormInline({
                                                           <SelectItem
                                                             key={t.id}
                                                             value={t.id}
-                                                            className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                                                            className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
                                                               {t.name}
                                                           </SelectItem>
                                                         ))}
@@ -10686,7 +10686,7 @@ function CheckpointFormInline({
                                                         <SelectItem
                                                           key={a.id}
                                                           value={a.id}
-                                                          className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                                                          className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
 
                                                             {a.name}{a.agent_language ? ` (${a.agent_language})` : ''}
                                                         </SelectItem>
@@ -10730,7 +10730,7 @@ function CheckpointFormInline({
                                                             <SelectItem
                                                               key={n.id || num}
                                                               value={num}
-                                                              className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]">
+                                                              className="pl-3 pr-6 text-sm justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
 
                                                                 {label || n.id || 'Unknown number'}
                                                             </SelectItem>

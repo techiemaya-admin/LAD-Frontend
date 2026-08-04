@@ -739,53 +739,49 @@ export const LinkedInIntegration: React.FC = () => {
   }
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div className="flex items-start">
-            <div className="bg-white dark:bg-gray-900 p-2 rounded-lg mr-3 flex-shrink-0">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>
-              <Linkedin className="h-6 w-6 text-blue-700 "/>
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 space-y-4 font-sans text-slate-900 dark:text-white">
+        {/* 1. SEPARATED TOP HEADER CARD */}
+        <div className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 shadow-sm dark:shadow-none">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {/* LinkedIn Icon Box */}
+              <div className="w-10 h-10 rounded-lg bg-[#1d4ed8] flex items-center justify-center shrink-0">
+                <Linkedin className="h-6 w-6 text-white fill-current" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white leading-tight">LinkedIn</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                  Connect your LinkedIn account for automated lead enrichment and outreach
+                </p>
               </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">LinkedIn</h3>
-              <p className="text-sm text-gray-600 dark:text-slate-300 break-words">
-                Connect your LinkedIn account for automated lead enrichment and outreach
-              </p>
+
+            {/* Top Right Status Badge */}
+            <div className="flex items-center shrink-0">
+              {(() => {
+                const hasConnected = linkedInConnections.some(conn => conn.connected);
+                const primaryStatus = linkedInConnections.length > 0
+                  ? linkedInConnections[0].status || (linkedInConnections[0].connected ? 'connected' : 'disconnected')
+                  : 'disconnected';
+                const statusDisplay = getStatusDisplay(primaryStatus, hasConnected);
+
+                return (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-200 dark:border-[#0e4835] bg-emerald-50 dark:bg-[#061e19] text-emerald-700 dark:text-[#00d68f] text-xs font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-[#00d68f]" />
+                    <span>
+                      {linkedInConnections.length > 0 ? `${linkedInConnections.length} Account${linkedInConnections.length > 1 ? 's' : ''}` : statusDisplay.text}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
-          <div className="flex items-center justify-end sm:justify-start flex-shrink-0">
-            {(() => {
-              const hasConnected = linkedInConnections.some(conn => conn.connected);
-              const primaryStatus = linkedInConnections.length > 0
-                ? linkedInConnections[0].status || (linkedInConnections[0].connected ? 'connected' : 'disconnected')
-                : 'disconnected';
-              const statusDisplay = getStatusDisplay(primaryStatus, hasConnected);
-              const StatusIcon = statusDisplay.icon;
-              return (
-                <div className={`flex items-center px-3 py-1.5 rounded-full border-2 text-xs sm:text-sm ${
-                  statusDisplay.color.includes('text-green-600') ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30' :
-                  statusDisplay.color.includes('text-gray-400') ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-gray-700' :
-                  statusDisplay.color.includes('text-yellow-600') ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900/30' :
-                  statusDisplay.color.includes('text-orange-600') ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/30' :
-                  'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/30'
-                }`}>
-                  {statusDisplay.showPulse && (
-                    <div className={`h-2 w-2 sm:h-2.5 sm:w-2.5 ${statusDisplay.bgColor} rounded-full mr-1.5 sm:mr-2 animate-pulse flex-shrink-0`}></div>
-                  )}
-                  <StatusIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 ${statusDisplay.color} flex-shrink-0`} />
-                  <span className={`font-semibold ${statusDisplay.color} whitespace-nowrap`}>
-                    {linkedInConnections.length > 0 ? `${linkedInConnections.length} Account${linkedInConnections.length > 1 ? 's' : ''}` : statusDisplay.text}
-                  </span>
-                </div>
-              );
-            })()}
-          </div>
         </div>
-        {/* AI Replies toggle feedback — only surfaces on failure (mirrors Instagram). */}
+
+        {/* AI Replies toast feedback */}
         {aiToast && (
           <div
-            className={`mb-4 flex items-center gap-2 rounded-lg border p-3 text-sm ${
+            className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
               aiToast.kind === 'ok'
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
                 : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
@@ -795,88 +791,82 @@ export const LinkedInIntegration: React.FC = () => {
             {aiToast.message}
           </div>
         )}
-        {/* Display all connected LinkedIn accounts */}
+
+        {/* 2. SECTION TITLE */}
         {linkedInConnections.length > 0 && (
-          <div className="mb-6 space-y-3">
-            <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-2">
-              Connected Accounts ({linkedInConnections.length})
-            </h4>
-            {linkedInConnections.length > 1 && (
-              <p className="text-xs text-gray-500 -mt-1 mb-1">
-                AI Replies is account-wide — toggling it on any card applies to all your connected LinkedIn accounts.
-              </p>
-            )}
+          <h4 className="font-medium text-slate-700 dark:text-gray-100 text-sm pt-1">
+            Connected Accounts ({linkedInConnections.length})
+          </h4>
+        )}
+
+        {/* 3. CONNECTED ACCOUNTS LIST */}
+        {linkedInConnections.length > 0 && (
+          <div className="space-y-3">
             {linkedInConnections.map((account, index) => {
-              const accountStatusDisplay = getStatusDisplay(account.status, account.connected);
-              const AccountStatusIcon = accountStatusDisplay.icon;
-              const accountNumber = index + 1;
               return (
-                <div key={account.id || account.email || `account-${index}`} className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{account.accountName || account.profileName || account.email || 'LinkedIn Account'}</p>
-                        <div className={`flex items-center px-2 py-1 rounded-md text-xs font-medium w-fit flex-shrink-0 ${
-                          accountStatusDisplay.color.includes('text-green-600') ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400' :
-                          accountStatusDisplay.color.includes('text-gray-400') ? 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300' :
-                          accountStatusDisplay.color.includes('text-yellow-600') ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
-                          accountStatusDisplay.color.includes('text-orange-600') ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
-                          'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
-                        }`}>
-                          {accountStatusDisplay.showPulse && (
-                            <div className={`h-1.5 w-1.5 ${accountStatusDisplay.bgColor} rounded-full mr-1.5 animate-pulse flex-shrink-0`}></div>
-                          )}
-                          <AccountStatusIcon className={`h-3 w-3 mr-1 ${accountStatusDisplay.color} flex-shrink-0`} />
-                          <span className="whitespace-nowrap">{accountStatusDisplay.text}</span>
-                        </div>
-                      </div>
-                      {account.email && (
-                        <p className="text-sm text-gray-600 dark:text-slate-300 break-words">{account.email}</p>
-                      )}
-                      {account.profileUrl && (
-                        <a
-                          href={account.profileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center mt-1 break-all"
-                        >
-                          View Profile
-                          <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                        </a>
-                      )}
-                      {account.connectedAt && (
-                        <p className="text-xs text-gray-500 dark:text-slate-300       mt-2">
-                          Connected on {new Date(account.connectedAt).toLocaleDateString()}
-                        </p>
-                      )}
-                      {account.status && account.status !== 'connected' && account.status !== 'active' && (
-                        <div className={`mt-3 p-2 rounded-md text-xs ${
-                          account.status === 'disconnected' || account.status === 'inactive' ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300' :
-                          account.status === 'stopped' ? 'bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400' :
-                          account.status === 'checkpoint' || account.status === 'credentials_expired' ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
-                          'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400'
-                        }`}>
-                          {(account.status === 'disconnected' || account.status === 'inactive') && '⚠️ Account is disconnected. Please reconnect to continue using LinkedIn features.'}
-                          {account.status === 'stopped' && '⏸️ Account is stopped. Click reconnect to resume.'}
-                          {(account.status === 'checkpoint' || account.status === 'credentials_expired') && '🔒 LinkedIn requires verification. Please reconnect with your credentials.'}
-                          {account.status === 'unknown' && '❓ Unable to determine account status. Please check your connection.'}
-                          {account.status === 'error' && '❌ Error checking account status. Please try reconnecting.'}
-                        </div>
-                      )}
+                <div 
+                  key={account.id || account.email || `account-${index}`} 
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#08172e] shadow-sm dark:shadow-none"
+                >
+                  {/* Header Row: Account Name & Actions Vertically Centered */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900 dark:text-gray-100 truncate text-sm">
+                        {account.accountName || account.profileName || account.email || 'LinkedIn Account'}
+                      </p>
                     </div>
-                    <div className="flex sm:ml-4 sm:flex-col gap-2">
+
+                    {/* Status Badge + Disconnect Button */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-[#0e4835] bg-emerald-50 dark:bg-[#061e19] text-emerald-700 dark:text-[#00d68f] text-xs font-medium">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-[#00d68f]"></span>
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-[#00d68f]" />
+                        <span>Connected</span>
+                      </div>
+
                       <button
                         onClick={() => disconnectLinkedIn(account.id, account.email)}
                         disabled={disconnecting[account.id || 'default']}
-                        className="px-4 py-2 text-sm sm:text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-950 disabled:cursor-not-allowed transition-colors whitespace-nowrap w-full sm:w-auto"
+                        className="px-4 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-950 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer font-medium"
                       >
                         {disconnecting[account.id || 'default'] ? 'Disconnecting...' : 'Disconnect'}
                       </button>
                     </div>
                   </div>
-                  {/* AI Replies — tenant-level LinkedIn AI agent. Every connected
-                      account binds to the same flag; toggling persists via the
-                      automation-settings API and survives a refresh. */}
+
+                  {/* Profile Info Sub-details */}
+                  <div className="mt-1">
+                    {account.profileUrl && (
+                      <a
+                        href={account.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 break-all"
+                      >
+                        View Profile
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    )}
+
+                    {account.connectedAt && (
+                      <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                        Connected on {new Date(account.connectedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status warnings */}
+                  {account.status && account.status !== 'connected' && account.status !== 'active' && (
+                    <div className="mt-3 p-2 rounded-md text-xs bg-amber-50 dark:bg-yellow-950/30 text-amber-800 dark:text-yellow-400 border border-amber-200 dark:border-yellow-500/20">
+                      {(account.status === 'disconnected' || account.status === 'inactive') && '⚠️ Account is disconnected. Please reconnect to continue using LinkedIn features.'}
+                      {account.status === 'stopped' && '⏸️ Account is stopped. Click reconnect to resume.'}
+                      {(account.status === 'checkpoint' || account.status === 'credentials_expired') && '🔒 LinkedIn requires verification. Please reconnect with your credentials.'}
+                      {account.status === 'unknown' && '❓ Unable to determine account status. Please check your connection.'}
+                      {account.status === 'error' && '❌ Error checking account status. Please try reconnecting.'}
+                    </div>
+                  )}
+
+                  {/* AI Toggle */}
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <AiToggleChip
                       label="AI Replies"
@@ -891,58 +881,33 @@ export const LinkedInIntegration: React.FC = () => {
             })}
           </div>
         )}
-        <div className="space-y-4">
-          {/* <div className="border-t border-gray-200 pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">Features</h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Automatically enrich leads with LinkedIn profile data</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Extract decision maker information and contact details</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Access to company employee lists and org charts</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Send automated connection requests and messages</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Track engagement and response rates</span>
-              </li>
-            </ul>
-          </div> */}
-          <div className="border-t border-gray-200 dark:border-gray-800 pt-4 space-y-3">
-            {/* Always show "Add Account" button to allow multiple connections */}
-            <button
-              onClick={() => setShowConnectionModal(true)}
-              className="w-full h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99] cursor-pointer border-none"
-            >
-              {/* Official LinkedIn Icon */}
-              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                <path d={LINKEDIN_LOGO_PATH}/>
-              </svg>
+
+        {/* 4. ADD BUTTON */}
+        <button
+          onClick={() => setShowConnectionModal(true)}
+          className="w-full h-12 px-5 rounded-2xl text-sm font-semibold text-white bg-[#2463ef] hover:bg-[#1d4ed8] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1d4ed8]/20 active:scale-[0.99] cursor-pointer border-none"
+        >
+          <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24">
+            <path d={LINKEDIN_LOGO_PATH}/>
+          </svg>
+          <span>
+            {linkedInConnections.length > 0 ? 'Add Another LinkedIn Account' : 'Connect LinkedIn Account'}
+          </span>
+        </button>
+
+        {/* 5. SEPARATED IMPORTANT NOTE CARD */}
+        <div className="bg-amber-50 dark:bg-[#071925] border border-amber-200 dark:border-yellow-500/30 rounded-2xl p-4">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+            <div className="text-sm text-amber-900 dark:text-yellow-200 min-w-0 leading-relaxed">
+              <p className="font-semibold mb-1 text-amber-950 dark:text-yellow-300">Important Note</p>
               <span>
-    {linkedInConnections.length > 0 ? 'Add Another LinkedIn Account' : 'Connect LinkedIn Account'}
-      </span>
-            </button>
-          </div>
-          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 rounded-lg p-3 sm:p-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800 dark:text-yellow-400 min-w-0">
-                <p className="font-medium mb-1 text-yellow-900 dark:text-yellow-300">Important Note</p>
-                <p className="leading-relaxed">
-                  LinkedIn has strict rate limits and usage policies. Automated actions should be used
-                  responsibly to avoid account restrictions. We recommend limiting connection requests
-                  to 50-100 per day.
-                </p>
-              </div>
+                LinkedIn has strict rate limits and usage policies. Automated actions should be used
+                responsibly to avoid account restrictions.{" "}
+              </span>
+              <span className="text-amber-700 dark:text-yellow-400 font-semibold">
+                We recommend limiting connection requests to 50-100 per day.
+              </span>
             </div>
           </div>
         </div>

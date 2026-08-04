@@ -598,7 +598,7 @@ export const IntegrationsSettings: React.FC = () => {
           {activeView === 'whatsapp-personal' && (
             <div className="space-y-6">
               <WhatsAppIntegration />
-              <div className="text-card-foreground flex flex-col gap-6 py-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724]" style={{ minHeight: 400 }}>
+              <div className="text-card-foreground flex flex-col gap-6 py-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#071131]" style={{ minHeight: 400 }}>
                 <PersonalWaTemplateManager />
               </div>
             </div>

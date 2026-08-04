@@ -40,7 +40,7 @@ export default function ZohoCrmPage() {
           </div>
           <button
             onClick={() => setShowRecurring(true)}
-            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-slate-200 dark:border-[#1c2c4e] text-[#172560] dark:text-white bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-all shadow-xs"
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-slate-200 dark:border-blue-950/40 text-[#172560] dark:text-white bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-all shadow-xs"
           >
             <Repeat className="h-4 w-4 text-blue-500 dark:text-blue-400" /> Recurring campaign
           </button>

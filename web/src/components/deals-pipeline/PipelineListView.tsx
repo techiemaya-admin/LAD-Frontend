@@ -1130,19 +1130,29 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
           <div className="flex items-center gap-2 text-xs sm:text-sm text-[#64748B] dark:text-[#7a8ba3]">
             <div className="flex items-center gap-2">
               <span>Show</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  handlePageSizeChange(Number(e.target.value));
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  handlePageSizeChange(Number(val));
                 }}
-                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-xs sm:text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-[70px] h-7 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
+                  <SelectValue placeholder={pageSize} />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] max-w-[70px] w-[70px] p-0">
+                  <div className="*:data-[slot=select-viewport]:min-w-[70px] *:data-[slot=select-viewport]:w-[70px] *:data-[slot=select-viewport]:p-1">
+                    {[10, 20, 50, 100].map((size) => (
+                      <SelectItem
+                        key={size}
+                        value={String(size)}
+                        className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
+                      >
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
               <span className="whitespace-nowrap">of {displayTotalRecords} {labels?.entityPlural.toLowerCase()}</span>
             </div>
             {(currentSearchQuery || (currentFilters && Object.keys(currentFilters).length > 0)) && totalLeadsCount !== undefined && totalLeadsCount > 0 && (

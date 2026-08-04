@@ -687,7 +687,7 @@
   /* Border & Input - Electric Blue accent */
   --border: #2B7CFF;
   --input: #1A2A43;
-  --ring: #2EE6A6;
+  --ring: #2B7CFF;
 
   /* Muted */
   --muted: #2B7CFF;
@@ -708,7 +708,7 @@
   --sidebar-accent: #2EE6A6;
   --sidebar-accent-foreground: #000724;
   --sidebar-border: #1a2a43;
-  --sidebar-ring: #2EE6A6;
+  --sidebar-ring: #2B7CFF;
 }
 
 /* Background override */
@@ -797,7 +797,7 @@ body {
 .dark select {
   background-color: #071131 !important;
   color: #ffffff !important;
-  border-color: #1c2c4e !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
 }
 
 .dark select option {
@@ -818,7 +818,7 @@ body {
 .dark [role="menu"],
 .dark [role="listbox"] {
   background-color: #071131 !important;
-  border-color: #1c2c4e !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
   color: #ffffff !important;
 }
 
@@ -833,5 +833,24 @@ body {
   background-color: #2563eb !important;
   color: #ffffff !important;
 }
+
+/* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
+.dark input:focus,
+.dark input:focus-visible,
+.dark textarea:focus,
+.dark textarea:focus-visible,
+.dark select:focus,
+.dark select:focus-visible,
+.dark [data-slot="input"]:focus,
+.dark [data-slot="input"]:focus-visible,
+.dark [data-slot="textarea"]:focus,
+.dark [data-slot="textarea"]:focus-visible,
+.dark [data-slot="select-trigger"]:focus,
+.dark [data-slot="select-trigger"]:focus-visible {
+  border-color: rgba(43, 124, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(43, 124, 255, 0.25) !important;
+  outline: none !important;
+}
+
 
 

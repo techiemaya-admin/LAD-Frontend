@@ -39,8 +39,7 @@ export default function KanbanBoard({ stages, leads, selectedLeadId, onSelectLea
                   {s.label}
                 </h3>
                 <span
-                  className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium tabular-nums"
-                  style={{ background: T.badgeBg, color: T.primaryHead }}
+                  className="inline-flex dark:bg-[#2563eb] dark:text-white items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium tabular-nums"
                 >
                   {stageLeads.length}
                 </span>
@@ -153,8 +152,7 @@ function LeadCard({
         <div className="flex items-center gap-1.5">
           {lead.fit != null && (
             <span
-              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium tabular-nums px-1.5 py-0.5 rounded-md"
-              style={{ background: T.badgeBg, color: T.primaryHead }}
+              className="inline-flex dark:bg-[#2563eb] dark:text-white items-center gap-0.5 text-[10.5px] font-medium tabular-nums px-1.5 py-0.5 rounded-md"
             >
               <Sparkles className="w-2.5 h-2.5" /> {Math.round(lead.fit * 100)}
             </span>

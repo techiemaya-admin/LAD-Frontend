@@ -46,7 +46,7 @@ export default function StatsCards({ counts, selected, onSelect }: StatsCardsPro
           className={`bg-white dark:bg-[#071131] rounded-[20px] border-2 w-full text-left flex flex-col h-full min-h-[120px] transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 ${
             isSel
               ? 'border-blue-600 dark:border-[#2563eb] ring-2 ring-blue-500/30'
-              : 'border-slate-200 dark:border-[#1c2c4e]'
+              : 'border-slate-200 dark:border-blue-950/40'
           }`}
         >
           <div className="flex-1 flex flex-col p-4">

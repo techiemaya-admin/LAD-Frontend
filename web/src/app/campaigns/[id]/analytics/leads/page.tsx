@@ -535,7 +535,7 @@ export default function CampaignLeadsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
         <Input
-          className="pl-10 bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
+          className="pl-10 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
           placeholder="Search leads by name, email, company, or title..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

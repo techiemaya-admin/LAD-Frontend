@@ -18,13 +18,16 @@
  * No backend changes needed — the create endpoint already accepts both
  * provider credential shapes.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import {
   Plus, Trash2, RefreshCw, Loader2, CheckCircle2, AlertCircle, Power, Eye, EyeOff,
   X as XIcon, Instagram as InstagramIcon, Pencil,
+  Lock, List, Hash, Building2, Edit3, Key,
+  LockKeyhole
 } from 'lucide-react';
+
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +92,24 @@ const AI_MODELS = [
   { id: 'gpt-4o',           label: 'GPT-4o' },
   { id: 'claude-sonnet-4',  label: 'Claude Sonnet 4' },
 ];
+
+function MetaLogo(props: React.SVGProps<SVGSVGElement>): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4.5 12C4.5 7.857 7.857 4.5 12 4.5c2.25 0 3.75 1.062 4.5 2.625.75 1.56.625 3.308-.5 4.625L12 16.5l-4.5-4.75C5.875 10.308 5.75 8.56 6.5 7z" />
+      <path d="M19.5 12c0 4.143-3.357 7.5-7.5 7.5-2.25 0-3.75-1.062-4.5-2.625-.75-1.56-.625-3.308.5-4.625L12 7.5l4.5 4.75c.75 1.297.875 3.045.5 4.125z" />
+    </svg>
+  );
+}
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
@@ -317,21 +338,24 @@ export const InstagramTenantOnboarding: React.FC = () => {
         <div
           className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
             toast.kind === 'ok'
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
-              : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
+              ? 'border-emerald-500/30 bg-emerald-950/20 text-emerald-200'
+              : 'border-rose-500/30 bg-rose-950/20 text-rose-200'
           }`}
         >
-          {toast.kind === 'ok' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {toast.kind === 'ok' ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <AlertCircle className="h-4 w-4 text-rose-300" />}
           {toast.message}
         </div>
       )}
 
       {/* ── Existing accounts ─────────────────────────────────────── */}
-      <section className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-white/10 dark:bg-white/5">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-blue-950/40 dark:bg-[#071131]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Connected Instagram accounts</h2>
-            <p className="text-sm text-neutral-600 mt-0.5 dark:text-white/60">
+            <div className="flex items-center gap-2 mb-1">
+              <InstagramIcon className="h-5 w-5 text-[#E1306C]" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Connected Instagram accounts</h2>
+            </div>
+            <p className="text-sm text-slate-600 mt-0.5 dark:text-slate-300">
               Each account links an Instagram identity (Meta or direct login) to this tenant.
             </p>
           </div>
@@ -339,7 +363,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
             type="button"
             onClick={() => load(true)}
             disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+            className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#071131]/80 dark:text-slate-200 dark:hover:bg-[#0c1b43]"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -347,12 +371,12 @@ export const InstagramTenantOnboarding: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-neutral-500 dark:text-white/60">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <div className="flex items-center justify-center py-12 text-slate-300">
+            <Loader2 className="h-5 w-5 animate-spin mr-2 text-slate-300" />
             <span className="text-sm">Loading accounts…</span>
           </div>
         ) : accounts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500 dark:border-white/10 dark:text-white/60">
+          <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-600 bg-slate-50 dark:border-blue-950/40 dark:text-slate-300 dark:bg-[#071131]/70">
             No Instagram accounts yet. Use the form below to connect one.
           </div>
         ) : (
@@ -362,13 +386,13 @@ export const InstagramTenantOnboarding: React.FC = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-neutral-900 dark:text-white">
+                      <span className="font-medium text-slate-900 dark:text-white">
                         {a.display_name || a.instagram_username || 'Untitled account'}
                       </span>
                       <ProviderBadge provider={a.provider} />
                       <StatusBadge status={a.status} />
                     </div>
-                    <div className="mt-1 text-xs text-neutral-600 space-y-0.5 dark:text-white/60">
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-300 space-y-0.5">
                       {a.instagram_username && <div>@{a.instagram_username}</div>}
                       {a.meta_ig_user_id && <div>Meta IG User ID: <span className="font-mono">{a.meta_ig_user_id}</span></div>}
                       {a.provider_account_id && <div>Connection ID: <span className="font-mono">{a.provider_account_id}</span></div>}
@@ -382,7 +406,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setEditingAccount(a)}
-                        className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+                        className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/80 dark:text-slate-200 dark:hover:bg-[#0c1b43]"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
@@ -390,7 +414,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDisconnect(a)}
-                        className="flex items-center gap-1.5 rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                        className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-950/20 px-3 py-1.5 text-xs text-rose-200 hover:bg-rose-900/40 dark:border-rose-500/30"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Disconnect
@@ -427,9 +451,12 @@ export const InstagramTenantOnboarding: React.FC = () => {
       </section>
 
       {/* ── Onboard new account ───────────────────────────────────── */}
-      <section className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-white/10 dark:bg-white/5">
-        <h2 className="text-lg font-semibold mb-1">Onboard new Instagram account</h2>
-        <p className="text-sm text-neutral-600 mb-5 dark:text-white/60">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-blue-950/40 dark:bg-[#071131]">
+        <div className="flex items-center gap-2 mb-1">
+          <Plus className="h-5 w-5 text-blue-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Onboard new Instagram account</h2>
+        </div>
+        <p className="text-sm text-slate-600 mb-5 dark:text-slate-300">
           Mirrors the WhatsApp tenant onboarding flow — connect a provider, link to an existing tenant or auto-create one.
         </p>
 
@@ -446,13 +473,20 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     onClick={() => setForm((f) => ({ ...f, provider: p }))}
                     className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
                       active
-                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                        : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10'
+                        ? 'border-blue-950/40 bg-[#0b1957] text-white shadow-sm dark:bg-[#0b1957]'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-200 dark:hover:bg-[#0c1b43]'
                     }`}
                   >
-                    {p === 'meta'
-                      ? 'Meta (official Instagram Graph API)'
-                      : 'Direct sign-in (username & password)'}
+                    <span className="inline-flex items-center gap-2">
+                      {p === 'meta' ? (
+                        <MetaLogo className={`h-4 w-4 ${active ? 'text-white' : 'text-[#1877F2]'}`} />
+                      ) : (
+                        <LockKeyhole className="h-4 w-4" />
+                      )}
+                      {p === 'meta'
+                        ? 'Meta (official Instagram Graph API)'
+                        : 'Unipile direct sign-in (username & password)'}
+                    </span>
                   </button>
                 );
               })}
@@ -460,14 +494,14 @@ export const InstagramTenantOnboarding: React.FC = () => {
           </FieldGroup>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Display name" hint="Friendly label shown in the app">
+            <Field label="Display name" icon={Edit3}>
               <Input
                 value={form.display_name}
                 onChange={(v) => setForm((f) => ({ ...f, display_name: v }))}
                 placeholder="e.g. Acme Studio"
               />
             </Field>
-            <Field label="Instagram username" hint="@handle (without the @)">
+            <Field label="Instagram username" icon={InstagramIcon}>
               <Input
                 value={form.instagram_username}
                 onChange={(v) => setForm((f) => ({ ...f, instagram_username: v }))}
@@ -475,7 +509,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
               />
             </Field>
 
-            <Field label="Tenant ID" hint="Optional — leave blank to use the active tenant" full>
+            <Field label="Tenant ID" icon={Hash} full>
               <Input
                 value={form.tenant_id}
                 onChange={(v) => setForm((f) => ({ ...f, tenant_id: v }))}
@@ -484,14 +518,14 @@ export const InstagramTenantOnboarding: React.FC = () => {
               />
             </Field>
 
-            <Field label="AI Model" hint="LLM used for AI Replies + Comments">
+            <Field label="AI Model" icon={List}>
               <select
                 value={form.ai_model}
                 onChange={(e) => setForm((f) => ({ ...f, ai_model: e.target.value }))}
-                className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:ring-white/30"
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white"
               >
                 {AI_MODELS.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white">
+                  <option key={m.id} value={m.id} className="bg-white text-slate-900 dark:bg-[#071131] dark:text-white">
                     {m.label}
                   </option>
                 ))}
@@ -502,7 +536,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSecrets((s) => !s)}
-                className="flex items-center gap-1.5 text-xs text-neutral-600 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white"
+                className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               >
                 {showSecrets ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 {showSecrets ? 'Hide secrets' : 'Show secrets'}
@@ -512,12 +546,12 @@ export const InstagramTenantOnboarding: React.FC = () => {
 
           {/* Provider-specific credentials */}
           {form.provider === 'meta' ? (
-            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-4 dark:border-white/10 dark:bg-white/5">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-white/50">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4 dark:border-blue-950/40 dark:bg-[#071131]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Meta Graph API credentials
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="App ID" required>
+                <Field label="App ID" icon={Building2} required>
                   <Input
                     value={form.meta_app_id}
                     onChange={(v) => setForm((f) => ({ ...f, meta_app_id: v }))}
@@ -525,7 +559,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     mono
                   />
                 </Field>
-                <Field label="App Secret" required>
+                <Field label="App Secret" icon={Lock} required>
                   <Input
                     value={form.meta_app_secret}
                     onChange={(v) => setForm((f) => ({ ...f, meta_app_secret: v }))}
@@ -534,14 +568,14 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     mono
                   />
                 </Field>
-                <Field label="Verify Token" required hint="Used for webhook signature validation">
+                <Field label="Verify Token" icon={Key} required>
                   <Input
                     value={form.meta_verify_token}
                     onChange={(v) => setForm((f) => ({ ...f, meta_verify_token: v }))}
                     placeholder="Choose any string — paste the same value into Meta webhooks setup"
                   />
                 </Field>
-                <Field label="Access Token" required>
+                <Field label="Access Token" icon={MetaLogo} required>
                   <Input
                     value={form.meta_access_token}
                     onChange={(v) => setForm((f) => ({ ...f, meta_access_token: v }))}
@@ -550,7 +584,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     mono
                   />
                 </Field>
-                <Field label="Instagram User ID" required hint="Returned by /me?fields=id" full>
+                <Field label="Instagram User ID" icon={MetaLogo} required full>
                   <Input
                     value={form.meta_ig_user_id}
                     onChange={(v) => setForm((f) => ({ ...f, meta_ig_user_id: v }))}
@@ -561,17 +595,17 @@ export const InstagramTenantOnboarding: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-white/50">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3 dark:border-blue-950/40 dark:bg-[#071131]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Instagram sign-in
               </div>
-              <p className="text-sm text-neutral-600 dark:text-white/70">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 Sign in to Instagram with your email + password (same pattern as
                 LinkedIn). We&apos;ll handle the connection and return a
                 connection id automatically.
               </p>
               {form.provider_account_id ? (
-                <div className="flex items-center justify-between gap-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+                <div className="flex items-center justify-between gap-3 rounded-md bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
                   <span className="inline-flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" />
                     Signed in — account <span className="font-mono">{form.provider_account_id}</span> ready to connect.
@@ -588,23 +622,25 @@ export const InstagramTenantOnboarding: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowSignIn(true)}
-                  className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[#DD2A7B] to-[#515BD4] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                  className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[#DD2A7B] to-[#515BD4] px-4 py-2 text-sm font-medium text-white hover:opacity-90 shadow-lg"
                 >
                   <InstagramIcon className="h-4 w-4" />
                   Sign in to Instagram
                 </button>
               )}
-              <details className="text-xs text-neutral-500 dark:text-white/50">
-                <summary className="cursor-pointer hover:text-neutral-700 dark:hover:text-white/80">
+              <details className="text-xs text-slate-500 dark:text-slate-400">
+                <summary className="cursor-pointer hover:text-slate-900 dark:hover:text-white">
                   Or paste a connection id manually
                 </summary>
                 <div className="mt-2">
+                  <Field label="Connection ID" icon={Hash}>
                   <Input
                     value={form.provider_account_id}
                     onChange={(v) => setForm((f) => ({ ...f, provider_account_id: v }))}
                     placeholder="e.g. WS_xxxxx — paste if you already have a connection id"
                     mono
                   />
+                </Field>
                 </div>
               </details>
             </div>
@@ -629,14 +665,14 @@ export const InstagramTenantOnboarding: React.FC = () => {
               type="button"
               onClick={() => setForm(INITIAL_FORM)}
               disabled={submitting}
-              className="rounded-md border border-neutral-200 bg-transparent px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:border-white/10 dark:text-white/80 dark:hover:bg-white/5"
+              className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-200 dark:hover:bg-[#0c1b43]"
             >
               Reset
             </button>
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+              className="flex items-center gap-1.5 rounded-md bg-[#0b1957] px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-[#0b1957] dark:hover:bg-[#0d3579] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -692,28 +728,28 @@ function LikesUnavailableModal({ onClose }: { onClose: () => void }): JSX.Elemen
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-w-md w-full rounded-2xl border bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900"
+        className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-blue-950/40 dark:bg-[#071131]"
       >
         <div className="mb-3 flex items-center gap-2">
           <AlertCircle className="h-5 w-5 text-amber-500" />
-          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             AI Likes isn&apos;t available with Meta sign-in
           </h3>
         </div>
-        <p className="text-sm leading-relaxed text-neutral-600 dark:text-white/70">
+        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
           Meta&apos;s official Instagram Graph API doesn&apos;t expose a way to
           like comments on your posts — it&apos;s a documented limitation, not
           something we can work around.
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-white/70">
+        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
           AI Likes is only supported on accounts connected via
-          <span className="mx-1 inline-flex rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-900 dark:bg-white/10 dark:text-white">
+          <span className="mx-1 inline-flex rounded bg-slate-900 px-1.5 py-0.5 text-xs font-medium text-slate-100">
             Direct sign-in
           </span>
           (Instagram credentials / cookies). Your other
           AI features (Replies, Comments) work normally on Meta.
         </p>
-        <p className="mt-3 text-xs text-neutral-500 dark:text-white/50">
+        <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">
           To enable AI Likes for this account, reconnect it using the Direct
           sign-in option in the onboarding form below.
         </p>
@@ -721,7 +757,7 @@ function LikesUnavailableModal({ onClose }: { onClose: () => void }): JSX.Elemen
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#0b1957] dark:text-white dark:hover:bg-[#0c1b43]"
           >
             Got it
           </button>
@@ -821,28 +857,28 @@ function EditAccountModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-2xl border bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900"
+        className="max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-blue-950/40 dark:bg-[#071131]"
       >
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Pencil className="h-5 w-5 text-neutral-500 dark:text-white/60" />
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+            <Pencil className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
               Edit Instagram account
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 dark:text-white/60 dark:hover:bg-white/10"
+            className="rounded-md p-1 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-[#0c1b43]"
             aria-label="Close"
           >
             <XIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="mb-4 text-xs text-neutral-500 dark:text-white/50">
-          Provider: <span className="font-medium text-neutral-700 dark:text-white/80">{account.provider}</span>
-          {' · '}Account id: <span className="font-mono">{account.id.slice(0, 8)}…</span>
+        <p className="mb-4 text-xs text-slate-600 dark:text-slate-300">
+          Provider: <span className="font-medium text-slate-900 dark:text-white">{account.provider}</span>
+          {' · '}Account id: <span className="font-mono text-slate-700 dark:text-slate-200">{account.id.slice(0, 8)}…</span>
         </p>
 
         <div className="space-y-4">
@@ -850,7 +886,7 @@ function EditAccountModal({
             <Input value={displayName} onChange={setDisplayName} placeholder="Friendly label shown in the app" />
           </Field>
 
-          <Field label="Instagram username" hint="without the @">
+          <Field label="Instagram username">
             <Input value={username} onChange={setUsername} placeholder="naveenyeluru" />
           </Field>
 
@@ -858,7 +894,7 @@ function EditAccountModal({
             <select
               value={aiModel}
               onChange={(e) => setAiModel(e.target.value)}
-              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white"
             >
               {AI_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label}</option>
@@ -870,7 +906,7 @@ function EditAccountModal({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white"
             >
               <option value="active">active</option>
               <option value="paused">paused</option>
@@ -880,13 +916,13 @@ function EditAccountModal({
 
           {isMeta && (
             <>
-              <div className="mt-2 border-t border-neutral-200 pt-4 dark:border-white/10">
+              <div className="mt-2 border-t border-slate-200 pt-4 dark:border-blue-950/40">
                 <div className="mb-3 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">Meta credentials</h4>
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Meta credentials</h4>
                   <button
                     type="button"
                     onClick={() => setShowSecrets((s) => !s)}
-                    className="flex items-center gap-1 text-xs text-neutral-600 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white"
+                    className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                   >
                     {showSecrets ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     {showSecrets ? 'Hide secrets' : 'Show secrets'}
@@ -934,7 +970,7 @@ function EditAccountModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#071131]/80 dark:text-slate-200 dark:hover:bg-[#0c1b43]"
           >
             Cancel
           </button>
@@ -942,7 +978,7 @@ function EditAccountModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-lg bg-[#0b1957] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d3579] disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             {saving ? 'Saving…' : 'Save changes'}
@@ -958,22 +994,38 @@ function Field({
   hint,
   required,
   full,
+  icon: Icon,
   children,
 }: {
   label: string;
   hint?: string;
   required?: boolean;
   full?: boolean;
+  icon?: React.ElementType;
   children: React.ReactNode;
 }): JSX.Element {
+  const renderChild = () => {
+    if (!Icon || !React.isValidElement(children)) return children;
+    const childProps = { ...(children.props as any) };
+    childProps.className = `${childProps.className || ''} pl-12`;
+    return React.cloneElement(children, childProps);
+  };
+
   return (
     <div className={full ? 'md:col-span-2' : ''}>
-      <label className="block text-xs font-medium text-neutral-700 mb-1.5 dark:text-white/80">
-        {label}
-        {required && <span className="text-rose-600 ml-1 dark:text-rose-300">*</span>}
-        {hint && <span className="text-neutral-500 font-normal ml-2 dark:text-white/40">{hint}</span>}
-      </label>
-      {children}
+      <div className="min-h-[2rem]">
+        <label className="block text-xs font-medium text-slate-700 mb-1 dark:text-white/80">
+          <span className="flex items-center gap-2">
+            <span>{label}</span>
+            {required && <span className="text-rose-600 ml-1 dark:text-rose-300">*</span>}
+          </span>
+          {hint && <span className="text-slate-500 font-normal ml-2 dark:text-white/40">{hint}</span>}
+        </label>
+      </div>
+      <div className={Icon ? 'relative' : ''}>
+        {Icon ? <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /> : null}
+        {renderChild()}
+      </div>
     </div>
   );
 }
@@ -981,7 +1033,7 @@ function Field({
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
   return (
     <div>
-      <label className="block text-xs font-medium text-neutral-700 mb-1.5 dark:text-white/80">{label}</label>
+      <label className="block text-xs font-medium text-slate-700 mb-1.5 dark:text-white/80">{label}</label>
       {children}
     </div>
   );
@@ -993,12 +1045,14 @@ function Input({
   placeholder,
   type = 'text',
   mono,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
   mono?: boolean;
+  className?: string;
 }): JSX.Element {
   return (
     <input
@@ -1006,9 +1060,9 @@ function Input({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-white/30 dark:focus:ring-white/30 ${
+      className={`w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400 ${
         mono ? 'font-mono' : ''
-      }`}
+      } ${className || ''}`}
     />
   );
 }
@@ -1023,7 +1077,7 @@ function ProviderBadge({ provider }: { provider: string }): JSX.Element {
           : 'bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-200 dark:border-purple-500/30'
       }`}
     >
-      {isMeta ? 'Meta' : 'Direct'}
+      {isMeta ? 'Meta' : provider === 'unipile' ? 'Unipile' : 'Direct'}
     </span>
   );
 }
@@ -1035,11 +1089,11 @@ function StatusBadge({ status }: { status: string }): JSX.Element {
     <span
       className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
         active
-          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/30'
-          : 'bg-neutral-100 text-neutral-600 border border-neutral-200 dark:bg-white/10 dark:text-white/60 dark:border-white/10'
+          ? 'bg-emerald-950/30 text-emerald-200 border border-emerald-500/20'
+          : 'bg-[#071131]/70 text-slate-300 border border-blue-950/40'
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-neutral-400 dark:bg-white/40'}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-600'}`} />
       {status || 'unknown'}
     </span>
   );
@@ -1066,7 +1120,7 @@ function AiToggleChip({
         type="button"
         onClick={onToggle}
         title={unavailableTitle}
-        className="flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-400 line-through hover:bg-neutral-200 dark:border-white/10 dark:bg-white/5 dark:text-white/30 dark:hover:bg-white/10"
+        className="flex items-center gap-1.5 rounded-full border border-dashed border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500 line-through hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-400 dark:hover:bg-[#0c1b43]"
       >
         <Power className="h-3 w-3" />
         {label}: unavailable
@@ -1079,8 +1133,8 @@ function AiToggleChip({
       onClick={onToggle}
       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium border transition ${
         enabled
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20'
-          : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10'
+          ? 'border-emerald-500/30 bg-emerald-950/20 text-emerald-200 hover:bg-emerald-900/40'
+          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-300 dark:hover:bg-[#0c1b43]'
       }`}
     >
       <Power className="h-3 w-3" />
@@ -1224,16 +1278,16 @@ function InstagramSignInModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-900"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-blue-950/40 dark:bg-[#071131]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-white/10">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-blue-950/40">
           <div className="flex items-center gap-2.5">
             <div className="rounded-md bg-gradient-to-br from-[#FEDA77] via-[#DD2A7B] to-[#515BD4] p-1.5">
               <InstagramIcon className="h-4 w-4 text-white" />
             </div>
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
               Sign in to Instagram
             </h3>
           </div>
@@ -1241,7 +1295,7 @@ function InstagramSignInModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:text-white/60 dark:hover:bg-white/10"
+            className="rounded-md p-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-[#0c1b43]"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -1251,10 +1305,10 @@ function InstagramSignInModal({
         <div className="space-y-4 px-5 py-5">
           {checkpoint?.required ? (
             <div className="space-y-3">
-              <h4 className="text-center text-sm font-semibold text-neutral-900 dark:text-white">
+              <h4 className="text-center text-sm font-semibold text-slate-900 dark:text-white">
                 Instagram requires verification
               </h4>
-              <p className="text-center text-xs text-neutral-600 dark:text-white/60">
+              <p className="text-center text-xs text-slate-600 dark:text-slate-300">
                 {checkpoint.message ||
                   `Instagram sent a code${checkpoint.sent_to ? ` to ${checkpoint.sent_to}` : ''}. Enter it below to finish signing in.`}
               </p>
@@ -1265,17 +1319,17 @@ function InstagramSignInModal({
                 value={checkpointCode}
                 onChange={(e) => setCheckpointCode(e.target.value)}
                 placeholder="6-digit verification code"
-                className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-white/30"
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
               />
             </div>
           ) : (
             <>
               {/* Method tabs — Credentials / Cookies, same as LinkedIn */}
               <div className="text-center">
-                <h4 className="mb-3 text-base font-semibold text-neutral-700 dark:text-white/80">
+                <h4 className="mb-3 text-base font-semibold text-slate-900 dark:text-white">
                   Choose a method
                 </h4>
-                <div className="inline-flex rounded-md border border-neutral-200 p-0.5 dark:border-white/10">
+                <div className="inline-flex rounded-md border border-slate-200 p-0.5 dark:border-blue-950/40">
                   {(['credentials', 'cookies'] as SignInMethod[]).map((m) => {
                     const active = method === m;
                     return (
@@ -1285,8 +1339,8 @@ function InstagramSignInModal({
                         onClick={() => setMethod(m)}
                         className={`rounded px-4 py-1.5 text-sm font-medium transition ${
                           active
-                            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                            : 'text-neutral-600 hover:bg-neutral-100 dark:text-white/60 dark:hover:bg-white/5'
+                            ? 'bg-slate-900 text-white dark:bg-[#0b1957]'
+                            : 'text-slate-700 hover:bg-[#0c1b43] dark:text-slate-300'
                         }`}
                       >
                         {m === 'credentials' ? 'Credentials' : 'Cookies'}
@@ -1304,7 +1358,7 @@ function InstagramSignInModal({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email or username"
-                    className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-white/30"
+                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
                   />
                   <div className="relative">
                     <input
@@ -1313,13 +1367,13 @@ function InstagramSignInModal({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Instagram password"
-                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2.5 pr-9 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-white/30"
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 pr-9 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:text-white/60 dark:hover:bg-white/10"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-[#0c1b43]"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -1327,8 +1381,8 @@ function InstagramSignInModal({
                 </form>
               ) : (
                 <form className="space-y-3" onSubmit={handleSubmit}>
-                  <p className="text-xs text-neutral-600 dark:text-white/60">
-                    Paste your Instagram <span className="font-mono">sessionid</span> cookie from your browser
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Paste your Instagram <span className="font-mono text-slate-700 dark:text-slate-200">sessionid</span> cookie from your browser
                     — open <span className="font-mono">instagram.com</span>, DevTools → Application → Cookies.
                   </p>
                   <input
@@ -1336,7 +1390,7 @@ function InstagramSignInModal({
                     value={cookie}
                     onChange={(e) => setCookie(e.target.value)}
                     placeholder="sessionid cookie value"
-                    className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-white/30 font-mono"
+                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-0 font-mono dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
                   />
                 </form>
               )}
@@ -1346,14 +1400,14 @@ function InstagramSignInModal({
                 <button
                   type="button"
                   onClick={() => setShowOptional((s) => !s)}
-                  className="flex items-center gap-1 text-xs text-neutral-600 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white"
+                  className="flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                 >
                   <span className={`inline-block transition-transform ${showOptional ? 'rotate-90' : ''}`}>›</span>
                   Optional settings
                 </button>
                 {showOptional && (
                   <div className="mt-2">
-                    <label className="block text-xs text-neutral-600 dark:text-white/60 mb-1">
+                    <label className="block text-xs text-slate-600 mb-1 dark:text-slate-300">
                       User-Agent (auto-detected from your browser)
                     </label>
                     <input
@@ -1361,7 +1415,7 @@ function InstagramSignInModal({
                       value={userAgent}
                       onChange={(e) => setUserAgent(e.target.value)}
                       placeholder="Mozilla/5.0 …"
-                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:placeholder-white/30"
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white"
                     />
                   </div>
                 )}
@@ -1370,7 +1424,7 @@ function InstagramSignInModal({
           )}
 
           {error && (
-            <div className="flex items-start gap-2 rounded-md border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+            <div className="flex items-start gap-2 rounded-md border border-rose-500/40 bg-rose-950/20 p-2.5 text-xs text-rose-200">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -1378,12 +1432,12 @@ function InstagramSignInModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-neutral-200 bg-neutral-50 px-5 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-blue-950/40 dark:bg-[#071131]">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-md px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/5"
+            className="rounded-md px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-[#0c1b43] disabled:opacity-50"
           >
             Cancel
           </button>

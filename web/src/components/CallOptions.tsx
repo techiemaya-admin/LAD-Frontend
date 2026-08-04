@@ -944,7 +944,7 @@ export function CallOptions(props: CallOptionsProps) {
     );
   };
   return (
-    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#071131] border border-gray-100 dark:border-blue-950/60">
+    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#071131] border border-gray-100 dark:border-blue-950/40">
       <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#071131] rounded-3xl px-5 py-1 border border-white/30 dark:border-none mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
           <PhoneCall className="w-5 h-5 inline mr-2" /> Call Options
@@ -955,14 +955,14 @@ export function CallOptions(props: CallOptionsProps) {
         <div className="flex gap-3">
           <Button
             variant={!useCsv ? "default" : "outline"}
-            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/60 dark:text-white dark:hover:bg-input/50 dark:data-[variant=outline]:bg-input/30"
+            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/40 dark:text-white dark:hover:bg-slate-800/70 dark:data-[variant=outline]:bg-slate-800/50"
             onClick={() => onUseCsvChange(false)}
           >
             Single Call
           </Button>
           <Button
             variant={useCsv ? "default" : "outline"}
-            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/60 dark:text-white dark:hover:bg-input/50 dark:data-[variant=outline]:bg-input/30"
+            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/40 dark:text-white dark:hover:bg-slate-800/70 dark:data-[variant=outline]:bg-slate-800/50"
             onClick={() => onUseCsvChange(true)}
           >
             Bulk List
@@ -973,12 +973,12 @@ export function CallOptions(props: CallOptionsProps) {
           <div className="space-y-3">
             {/* Phone Number with Country Dropdown */}
             <div className="relative">
-              <div className="flex rounded-[10px] border border-gray-200 dark:border-blue-950/60 overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 focus-within:border-gray-200 h-12 bg-white dark:bg-input/30">
+              <div className="flex rounded-[10px] border border-gray-200 dark:border-blue-950/40 overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 focus-within:border-gray-200 h-12 bg-white dark:bg-slate-800/50">
                 {/* Country Dropdown Button */}
                 <button
                   type="button"
                   onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-input/30 border-r border-gray-200 dark:border-blue-950/60 hover:bg-gray-100 dark:hover:bg-input/50 transition-colors min-w-[80px]"
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-800/50 border-r border-gray-200 dark:border-blue-950/40 hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors min-w-[80px]"
                 >
                   <Image
                     src={`https://flagcdn.com/w40/${selectedCountry.code.toLowerCase()}.png`}
@@ -1003,12 +1003,12 @@ export function CallOptions(props: CallOptionsProps) {
 
               {/* Country Dropdown Menu */}
               {showCountryDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-[280px] max-h-64 overflow-y-auto bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/60 rounded-[10px] shadow-lg z-50">
-                  <div className="sticky top-0 bg-white dark:bg-[#071131] border-b border-gray-100 dark:border-blue-950/60 p-2">
+                <div className="absolute top-full left-0 mt-1 w-[280px] max-h-64 overflow-y-auto bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-[10px] shadow-lg z-50">
+                  <div className="sticky top-0 bg-white dark:bg-[#071131] border-b border-gray-100 dark:border-blue-950/40 p-2">
                     <input
                       type="text"
                       placeholder="Search country..."
-                      className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-blue-950/60 rounded-lg outline-none focus:border-gray-200 bg-white dark:bg-input/30 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg outline-none focus:border-gray-200 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                       onChange={(e) => {
                         const searchTerm = e.target.value.toLowerCase();
                         const filtered = COUNTRIES.filter(
@@ -1095,20 +1095,20 @@ export function CallOptions(props: CallOptionsProps) {
       </CardContent>
       {/* Summary editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="dark:bg-[#071131] dark:border-blue-950/60">
-          <DialogHeader className="dark:bg-[#071131] dark:border-blue-950/60">
+        <DialogContent className="dark:bg-[#071131] dark:border-blue-950/40">
+          <DialogHeader className="dark:bg-[#071131] dark:border-blue-950/40">
             <DialogTitle className="flex items-center gap-2">
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input className="dark:bg-input/30 dark:border-blue-950/60" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input className="dark:bg-input/30 dark:border-blue-950/60" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
-              className="dark:bg-input/30 dark:border-blue-950/60"
+              className="dark:bg-slate-800/50 dark:border-blue-950/40"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1121,7 +1121,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/60 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-input/30 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
@@ -1160,7 +1160,7 @@ export function CallOptions(props: CallOptionsProps) {
                     setIsRephrasing(false);
                   }
                 }}
-                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-input/30 hover:bg-gray-200 dark:hover:bg-input/50 border border-gray-300 dark:border-blue-950/60 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
+                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-slate-800/50 hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
               >
                 {isRephrasing ? (
                   <span className="animate-spin text-gray-600">⏳</span>
@@ -1170,7 +1170,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#071131] dark:border-blue-950/60">
+          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#071131] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 

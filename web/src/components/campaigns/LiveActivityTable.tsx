@@ -1428,7 +1428,7 @@ export const LiveActivityTable: React.FC<LiveActivityTableProps> = ({
                           key={size}
                           value={String(size)}
                           // Keep your clean custom hover matrix settings intact
-                          className="dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724] pl-3 pr-6 text-xs justify-start"
+                          className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
                       >
                   {size}
                 </SelectItem>
