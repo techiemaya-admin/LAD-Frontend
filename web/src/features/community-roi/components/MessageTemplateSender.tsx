@@ -89,6 +89,21 @@ const FIELD_OPTIONS = [
   { value: 'rec_week2_all',  label: 'Week 2 · All 3 names (one variable)', group: 'rec' },
   { value: 'rec_week3_all',  label: 'Week 3 · All 3 names (one variable)', group: 'rec' },
   { value: 'rec_week4_all',  label: 'Week 4 · All 3 names (one variable)', group: 'rec' },
+  // Per-line "Name — reason" values for a BULLETED template (one variable per
+  // bullet). Meta forbids newlines inside a variable, so the line breaks must
+  // live in the static template body:  "• {{2}}\n• {{3}}\n• {{4}}".
+  { value: 'rec_week1_line_1', label: 'Week 1 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_2', label: 'Week 1 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_3', label: 'Week 1 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_1', label: 'Week 2 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_2', label: 'Week 2 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_3', label: 'Week 2 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_1', label: 'Week 3 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_2', label: 'Week 3 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_3', label: 'Week 3 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_1', label: 'Week 4 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_2', label: 'Week 4 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_3', label: 'Week 4 · Line 3 (name + reason)', group: 'rec' },
   { value: 'rec_week1_1',   label: 'Week 1 · Rec #1',   group: 'rec' },
   { value: 'rec_week1_2',   label: 'Week 1 · Rec #2',   group: 'rec' },
   { value: 'rec_week1_3',   label: 'Week 1 · Rec #3',   group: 'rec' },
@@ -107,10 +122,12 @@ const FIELD_OPTIONS = [
 
 type WeekKey = 'week1' | 'week2' | 'week3' | 'week4';
 type WeekReasonKey = `${WeekKey}_with_reasons`;
+type WeekLinesKey = `${WeekKey}_lines`;
 type MemberRecData = Record<
   string,
   Partial<Record<WeekKey, string[]>> &
-    Partial<Record<WeekReasonKey, string>> & { no_interaction_count?: number }
+    Partial<Record<WeekReasonKey, string>> &
+    Partial<Record<WeekLinesKey, string[]>> & { no_interaction_count?: number }
 >;
 type WeekDateMap = Partial<Record<'week_1' | 'week_2' | 'week_3' | 'week_4', string>>;
 
@@ -242,6 +259,16 @@ function resolveParam(
     const ready = memberRecs?.[`${weekKey}_with_reasons` as WeekReasonKey];
     if (ready && ready !== '—') return ready;
     return joinNames(memberRecs?.[weekKey] ?? []);
+  }
+  // One bullet line: "Name — reason". Served ready-made by the backend
+  // (weekN_lines); falls back to the bare name from weekN when unavailable.
+  const lineMatch = field.match(/^rec_(week[1-4])_line_([1-3])$/);
+  if (lineMatch) {
+    const weekKey = lineMatch[1] as WeekKey;
+    const idx = parseInt(lineMatch[2], 10) - 1;
+    const memberRecs = recData?.[member?.id];
+    const lines = memberRecs?.[`${weekKey}_lines` as WeekLinesKey];
+    return lines?.[idx] || memberRecs?.[weekKey]?.[idx] || '—';
   }
   // Whole-week list of names only, in one variable.
   const allNamesMatch = field.match(/^rec_(week[1-4])_all$/);
