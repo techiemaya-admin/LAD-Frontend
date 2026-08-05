@@ -49,7 +49,7 @@ function SelectContent({
   position = "popper",
   align = "center",
   side = "bottom",
-  avoidCollisions = false,
+  avoidCollisions = true,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
