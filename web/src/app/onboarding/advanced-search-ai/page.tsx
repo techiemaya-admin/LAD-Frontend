@@ -725,6 +725,16 @@ export default function AdvancedSearchAIPage() {
     const [isRecording, setIsRecording] = useState(false);
     const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
     const [beautifying, setBeautifying] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
+    // Whatever was already in the box when dictation started, plus every
+    // finalised chunk so far. onresult only replays results from resultIndex
+    // onward, so without these the earlier sentences get overwritten.
+    const dictationBaseRef = useRef('');
+    const dictationFinalRef = useRef('');
+    useEffect(() => {
+        setSpeechSupported(!!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition));
+    }, []);
+    useEffect(() => () => { try { recognitionInstance?.stop(); } catch { } }, [recognitionInstance]);
     const [busy, setBusy] = useState(false);
     const [typedPlaceholder, setTypedPlaceholder] = useState('');
     useEffect(() => {
@@ -5653,6 +5663,13 @@ export default function AdvancedSearchAIPage() {
         }
     };
 
+    const growTextarea = () => {
+        const el = taRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    };
+
     const toggleRecording = async () => {
         if (beautifying) return;
 
@@ -5688,6 +5705,7 @@ export default function AdvancedSearchAIPage() {
                     const data = await res.json();
                     if (data && data.beautified_text) {
                         setInput(data.beautified_text);
+                        requestAnimationFrame(growTextarea);
                     }
                 }
             } catch (err) {
@@ -5715,14 +5733,18 @@ export default function AdvancedSearchAIPage() {
             rec.interimResults = true;
             rec.lang = 'en-US';
 
+            dictationBaseRef.current = input.trim() ? input.trim() + ' ' : '';
+            dictationFinalRef.current = '';
+
             rec.onresult = (event: any) => {
-                let finalTranscript = '';
+                let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    finalTranscript += event.results[i][0].transcript;
+                    const result = event.results[i];
+                    if (result.isFinal) dictationFinalRef.current += result[0].transcript;
+                    else interim += result[0].transcript;
                 }
-                if (finalTranscript) {
-                    setInput(finalTranscript);
-                }
+                setInput((dictationBaseRef.current + dictationFinalRef.current + interim).trimStart());
+                requestAnimationFrame(growTextarea);
             };
 
             rec.onerror = (event: any) => {
@@ -6193,7 +6215,25 @@ export default function AdvancedSearchAIPage() {
                                     {/* Right flank — a wrapper, not flex on the button itself:
                                         a flex-basis would override adv-send-sm's fixed 34px and
                                         stretch the send circle into an oval. */}
-                                    <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                                    {!mediaMode && speechSupported && (
+                                        <button
+                                            className={`adv-mic-btn ${isRecording ? 'adv-mic-btn-rec recording-pulse' : ''}`}
+                                            onClick={(e) => { e.stopPropagation(); toggleRecording(); }}
+                                            disabled={beautifying}
+                                            aria-pressed={isRecording}
+                                            aria-label={isRecording ? 'Stop dictation' : 'Dictate your prompt'}
+                                            title={beautifying ? 'Cleaning up transcript…' : isRecording ? 'Stop dictation' : 'Dictate your prompt'}
+                                        >
+                                            {beautifying ? (
+                                                <Loader2 className="size-3.5 animate-spin" />
+                                            ) : isRecording ? (
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                                            ) : (
+                                                <Mic className="size-3.5" style={{ strokeWidth: 2.5 }} />
+                                            )}
+                                        </button>
+                                    )}
                                     <button
                                         className="adv-send-circle adv-send-sm"
                                         disabled={mediaMode ? ((!input.trim() && (!mb.references || mb.references.length === 0)) || mb.generating || mb.step === 'loading' || (mb.step === 'builder-brand-dna' && !brandDnaRequestedChanges)) : (!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10))}
@@ -13201,6 +13241,10 @@ const css = `
             .adv-chat-input-foot > .adv-premium-btn {flex:0 0 auto; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
+            .adv-mic-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
+            .adv-mic-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
+            .adv-mic-btn:disabled {cursor:default; color:#94a3b8; }
+            .adv-mic-btn.adv-mic-btn-rec, .adv-mic-btn.adv-mic-btn-rec:hover {background:#fef2f2; border-color:#ef4444; color:#ef4444; }
             .adv-roles-btn {display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:7px 14px; border-radius:999px; border:1.5px solid #e5e7eb; background:#fff; color:#0b1957; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s ease; }
             .adv-roles-btn:hover {border-color:#0b1957; box-shadow:0 4px 14px rgba(11,25,87,.14); transform:translateY(-1px); }
             .adv-roles-menu {position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:8px; width:370px; max-width:calc(100vw - 32px); max-height:440px; overflow-y:auto; box-shadow:0 16px 48px rgba(15,23,42,.16); z-index:100; animation:fadeUp .15s ease both; }
@@ -13465,8 +13509,8 @@ const css = `
                    flanks would squeeze the pill against its 95px min-width. */
                 .adv-foot-side { flex: 0 1 auto !important; }
                 .adv-premium-btn { width: auto !important; min-width: 95px !important; justify-content: center !important; padding: 3px 10px !important; margin: 0 !important; font-size: 10px !important; }
-                .adv-chat-attach-btn, .adv-send-sm { width: 28px !important; height: 28px !important; }
-                .adv-chat-attach-btn svg, .adv-send-sm svg { width: 13px !important; height: 13px !important; }
+                .adv-chat-attach-btn, .adv-send-sm, .adv-mic-btn { width: 28px !important; height: 28px !important; }
+                .adv-chat-attach-btn svg, .adv-send-sm svg, .adv-mic-btn svg { width: 13px !important; height: 13px !important; }
                 .adv-msg-counter { font-size: 10px !important; color: #9ca3af !important; margin: 4px 0 0 !important; padding: 0 !important; line-height: 1.2 !important; }
                 
                 .adv-mobile-add-btn, .adv-mobile-send-btn {
@@ -13792,6 +13836,11 @@ const css = `
             .dark .adv-roles-menu { background: #0f1b33; border-color: #31415f; }
             .dark .adv-chat-attach-btn svg { stroke: #ffffff; }
             .dark .adv-chat-attach-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-mic-btn { background: #1A2A43; border: 1px solid #484b4f; color: #ffffff; }
+            .dark .adv-mic-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-mic-btn svg { stroke: #ffffff; }
+            .dark .adv-mic-btn.adv-mic-btn-rec, .dark .adv-mic-btn.adv-mic-btn-rec:hover { background: #3b1d1d; border-color: #ef4444; color: #ef4444; }
+            .dark .adv-mic-btn.adv-mic-btn-rec svg { stroke: #ef4444; fill: #ef4444; }
             .dark .adv-unlock-btn { background: #2B7CFF; color: #000724; }
             .dark .adv-unlock-btn:hover { background: #1e5fa8; box-shadow: 0 4px 12px rgba(43, 124, 255, 0.3); }
 
