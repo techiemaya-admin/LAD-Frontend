@@ -15,7 +15,7 @@ export const OPEN_ROUTES = {
   auth: ['/login', '/register', '/forgot-password', '/api/auth', '/api/webhooks'],
   
   // Public pages
-  public: ['/', '/pricing', '/favicon.ico', '/api/recording-proxy', '/landing', '/contact', '/privacy-policy', '/terms-of-service', '/cookies-policy', '/account-deletion-policy', '/home-redesign',
+  public: ['/', '/pricing', '/favicon.ico', '/api/recording-proxy', '/landing', '/contact', '/privacy-policy', '/terms-of-service', '/cookies-policy', '/account-deletion-policy',
     // Founding-group landing page, its short /apply entry point, and the route
     // handler the form posts to. All must be open: the whole point is that a
     // stranger clicking a link in an InMail can reach them.

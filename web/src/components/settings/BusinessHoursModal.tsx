@@ -76,9 +76,14 @@ interface BusinessHoursModalProps {
   /** Receives structured payload AND formatted summary string */
   onSave: (payload: BusinessHoursPayload, summary: string) => void;
   onClose: () => void;
+  /** Mutation in flight — disables the button so a slow save can't be double-fired. */
+  saving?: boolean;
+  /** Set by the caller's onError. Previously there was nowhere for this to go:
+   *  a failed save left the modal open with no indication anything went wrong. */
+  error?: string | null;
 }
 
-export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialData, initialSummary, onSave, onClose }) => {
+export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialData, initialSummary, onSave, onClose, saving = false, error = null }) => {
   const [startTime, setStartTime] = useState(initialData?.startTime ?? '09:00');
   const [endTime, setEndTime] = useState(initialData?.endTime ?? '18:00');
   const [timezone, setTimezone] = useState(initialData?.timezone ?? 'GST+4');
@@ -277,15 +282,26 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
             </div>
           </div>
 
+          {/* Save error — the mutation's onError previously had nowhere to surface to. */}
+          {error && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Save button */}
           <button
+            disabled={saving}
             onClick={() => {
               const payload: BusinessHoursPayload = { startTime, endTime, timezone, activeDays };
               onSave(payload, getSummary());
             }}
-            className="w-full py-3.5 bg-[#0B1957] dark:bg-[#2B7CFF] hover:bg-[#0a1648] dark:hover:bg-[#1a6bf0] text-white rounded-xl font-bold text-[15px] tracking-wide shadow-lg shadow-[#0B1957]/30 dark:shadow-[#2B7CFF]/20 hover:shadow-[#0B1957]/50 dark:hover:shadow-[#2B7CFF]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
+            className="w-full py-3.5 bg-[#0B1957] dark:bg-[#2B7CFF] hover:bg-[#0a1648] dark:hover:bg-[#1a6bf0] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white rounded-xl font-bold text-[15px] tracking-wide shadow-lg shadow-[#0B1957]/30 dark:shadow-[#2B7CFF]/20 hover:shadow-[#0B1957]/50 dark:hover:shadow-[#2B7CFF]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
           >
-            Save Business Hours
+            {saving ? 'Saving…' : 'Save Business Hours'}
           </button>
         </div>
       </div>

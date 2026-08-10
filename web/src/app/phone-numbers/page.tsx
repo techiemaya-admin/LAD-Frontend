@@ -130,17 +130,22 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { CreateNumberClient } from "@/components/create-number-client";
 
+// Mirrors a row of GET /api/voice-agent/numbers. The number is stored SPLIT as
+// country_code + base_number; there is no single `phone_number` column, so the
+// display value is derived (see displayNumber).
 export type PhoneNumber = {
   id: string;
-  phone_number: string;
-  label?: string;
+  tenant_id?: string;
+  country_code?: string;
+  base_number?: string;
   provider?: string;
-  sid?: string;
-  account?: string;
-  type?: string;
   status?: string;
+  default_agent_id?: string | null;
   created_at?: string;
 };
+
+const displayNumber = (n: PhoneNumber) =>
+  `${n.country_code ?? ""}${n.base_number ?? ""}` || "—";
 
 export default function PhoneNumbersPage() {
   const [items, setItems] = useState<PhoneNumber[]>([]);
@@ -148,9 +153,14 @@ export default function PhoneNumbersPage() {
   const [filterProvider, setFilterProvider] = useState("All");
 
   const fetchData = useCallback(async () => {
-    const response = await apiGet<{ success: boolean; numbers: PhoneNumber[] }>("/api/voice-agent/numbers");
+    // The payload is { success, data, count } — the rows are under `data`.
+    // Reading `.numbers` yielded undefined, and setItems(undefined) made the
+    // `items.filter(...)` below throw during render, taking the whole page to
+    // the error boundary. Coerce to an array so no future shape change can
+    // crash the page again — an empty table beats "Something went wrong".
+    const response = await apiGet<{ success: boolean; data: PhoneNumber[]; count: number }>("/api/voice-agent/numbers");
     if (response.success) {
-      setItems(response.numbers);
+      setItems(Array.isArray(response.data) ? response.data : []);
     }
   }, []);
 
@@ -160,13 +170,13 @@ export default function PhoneNumbersPage() {
 
   const filteredItems = items.filter((n) => {
     const searchLower = search.toLowerCase();
+    // Only fields the API actually returns. The previous list matched on
+    // label / sid / account / type, none of which exist on this payload, so
+    // every one of those terms was dead — any search that wasn't a provider
+    // or status match silently returned nothing.
     const matchesSearch =
-      n.label?.toLowerCase().includes(searchLower) ||
-      n.phone_number?.toLowerCase().includes(searchLower) ||
+      displayNumber(n).toLowerCase().includes(searchLower) ||
       n.provider?.toLowerCase().includes(searchLower) ||
-      n.account?.toLowerCase().includes(searchLower) ||
-      n.sid?.toLowerCase().includes(searchLower) ||
-      n.type?.toLowerCase().includes(searchLower) ||
       n.status?.toLowerCase().includes(searchLower);
 
     const matchesProvider =
@@ -204,7 +214,7 @@ export default function PhoneNumbersPage() {
         <div className="flex flex-col sm:flex-row gap-6 items-center justify-between bg-white/70 dark:bg-white/10 p-6 rounded-3xl border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md">
           <input
             type="text"
-            placeholder="🔍 Search by label, provider, SID, or account..."
+            placeholder="🔍 Search by number, provider, or status..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-2/3 px-5 py-3 text-lg rounded-xl border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none bg-white/80 dark:bg-gray-900/50 text-gray-900 dark:text-gray-200"
@@ -233,7 +243,7 @@ export default function PhoneNumbersPage() {
                 <th className="p-6">Phone Number</th>
                 <th className="p-6">Provider</th>
                 <th className="p-6">Status</th>
-                <th className="p-6">Type</th>
+                <th className="p-6">Created</th>
               </tr>
             </thead>
             <tbody className="backdrop-blur-sm text-[1.05rem]">
@@ -255,10 +265,12 @@ export default function PhoneNumbersPage() {
                     }`}
                   >
                     <td className="p-6 font-semibold">{n.id || "—"}</td>
-                    <td className="p-6 font-mono">{n.phone_number}</td>
+                    <td className="p-6 font-mono">{displayNumber(n)}</td>
                     <td className="p-6 capitalize">{n.provider || "—"}</td>
                     <td className="p-6 font-mono">{n.status || "—"}</td>
-                    <td className="p-6 font-mono">{n.type || "—"}</td>
+                    <td className="p-6 font-mono">
+                      {n.created_at ? new Date(n.created_at).toLocaleDateString() : "—"}
+                    </td>
                   </tr>
                 ))
               )}

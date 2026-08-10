@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -111,6 +111,11 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
   const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(null);
   // Per-action loading keys: `sched:<leadId>` and `rm:<followupId>`.
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  // Synchronous double-submit guard. `busy` is React state (applies next render),
+  // so rapid clicks in the same tick slip past the disabled button and fire
+  // duplicate schedule POSTs. This ref blocks the 2nd+ call immediately. (The
+  // backend also de-dupes; this stops the redundant requests at the source.)
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   const handleTemplateSelect = (tpl: LinkedInMessageTemplate | null) => {
     setSelectedTemplateId(tpl?.id ?? null);
@@ -178,6 +183,8 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
   const schedule = useCallback(
     async (lead: AcceptedLead, body: { delayHours?: number; scheduledAt?: string }, label: string) => {
       const key = `sched:${lead.campaignLeadId}`;
+      if (inFlightRef.current.has(key)) return; // synchronous guard: block a same-tick double-fire
+      inFlightRef.current.add(key);
       setBusyKey(key, true);
       try {
         await proxyPost<{ success: boolean; id?: string; error?: string }>(
@@ -196,6 +203,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
       } catch (e: any) {
         push({ variant: 'error', title: 'Could not schedule', description: e?.message || 'Please try again' });
       } finally {
+        inFlightRef.current.delete(key);
         setBusyKey(key, false);
       }
     },

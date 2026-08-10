@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Megaphone, X, Users, Send, Loader2, RefreshCw, Plus,
-  CheckCircle, Clock, AlertCircle, Ban, Briefcase,
+  CheckCircle, Clock, AlertCircle, Ban, Briefcase, Eye, MessageSquare,
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
@@ -29,10 +29,33 @@ interface Template { id: string; name: string; content?: string; category?: stri
 interface Run {
   id: string; name?: string; status: string; recipient_count: number;
   sent_count: number; failed_count: number; skipped_count: number;
-  daily_cap?: number; created_at?: string; error_message?: string;
+  seen_count?: number; replied_count?: number;
+  group_name?: string | null; template_name?: string | null;
+  daily_cap?: number; created_at?: string; started_at?: string; completed_at?: string;
+  error_message?: string;
 }
 
 interface Props { onClose: () => void; }
+
+/**
+ * Audience label for a history row. The group is what the user actually picked,
+ * so it leads; a run created from an ad-hoc recipient list has no group, hence
+ * the run-name → template-name → generic fallback chain.
+ */
+function runLabel(r: Run) {
+  return r.group_name || r.name || r.template_name || 'Broadcast';
+}
+
+/** "3 Aug 2026, 14:32" — the send date, or the queue date if it never started. */
+function formatSentAt(r: Run) {
+  const raw = r.started_at || r.created_at;
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
 
 async function getJson(url: string, init?: RequestInit) {
   const res = await fetchWithTenant(url, init);
@@ -323,23 +346,50 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
                 const done = (r.sent_count || 0) + (r.failed_count || 0) + (r.skipped_count || 0);
                 const pct = total ? Math.round((done / total) * 100) : 0;
                 const active = ['queued', 'running', 'paused_rate_limited', 'paused_credits'].includes(r.status);
+                const sentAt = formatSentAt(r);
+                const seen = r.seen_count || 0;
+                const replied = r.replied_count || 0;
+                const sent = r.sent_count || 0;
+                // Percentages are of what actually went out — "12 seen of 36 queued"
+                // would understate a broadcast still mid-drip.
+                const rate = (n: number) => (sent ? Math.round((n / sent) * 100) : 0);
                 return (
                   <div key={r.id} className="rounded-md border border-border px-3 py-2.5">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.cls}`}>{meta.icon}{meta.label}</span>
-                      {active && (
-                        <button onClick={() => cancelRun(r.id)} disabled={busy === `cancel-${r.id}`}
-                          className="text-[11px] text-muted-foreground hover:text-red-600">Cancel</button>
-                      )}
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate" title={runLabel(r)}>{runLabel(r)}</p>
+                        {sentAt && <p className="text-[11px] text-muted-foreground mt-0.5">{sentAt}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.cls}`}>{meta.icon}{meta.label}</span>
+                        {active && (
+                          <button onClick={() => cancelRun(r.id)} disabled={busy === `cancel-${r.id}`}
+                            className="text-[11px] text-muted-foreground hover:text-red-600">Cancel</button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-xs text-muted-foreground mb-1.5">
-                      {r.sent_count}/{total} sent
+                      {sent}/{total} sent
                       {r.failed_count ? ` · ${r.failed_count} failed` : ''}
                       {r.skipped_count ? ` · ${r.skipped_count} skipped` : ''}
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
                     </div>
+                    {sent > 0 && (
+                      <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1" title="Recipients who opened the message. LinkedIn only reports a read receipt when the recipient has them switched on, so this is a minimum.">
+                          <Eye className="h-3.5 w-3.5" />
+                          <strong className="text-foreground font-medium">{seen}</strong> seen
+                          <span className="text-muted-foreground/70">({rate(seen)}%)</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1" title="Recipients who replied in the thread after this broadcast.">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <strong className="text-foreground font-medium">{replied}</strong> replied
+                          <span className="text-muted-foreground/70">({rate(replied)}%)</span>
+                        </span>
+                      </div>
+                    )}
                     {r.error_message && <p className="mt-1 text-[11px] text-red-500">{r.error_message}</p>}
                   </div>
                 );

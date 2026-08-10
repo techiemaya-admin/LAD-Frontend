@@ -449,3 +449,62 @@ export interface CommunitySignupsResponse {
   summary: Partial<Record<SignupStatus, number>>;
   count: number;
 }
+
+// ── LLM routing (per-tenant, per-feature model selection) ───────────────────
+
+export type LlmProvider = 'anthropic' | 'openai' | 'gemini' | 'deepseek';
+
+/** One hop in a chain. Index 0 is the primary; the rest are fallbacks in order. */
+export interface LlmRoutingEntry {
+  provider: LlmProvider;
+  model: string;
+  /** Present on reads; the API derives it from array order on writes. */
+  priority?: number;
+  isActive?: boolean;
+}
+
+export interface LlmRoutingFeature {
+  featureKey: string;
+  chain: LlmRoutingEntry[];
+  updatedAt?: string;
+  updatedBy?: string | null;
+}
+
+/** A model the console may offer, with its rate per 1M tokens. */
+export interface LlmSelectableModel {
+  model: string;
+  input: number | null;
+  output: number | null;
+}
+
+/** A feature the console lists, and whether a rule on it would do anything. */
+export interface LlmRoutingFeatureMeta {
+  key: string;
+  label: string;
+  hint: string;
+  /**
+   * False until the call site goes through generateWithChain(). A rule on an
+   * unwired feature would save and be ignored, so the console disables it.
+   */
+  wired: boolean;
+}
+
+export interface LlmRoutingMeta {
+  providers: LlmProvider[];
+  /** The full catalogue, owned by the backend so the UI cannot drift from it. */
+  features: LlmRoutingFeatureMeta[];
+  /**
+   * provider -> models that provider actually serves. The console renders these
+   * as a dropdown, so an admin cannot type a retired or misspelled id, or pair
+   * a model with the wrong provider.
+   */
+  models: Record<LlmProvider, LlmSelectableModel[]>;
+  /** feature_key -> why it cannot be routed (provider-locked capability). */
+  nonRoutableFeatures: Record<string, string>;
+}
+
+/** Verdict from the dry-run endpoint. `ok: false` carries the reason. */
+export interface LlmRoutingValidation {
+  ok: boolean;
+  error?: string;
+}

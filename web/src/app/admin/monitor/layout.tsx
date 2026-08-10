@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldAlert, LayoutDashboard, Building2, ScrollText, Clock, Target, ListChecks, Sparkles, Database, ShieldCheck, Inbox } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, Building2, ScrollText, Clock, Target, ListChecks, Sparkles, Database, ShieldCheck, Inbox, Route } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Client-side gate for UX only — the real enforcement is server-side
@@ -16,6 +16,7 @@ const TABS = [
   { href: '/admin/monitor/tenants', label: 'Tenants', icon: Building2, exact: false },
   { href: '/admin/monitor/sah', label: 'Cost / SAH', icon: Target, exact: false },
   { href: '/admin/monitor/llm-cost', label: 'LLM Spend', icon: Sparkles, exact: false },
+  { href: '/admin/monitor/llm-routing', label: 'LLM Routing', icon: Route, exact: false },
   { href: '/admin/monitor/crons', label: 'Crons', icon: Clock, exact: false },
   { href: '/admin/monitor/tasks', label: 'Tasks', icon: ListChecks, exact: false },
   { href: '/admin/monitor/migrations', label: 'Migrations', icon: Database, exact: false },

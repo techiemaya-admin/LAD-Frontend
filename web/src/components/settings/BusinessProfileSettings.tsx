@@ -142,6 +142,11 @@ export const BusinessProfileSettings: React.FC = () => {
   const { data: savedBH } = useBusinessHours();
   const updateBH = useUpdateBusinessHours();
   const [hoursOpen, setHoursOpen] = useState(false);
+  // useUpdateBusinessHours already supports onError — nothing previously wired
+  // it up, so a failed save left the modal open with no feedback at all: no
+  // toast, no banner, the button just sat there. A user had no way to tell a
+  // failed save from a slow one.
+  const [hoursError, setHoursError] = useState<string | null>(null);
   const [location, setLocation] = useState('');
   const [locationSavedAt, setLocationSavedAt] = useState<number | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -396,8 +401,8 @@ export const BusinessProfileSettings: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setHoursOpen(true)}
-              className="h-9 px-3 rounded-lg text-[12px] font-semibold text-[#0B1957] dark:text-blue-400 border border-slate-200 dark:border-blue-900/40 hover:bg-slate-50 dark:hover:bg-[#0b1739] whitespace-nowrap transition"
+              onClick={() => { setHoursError(null); setHoursOpen(true); }}
+              className="h-9 px-3 rounded-lg text-[12px] font-semibold text-[#0B1957] dark:text-blue-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap transition"
             >
               {savedBH ? 'Edit' : 'Set hours'}
             </button>
@@ -507,9 +512,15 @@ export const BusinessProfileSettings: React.FC = () => {
                 }
               : undefined
           }
-          onSave={(payload: BusinessHoursPayload) =>
-            updateBH.mutate(payload, { onSuccess: () => setHoursOpen(false) })
-          }
+          onSave={(payload: BusinessHoursPayload) => {
+            setHoursError(null);
+            updateBH.mutate(payload, {
+              onSuccess: () => setHoursOpen(false),
+              onError: (err) => setHoursError(err?.message || 'Could not save business hours. Please try again.'),
+            });
+          }}
+          saving={updateBH.isPending}
+          error={hoursError}
           onClose={() => setHoursOpen(false)}
         />
       )}

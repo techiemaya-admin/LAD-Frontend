@@ -25,7 +25,7 @@ import {
 
 /** Source keys the builder can actually restore (mirrors its SOURCES list). */
 const KNOWN_SOURCE_KEYS: TemplateSourceKey[] = [
-  'zoho_recurring', 'zoho_once', 'ghl_once', 'linkedin_search', 'linkedin_signal', 'file_import',
+  'zoho_recurring', 'zoho_once', 'ghl_recurring', 'ghl_once', 'linkedin_search', 'linkedin_signal', 'file_import',
 ];
 
 const MACRO_ID_SET = new Set(MACRO_STEP_IDS);

@@ -80,7 +80,7 @@ export const EXPORT_DEFAULT_COLUMNS = [
   'full_name', 'title', 'company_name', 'email', 'phone', 'linkedin_url', 'status', 'last_action', 'last_action_at',
 ];
 
-export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import';
+export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import';
 
 export type TemplateNode = {
   type: StepType;
@@ -370,9 +370,10 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       // ── Day 14 · the trend touch ───────────────────────────────────────────
       // Written as a plain DM rather than a followup_sequence touch on purpose:
       // the follow-up macro always emits AFTER every outreach step, so a touch
-      // placed here would actually fire after the break-up email — and its
-      // `touch_type` is dropped at launch (that machinery belongs to the
-      // scheduled follow-ups in Chat Settings, not to campaign steps).
+      // placed here would actually fire after the break-up email — the ordering,
+      // not the touch_type, is why this stays a hand-written step. (Structured
+      // touch types on campaign follow-ups ARE honoured at launch now — see the
+      // followup_sequence expansion in CustomWorkflowBuilder.)
       {
         type: 'linkedin_message', title: 'Trend touch', description: 'Day 14 · industry, not product',
         cfg: {

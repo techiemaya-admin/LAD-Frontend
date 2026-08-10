@@ -100,6 +100,7 @@ import {
   // ── New icons for rich New Chat overlay ──
   Megaphone, Loader2, CheckCircle2, Play, Pause, StopCircle,
 } from 'lucide-react';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Shared type for context status chips ────────────────────────────────────
 interface ContextStatusOption {
@@ -2427,6 +2428,11 @@ function WABASidebar({
   isImportDialogOpen: externalIsImportDialogOpen,
   onImportDialogOpenChange,
 }: WABASidebarProps) {
+  // Per-viewer phone masking. The list renders a contact number twice — as the
+  // title when no name is known, and as the subtitle under every named contact
+  // — so without this the sidebar showed raw numbers for essentially every
+  // conversation regardless of the setting.
+  const { displayPhone, displayNameOrPhone } = usePhoneMasking();
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sidebarError, setSidebarError] = useState<SidebarErrorState | null>(null);
@@ -3072,6 +3078,11 @@ function WABASidebar({
     });
     return [...filtered].sort((a, b) => {
       if (sortBy === 'name') {
+        // Sorts on the RAW value deliberately — this comparator renders
+        // nothing, so it leaks nothing, and masked numbers all share the same
+        // leading bullets, which would collapse the ordering into "grouped by
+        // last 4 digits". Sorting stays stable and meaningful while the
+        // rendered labels above are masked.
         return (a.contact?.name || a.contact?.phone || '').localeCompare(b.contact?.name || b.contact?.phone || '');
       }
       if (sortBy === 'message_count') {
@@ -4000,11 +4011,11 @@ function WABASidebar({
                             </Avatar>
                             <div className="flex flex-col items-start overflow-hidden">
                               <span className="text-sm font-medium truncate w-full text-left">
-                                {conv.contact?.name || conv.contact?.phone || 'Unknown'}
+                                {displayNameOrPhone(conv.contact?.name, conv.contact?.phone)}
                               </span>
                               {conv.contact?.phone && conv.contact?.name && (
                                 <span className="text-xs text-muted-foreground truncate w-full text-left">
-                                  {conv.contact.phone}
+                                  {displayPhone(conv.contact.phone)}
                                 </span>
                               )}
                             </div>

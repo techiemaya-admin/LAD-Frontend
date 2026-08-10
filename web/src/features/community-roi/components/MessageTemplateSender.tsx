@@ -75,6 +75,35 @@ const FIELD_OPTIONS = [
   { value: 'week_date_2',   label: 'Week 2 Date (Mon)', group: 'date' },
   { value: 'week_date_3',   label: 'Week 3 Date (Mon)', group: 'date' },
   { value: 'week_date_4',   label: 'Week 4 Date (Mon)', group: 'date' },
+  // Whole-week lists that fill ONE variable with all 3 picks. The "+ reasons"
+  // variants append each pick's generated "why meet them" line, e.g.
+  //   "Ali Murtaza (Advertising & Marketing — a natural fit with your Real Estate
+  //    clients), Reema Mahajan (...) and Sreekutty Sukumaran (...)"
+  // Empty slots are dropped, so a member with fewer than 3 picks never renders a
+  // dangling "—". Use these with the 2-variable weekly template.
+  { value: 'rec_week1_all_reasons', label: 'Week 1 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week2_all_reasons', label: 'Week 2 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week3_all_reasons', label: 'Week 3 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week4_all_reasons', label: 'Week 4 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week1_all',  label: 'Week 1 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week2_all',  label: 'Week 2 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week3_all',  label: 'Week 3 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week4_all',  label: 'Week 4 · All 3 names (one variable)', group: 'rec' },
+  // Per-line "Name — reason" values for a BULLETED template (one variable per
+  // bullet). Meta forbids newlines inside a variable, so the line breaks must
+  // live in the static template body:  "• {{2}}\n• {{3}}\n• {{4}}".
+  { value: 'rec_week1_line_1', label: 'Week 1 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_2', label: 'Week 1 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_3', label: 'Week 1 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_1', label: 'Week 2 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_2', label: 'Week 2 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_3', label: 'Week 2 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_1', label: 'Week 3 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_2', label: 'Week 3 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_3', label: 'Week 3 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_1', label: 'Week 4 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_2', label: 'Week 4 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_3', label: 'Week 4 · Line 3 (name + reason)', group: 'rec' },
   { value: 'rec_week1_1',   label: 'Week 1 · Rec #1',   group: 'rec' },
   { value: 'rec_week1_2',   label: 'Week 1 · Rec #2',   group: 'rec' },
   { value: 'rec_week1_3',   label: 'Week 1 · Rec #3',   group: 'rec' },
@@ -92,7 +121,14 @@ const FIELD_OPTIONS = [
 ];
 
 type WeekKey = 'week1' | 'week2' | 'week3' | 'week4';
-type MemberRecData = Record<string, Partial<Record<WeekKey, string[]>> & { no_interaction_count?: number }>;
+type WeekReasonKey = `${WeekKey}_with_reasons`;
+type WeekLinesKey = `${WeekKey}_lines`;
+type MemberRecData = Record<
+  string,
+  Partial<Record<WeekKey, string[]>> &
+    Partial<Record<WeekReasonKey, string>> &
+    Partial<Record<WeekLinesKey, string[]>> & { no_interaction_count?: number }
+>;
 type WeekDateMap = Partial<Record<'week_1' | 'week_2' | 'week_3' | 'week_4', string>>;
 
 // Module-level mutable holder updated by useEffect when the API returns.
@@ -168,6 +204,17 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
     if (paramNumber === 1) return 'name';
     if (paramNumber === 2) return 'no_interaction_count';
   }
+  // Weekly 1-2-1 recommendations — 2 params: first name + the whole week's picks
+  // with their reasons in ONE variable.
+  // Body: "Hi {{1}}, … please schedule 1-2-1s with {{2}}."
+  const tname = String(templateName || '');
+  const bodyParamCount = new Set((body || '').match(/\{\{\d+\}\}/g) || []).size;
+  if (/1(?:-|_)?2(?:-|_)?1|recommendation/i.test(tname) && bodyParamCount === 2) {
+    if (paramNumber === 1) return 'first_name';
+    if (paramNumber === 2) {
+      return /no[_-]?reasons?$/i.test(tname) ? 'rec_week1_all' : 'rec_week1_all_reasons';
+    }
+  }
   // body-context heuristics for unknown templates
   const regex = new RegExp(`\\{\\{${paramNumber}\\}\\}`);
   const match = regex.exec(body);
@@ -177,6 +224,14 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
   if (ctx.includes('phone') || ctx.includes('mobile') || ctx.includes('contact number')) return 'phone';
   if (ctx.includes('email')) return 'email';
   return 'name';
+}
+
+/** "A, B and C" — drops empty/"—" slots so a short week never shows a dangling dash. */
+function joinNames(names: string[]): string {
+  const parts = (names || []).filter(n => n && n !== '—');
+  if (parts.length === 0) return '—';
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 function resolveParam(
@@ -193,6 +248,33 @@ function resolveParam(
   if (field === 'no_interaction_count') {
     const memberRecs = recData?.[member?.id];
     return String(memberRecs?.no_interaction_count ?? 0);
+  }
+  // Whole-week list WITH each pick's reason, in one variable. Served ready-made
+  // by the backend (weekN_with_reasons); falls back to a plain name join if an
+  // older backend hasn't shipped that field yet.
+  const allReasonsMatch = field.match(/^rec_(week[1-4])_all_reasons$/);
+  if (allReasonsMatch) {
+    const weekKey = allReasonsMatch[1] as WeekKey;
+    const memberRecs = recData?.[member?.id];
+    const ready = memberRecs?.[`${weekKey}_with_reasons` as WeekReasonKey];
+    if (ready && ready !== '—') return ready;
+    return joinNames(memberRecs?.[weekKey] ?? []);
+  }
+  // One bullet line: "Name — reason". Served ready-made by the backend
+  // (weekN_lines); falls back to the bare name from weekN when unavailable.
+  const lineMatch = field.match(/^rec_(week[1-4])_line_([1-3])$/);
+  if (lineMatch) {
+    const weekKey = lineMatch[1] as WeekKey;
+    const idx = parseInt(lineMatch[2], 10) - 1;
+    const memberRecs = recData?.[member?.id];
+    const lines = memberRecs?.[`${weekKey}_lines` as WeekLinesKey];
+    return lines?.[idx] || memberRecs?.[weekKey]?.[idx] || '—';
+  }
+  // Whole-week list of names only, in one variable.
+  const allNamesMatch = field.match(/^rec_(week[1-4])_all$/);
+  if (allNamesMatch) {
+    const weekKey = allNamesMatch[1] as WeekKey;
+    return joinNames(recData?.[member?.id]?.[weekKey] ?? []);
   }
   if (field.startsWith('rec_')) {
     // field format: rec_week1_1, rec_week2_3, rec_week3_2, rec_week4_3 etc.

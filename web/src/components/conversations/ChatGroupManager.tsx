@@ -42,6 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -292,6 +293,8 @@ export function ChatGroupManager({
   onOpenGroupInfo,
   channel,
 }: ChatGroupManagerProps) {
+  // Contact pickers list every candidate by name, falling back to their number.
+  const { displayPhone, displayNameOrPhone } = usePhoneMasking();
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -761,7 +764,7 @@ export function ChatGroupManager({
                           className="text-[10px] pl-1.5 pr-1 py-0.5 gap-1 cursor-pointer hover:bg-destructive/10"
                           onClick={() => toggleContact(c)}
                         >
-                          {c.name || c.phone || c.email || 'Unknown'}
+                          {displayNameOrPhone(c.name, c.phone, c.email || 'Unknown')}
                           <X className="h-2.5 w-2.5" />
                         </Badge>
                       ))}
@@ -865,7 +868,7 @@ export function ChatGroupManager({
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-1.5">
                                         <p className="text-xs font-medium truncate">
-                                          {contact.name || contact.phone || contact.email || 'Unknown'}
+                                          {displayNameOrPhone(contact.name, contact.phone, contact.email || 'Unknown')}
                                         </p>
                                         {contact.channel && (() => {
                                           const ch = contact.channel.startsWith('personal') ? 'personal' : contact.channel;
@@ -883,7 +886,7 @@ export function ChatGroupManager({
                                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                         {contact.phone && (
                                           <span className="flex items-center gap-0.5">
-                                            <Phone className="h-2.5 w-2.5" />{contact.phone}
+                                            <Phone className="h-2.5 w-2.5" />{displayPhone(contact.phone)}
                                           </span>
                                         )}
                                         {contact.email && (

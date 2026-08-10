@@ -30,6 +30,13 @@ interface ExtendedCampaignLead extends CampaignLead {
   has_connected?: boolean;
   has_replied?: boolean;
 }
+// Filter keys mirror the server's engagement stages; these are their UI labels.
+const FILTER_LABELS: Record<string, string> = {
+  sent: 'contacted',
+  connected: 'connected',
+  replied: 'responded',
+};
+
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,16 +45,24 @@ export default function CampaignLeadsPage() {
   const campaignId = params.id as string;
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
 
   // Fetch campaign to get campaign_type
   const { campaign, loading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
 
-  // Use SDK hook for leads
-  const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
+  // Use SDK hook for leads.
+  // Both the engagement filter and the search run SERVER-SIDE: the filter is
+  // resolved from campaign_analytics using the same definitions as the stat
+  // cards, so this list always matches the card that linked here. Filtering in
+  // the browser could only ever see one page of leads and used looser matching,
+  // which is why the two disagreed.
+  const { leads: campaignLeads, total, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
-    useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
+    useMemo(() => ({
+      search: searchQuery || undefined,
+      filter: filterParams as 'all' | 'sent' | 'connected' | 'replied',
+      limit: 1000,
+    }), [searchQuery, filterParams])
   );
 
   // Convert to extended type for UI
@@ -60,9 +75,6 @@ export default function CampaignLeadsPage() {
   // Fetch summaries for all leads using the SDK hook
   const { summaries, loading: summariesLoading } = useLeadsSummaries(campaignId, leadIds);
 
-  // Note: Pagination would ideally come from SDK
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   // Reveal state for employee contacts
   const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
@@ -89,14 +101,6 @@ export default function CampaignLeadsPage() {
       });
     }
   }, [leadsError, push]);
-  // Update total when leads change (this would ideally come from SDK)
-  useEffect(() => {
-    if (leads) {
-      setTotal(leads.length);
-      setTotalPages(Math.ceil(leads.length / 50));
-    }
-  }, [leads]);
-
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
@@ -444,36 +448,10 @@ export default function CampaignLeadsPage() {
       setFollowupSending(false);
     }
   }, [followupLead, followupChannel, followupMessage, followupSubject, followupFromEmail, followupContext, campaignId, push, refetch]);
-  const filteredLeads = useMemo(() => {
-    // Cast to any[] so we can access backend-provided fields (has_sent, has_connected, has_replied)
-    // that are not in the SDK type definition
-    let result = leads as any[];
-
-    if (filterParams !== 'all') {
-      result = result.filter((lead: any) => {
-        const status = lead.status?.toLowerCase() || '';
-        if (filterParams === 'sent') {
-          return lead.has_sent === true || status.includes('sent') || status.includes('invit') || status.includes('connection');
-        }
-        if (filterParams === 'connected') {
-          return lead.has_connected === true || status.includes('connect') || status.includes('accept') || status.includes('contacted');
-        }
-        if (filterParams === 'replied') {
-          return lead.has_replied === true || status.includes('repli') || status.includes('respond') || status.includes('reply');
-        }
-        return true;
-      });
-    }
-
-    if (!searchQuery) return result;
-    const query = searchQuery.toLowerCase();
-    return result.filter((lead: any) =>
-      lead.name?.toLowerCase().includes(query) ||
-      lead.email?.toLowerCase().includes(query) ||
-      lead.company?.toLowerCase().includes(query) ||
-      lead.title?.toLowerCase().includes(query)
-    );
-  }, [leads, searchQuery, filterParams]);
+  // The server already applied both the engagement filter and the search —
+  // re-filtering here would only remove rows the server deliberately returned
+  // (its search covers more fields than name/email/company/title).
+  const filteredLeads = leads;
   if (loading && leads.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-[#000724]">
@@ -502,7 +480,8 @@ export default function CampaignLeadsPage() {
                 {campaign?.name || 'Campaign Leads'}
               </h4>
               <p className="text-sm text-slate-500 dark:text-slate-300">
-                {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
+                {total} {filterParams !== 'all' ? FILTER_LABELS[filterParams] ?? filterParams : ''} leads
+                {total > filteredLeads.length && ` (showing ${filteredLeads.length})`}
               </p>
             </div>
           </div>
@@ -626,28 +605,6 @@ export default function CampaignLeadsPage() {
                 );
               })}
             </div>
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-4 mt-8">
-                <Button
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <p className="flex items-center text-slate-500">
-                  Page {page} of {totalPages}
-                </p>
-                <Button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
-            )}
           </>
         )}
       </div>

@@ -3,7 +3,7 @@
 // which (in the browser) routes same-origin through the Next.js [feature]/[...path]
 // proxy → /api/admin/monitor/* on the backend. Super-admin gating is enforced
 // server-side; these calls simply carry the caller's auth token.
-import { apiGet, apiPatch, apiPost } from '../../shared/apiClient';
+import { apiGet, apiPatch, apiPost, apiDelete } from '../../shared/apiClient';
 import type {
   DashboardStats,
   DateRangeParams,
@@ -21,6 +21,10 @@ import type {
   StrategyReviewStatus,
   SignupStatus,
   CommunitySignupsResponse,
+  LlmRoutingFeature,
+  LlmRoutingMeta,
+  LlmRoutingEntry,
+  LlmRoutingValidation,
 } from './types';
 
 const BASE = '/api/admin/monitor';
@@ -164,4 +168,51 @@ export async function updateCommunitySignup(
   notes?: string,
 ): Promise<void> {
   await apiPatch(`/api/community/signups/${id}`, { status, notes });
+}
+
+// ── LLM routing ─────────────────────────────────────────────────────────────
+// Per-tenant, per-feature provider chains. Writes replace a feature's WHOLE
+// chain (it is an ordered list — patching one hop at a time can leave two
+// entries sharing a priority).
+
+export async function getLlmRoutingMeta(): Promise<LlmRoutingMeta> {
+  const res = await apiGet<{ success: boolean; data: LlmRoutingMeta }>(`${BASE}/llm-routing/meta`);
+  return res.data.data;
+}
+
+export async function getTenantLlmRouting(tenantId: string): Promise<LlmRoutingFeature[]> {
+  const res = await apiGet<{ success: boolean; data: LlmRoutingFeature[] }>(
+    `${BASE}/llm-routing/${tenantId}`
+  );
+  return res.data.data;
+}
+
+/** Dry-run: returns the same verdict a save would, without persisting. */
+export async function validateLlmRoutingChain(
+  tenantId: string,
+  featureKey: string,
+  chain: LlmRoutingEntry[]
+): Promise<LlmRoutingValidation> {
+  const res = await apiPost<{ success: boolean; data: LlmRoutingValidation }>(
+    `${BASE}/llm-routing/${tenantId}/${featureKey}/validate`,
+    { chain }
+  );
+  return res.data.data;
+}
+
+export async function setLlmRoutingChain(
+  tenantId: string,
+  featureKey: string,
+  chain: LlmRoutingEntry[]
+): Promise<LlmRoutingFeature[]> {
+  const res = await apiPost<{ success: boolean; data: LlmRoutingFeature[] }>(
+    `${BASE}/llm-routing/${tenantId}/${featureKey}`,
+    { chain }
+  );
+  return res.data.data;
+}
+
+/** Remove the tenant's rules for a feature — it reverts to the code default. */
+export async function clearLlmRoutingChain(tenantId: string, featureKey: string): Promise<void> {
+  await apiDelete(`${BASE}/llm-routing/${tenantId}/${featureKey}`);
 }

@@ -24,6 +24,11 @@ export {
   reviewStrategy,
   getCommunitySignups,
   updateCommunitySignup,
+  getLlmRoutingMeta,
+  getTenantLlmRouting,
+  setLlmRoutingChain,
+  clearLlmRoutingChain,
+  validateLlmRoutingChain,
 } from './api';
 
 // Hooks
@@ -38,3 +43,4 @@ export { useLlmCost } from './hooks/useLlmCost';
 export { useMigrationStatus } from './hooks/useMigrationStatus';
 export { useStrategyReview } from './hooks/useStrategyReview';
 export { useCommunitySignups } from './hooks/useCommunitySignups';
+export { useLlmRouting } from './hooks/useLlmRouting';

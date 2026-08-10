@@ -5,6 +5,7 @@ import { Users, Loader2, X, Megaphone } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import type { ChatGroup } from './ChatGroupManager';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 interface Member { id: string; name: string | null; phone: string | null; }
 
@@ -23,6 +24,9 @@ interface GroupInfoModalProps {
  * a regular group shows its members. Either can be removed inline.
  */
 export function GroupInfoModal({ open, onClose, group, allGroups, channel, onChanged }: GroupInfoModalProps) {
+  // Group members frequently have no pushname, so this list is one of the
+  // densest concentrations of raw phone numbers in the product.
+  const { displayPhone, displayNameOrPhone } = usePhoneMasking();
   const isBroadcastList = !!(group?.metadata as { is_broadcast_list?: boolean } | undefined)?.is_broadcast_list;
   const [memberGroupIds, setMemberGroupIds] = useState<string[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -151,18 +155,18 @@ export function GroupInfoModal({ open, onClose, group, allGroups, channel, onCha
                 : members.map((m) => (
                     <li key={m.id} className="flex items-center gap-3 px-5 py-2.5">
                       <div className="h-8 w-8 rounded-full bg-violet-500/90 flex items-center justify-center text-white text-xs font-semibold shrink-0">
-                        {(m.name || m.phone || '?').charAt(0).toUpperCase()}
+                        {displayNameOrPhone(m.name, m.phone, '?').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{m.name || m.phone || 'Unknown'}</p>
-                        {m.name && m.phone && <p className="text-[11px] text-muted-foreground truncate">{m.phone}</p>}
+                        <p className="text-sm truncate">{displayNameOrPhone(m.name, m.phone)}</p>
+                        {m.name && m.phone && <p className="text-[11px] text-muted-foreground truncate">{displayPhone(m.phone)}</p>}
                       </div>
                       <button
                         type="button"
                         onClick={() => removeMember(m.id)}
                         disabled={removingId === m.id}
                         title="Remove member"
-                        aria-label={`Remove ${m.name || m.phone}`}
+                        aria-label={`Remove ${displayNameOrPhone(m.name, m.phone)}`}
                         className="shrink-0 text-muted-foreground hover:text-red-500 disabled:opacity-50"
                       >
                         {removingId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}

@@ -61,7 +61,9 @@ export default function CampaignAnalyticsPage() {
   const isConnected = analytics?.campaign?.status === 'running';
 
   // ── Bulk Follow-up state ───────────────────────────────────────────────────
-  const { leads: allLeads, loading: leadsLoading } = useCampaignLeads(campaignId);
+  // limit raised past the server's default 100 so bulk follow-up can select
+  // across the whole campaign, not just the first page of leads.
+  const { leads: allLeads, loading: leadsLoading } = useCampaignLeads(campaignId, { limit: 1000 });
   const [followupPanelOpen, setFollowupPanelOpen] = useState(false);
   const [scheduleManagerOpen, setScheduleManagerOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
@@ -85,15 +87,14 @@ export default function CampaignAnalyticsPage() {
     return channels;
   }, [analytics]);
 
-  // LinkedIn → only accepted-connection leads; email/whatsapp → all leads
+  // LinkedIn → only accepted-connection leads; email/whatsapp → all leads.
+  // has_connected is authoritative (server-side, from campaign_analytics). The
+  // old status-substring fallback also matched "connection_sent", so leads who
+  // had merely been invited were offered for LinkedIn follow-up.
   const selectableLeads = useMemo(() => {
     if (!allLeads) return [];
     if (bulkChannel === 'linkedin') {
-      return (allLeads as any[]).filter((l: any) =>
-        l.has_connected === true ||
-        l.status?.toLowerCase().includes('connect') ||
-        l.status?.toLowerCase().includes('accept')
-      );
+      return (allLeads as any[]).filter((l: any) => l.has_connected === true);
     }
     return allLeads as any[];
   }, [allLeads, bulkChannel]);
@@ -749,13 +750,15 @@ export default function CampaignAnalyticsPage() {
                         <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{[lead.title, lead.company].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0 items-center">
-                        {(lead.has_connected || lead.status?.includes('connect')) && (
+                        {/* has_* is authoritative — the status-substring fallbacks
+                            badged "connection_sent" leads as Connected. */}
+                        {lead.has_connected && (
                           <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">Connected</span>
                         )}
-                        {(lead.has_replied || lead.status?.includes('repli')) && (
+                        {lead.has_replied && (
                           <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-amber-300">Replied</span>
                         )}
-                        {(lead.has_sent || lead.status?.includes('sent')) && !lead.has_connected && (
+                        {lead.has_sent && !lead.has_connected && (
                           <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400">Sent</span>
                         )}
                         {/* Follow-up count badge — increments in real-time via leadProgress */}

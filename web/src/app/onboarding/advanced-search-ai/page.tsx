@@ -29,6 +29,7 @@ import { AgentBuilderVideoProgress } from "@/components/voice-agent/playground/b
 import { AgentBuilderKeyframesConfirm } from "@/components/voice-agent/playground/builder-steps/AgentBuilderKeyframesConfirm";
 import { AgentBuilderBrandDNA } from "@/components/voice-agent/playground/builder-steps/AgentBuilderBrandDNA";
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import CustomWorkflowBuilder from '@/components/campaigns/CustomWorkflowBuilder';
 import {
     WORKFLOW_TEMPLATES, WorkflowTemplate,
@@ -102,6 +103,63 @@ interface LeadProfile {
     inferred?: Record<string, any>;
     inferred_nationality?: string;
     nationality_confidence?: number;
+    /**
+     * Only present on signal_detection leads, where the lead IS the author of a
+     * LinkedIn post. Without it a post-derived lead renders identically to a
+     * Sales Navigator one and there is no way back to the post that produced it.
+     * Shape comes from SignalDetectionService._postsToLeads.
+     */
+    signal_context?: {
+        signal_type?: string;
+        signal_strength?: string;
+        urgency?: string;
+        /** Empty on job-sourced leads: the person did not write anything. */
+        pain_points?: string[];
+        post_url?: string;
+        posted_at?: string;
+        /** Job-sourced leads carry a listing link instead; key TBD — see signalContextLink. */
+        [key: string]: any;
+    };
+}
+
+/**
+ * The link on a signal lead — a feed post or a job listing.
+ *
+ * Signal Search has two sources. On the jobs route a match yields a COMPANY
+ * rather than a post author, so the lead's link is a job listing.
+ * `signal_context.source_type` ('linkedin_job' | 'linkedin_post') is the
+ * discriminator and is the primary path; the backend backfilled the post value
+ * onto the existing route so both can be branched positively.
+ *
+ * `post_url` is deliberately absent on job leads and `job_url` carries the
+ * permalink, so the URL-sniffing fallback is correct on its own — it is kept for
+ * anything emitted before source_type existed. Returns null when there is no
+ * link at all.
+ */
+const JOB_LINK_KEYS = ['job_url', 'job_link', 'job_posting_url', 'jobs_url', 'listing_url', 'job_post_url'];
+
+function signalContextLink(ctx: LeadProfile['signal_context']): { url: string; label: string } | null {
+    if (!ctx || typeof ctx !== 'object') return null;
+    const bag = ctx as Record<string, any>;
+    const firstString = (keys: string[]) => {
+        for (const k of keys) {
+            const v = bag[k];
+            if (typeof v === 'string' && v.trim()) return v.trim();
+        }
+        return '';
+    };
+    const jobUrl = firstString(JOB_LINK_KEYS);
+    const postUrl = firstString(['post_url']);
+    const sourceType = String(bag.source_type || '').toLowerCase();
+    if (sourceType === 'linkedin_job') {
+        return jobUrl || postUrl ? { url: jobUrl || postUrl, label: 'View job' } : null;
+    }
+    if (sourceType === 'linkedin_post') {
+        return postUrl || jobUrl ? { url: postUrl || jobUrl, label: 'View post' } : null;
+    }
+    if (jobUrl) return { url: jobUrl, label: 'View job' };
+    if (postUrl) return { url: postUrl, label: 'View post' };
+    return null;
 }
 
 interface ParsedInboundLead {
@@ -161,6 +219,15 @@ interface ChatMsg {
     options?: { label: string; value: string }[];
     /** Rich "Accelerators" wizard card (template pipelines launched from chat). */
     roleCard?: { key: string; stage: 'intro' | 'question' | 'summary' | 'file'; qIdx?: number; nudge?: boolean; answers?: Record<string, string> };
+    /**
+     * Caveats the workflow drafter raised about the pipeline it built — e.g.
+     * "in parallel" collapsed to sequential because the engine is linear.
+     * Rendered as its own callout rather than folded into `text`: these are the
+     * difference between what the user asked for and what they are about to
+     * launch, and a paragraph in a chat bubble is exactly where that gets
+     * skimmed past.
+     */
+    wfWarnings?: string[];
     leads?: LeadProfile[];
     inboundAction?: 'download' | 'upload' | 'summary';
     inboundSummary?: { total: number; linkedin: number; email: number; whatsapp: number; phone: number; website: number };
@@ -194,6 +261,50 @@ interface OutreachStep {
     reason: string;
     recommended: boolean;
 }
+
+/**
+ * One clarifying question from POST /api/campaigns/workflow/interview.
+ *
+ * The catalog lives server-side (every question maps to a config key the
+ * builder actually reads); this mirrors the wire shape only for rendering.
+ */
+interface WfQuestion {
+    id: string;
+    question: string;
+    /** When present, rendered as tappable chips instead of a free-text reply. */
+    options?: string[];
+    /** Pre-filled answer the user can accept with one tap. */
+    default?: string;
+    /** Why the drafter needs this — shown under the question. */
+    why?: string;
+}
+
+/**
+ * Hard ceiling on the interview, independent of the backend's own 3–5 cap.
+ *
+ * The server is stateless and re-derives its questions from the answer map on
+ * every call, so a drafter that never reaches `done` would otherwise keep the
+ * user answering forever. These stop that: `WF_MAX_QUESTIONS` caps how many we
+ * will ASK, `WF_MAX_ROUNDS` caps how many times we will call the endpoint.
+ * Hitting either ends the interview honestly rather than silently looping.
+ */
+const WF_MAX_QUESTIONS = 8;
+const WF_MAX_ROUNDS = 6;
+
+/**
+ * Labels for the drafted pipeline's contact source, so the Workflow panel names
+ * it instead of showing a bare "Contact source" node. Mirrors the builder's own
+ * SOURCES list; the builder remains the authority once the draft opens there.
+ */
+const WF_SOURCE_LABELS: Record<string, { label: string; sub: string }> = {
+    linkedin_search:  { label: 'LinkedIn Search',            sub: 'Find new leads by keywords' },
+    linkedin_signal:  { label: 'LinkedIn Signal Search',     sub: 'Find leads from hiring/buying signals' },
+    file_import:      { label: 'File import (CSV / Excel)',  sub: 'Upload a list and map columns' },
+    zoho_once:        { label: 'Zoho CRM — one-time',        sub: 'Import synced contacts now' },
+    zoho_recurring:   { label: 'Zoho CRM — recurring',       sub: 'Import new contacts daily' },
+    ghl_once:         { label: 'GoHighLevel — one-time',     sub: 'Import synced contacts now' },
+    ghl_recurring:    { label: 'GoHighLevel — recurring',    sub: 'Import new contacts daily' },
+};
 
 /* ═══════════════════════════════════════════════
    UTILS
@@ -359,12 +470,37 @@ function resolveProfileUrl(item: any): string {
 }
 
 /**
+ * Put an icp_score onto the 0-100 scale this page renders and filters against.
+ *
+ * 0-100 is the authoritative scale: /search/unified defaults icp_min_score to
+ * 50, ICPLeadQualificationService prompts Gemini for "0-100", and the column is
+ * NUMERIC(5,2). But not every module that feeds the same list obeys it — the
+ * signal_detection, abm and competitor_intent branches pass their internal
+ * 0.0-1.0 relevance straight through as icp_score (SignalDetectionService
+ * `icp_score: l._match_score`, ABMSearchService, CompetitiveIntelService).
+ * Those leads arrived as 0.95 and rendered as "0.95%", could never clear the
+ * >= 70 "strong" bar, and were never auto-selected by the >= 50 seed.
+ *
+ * So: anything in (0, 1] is read as a fraction and scaled. A genuine 0-100
+ * score of exactly 1 becomes 100 — that is the one ambiguous input, and a lead
+ * scored 1/100 is noise either way. Idempotent, so applying it again at a
+ * render site is harmless.
+ */
+function normalizeIcpScore(raw: unknown): number | undefined {
+    if (raw === null || raw === undefined || raw === '') return undefined;
+    const n = Number(raw); // pg NUMERIC can arrive as a string
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n > 0 && n <= 1 ? n * 100 : n);
+}
+
+/**
  * Compute the display match level from the actual icp_score.
  * Gemini's match_level label can be inconsistent (e.g. 'weak' for score 52).
  * Using the score directly ensures the badge colour reflects what the user sees.
+ * Normalises first — a 0-1 score would otherwise never be 'strong'.
  */
 function scoreToMatchLevel(score: number | undefined): 'strong' | 'moderate' {
-    if ((score ?? 0) >= 70) return 'strong';
+    if ((normalizeIcpScore(score) ?? 0) >= 70) return 'strong';
     return 'moderate'; // yellow for everything else — never show red on lead badges
 }
 
@@ -536,6 +672,55 @@ function isInboundIntent(text: string): boolean {
     return /\b(i have leads|i have .* data|upload.*leads|inbound|import.*leads|have.*csv|have.*excel|already have.*leads|my leads|upload.*file|have.*spreadsheet|bulk.*upload)\b/i.test(lower);
 }
 
+/**
+ * Signals that a message describes a PIPELINE rather than an audience.
+ *
+ * Six independent families. A lead search trips none or one of them; a pipeline
+ * description trips several, because describing a pipeline means naming steps
+ * AND their order AND what happens between them.
+ */
+const PIPELINE_SIGNALS: { name: string; re: RegExp }[] = [
+    // Ordering between steps.
+    { name: 'sequencing', re: /\b(and\s+then|then\s+(send|start|message|email|wait|do|run|add|connect|follow)|after\s+(that|which|they|he|she|it)|once\s+(they|he|she|it|accepted?)|next\s*,|first\W+.*\bthen\b|finally\b)/i },
+    // A named outreach action, not a description of who to find.
+    { name: 'outreach_action', re: /\b(connection\s+request|connect\s+request|send\s+(them\s+|him\s+|her\s+|me\s+|the\s+|a\s+|an\s+)?(mail|email|message|dm|inmail|whatsapp|report)|invite\s+to\s+connect|profile\s+visit|voice\s+call|cold\s+call)\b/i },
+    // An explicit hold between steps.
+    { name: 'wait_gate', re: /\b(wait\s+(for|until|till|\d)|post[-\s]?acceptance|after\s+(they\s+)?accept|on\s+acceptance|when\s+(they|he|she)\s+(accepts?|replies|responds)|delay\s+of|\d+\s*(day|days|hour|hours)\s+(later|gap|delay|wait))\b/i },
+    // A human checkpoint.
+    { name: 'approval_gate', re: /\b(post\s+approval|after\s+(my\s+|your\s+)?approval|once\s+(i\s+)?approve|for\s+(my\s+)?approval|approve\s+(it|first|before)|send\s+me\s+the\s+report|review\s+before)\b/i },
+    // A cadence, not a single touch.
+    { name: 'followup', re: /\b(follow[-\s]?up\s+(sequence|series|cadence|messages?|touches?)|followup\s+sequence|drip\s+(sequence|campaign)|nurture\s+sequence|\d+\s+follow[-\s]?ups?)\b/i },
+    // Fan-out — the one the linear engine cannot honour, so worth detecting.
+    { name: 'parallel', re: /\b(in\s+parallel|at\s+the\s+same\s+time|simultaneously|both\s+.*\band\b.*\b(email|mail|linkedin|whatsapp)|side\s+by\s+side)\b/i },
+];
+
+/**
+ * True when the message reads as "build me this pipeline", not "find me these
+ * people".
+ *
+ * This exists because a pipeline description used to be swallowed by the
+ * handlers that run BEFORE the backend classifier gets a look: the ABM regex
+ * below matches a bare `research <anything>`, so
+ *
+ *   "…and research about them their company, send me the report post approval…"
+ *
+ * was researched as a company literally named "them their" and answered with a
+ * fabricated company profile. The classifier's `workflow_build` verdict cannot
+ * rescue a message that never reaches it.
+ *
+ * Deliberately strict: THREE distinct signal families, and only on a message
+ * long enough to be a description. "Find founders in Dubai" scores 0;
+ * "research Acme Corp" scores 0; "find CTOs then message them" scores 1 and
+ * still searches, exactly as it does today.
+ */
+function looksLikePipelineDescription(text: string): boolean {
+    const t = text.trim();
+    if (t.length < 60) return false;
+    let hits = 0;
+    for (const s of PIPELINE_SIGNALS) if (s.re.test(t)) hits++;
+    return hits >= 3;
+}
+
 /** Returns true when the user's reply is a confirmation of a search preview. */
 function isConfirmation(text: string): boolean {
     return /^\s*(yes|yeah|yep|yup|ok|okay|sure|go|proceed|correct|right|confirm|search it|search|find them|do it|go ahead|looks (good|right|correct)|that'?s? (right|correct|good|it)|sounds good|perfect|absolutely|definitely)\s*[!.]*\s*$/i.test(text.trim());
@@ -643,6 +828,16 @@ export default function AdvancedSearchAIPage() {
     const [isRecording, setIsRecording] = useState(false);
     const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
     const [beautifying, setBeautifying] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
+    // Whatever was already in the box when dictation started, plus every
+    // finalised chunk so far. onresult only replays results from resultIndex
+    // onward, so without these the earlier sentences get overwritten.
+    const dictationBaseRef = useRef('');
+    const dictationFinalRef = useRef('');
+    useEffect(() => {
+        setSpeechSupported(!!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition));
+    }, []);
+    useEffect(() => () => { try { recognitionInstance?.stop(); } catch { } }, [recognitionInstance]);
     const [busy, setBusy] = useState(false);
     const [typedPlaceholder, setTypedPlaceholder] = useState('');
     useEffect(() => {
@@ -1002,9 +1197,52 @@ export default function AdvancedSearchAIPage() {
     // CustomWorkflowBuilder (initialTemplateKey/initialSourceCfg/autoLaunch) so
     // the launch path is the builder's own — no duplicated payload logic.
     const [builderTemplate, setBuilderTemplate] = useState<{ key: string; sourceCfg: Record<string, string>; nodeCfg: Record<string, any>; autoLaunch: boolean } | null>(null);
+    /**
+     * An AI-drafted pipeline handed to the builder. Unlike an Accelerator this
+     * template has no key to look up — it was invented for this description —
+     * so it travels as the template itself, alongside the caveats the drafter
+     * raised so they stay on screen next to the Launch button.
+     */
+    const [builderAiDraft, setBuilderAiDraft] = useState<{ template: any; warnings: string[]; autoLaunch?: boolean } | null>(null);
     const roleWizardRef = useRef<{ key: string; idx: number; answers: Record<string, string> } | null>(null);
     /** Audience preview for the pending Accelerator — keyed off the summary card's CTA. */
     const [rolePreviewing, setRolePreviewing] = useState(false);
+
+    // ── BUILD MODE: "describe a pipeline, get a workflow" ──────────────────
+    // Entered when the message is a pipeline description rather than an
+    // audience (locally via looksLikePipelineDescription, or on the backend
+    // classifier's `workflow_build` verdict). While this ref is set the chat is
+    // conducting an interview: typed replies and option chips answer questions
+    // instead of running searches. Cleared on done, bail-out or cancel, which
+    // returns the chat to its normal behaviour.
+    //
+    // The endpoint is stateless — every call carries the description and the
+    // FULL merged answer map — so this ref is the only place the interview
+    // lives. A ref rather than state for the same reason roleWizardRef is one:
+    // doSend/onOptClick read it mid-callback and must see the latest value.
+    const wfWizardRef = useRef<{
+        description: string;
+        /** questionId → answer, merged and resent on every call. */
+        answers: Record<string, string>;
+        /** Questions from the last response, asked one at a time. */
+        queue: WfQuestion[];
+        /** Index into `queue` of the question currently on screen. */
+        idx: number;
+        /** Questions asked so far this interview — capped at WF_MAX_QUESTIONS. */
+        asked: number;
+        /** Calls made to the interview endpoint — capped at WF_MAX_ROUNDS. */
+        rounds: number;
+    } | null>(null);
+    /** The finished draft, kept so "Open in builder" works after the card scrolls away. */
+    const [wfDraft, setWfDraft] = useState<{ template: any; warnings: string[] } | null>(null);
+    /**
+     * Set while we are waiting for the user to name the finished sequence. A ref
+     * for the same reason as wfWizardRef: doSend reads it mid-callback. The name
+     * is asked AFTER drafting, not during the interview, because it shapes
+     * nothing about the pipeline — spending one of the five question slots on it
+     * would cost a question that actually changes the nodes.
+     */
+    const wfNamingRef = useRef<{ template: any; warnings: string[]; suggested: string } | null>(null);
 
     interface MediaChatMsg {
         id: string;
@@ -1867,12 +2105,18 @@ export default function AdvancedSearchAIPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Sync credit balance from billing hook
+    // Sync credit balance from billing hook.
+    // On a billing FETCH ERROR the balance stays null — "unknown", not "zero".
+    // Every consumer below is written to fail OPEN on null (see the launch
+    // credit gate: `creditBalance == null || creditBalance >= requiredCredits`),
+    // so an unreachable billing service must not masquerade as an empty wallet:
+    // coercing to 0 here made `creditsOk` false and silently BLOCKED launch,
+    // which is exactly what that gate's comment says must never happen.
     useEffect(() => {
         if (billing.wallet?.availableBalance !== undefined) {
             setCreditBalance(billing.wallet.availableBalance ?? billing.wallet.currentBalance ?? 0);
         } else if (billing.error) {
-            setCreditBalance(0);
+            setCreditBalance(null);
         }
     }, [billing.wallet, billing.error]);
 
@@ -3211,6 +3455,391 @@ export default function AdvancedSearchAIPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [finishInboundImport]);
 
+    /* ── Workflow-build interview ──────────────────────────────────────────
+       "Describe a pipeline in chat and get a workflow."
+
+       The whole interview happens in THIS thread — the user asked for that
+       explicitly, and opening the builder to collect answers would throw away
+       the description they already typed. It reuses the confirm-card shape the
+       search preview uses (an AI bubble carrying `options` chips), so a
+       question reads like every other decision point on this page.
+
+       The endpoint is stateless: each call carries the original description
+       plus the full merged answer map, and either asks more (`done:false`) or
+       returns the finished template (`done:true`). Nothing here launches — the
+       draft opens in the builder for review, because a campaign spends real
+       credits and messages real people.
+       ────────────────────────────────────────────────────────────────────── */
+
+    const wfPushAi = useCallback((
+        text: string,
+        options?: { label: string; value: string }[],
+        wfWarnings?: string[],
+    ) => {
+        setMessages(p => [...p, {
+            id: `a-wf-${Date.now()}-${p.length}`, role: 'ai', text, ts: new Date(), options, wfWarnings,
+        }]);
+    }, []);
+
+    /** Leave build mode and hand the user the builder, with nothing drafted. */
+    const wfBailToBuilder = useCallback((text: string) => {
+        wfWizardRef.current = null;
+        wfNamingRef.current = null;
+        setWfDraft(null);
+        wfPushAi(text);
+        setBuilderTemplate(null);
+        setShowCustomWorkflow(true);
+    }, [wfPushAi]);
+
+    /**
+     * Put a finished draft on the builder's canvas.
+     *
+     * The template is ad-hoc (the drafter invented it), so it cannot travel as
+     * an `initialTemplateKey` the way an Accelerator does — it goes through the
+     * builder's own AI-draft apply path instead.
+     *
+     * `autoLaunch` runs the builder's OWN launch() the moment the draft lands.
+     * That is deliberate and it is the only honest way to launch from chat:
+     * launch() carries the credit gate, the LinkedIn-targeting check, the InMail
+     * entitlement probe, the publisher-only exemption and the sequence-issue
+     * guards. Re-implementing any of that here would mean campaigns launched
+     * from chat validate differently from campaigns launched from the canvas.
+     * If a guard trips, the builder is already on screen showing the reason.
+     */
+    const openDraftInBuilder = useCallback((template: any, warnings: string[], autoLaunch?: boolean) => {
+        setBuilderTemplate(null);
+        setBuilderAiDraft({ template, warnings, autoLaunch: !!autoLaunch });
+        setShowCustomWorkflow(true);
+    }, []);
+
+    /**
+     * Save the drafted pipeline as a reusable Strategy.
+     *
+     * Deliberately separate from launching: saving costs nothing and touches no
+     * leads, so it never needs the launch guards. The drafted template IS the
+     * definition shape the strategies API wants (it carries `nodes`).
+     */
+    const wfSaveStrategy = useCallback(async (template: any, name: string) => {
+        try {
+            const res = await fetchWithTenant('/api/campaigns/strategies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    description: template?.tagline || template?.notes || null,
+                    definition: template,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 409) {
+                wfPushAi(`⚠️ You already have a saved sequence called **"${name}"**. Reply with a different name to save it under, or launch it as it is.`);
+                return false;
+            }
+            if (!res.ok || !data?.success) {
+                wfPushAi(`⚠️ I couldn't save that sequence${data?.error ? ` — ${data.error}` : ''}. The pipeline is still here, so you can launch it or open it in the builder.`);
+                return false;
+            }
+            return true;
+        } catch {
+            wfPushAi('⚠️ I couldn\'t reach the sequences service, so nothing was saved. The pipeline is still here.');
+            return false;
+        }
+    }, [wfPushAi]);
+
+    /**
+     * The sequence has a name — offer what you can actually do with it.
+     *
+     * Launch and Save are separate buttons because they are separate decisions:
+     * saving is free and reversible, launching spends credits and messages real
+     * people. "Save and launch" exists so wanting both is not two round trips.
+     */
+    const wfOfferLaunch = useCallback((template: any, warnings: string[], name: string) => {
+        const named = { ...template, name };
+        wfNamingRef.current = null;
+        setWfDraft({ template: named, warnings });
+        wfPushAi(
+            `**"${name}"** is ready.\n\n`
+            + 'Launching enrols leads and starts sending — everything else here is reversible.',
+            [
+                { label: `🚀 Launch "${name}"`, value: '__wf_launch__' },
+                { label: '💾 Save for later', value: '__wf_save__' },
+                { label: '💾🚀 Save and launch', value: '__wf_save_and_launch__' },
+                { label: '🛠️ Open in builder', value: '__wf_openbuilder__' },
+                { label: '❌ Discard', value: '__wf_cancel__' },
+            ],
+            warnings,
+        );
+    }, [wfPushAi]);
+
+    /** Render the drafted pipeline into the right-hand Workflow panel. */
+    const wfRenderPreview = useCallback((template: any) => {
+        try {
+            const nodes: any[] = Array.isArray(template?.nodes) ? template.nodes : [];
+            const srcKey: string | undefined = template?.source?.key;
+            const srcDef = srcKey ? WF_SOURCE_LABELS[srcKey] : undefined;
+            const { steps } = templateToPreviewSteps({
+                key: `ai-${Date.now()}`,
+                name: template?.name || 'AI workflow',
+                tagline: template?.tagline || '',
+                chain: nodes.map(n => n.title),
+                source: srcKey ? {
+                    key: srcKey as never,
+                    cfg: template?.source?.cfg || {},
+                    title: srcDef?.label || 'Contact source',
+                    description: srcDef?.sub || '',
+                } : undefined,
+                nodes,
+                inputs: [],
+                accent: '#0b1957',
+                meta: { cycleDays: 30, channels: new Set(nodes.map(n => String(n.type).split('_')[0])).size },
+                category: 'general',
+            } as WorkflowTemplate);
+            setWorkflowPreview(steps as never);
+            setShowPanel('workflow');
+        } catch (e) {
+            // A preview that cannot be built must not block the draft — the
+            // builder renders the same template from the same nodes.
+            console.warn('[workflow-build] preview render failed', e);
+        }
+    }, [setWorkflowPreview]);
+
+    /** Show the question at the head of the queue as a confirm-style card. */
+    const askWfQuestion = useCallback(() => {
+        const wiz = wfWizardRef.current;
+        if (!wiz) return;
+        const q = wiz.queue[wiz.idx];
+        if (!q) return;
+
+        const parts: string[] = [];
+        // A running count is always true. The "of N" is only shown while this
+        // batch is still the whole interview: the server is stateless and may
+        // ask another round, at which point a fixed total would be a lie.
+        const showTotal = wiz.queue.length > 1 && wiz.asked < wiz.queue.length;
+        parts.push(`🛠️ **Building your pipeline** — question ${wiz.asked + 1}${showTotal ? ` of ${wiz.queue.length}` : ''}`);
+        parts.push('');
+        parts.push(q.question);
+        if (q.why) parts.push(`\n*${q.why}*`);
+        if (q.default) parts.push(`\nDefault: **${q.default}**`);
+        if (!q.options?.length) parts.push('\nType your answer below, or tap a button.');
+
+        const opts: { label: string; value: string }[] = [];
+        // Options become tappable chips; the default one is marked so it can be
+        // accepted with a single tap.
+        for (const o of (q.options || []).slice(0, 12)) {
+            opts.push({
+                label: q.default && o === q.default ? `✅ ${o} (default)` : o,
+                value: `__wf_answer__:${o}`,
+            });
+        }
+        // Skipping and accepting the default are the same action, so they are
+        // the same control — naming the value it will use makes the one-tap
+        // accept obvious without adding a second chip that does the same thing.
+        opts.push({
+            label: q.default ? `⏭️ Skip — use "${q.default}"` : '⏭️ Skip this one',
+            value: '__wf_skip__',
+        });
+        // The way out, on every question.
+        opts.push({ label: '🛠️ Build it myself instead', value: '__wf_bail__' });
+        wfPushAi(parts.join('\n'), opts);
+    }, [wfPushAi]);
+
+    /**
+     * Call the interview endpoint with the full answer map and act on the reply.
+     *
+     * Degrades rather than throws: a 404 means the backend half isn't deployed
+     * yet, and the honest answer there is "not available — here's the builder".
+     */
+    const wfCallInterview = useCallback(async (answers: Record<string, string>) => {
+        const wiz = wfWizardRef.current;
+        if (!wiz) return;
+        wiz.rounds += 1;
+        const loadingId = `l-wf-${Date.now()}`;
+        setMessages(p => [...p, { id: loadingId, role: 'ai', text: '', ts: new Date(), loading: true }]);
+        setBusy(true);
+        try {
+            const res = await fetchWithTenant('/api/campaigns/workflow/interview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: wiz.description, answers }),
+            });
+            setMessages(p => p.filter(m => m.id !== loadingId));
+            // The user can bail out or cancel while this is in flight. Once they
+            // have, this reply belongs to an interview that no longer exists —
+            // answering it would drop a question card into a chat that has moved
+            // on, or reopen the builder they just closed.
+            if (wfWizardRef.current !== wiz) return;
+
+            // Not deployed here yet. Say so and offer the builder rather than
+            // hanging, throwing, or falling back to a lead search — a search is
+            // exactly the wrong answer to a pipeline description.
+            if (res.status === 404 || res.status === 501) {
+                wfWizardRef.current = null;
+                wfPushAi(
+                    '🛠️ Building a workflow from a description isn\'t available on this environment yet.\n\nYou can still build this pipeline yourself — the Accelerator builder has a **Build with AI** tab where you can paste the same description, or you can drag the steps in by hand.',
+                    [{ label: '🛠️ Open the builder', value: '__wf_bail__' }],
+                );
+                return;
+            }
+            let data: any = null;
+            try { data = await res.json(); } catch { /* non-JSON error body */ }
+            if (!res.ok || !data?.success) {
+                wfWizardRef.current = null;
+                wfPushAi(
+                    `⚠️ I couldn't build that workflow${data?.error ? ` — ${data.error}` : ''}. You can describe it again, or build it in the Accelerator builder.`,
+                    [{ label: '🛠️ Open the builder', value: '__wf_bail__' }],
+                );
+                return;
+            }
+
+            const warnings: string[] = Array.isArray(data.warnings) ? data.warnings.filter((w: any) => typeof w === 'string' && w.trim()) : [];
+
+            if (data.done) {
+                if (!data.template?.nodes?.length) {
+                    wfWizardRef.current = null;
+                    wfPushAi(
+                        '⚠️ The drafter finished but produced an empty pipeline. Try describing it again with the steps in order, or build it yourself.',
+                        [{ label: '🛠️ Open the builder', value: '__wf_bail__' }],
+                    );
+                    return;
+                }
+                wfWizardRef.current = null;
+                const template = data.template;
+                setWfDraft({ template, warnings });
+                wfRenderPreview(template);
+
+                const nodes: any[] = template.nodes;
+                // Numbered because the engine is linear — the order IS the
+                // pipeline, and a chip row would not say that.
+                const lines = nodes.map((n: any, i: number) =>
+                    `${i + 1}. **${n.title || n.type}**${n.description ? ` — ${n.description}` : ''}`);
+                const parts: string[] = [
+                    `✅ **Your pipeline is ready — "${template.name || 'AI workflow'}"**`,
+                    '',
+                    ...lines,
+                    '',
+                ];
+                if (template.notes) parts.push(`*${template.notes}*`, '');
+                parts.push('It\'s in the **Workflow** panel on the right — **nothing has launched yet**.');
+                parts.push('');
+                parts.push('**What should this sequence be called?** Type a name, or keep the suggested one.');
+
+                // Ask for the name here rather than dropping the user into the
+                // builder: a launch needs a name anyway, and being handed a
+                // full-screen canvas is not an answer to "is this right?".
+                const suggested = String(template.name || 'AI workflow').slice(0, 60);
+                wfNamingRef.current = { template, warnings, suggested };
+
+                wfPushAi(parts.join('\n'), [
+                    { label: `✅ Use "${suggested}"`, value: '__wf_name__' },
+                    { label: '🛠️ Open in builder', value: '__wf_openbuilder__' },
+                    { label: '✏️ Describe it differently', value: '__wf_restart__' },
+                    { label: '❌ Discard', value: '__wf_cancel__' },
+                ], warnings);
+                return;
+            }
+
+            // Normalised at the boundary so every reader below can trust the
+            // shape: a question with no id or no text is unanswerable, and a
+            // non-string option would render as "[object Object]" on a chip.
+            const questions: WfQuestion[] = (Array.isArray(data.questions) ? data.questions : [])
+                .filter((q: any) => q && typeof q.id === 'string' && typeof q.question === 'string' && q.question.trim())
+                .map((q: any): WfQuestion => ({
+                    id: q.id,
+                    question: q.question,
+                    options: Array.isArray(q.options)
+                        ? q.options.filter((o: any) => typeof o === 'string' && o.trim())
+                        : undefined,
+                    default: typeof q.default === 'string' && q.default.trim() ? q.default : undefined,
+                    why: typeof q.why === 'string' && q.why.trim() ? q.why : undefined,
+                }));
+            if (!questions.length) {
+                // done:false with nothing to ask is a contract violation; treat it
+                // as "cannot finish" rather than sitting on a silent dead end.
+                wfWizardRef.current = null;
+                wfPushAi(
+                    '⚠️ I ran out of questions before the pipeline was finished. Open the builder and I\'ll pick it up from your description there.',
+                    [{ label: '🛠️ Open the builder', value: '__wf_bail__' }],
+                );
+                return;
+            }
+            // Runaway drafter: it keeps asking and never finishes. Both caps are
+            // checked HERE as well as at answer time, because a server that
+            // re-asks after every round would otherwise refill the queue
+            // indefinitely without either counter ever ending the interview.
+            if (wiz.rounds >= WF_MAX_ROUNDS || wiz.asked >= WF_MAX_QUESTIONS) {
+                wfBailToBuilder('🛠️ This is taking more back-and-forth than it should. I\'ve opened the builder so you can finish it directly — your description and answers are the starting point.');
+                return;
+            }
+            // Warnings can arrive mid-interview; surface them as they come
+            // rather than only at the end.
+            if (warnings.length) {
+                wfPushAi('Worth knowing before we go further:', undefined, warnings);
+            }
+            wiz.queue = questions;
+            wiz.idx = 0;
+            askWfQuestion();
+        } catch (e) {
+            setMessages(p => p.filter(m => m.id !== loadingId));
+            console.warn('[workflow-build] interview failed', e);
+            wfWizardRef.current = null;
+            wfPushAi(
+                '⚠️ I couldn\'t reach the workflow builder service. You can try again, or build the pipeline yourself.',
+                [{ label: '🛠️ Open the builder', value: '__wf_bail__' }],
+            );
+        } finally {
+            setBusy(false);
+        }
+    }, [wfPushAi, wfBailToBuilder, wfRenderPreview, askWfQuestion]);
+
+    /**
+     * Record one answer and advance. Exhausting the queue sends everything back
+     * for the next round; hitting the question cap ends the interview instead of
+     * letting a runaway drafter ask forever.
+     */
+    const handleWfAnswer = useCallback((value: string, opts?: { skipped?: boolean }) => {
+        const wiz = wfWizardRef.current;
+        if (!wiz) return;
+        const q = wiz.queue[wiz.idx];
+        // Earlier cards keep their buttons live, so a click can arrive for a
+        // question the interview has already moved past. Same guard as the
+        // Roles wizard: a stale click is a no-op, not a phantom reply.
+        if (!q) return;
+
+        // A skip takes the default when there is one and simply records nothing
+        // when there isn't — the server re-derives from what it has either way.
+        const answer = opts?.skipped ? (q.default || '') : value.trim();
+        if (answer) wiz.answers[q.id] = answer;
+        wiz.idx += 1;
+        wiz.asked += 1;
+
+        if (wiz.idx < wiz.queue.length) {
+            if (wiz.asked >= WF_MAX_QUESTIONS) {
+                // Stop asking, but still let the server finish from what it has.
+                wiz.queue = [];
+                wiz.idx = 0;
+                wfPushAi('That\'s enough to work with — drafting the pipeline now.');
+                void wfCallInterview({ ...wiz.answers });
+                return;
+            }
+            askWfQuestion();
+            return;
+        }
+        void wfCallInterview({ ...wiz.answers });
+    }, [askWfQuestion, wfCallInterview, wfPushAi]);
+
+    /**
+     * Enter build mode: this message describes a pipeline, so build one instead
+     * of searching for leads.
+     */
+    const enterWorkflowBuild = useCallback((description: string) => {
+        roleWizardRef.current = null;
+        wfNamingRef.current = null;
+        setWfDraft(null);
+        wfWizardRef.current = { description, answers: {}, queue: [], idx: 0, asked: 0, rounds: 0 };
+        wfPushAi('🛠️ That reads like a **pipeline**, not a lead search — so let\'s build it rather than search for it. A couple of quick questions and I\'ll draft it for you.');
+        void wfCallInterview({});
+    }, [wfPushAi, wfCallInterview]);
+
     const doSend = useCallback(async (text: string, opts?: { targetingOverride?: LeadTargeting }) => {
         if (!text.trim() || busy) return;
         // ICP chip sentinel → run the SearchDispatcher (Apollo + Sales Nav on the active
@@ -3237,6 +3866,40 @@ export default function AdvancedSearchAIPage() {
             setPendingImportLocation(null);
             await finishInboundImport(parsedLeads, isGlobal ? '' : reply, lid);
             setBusy(false);
+            return;
+        }
+
+        // ── PRIORITY -1.5: Naming the finished sequence ──
+        // A drafted pipeline is waiting for a name, so this reply IS the name.
+        // Must run before the build-mode gate below, or a name like "LinkedIn
+        // outreach then follow up" would be read as a fresh pipeline
+        // description and restart the interview the user just finished.
+        if (wfNamingRef.current) {
+            const naming = wfNamingRef.current;
+            setMessages(p => p.filter(m => m.id !== lid));
+            const typed = text.trim().slice(0, 60);
+            wfOfferLaunch(naming.template, naming.warnings, typed || naming.suggested);
+            setBusy(false);
+            return;
+        }
+
+        // ── PRIORITY -1: Pipeline description → BUILD MODE ──
+        // This message describes a workflow, not an audience. It must be caught
+        // HERE, ahead of the ABM / web-search / lead-chat handlers below: the
+        // ABM regex matches a bare `research <anything>`, which is how
+        // "…research about them their company, send me the report post
+        // approval…" was answered with an invented company profile for a firm
+        // called "them their". The backend's `workflow_build` verdict (handled
+        // at the search response, below) cannot save a message that never
+        // reaches the classifier.
+        //
+        // looksLikePipelineDescription needs three independent pipeline signals
+        // to fire, so ordinary ICP, ABM and signal queries fall straight
+        // through to the flows they use today.
+        if (!wfWizardRef.current && looksLikePipelineDescription(text)) {
+            setMessages(p => p.filter(m => m.id !== lid));
+            setBusy(false);
+            enterWorkflowBuild(text);
             return;
         }
 
@@ -3446,7 +4109,11 @@ export default function AdvancedSearchAIPage() {
                     if (dms.length > 0) {
                         parts.push(`**Key Decision Makers & ICP Scores:**`);
                         dms.slice(0, 6).forEach((dm: any) => {
-                            const score = dm.icp_score >= 80 ? `🟢 ${dm.icp_score}/100` : dm.icp_score >= 60 ? `🟡 ${dm.icp_score}/100` : `🟠 ${dm.icp_score}/100`;
+                            // Same 0-1 vs 0-100 hazard as the lead badges: the ABM
+                            // company_search path stamps a 0.8 float over the real
+                            // 0-100 score its own ICP scorer produced.
+                            const n = normalizeIcpScore(dm.icp_score) ?? 0;
+                            const score = n >= 80 ? `🟢 ${n}/100` : n >= 60 ? `🟡 ${n}/100` : `🟠 ${n}/100`;
                             parts.push(`• **${dm.name || 'Unknown'}** — ${dm.title || 'N/A'}${dm.department ? ` · ${dm.department}` : ''} ${score}${dm.linkedin_url ? ` · [LinkedIn](${dm.linkedin_url})` : ''}`);
                             if (dm.icp_rationale) parts.push(`  _${dm.icp_rationale}_`);
                         });
@@ -3700,7 +4367,7 @@ export default function AdvancedSearchAIPage() {
                                         locked: idx >= 5,
                                         phone: item.phone || item.company_phone || '',
                                         email: item.email || '',
-                                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                        icp_score: normalizeIcpScore(item.icp_score),
                                         match_level: item.match_level || undefined,
                                         icp_reasoning: item.icp_reasoning || undefined,
                                         enriched_profile: item.enriched_profile || undefined,
@@ -3715,6 +4382,17 @@ export default function AdvancedSearchAIPage() {
                                     setMessages(p => p.concat({
                                         id: `a-sr-${Date.now()}`, role: 'ai',
                                         text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        ts: new Date(),
+                                    }));
+                                } else if (!resp.ok || d.success === false) {
+                                    // A server-side failure is NOT an empty result set. The
+                                    // endpoint returns JSON on 500, so resp.json() succeeds and
+                                    // this used to fall through to "try rephrasing" — telling
+                                    // people to reword a query that was never the problem.
+                                    console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                                    setMessages(p => p.concat({
+                                        id: `a-err-${Date.now()}`, role: 'ai',
+                                        text: `⚠️ The search failed on our side — this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
                                         ts: new Date(),
                                     }));
                                 } else {
@@ -3817,7 +4495,7 @@ export default function AdvancedSearchAIPage() {
                                 locked: idx >= 5,
                                 phone: item.phone || item.company_phone || '',
                                 email: item.email || '',
-                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                icp_score: normalizeIcpScore(item.icp_score),
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -3832,6 +4510,15 @@ export default function AdvancedSearchAIPage() {
                             setMessages(p => p.concat({
                                 id: `a-sr-${Date.now()}`, role: 'ai',
                                 text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                ts: new Date(),
+                            }));
+                        } else if (!resp.ok || d.success === false) {
+                            // See the sibling handler above: a 500 returns JSON, so this branch
+                            // must be split out or a server crash reads as "no matches".
+                            console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                            setMessages(p => p.concat({
+                                id: `a-err-${Date.now()}`, role: 'ai',
+                                text: `⚠️ The search failed on our side — this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
                                 ts: new Date(),
                             }));
                         } else {
@@ -4039,6 +4726,12 @@ export default function AdvancedSearchAIPage() {
             // True when 0 results is a transient provider rate-limit (HTTP 429),
             // not an empty match set — surfaced so we tell the user to retry.
             let searchRateLimited = false;
+            // Which module the backend actually routed to, and its display name.
+            // The unified endpoint picks between advanced_search, abm,
+            // signal_detection and competitor_intent per query, so the result
+            // banner cannot name one of them from the client side.
+            let searchModule = '';
+            let searchModuleLabel = '';
 
             // Determine effective search query for confirmed searches.
             // When user confirms a preview with "yes", "ok", etc., always use the pre-extracted intent
@@ -4056,18 +4749,43 @@ export default function AdvancedSearchAIPage() {
                 ext = confirmedForSearch.intent;
                 searchQuery = confirmedForSearch.originalQuery || text;
             } else {
-                // For non-confirmed (lead-chat triggered) searches, build a compact query
-                // from only core keywords + locations (not job titles or industries which are
-                // passed as structured targeting and would bloat the query string).
+                // For non-confirmed (lead-chat triggered) searches, lead with what the
+                // user actually typed and top it up with accumulated targeting.
+                //
+                // This used to send ONLY the extracted keywords + companies + first
+                // location, which quietly deleted the user's phrasing. The backend
+                // classifies the module off this string and keys on activity language —
+                // "posting about", "recently raised", "just promoted". Extraction keeps
+                // none of that, so "founders posting about hiring SDRs" arrived as
+                // "hiring sales development reps" and routed to advanced_search: a plain
+                // people-search instead of the signal detection the user asked for. The
+                // backend cannot recover a word the frontend removed.
+                //
+                // The rebuild still has a job, which is why the accumulated terms are
+                // kept: on a REFINEMENT turn the message is a delta ("make it Dubai
+                // only"), and searching that fragment alone would drop the intent built
+                // up over the conversation. isFirstMessage is true only for the very
+                // first message of the session, so this branch covers brand-new queries
+                // too — those are exactly the ones that must survive verbatim.
+                //
+                // Length is not a concern here: `targeting` is always sent alongside, so
+                // the backend takes the fast path and LinkedIn keywords come from
+                // intent.keywords. The query is a queryHint of last resort there
+                // (LinkedInSearchService.fullSearchWithIntent) and the classifier's input
+                // everywhere else. Job titles and industries are still left out — those
+                // are what bloated the string, and they travel as structured targeting.
                 if (shouldRunSearch && ext && !isFirstMessage) {
                     const kwArr = Array.isArray(ext.keywords)
                         ? ext.keywords
                         : (ext.keywords ? [ext.keywords] : []);
-                    searchQuery = [
+                    const typed = text.trim();
+                    const typedLower = typed.toLowerCase();
+                    const topUp = [
                         ...kwArr,
                         ...(ext.company_names || []),
                         ...(ext.locations?.slice(0, 1) || []),   // first location only
-                    ].filter(Boolean).join(' ') || text;
+                    ].filter((t): t is string => !!t && !typedLower.includes(String(t).toLowerCase()));
+                    searchQuery = [typed, ...topUp].filter(Boolean).join(' ') || text;
                 } else {
                     searchQuery = text;
                 }
@@ -4154,6 +4872,19 @@ export default function AdvancedSearchAIPage() {
 
                 setIsSearching(false);
 
+                // ── Classifier verdict: this was a pipeline, not a search ──
+                // The unified endpoint routes to `workflow_build` when the query
+                // describes a workflow. It returns no people for that module, so
+                // rendering the usual result set would print a lead panel over an
+                // empty answer. Hand the description to the interview instead and
+                // leave the search path untouched for every other module.
+                if (d?.module_used === 'workflow_build') {
+                    setMessages(p => p.filter(m => m.id !== lid));
+                    setBusy(false);
+                    enterWorkflowBuild(text);
+                    return;
+                }
+
                 if (d) {
                     if (d.intent) {
                         const newExt: LeadTargeting = {
@@ -4185,6 +4916,8 @@ export default function AdvancedSearchAIPage() {
                     icpWasApplied = !!d.icp_applied;
                     excludedAlreadyContacted = Number(d.excluded_already_contacted) || 0;
                     searchRateLimited = !!d.rate_limited;
+                    searchModule = d.module_used || '';
+                    searchModuleLabel = d.module_label || '';
                     if (Array.isArray(d.results) && d.results.length > 0) {
                         rawSearchResults = d.results;
                         realLeads = d.results.map((item: any, idx: number) => {
@@ -4202,11 +4935,12 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: idx >= 5,
-                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                icp_score: normalizeIcpScore(item.icp_score),
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
                                 inferred: item.inferred || undefined,
+                                signal_context: item.signal_context || undefined,
                             };
                         });
                         setLeads(realLeads);
@@ -4246,7 +4980,7 @@ export default function AdvancedSearchAIPage() {
                                             if (!s || s.icp_score == null) return l;
                                             return {
                                                 ...l,
-                                                icp_score:        s.icp_score,
+                                                icp_score:        normalizeIcpScore(s.icp_score),
                                                 match_level:      s.match_level || l.match_level,
                                                 icp_reasoning:    s.icp_reasoning || l.icp_reasoning,
                                                 enriched_profile: s.enriched_profile || l.enriched_profile,
@@ -4257,7 +4991,7 @@ export default function AdvancedSearchAIPage() {
                                         // had scoring been synchronous — unless they've
                                         // already started picking, in which case leave it.
                                         seedDefaultSelection(
-                                            realLeads.map(l => ({ ...l, icp_score: scoreMap[l.id]?.icp_score ?? l.icp_score })),
+                                            realLeads.map(l => ({ ...l, icp_score: normalizeIcpScore(scoreMap[l.id]?.icp_score) ?? l.icp_score })),
                                             true
                                         );
                                     }
@@ -4345,7 +5079,7 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: false,
-                                icp_score: item.icp_score != null ? item.icp_score : undefined,
+                                icp_score: normalizeIcpScore(item.icp_score),
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -4387,6 +5121,34 @@ export default function AdvancedSearchAIPage() {
                 } catch (e) { console.warn('[Search] extract-intent err', e); }
             }
 
+            /**
+             * Where the leads in this result set actually came from.
+             *
+             * This used to read "on LinkedIn via Sales Navigator" unconditionally.
+             * /search/unified routes each query to one of four modules, so that line
+             * printed over ABM, competitor-intent and post-signal runs as well — a
+             * signal_detection run that had matched LinkedIn posts announced itself as
+             * a Sales Navigator search, which is how the source of a set of leads
+             * became impossible to tell from the chat. The response says which module
+             * ran; say that instead of guessing.
+             */
+            const searchSourceLabel = (): string => {
+                switch (searchModule) {
+                    case 'signal_detection':
+                        return 'from LinkedIn posts matching your signal (Intent Signal Search)';
+                    case 'abm':
+                        return 'at the account you named (Target Specific Account)';
+                    case 'competitor_intent':
+                        return 'from competitor intent signals (Competitor Prospect Search)';
+                    case 'advanced_search':
+                        return useSalesNav ? 'on LinkedIn via Sales Navigator' : 'on LinkedIn';
+                    default:
+                        // Unknown/absent module_used — name the label if the backend sent
+                        // one, and otherwise stay vague rather than invent a source.
+                        return searchModuleLabel ? `via ${searchModuleLabel}` : 'on LinkedIn';
+                }
+            };
+
             // ── Build final AI response text ──
             let finalText = aiResponseText; // May be set by lead-chat above
 
@@ -4398,7 +5160,7 @@ export default function AdvancedSearchAIPage() {
                     // First message: build summary
                     finalText = buildSummary(ext);
                     if (realLeads.length > 0) {
-                        finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via Sales Navigator.`;
+                        finalText += `\n\n🔍 **Found ${searchTotal} real leads** on LinkedIn via ${searchSourceLabel()}.`;
                         if (icpWasApplied) {
                             const strongCount = realLeads.filter(l => l.match_level === 'strong').length;
                             const moderateCount = realLeads.filter(l => l.match_level === 'moderate').length;
@@ -4407,14 +5169,14 @@ export default function AdvancedSearchAIPage() {
                     }
                     if (realLeads.length > 0) setTimeout(() => setShowPanel('leads'), 500);
                 } else if (realLeads.length > 0) {
-                    finalText = `Searching LinkedIn for leads...\n\n🔍 **Found ${searchTotal} leads** matching your search.`;
+                    finalText = `Searching LinkedIn for leads...\n\n🔍 **Found ${searchTotal} leads** ${searchSourceLabel()}.`;
                     setTimeout(() => setShowPanel('leads'), 500);
                 } else {
                     finalText = "I'm here to help you find the perfect leads! Try describing what you need — for example:\n\n• **Find a person:** \"John Smith, CTO at Stripe\"\n• **People at a company:** \"Find all people in Tesla\"\n• **Decision makers:** \"Find decision makers at Google\"\n• **Specific role:** \"Find founders at techiemaya\"\n• **Industry search:** \"Marketing directors at fintech startups in London\"";
                 }
             } else if (realLeads.length > 0) {
                 // lead-chat triggered a search and got results
-                finalText += `\n\n🔍 **Found ${searchTotal} leads** matching your criteria.`;
+                finalText += `\n\n🔍 **Found ${searchTotal} leads** ${searchSourceLabel()}.`;
                 setTimeout(() => setShowPanel('leads'), 500);
             }
 
@@ -4477,7 +5239,7 @@ export default function AdvancedSearchAIPage() {
                 id: `a-${Date.now()}`, role: 'ai', text: '⚠️ Something went wrong. Please try again.', ts: new Date(),
             }));
         } finally { setBusy(false); }
-    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation, pendingLocationRequest, pendingImportLocation, finishInboundImport, webSearchEnabled]);
+    }, [busy, messages, convId, targeting, pendingIntent, pendingSearchConfirmation, pendingLocationRequest, pendingImportLocation, finishInboundImport, webSearchEnabled, enterWorkflowBuild, wfOfferLaunch]);
 
     // ── Roles wizard ───────────────────────────────────────────────────────
     const rolePushAi = useCallback((text: string, options?: { label: string; value: string }[]) => {
@@ -4551,11 +5313,102 @@ export default function AdvancedSearchAIPage() {
             handleRoleAnswer(t);
             return;
         }
+        // Build mode: a typed reply answers the question on screen rather than
+        // starting a search. Same shape as the Roles wizard above so there is
+        // one advance path per wizard, typed or tapped. Gated on there actually
+        // BEING a question on screen — between rounds the interview holds no
+        // question, and swallowing the reply there would echo the user with no
+        // answer coming back.
+        if (wfWizardRef.current && wfWizardRef.current.queue[wfWizardRef.current.idx]) {
+            const t = input.trim();
+            setInput('');
+            if (taRef.current) taRef.current.style.height = 'auto';
+            setMessages(p => [...p, { id: `u-wf-${Date.now()}`, role: 'user', text: t, ts: new Date() }]);
+            handleWfAnswer(t);
+            return;
+        }
         doSend(input.trim()); setInput('');
         if (taRef.current) taRef.current.style.height = 'auto';
-    }, [input, busy, doSend, handleRoleAnswer]);
+    }, [input, busy, doSend, handleRoleAnswer, handleWfAnswer]);
 
     const onOptClick = useCallback(async (v: string) => {
+        // ── Workflow-build interview actions ──────────────────────────────
+        // A chip is a shortcut for typing, so it routes through the same
+        // handleWfAnswer the composer does — one advance path per wizard.
+        //
+        // Every earlier question card stays in the transcript with its buttons
+        // live, so a click can arrive for a question the interview has already
+        // moved past. Checking for a current question BEFORE echoing keeps a
+        // stale click a no-op instead of a user bubble no answer ever follows.
+        if (v.startsWith('__wf_answer__:') || v === '__wf_skip__') {
+            const wiz = wfWizardRef.current;
+            const q = wiz?.queue[wiz.idx];
+            if (!q) return;
+            const skipped = v === '__wf_skip__';
+            const answer = skipped ? (q.default || '') : v.slice('__wf_answer__:'.length);
+            setMessages(p => [...p, {
+                id: `u-wf-${Date.now()}`, role: 'user',
+                text: answer || 'Skip', ts: new Date(),
+            }]);
+            handleWfAnswer(answer, { skipped });
+            return;
+        }
+        if (v === '__wf_bail__') {
+            wfBailToBuilder('🛠️ Opened the Accelerator builder — pick your steps there and configure each one.');
+            return;
+        }
+        if (v === '__wf_name__') {
+            const naming = wfNamingRef.current;
+            if (!naming) return;   // stale click on a card the flow has moved past
+            setMessages(p => [...p, { id: `u-wf-${Date.now()}`, role: 'user', text: naming.suggested, ts: new Date() }]);
+            wfOfferLaunch(naming.template, naming.warnings, naming.suggested);
+            return;
+        }
+        if (v === '__wf_launch__' || v === '__wf_save__' || v === '__wf_save_and_launch__') {
+            const draft = wfDraft;
+            if (!draft) return;
+            const name = String(draft.template?.name || 'AI workflow');
+            void (async () => {
+                if (v !== '__wf_launch__') {
+                    const saved = await wfSaveStrategy(draft.template, name);
+                    if (!saved) return;   // the failure already explained itself
+                    wfPushAi(`💾 Saved **"${name}"** — you'll find it under your saved sequences.`);
+                    if (v === '__wf_save__') return;
+                }
+                // Hand the launch to the builder's own launch(), guards and all.
+                wfPushAi(`🚀 Launching **"${name}"** — opening the canvas so you can watch it start. If anything is missing, it'll say so there rather than failing quietly.`);
+                openDraftInBuilder(draft.template, draft.warnings, true);
+            })();
+            return;
+        }
+        if (v === '__wf_openbuilder__') {
+            // Naming may still be open — the user chose the canvas over the chat.
+            const naming = wfNamingRef.current;
+            if (naming) {
+                wfNamingRef.current = null;
+                setWfDraft({ template: naming.template, warnings: naming.warnings });
+                openDraftInBuilder(naming.template, naming.warnings);
+                return;
+            }
+            if (wfDraft) openDraftInBuilder(wfDraft.template, wfDraft.warnings);
+            else { setBuilderTemplate(null); setShowCustomWorkflow(true); }
+            return;
+        }
+        if (v === '__wf_restart__') {
+            wfWizardRef.current = null;
+            wfNamingRef.current = null;
+            setWfDraft(null);
+            wfPushAi('Sure — describe the pipeline again and I\'ll draft it fresh. Say the steps in the order you want them to run.');
+            return;
+        }
+        if (v === '__wf_cancel__') {
+            wfWizardRef.current = null;
+            wfNamingRef.current = null;
+            setWfDraft(null);
+            wfPushAi('No problem — pipeline discarded. Nothing was launched. Describe another one any time, or search for leads as usual.');
+            return;
+        }
+
         // ── Roles wizard actions ──────────────────────────────────────────
         // Copy gate answered by button — routed through the same handler as a
         // typed reply so the wizard has one advance path.
@@ -4639,7 +5492,7 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: idx >= 5,
-                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                        icp_score: normalizeIcpScore(item.icp_score),
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -4824,7 +5677,7 @@ export default function AdvancedSearchAIPage() {
         }
         if (v.toLowerCase().includes('refine')) setChatBlocked(false);
         doSend(v);
-    }, [doSend, targeting, pendingContact, setCpStep, isMobile, rolePreviewing, leadCount, useSalesNav, linkedInSearch, rolePushAi, pushRoleCard, handleRoleAnswer]);
+    }, [doSend, targeting, pendingContact, setCpStep, isMobile, rolePreviewing, leadCount, useSalesNav, linkedInSearch, rolePushAi, pushRoleCard, handleRoleAnswer, handleWfAnswer, wfBailToBuilder, wfPushAi, wfDraft, openDraftInBuilder, wfOfferLaunch, wfSaveStrategy]);
 
     const handleTargetingConfirm = useCallback(async () => {
         // Build the updated targeting object with new filter values
@@ -4988,7 +5841,7 @@ export default function AdvancedSearchAIPage() {
                         locked: (existingCount + idx) >= 5,
                         phone: item.phone || '',
                         email: item.email || '',
-                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                        icp_score: normalizeIcpScore(item.icp_score),
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -5079,7 +5932,7 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: (existingCount + idx) >= 5,
-                        icp_score: item.icp_score != null ? item.icp_score : undefined,
+                        icp_score: normalizeIcpScore(item.icp_score),
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -5505,6 +6358,13 @@ export default function AdvancedSearchAIPage() {
         }
     };
 
+    const growTextarea = () => {
+        const el = taRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    };
+
     const toggleRecording = async () => {
         if (beautifying) return;
 
@@ -5540,6 +6400,7 @@ export default function AdvancedSearchAIPage() {
                     const data = await res.json();
                     if (data && data.beautified_text) {
                         setInput(data.beautified_text);
+                        requestAnimationFrame(growTextarea);
                     }
                 }
             } catch (err) {
@@ -5567,14 +6428,18 @@ export default function AdvancedSearchAIPage() {
             rec.interimResults = true;
             rec.lang = 'en-US';
 
+            dictationBaseRef.current = input.trim() ? input.trim() + ' ' : '';
+            dictationFinalRef.current = '';
+
             rec.onresult = (event: any) => {
-                let finalTranscript = '';
+                let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    finalTranscript += event.results[i][0].transcript;
+                    const result = event.results[i];
+                    if (result.isFinal) dictationFinalRef.current += result[0].transcript;
+                    else interim += result[0].transcript;
                 }
-                if (finalTranscript) {
-                    setInput(finalTranscript);
-                }
+                setInput((dictationBaseRef.current + dictationFinalRef.current + interim).trimStart());
+                requestAnimationFrame(growTextarea);
             };
 
             rec.onerror = (event: any) => {
@@ -6045,7 +6910,25 @@ export default function AdvancedSearchAIPage() {
                                     {/* Right flank — a wrapper, not flex on the button itself:
                                         a flex-basis would override adv-send-sm's fixed 34px and
                                         stretch the send circle into an oval. */}
-                                    <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <div className="adv-foot-side" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                                    {!mediaMode && speechSupported && (
+                                        <button
+                                            className={`adv-mic-btn ${isRecording ? 'adv-mic-btn-rec recording-pulse' : ''}`}
+                                            onClick={(e) => { e.stopPropagation(); toggleRecording(); }}
+                                            disabled={beautifying}
+                                            aria-pressed={isRecording}
+                                            aria-label={isRecording ? 'Stop dictation' : 'Dictate your prompt'}
+                                            title={beautifying ? 'Cleaning up transcript…' : isRecording ? 'Stop dictation' : 'Dictate your prompt'}
+                                        >
+                                            {beautifying ? (
+                                                <Loader2 className="size-3.5 animate-spin" />
+                                            ) : isRecording ? (
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                                            ) : (
+                                                <Mic className="size-3.5" style={{ strokeWidth: 2.5 }} />
+                                            )}
+                                        </button>
+                                    )}
                                     <button
                                         className="adv-send-circle adv-send-sm"
                                         disabled={mediaMode ? ((!input.trim() && (!mb.references || mb.references.length === 0)) || mb.generating || mb.step === 'loading' || (mb.step === 'builder-brand-dna' && !brandDnaRequestedChanges)) : (!input.trim() || busy || (creditBalance !== null && creditBalance <= 0 && msgCount >= 10))}
@@ -6373,7 +7256,7 @@ export default function AdvancedSearchAIPage() {
                                                         )}
                                                         {!targetingFiltersActive && lead.icp_score !== undefined && (
                                                           <span className={`inline-flex items-center gap-[3px] px-[8px] py-[2px] rounded-[12px] text-[11px] font-bold ${scoreToMatchLevel(lead.icp_score) === 'strong' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300'}`}>
-                                                                {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
+                                                                {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
                                                             </span>
                                                         )}
                                                         {/* Scoring still in flight (defer_icp): hold the chip's place with a
@@ -6404,6 +7287,46 @@ export default function AdvancedSearchAIPage() {
                                                             </span>
                                                         </div>
                                                     )}
+                                                    {/* Signal-derived lead: show WHY it surfaced and link back to the
+                                                        source. Signal leads are otherwise indistinguishable from Sales
+                                                        Nav ones, and the post (or job listing) is the whole reason this
+                                                        person is here.
+
+                                                        Every part is individually optional. Job-sourced leads have no
+                                                        pain_points — nobody wrote anything — so the chip row must not
+                                                        render an empty strip; hence the guard on the whole block below
+                                                        rather than on signal_context alone. */}
+                                                    {(() => {
+                                                        const ctx = lead.signal_context;
+                                                        if (!ctx) return null;
+                                                        const pains = (ctx.pain_points || []).filter(Boolean).slice(0, 3);
+                                                        const link = signalContextLink(ctx);
+                                                        if (!ctx.signal_type && !pains.length && !link) return null;
+                                                        return (
+                                                            <div className="flex gap-[4px] flex-wrap items-center mt-[4px]">
+                                                                {ctx.signal_type && (
+                                                                    <span className="inline-flex items-center gap-[3px] px-[7px] py-[1px] rounded-[10px] text-[10px] font-semibold bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                                                        📡 {ctx.signal_type.replace(/_/g, ' ')}
+                                                                        {ctx.signal_strength && (
+                                                                            <span className="opacity-60 ml-[2px]">·{ctx.signal_strength}</span>
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                                {pains.map((pp, pi) => (
+                                                                    <span key={pi} className="px-[6px] py-[1px] rounded-[8px] text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                                                                        {pp}
+                                                                    </span>
+                                                                ))}
+                                                                {link && (
+                                                                    <a href={link.url} target="_blank" rel="noopener noreferrer"
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        className="text-[10px] font-semibold text-sky-700 dark:text-sky-400 hover:underline">
+                                                                        {link.label} ↗
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     {!targetingFiltersActive && lead.icp_reasoning && (
                                                         <div className="text-[11px] text-gray-500 dark:text-slate-300 mt-[4px] italic leading-relaxed">
                                                             {lead.icp_reasoning}
@@ -6539,7 +7462,7 @@ export default function AdvancedSearchAIPage() {
                                                                         background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
                                                                         color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                                     }}>
-                                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {lead.icp_score}%
+                                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -7426,11 +8349,13 @@ export default function AdvancedSearchAIPage() {
             {showCustomWorkflow && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#F8F9FE' }}>
                     <CustomWorkflowBuilder
-                        onClose={() => { setShowCustomWorkflow(false); setBuilderTemplate(null); setEditingCampaignId(null); }}
+                        onClose={() => { setShowCustomWorkflow(false); setBuilderTemplate(null); setBuilderAiDraft(null); setEditingCampaignId(null); }}
                         initialTemplateKey={builderTemplate?.key}
                         initialSourceCfg={builderTemplate?.sourceCfg}
                         initialNodeCfg={builderTemplate?.nodeCfg}
-                        autoLaunch={builderTemplate?.autoLaunch}
+                        autoLaunch={builderTemplate?.autoLaunch || builderAiDraft?.autoLaunch}
+                        initialAiTemplate={builderAiDraft?.template}
+                        initialAiWarnings={builderAiDraft?.warnings}
                         editCampaignId={editingCampaignId || undefined}
                     />
                 </div>
@@ -8244,6 +9169,29 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, a
                           </div>
                       )}
                   </div>
+                )}
+
+                {/* ── Workflow-build caveats ──
+                    Where the drafted pipeline differs from what was asked for
+                    — most often "in parallel" flattened to sequential, because
+                    the engine runs one step at a time. Rendered as its own
+                    panel, above the buttons, so it is read before the decision
+                    rather than discovered after the campaign is live. */}
+                {msg.wfWarnings && msg.wfWarnings.length > 0 && (
+                    <div className="mt-3 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                            Read this before you launch
+                        </div>
+                        <ul className="mt-2 space-y-1.5 list-none p-0 m-0">
+                            {msg.wfWarnings.map((w, i) => (
+                                <li key={i} className="text-[13px] leading-snug text-amber-900 dark:text-amber-200 flex gap-2">
+                                    <span aria-hidden className="flex-shrink-0">•</span>
+                                    <span>{w}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
 
                 {/* Option buttons from AI */}
@@ -13013,6 +13961,10 @@ const css = `
             .adv-chat-input-foot > .adv-premium-btn {flex:0 0 auto; }
             .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
             .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
+            .adv-mic-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
+            .adv-mic-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
+            .adv-mic-btn:disabled {cursor:default; color:#94a3b8; }
+            .adv-mic-btn.adv-mic-btn-rec, .adv-mic-btn.adv-mic-btn-rec:hover {background:#fef2f2; border-color:#ef4444; color:#ef4444; }
             .adv-roles-btn {display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:7px 14px; border-radius:999px; border:1.5px solid #e5e7eb; background:#fff; color:#0b1957; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s ease; }
             .adv-roles-btn:hover {border-color:#0b1957; box-shadow:0 4px 14px rgba(11,25,87,.14); transform:translateY(-1px); }
             .adv-roles-menu {position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:8px; width:370px; max-width:calc(100vw - 32px); max-height:440px; overflow-y:auto; box-shadow:0 16px 48px rgba(15,23,42,.16); z-index:100; animation:fadeUp .15s ease both; }
@@ -13277,8 +14229,8 @@ const css = `
                    flanks would squeeze the pill against its 95px min-width. */
                 .adv-foot-side { flex: 0 1 auto !important; }
                 .adv-premium-btn { width: auto !important; min-width: 95px !important; justify-content: center !important; padding: 3px 10px !important; margin: 0 !important; font-size: 10px !important; }
-                .adv-chat-attach-btn, .adv-send-sm { width: 28px !important; height: 28px !important; }
-                .adv-chat-attach-btn svg, .adv-send-sm svg { width: 13px !important; height: 13px !important; }
+                .adv-chat-attach-btn, .adv-send-sm, .adv-mic-btn { width: 28px !important; height: 28px !important; }
+                .adv-chat-attach-btn svg, .adv-send-sm svg, .adv-mic-btn svg { width: 13px !important; height: 13px !important; }
                 .adv-msg-counter { font-size: 10px !important; color: #9ca3af !important; margin: 4px 0 0 !important; padding: 0 !important; line-height: 1.2 !important; }
                 
                 .adv-mobile-add-btn, .adv-mobile-send-btn {
@@ -13604,6 +14556,11 @@ const css = `
             .dark .adv-roles-menu { background: #0f1b33; border-color: #31415f; }
             .dark .adv-chat-attach-btn svg { stroke: #ffffff; }
             .dark .adv-chat-attach-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-mic-btn { background: #1A2A43; border: 1px solid #484b4f; color: #ffffff; }
+            .dark .adv-mic-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-mic-btn svg { stroke: #ffffff; }
+            .dark .adv-mic-btn.adv-mic-btn-rec, .dark .adv-mic-btn.adv-mic-btn-rec:hover { background: #3b1d1d; border-color: #ef4444; color: #ef4444; }
+            .dark .adv-mic-btn.adv-mic-btn-rec svg { stroke: #ef4444; fill: #ef4444; }
             .dark .adv-unlock-btn { background: #2B7CFF; color: #000724; }
             .dark .adv-unlock-btn:hover { background: #1e5fa8; box-shadow: 0 4px 12px rgba(43, 124, 255, 0.3); }
 

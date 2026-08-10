@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useTransition } from "react";
 import { Plus, RadioTower, Gauge, Zap, Trophy, Activity, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/app-toaster";
@@ -26,6 +26,19 @@ import { Goal } from "lucide-react";
 
 export default function CampaignsListPage() {
   const router = useRouter();
+  // Template/Campaign/Custom Accelerator route.push to large client bundles
+  // (advanced-search-ai's page.tsx alone is ~14k lines) with zero loading
+  // feedback on the button. Measured: 7.3s from click to the URL actually
+  // changing on a first visit this session, during which the button looks
+  // completely inert -- not disabled, no spinner, nothing. A user has every
+  // reason to conclude it's broken and click again. useTransition's isPending
+  // doesn't make the navigation faster; it makes the wait visible.
+  const [isNavigating, startNavigation] = useTransition();
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const navigateTo = (path: string) => {
+    setNavigatingTo(path);
+    startNavigation(() => router.push(path));
+  };
   const searchParams = useSearchParams();
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -274,28 +287,43 @@ export default function CampaignsListPage() {
 
           <div className="flex gap-2 w-full sm:w-auto">
             <Button
-              onClick={() => router.push("/conversations/templates/create")}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+              onClick={() => navigateTo("/conversations/templates/create")}
+              disabled={isNavigating}
+              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              {isNavigating && navigatingTo === "/conversations/templates/create" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
               Template
             </Button>
 
             <Button
-              onClick={() => router.push("/onboarding/advanced-search-ai")}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+              onClick={() => navigateTo("/onboarding/advanced-search-ai")}
+              disabled={isNavigating}
+              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              {isNavigating && navigatingTo === "/onboarding/advanced-search-ai" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
               Campaign
             </Button>
 
             {/* Custom Accelerator builder: source node → outreach nodes */}
             <Button
-              onClick={() => router.push("/campaigns/workflow")}
+              onClick={() => navigateTo("/campaigns/workflow")}
+              disabled={isNavigating}
               variant="outline"
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+              className="rounded-xl font-semibold px-3 py-1.5 flex-1 sm:w-auto border-[#0b1957] text-[#0b1957] hover:bg-[#0b1957]/10 hover:cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              {isNavigating && navigatingTo === "/campaigns/workflow" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
               Custom Accelerator
             </Button>
           </div>

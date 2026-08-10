@@ -5,6 +5,7 @@ import { Star, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 interface StarredRow {
   id: string;
@@ -36,6 +37,8 @@ export function StarredMessagesDialog({
   channel,
   onSelectConversation,
 }: StarredMessagesDialogProps) {
+  // Starred rows are labelled by contact, falling back to the raw number.
+  const { displayNameOrPhone } = usePhoneMasking();
   const [rows, setRows] = useState<StarredRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +132,7 @@ export function StarredMessagesDialog({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[14px] font-semibold truncate">
-                        {row.contact_name || row.contact_phone || 'Unknown'}
+                        {displayNameOrPhone(row.contact_name, row.contact_phone)}
                       </span>
                       <span className="text-[11px] text-muted-foreground shrink-0">
                         {(() => {

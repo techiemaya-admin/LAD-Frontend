@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verdant Landscapes — grounds contracts across the UAE</title>
+
+<meta name="description" content="Design-build and grounds maintenance for UAE communities, hotels and developers.">
+<meta property="og:title" content="Win the grounds contract before it goes to tender">
+<meta property="og:description" content="Design-build and grounds maintenance for UAE communities, hotels and developers.">
+
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#ffffff;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--card:#f8fafc;
+    --brand:#6366f1;--brand-fg:#ffffff;--err:#dc2626;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0b1220;--fg:#e8edf7;--muted:#94a3b8;--line:#1e293b;--card:#111a2e}
+  }
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px}
+  header{padding:28px 0}
+  header img{max-height:44px;max-width:190px;object-fit:contain;display:block}
+  header .name{font-weight:700;font-size:18px}
+  .hero{padding:44px 0 36px;border-bottom:1px solid var(--line)}
+  .hero h1{font-size:clamp(28px,5vw,46px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em}
+  .hero p{font-size:clamp(16px,2.2vw,20px);color:var(--muted);margin:0 0 26px;max-width:62ch}
+  .btn{display:inline-block;padding:13px 26px;border-radius:10px;border:0;
+    font-size:16px;font-weight:600;cursor:pointer;text-decoration:none}
+  .btn-primary{background:var(--brand);color:var(--brand-fg)}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;padding:36px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h3{margin:0 0 8px;font-size:17px}
+  .card p{margin:0;color:var(--muted);font-size:15px}
+  .sec{padding:26px 0;border-top:1px solid var(--line)}
+  .sec h2{font-size:clamp(20px,3vw,27px);margin:0 0 10px;letter-spacing:-.01em}
+  .sec p{margin:0;color:var(--muted);max-width:70ch}
+  .card .beat{margin:0 0 6px;font-weight:700;font-size:16px;color:var(--fg);letter-spacing:-.01em}
+  .sym{border-left:3px solid var(--brand)}
+  .disco{display:grid;gap:14px;padding-top:8px}
+  @media (min-width:760px){.disco{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .disco-item{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--card)}
+  .disco-q{margin:0 0 8px;font-weight:600;color:var(--fg);line-height:1.35}
+  .disco-q .n{color:var(--brand);font-weight:700;font-size:13px;margin-right:9px;
+    font-variant-numeric:tabular-nums}
+  .disco-a{margin:0;padding-top:8px;border-top:1px dashed var(--line);color:var(--muted);font-size:15px}
+  .steps{list-style:none;counter-reset:s;margin:8px 0 0;padding:0;display:grid;gap:14px}
+  .steps li{counter-increment:s;position:relative;padding-left:44px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;
+    display:grid;place-items:center;border-radius:50%;background:var(--brand);color:var(--brand-fg);
+    font-size:14px;font-weight:700}
+  .steps h3{margin:4px 0 5px;font-size:17px}
+  .steps p{margin:0;color:var(--muted);font-size:15px}
+  .timing{font-weight:600;font-size:13px;color:var(--brand);margin-left:6px}
+  .figures{padding-top:14px}
+  .figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;
+    display:grid;gap:6px;align-content:start}
+  .fig{font-size:clamp(26px,4vw,36px);font-weight:700;line-height:1.05;letter-spacing:-.02em;color:var(--brand)}
+  .fig-label{color:var(--muted);font-size:14px}
+  .disq{border-left:3px solid var(--line);padding-left:18px}
+  .faq{border-top:1px solid var(--line);padding:12px 0}
+  .faq summary{cursor:pointer;font-weight:600;list-style:none}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::before{content:"+";display:inline-block;width:1.2em;color:var(--brand);font-weight:700}
+  .faq[open] summary::before{content:"–"}
+  .faq p{margin:8px 0 0 1.2em;color:var(--muted)}
+  .cta{padding:44px 0;border-top:1px solid var(--line)}
+  .form{display:grid;gap:12px;max-width:440px;margin-top:20px}
+  .fld{display:grid;gap:5px;font-size:14px;font-weight:600}
+  .fld input,.fld textarea{font:inherit;font-weight:400;padding:11px 13px;border:1px solid var(--line);
+    border-radius:9px;background:var(--bg);color:var(--fg);width:100%}
+  .fld input:focus,.fld textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .form-msg{margin:0;font-size:14px;min-height:1.2em}
+  .form-msg.err{color:var(--err)}
+  .thanks{font-size:17px;font-weight:600;margin:0}
+  footer{padding:30px 0;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+  footer a{color:inherit}
+  .dot{margin:0 8px;opacity:.5}
+  .preview-bar{margin:12px 0 0;padding:9px 13px;border-radius:9px;font-size:13px;font-weight:600;
+    background:#fef3c7;color:#78350f;border:1px solid #fcd34d}
+  @media (prefers-color-scheme:dark){.preview-bar{background:#3b2f0b;color:#fde68a;border-color:#78350f}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  
+
+  <header>
+    <div class="name">Verdant Landscapes</div>
+  </header>
+
+  <div class="hero">
+    <h1>Win the grounds contract before it goes to tender</h1>
+    <p>We keep your order book full while your crews stay on site.</p>
+    <a class="btn btn-primary" href="#lead-form">Book a site walk</a>
+  </div>
+
+  <div class="grid">
+        <div class="card">
+          <h3>Crews stay billable</h3>
+          <p>Your team works the site while the pipeline is worked for you.</p>
+        </div>
+        <div class="card">
+          <h3>Renewals tracked</h3>
+          <p>Contract dates are held so you are in the room six months early.</p>
+        </div></div>
+  
+      <section class="sec">
+        <h2>Who this is for</h2>
+        <div class="grid">
+          
+          <div class="card">
+            <h3>Design-build studio</h3>
+            <p>You win on portfolio and referral, and the order book empties the month a big build completes.</p>
+          </div>
+          <div class="card">
+            <h3>Grounds maintenance, 40-300 staff</h3>
+            <p>Revenue is renewals and tenders, both won long before anyone asks for a price.</p>
+          </div>
+          <div class="card">
+            <h3>Both under one roof</h3>
+            <p>Villa enquiries and commercial tenders compete for the same estimator, and the tender usually loses.</p>
+          </div>
+        </div>
+      </section>
+  
+      <section class="sec">
+        <h2>You might recognise this</h2>
+        <div class="grid">
+          
+          <div class="card sym">
+            <p class="beat">The tender closed before you heard.</p>
+            <p>You learn the contract went out when the incumbent has already been re-appointed.</p>
+          </div>
+          <div class="card sym">
+            <p class="beat">The 21:00 Friday enquiry.</p>
+            <p>A villa enquiry arrives Friday night, is answered Monday, and was booked Saturday by whoever replied.</p>
+          </div>
+          <div class="card sym">
+            <p class="beat">One estimator holds every relationship.</p>
+            <p>The community managers who trust you trust a person, not a company.</p>
+          </div>
+        </div>
+      </section>
+  
+      <section class="sec">
+        <h2>Questions worth asking yourself</h2>
+        <div class="disco">
+          
+          <div class="disco-item">
+            <p class="disco-q"><span class="n">01</span>How many quotations went out last month, and how many were chased twice?</p>
+            <p class="disco-a">If nobody can answer from a system, there is no follow-up process, only good intentions.</p>
+          </div>
+          <div class="disco-item">
+            <p class="disco-q"><span class="n">02</span>Name the renewal month for your three biggest accounts.</p>
+            <p class="disco-a">If you cannot, you are bidding on other people timelines rather than your own.</p>
+          </div>
+          <div class="disco-item">
+            <p class="disco-q"><span class="n">03</span>Who is prospecting in July, when nothing is being planted?</p>
+            <p class="disco-a">If the answer is nobody, the season starts empty every year by design.</p>
+          </div>
+        </div>
+      </section>
+  
+  
+      <section class="sec">
+        <h2>How it works</h2>
+        <ol class="steps">
+          
+          <li>
+            <h3>Profile and lanes <span class="timing">Day 1</span></h3>
+            <p>We build your ideal-client profile from your portfolio and five best contracts.</p>
+          </li>
+          <li>
+            <h3>First outreach <span class="timing">Week 1</span></h3>
+            <p>Named communities and developers are contacted across LinkedIn, email and WhatsApp.</p>
+          </li>
+          <li>
+            <h3>Site walks land <span class="timing">Week 2-4</span></h3>
+            <p>Qualified conversations arrive as diary entries, not as a lead list.</p>
+          </li>
+        </ol>
+      </section>
+  
+      <section class="sec">
+        <h2>The numbers</h2>
+        <p>What we can evidence today.</p>
+        <div class="grid figures">
+          
+          <div class="figure">
+            <span class="fig">200+</span>
+            <span class="fig-label">meetings booked for customers in the last 30 days</span>
+          </div>
+          <div class="figure">
+            <span class="fig">40%</span>
+            <span class="fig-label">reply rate across 2,000 prospects worked</span>
+          </div>
+        </div>
+      </section>
+  
+      <section class="sec">
+        <h2>Questions</h2>
+        
+        <details class="faq">
+          <summary>Do you replace our estimator?</summary>
+          <p>No. The estimator keeps the relationships and the pricing; the chasing and the first contact are handled for them.</p>
+        </details>
+      </section>
+  
+      <section class="sec disq">
+        <h2>Not for you if</h2>
+        <p>You only take work by referral and have no interest in contracts you did not already hear about.</p>
+      </section>
+
+  <div class="cta">
+    <h2>Twenty minutes now, site walks this season</h2>
+    <p class="sec-p" style="color:var(--muted);max-width:70ch">We build your client profile on the call before you decide anything.</p>
+    
+    
+    <form id="lead-form" class="form" novalidate>
+      <input type="hidden" name="page_id" value="demo">
+      <div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <label class="fld"><span>Your name</span><input type="text" name="name" required autocomplete="on"></label>
+        <label class="fld"><span>Email</span><input type="email" name="email" required autocomplete="on"></label>
+        <label class="fld"><span>Company</span><input type="text" name="company" autocomplete="on"></label>
+        <label class="fld"><span>What do you need help with?</span><textarea name="message" rows="3"></textarea></label>
+      <button type="submit" class="btn btn-primary">Book a site walk</button>
+      <p class="form-msg" role="status" aria-live="polite"></p>
+    </form>
+    <script>
+      (function () {
+        var f = document.getElementById('lead-form');
+        if (!f) return;
+        var msg = f.querySelector('.form-msg');
+        var btn = f.querySelector('button[type=submit]');
+        f.addEventListener('submit', function (e) {
+          e.preventDefault();
+          msg.textContent = '';
+          msg.className = 'form-msg';
+          var data = {};
+          new FormData(f).forEach(function (v, k) { data[k] = v; });
+          if (!data.email && !data.phone) {
+            msg.textContent = 'Please give us an email or a phone number so we can reply.';
+            msg.className = 'form-msg err';
+            return;
+          }
+          btn.disabled = true;
+          var original = btn.textContent;
+          btn.textContent = 'Sending...';
+          
+          fetch("https://api.example.com/api/landing/demo/submit", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, b: b }; });
+          }).then(function (res) {
+            if (!res.ok) throw new Error((res.b && res.b.error) || 'Something went wrong.');
+            // The server decides whether a download is on offer — the page is a
+            // static object and cannot know at render time whether the report
+            // finished generating.
+            var dl = res.b && res.b.download_url;
+            f.innerHTML = dl
+              ? '<p class="thanks">Thank you. Your report is ready.</p>'
+                + '<p><a class="btn btn-primary" href="' + dl + '" target="_blank" rel="noopener" download>Download the report</a></p>'
+              : '<p class="thanks">Thank you. We will be in touch shortly.</p>';
+          }).catch(function (err) {
+            msg.textContent = err.message || 'Something went wrong. Please try again.';
+            msg.className = 'form-msg err';
+            btn.disabled = false;
+            btn.textContent = original;
+          });
+        });
+      })();
+    </script>
+  </div>
+
+  <footer>
+    <div>Verdant Landscapes</div>
+    <div style="margin-top:6px"><a href="mailto:hello@verdant.ae">hello@verdant.ae</a><span class="dot">·</span><a href="tel:+971501234567">+971 50 123 4567</a><span class="dot">·</span><a href="https://verdant.ae/" rel="noopener">Website</a></div>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/contexts/ThemeContext';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Group sender colours (WhatsApp-style, deterministic per sender) ───────────
 const WA_SENDER_COLORS = ['#d9416a', '#0a7cff', '#e07b00', '#00a884', '#7b61ff', '#c0399f', '#0e8a8a', '#a8662a'];
@@ -413,6 +414,11 @@ export const MessageBubble = memo(function MessageBubble({
   searchText,
   isHighlighted = false,
 }: MessageBubbleProps) {
+  // senderName arrives already collapsed to "pushname, else raw number" by the
+  // message mapper, so it is masked here at the render site rather than in the
+  // mapper — keeping bullets out of the message model, where they could reach
+  // search or persistence.
+  const { displayPossiblePhone } = usePhoneMasking();
   const { content, timestamp, isOutgoing, status, sender, role } = message;
   const StatusIcon = statusIcons[status];
 
@@ -483,7 +489,7 @@ export const MessageBubble = memo(function MessageBubble({
             className="text-[12.5px] font-semibold leading-tight mb-0.5 truncate max-w-full"
             style={{ color: senderColor(message.senderName) }}
           >
-            {message.senderName}
+            {displayPossiblePhone(message.senderName)}
           </span>
         )}
         {(onToggleStar || (isOutgoing && onDeleteMessage)) && (
