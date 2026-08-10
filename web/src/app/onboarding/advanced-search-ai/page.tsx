@@ -1021,6 +1021,17 @@ export default function AdvancedSearchAIPage() {
     includeLeadSourceRef.current = !inboundMode && !(pendingContact && !pendingContact.linkedin_url);
     const [inboundLeads, setInboundLeads] = useState<ParsedInboundLead[]>([]);
     const [inboundLeadIds, setInboundLeadIds] = useState<string[]>([]); // Real UUIDs from leads table (CSV/image)
+    // Async import discovery. Company+title sheets fan out to one paced LinkedIn
+    // search per (company, role) — minutes of work — so the backend now returns a
+    // job id immediately and does the searching in a Cloud Task chain. Launch is
+    // gated on this being done: building a campaign mid-discovery is what enrolled
+    // placeholder rows (no name, no LinkedIn URL) and produced an empty campaign.
+    const [importJob, setImportJob] = useState<{
+        id: string; status: string; percent: number; processed: number; total: number;
+    } | null>(null);
+    const importJobPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const importDiscoveryPending = !!importJob
+        && importJob.status !== 'completed' && importJob.status !== 'failed';
     const [directContactLeadIds, setDirectContactLeadIds] = useState<string[]>([]); // Real UUIDs for chat-entered direct contacts
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaFileInputRef = useRef<HTMLInputElement>(null);
@@ -2916,6 +2927,133 @@ export default function AdvancedSearchAIPage() {
        question (role-based sheets with no location column) and resume here with the
        user's answer. Pass existingProcessingId to reuse an already-shown loading
        bubble (the caller then owns the busy flag); omit it to run standalone. */
+    /**
+     * Seed the panel + enrolment ids from a set of backend-resolved people.
+     * Shared by the synchronous save response and the async job result so both
+     * paths land identical state — the discovered NAME and LinkedIn URL are what
+     * make a lead contactable, and dropping them is what produced campaigns full
+     * of "at <COMPANY>" placeholders.
+     */
+    const seedFromResolvedLeads = useCallback((resolved: any[]) => {
+        if (!Array.isArray(resolved) || resolved.length === 0) return;
+        const rebuiltInbound: ParsedInboundLead[] = resolved.map((r) => {
+            const { firstName, lastName } = readLeadName(r);
+            return {
+                firstName,
+                lastName,
+                companyName: r.company || '',
+                linkedinProfile: r.linkedin_url || '',
+                email: '', whatsapp: '', phone: '', website: '', notes: '',
+                title: r.headline || r.title || r.target_title || '',
+                location: r.location || '',
+                profilePicture: r.profile_picture || '',
+            };
+        });
+        setInboundLeads(rebuiltInbound);
+        setLeads(resolved.map((r, i) => {
+            const { firstName, lastName, name } = readLeadName(r);
+            return {
+                id: r.id || `inbound-${i}`,
+                name: leadDisplayLabel({ name, company: r.company, headline: r.headline || r.title || r.target_title }, i),
+                first_name: firstName,
+                last_name: lastName,
+                headline: r.headline || r.title || r.target_title || (r.company ? `at ${r.company}` : ''),
+                location: r.location || '',
+                current_company: r.company || '',
+                profile_url: r.linkedin_url || '',
+                profile_picture: r.profile_picture || '',
+                industry: '',
+                network_distance: '',
+                locked: false,
+            } as LeadProfile;
+        }));
+        const ids = resolved.map((r) => r.id).filter(Boolean);
+        setInboundLeadIds(ids);
+        setSelectedLeadIds(new Set(ids));
+        syncInboundSummary(rebuiltInbound);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    /**
+     * Poll an async import-discovery job until it settles.
+     *
+     * Discovery is minutes of paced LinkedIn searching, so the backend returns a
+     * job id straight away. Until this reports `completed`, `importDiscoveryPending`
+     * keeps "Create Outreach Journey" disabled — launching mid-discovery is exactly
+     * how a campaign ended up enrolling rows the search had not reached yet.
+     */
+    const pollImportJob = useCallback(async (jobId: string) => {
+        const POLL_MS = 4000;
+        const started = Date.now();
+        const MAX_MS = 30 * 60 * 1000;      // give up messaging after 30 min
+
+        const tick = async () => {
+            try {
+                const res = await fetch(`/api/campaigns/leads/import/jobs/${jobId}`);
+                if (!res.ok) throw new Error(`status ${res.status}`);
+                const job = await res.json();
+                setImportJob({
+                    id: jobId, status: job.status, percent: job.percent ?? 0,
+                    processed: job.processedRows ?? 0, total: job.totalRows ?? 0,
+                });
+
+                if (job.status === 'completed') {
+                    const resolved: any[] = Array.isArray(job.leads) ? job.leads : [];
+                    seedFromResolvedLeads(resolved);
+                    const withLinkedIn = resolved.filter((r) => r.linkedin_url).length;
+                    const counts = computeInboundCounts(resolved.map((r: any): ParsedInboundLead => ({
+                        firstName: '', lastName: '', companyName: r.company || '',
+                        linkedinProfile: r.linkedin_url || '', email: '', whatsapp: '',
+                        phone: '', website: '', notes: '', title: '', location: '',
+                        profilePicture: '',
+                    })));
+                    setTargeting({
+                        job_titles: [], industries: [], locations: [],
+                        keywords: [`${resolved.length} Inbound Lead${resolved.length === 1 ? '' : 's'}`],
+                    });
+                    setMessages(p => [...p, {
+                        id: `a-${Date.now()}`, role: 'ai', ts: new Date(),
+                        text: resolved.length === 0
+                            ? `⚠️ **No people found.**\n\nI searched every role against every company on your sheet but LinkedIn returned no matches. This usually means the company names are registered entities rather than the trading names people use on their profiles, or the companies have little LinkedIn presence.`
+                            : `✅ **Found ${resolved.length} ${resolved.length === 1 ? 'person' : 'people'}** across your list${withLinkedIn > 0 ? ` — ${withLinkedIn} with a LinkedIn profile` : ''}.\n\nReview them in the panel, then click **"Create Outreach Journey"** to configure your campaign.`,
+                        inboundSummary: resolved.length > 0 ? counts : undefined,
+                    }]);
+                    return;
+                }
+
+                if (job.status === 'failed') {
+                    setMessages(p => [...p, {
+                        id: `a-${Date.now()}`, role: 'ai', ts: new Date(),
+                        text: `⚠️ **Lead discovery failed.**\n\n${job.error || 'The search could not be completed.'}\n\nYour uploaded rows are saved — try the import again, or continue with the leads already found.`,
+                    }]);
+                    return;
+                }
+
+                if (Date.now() - started > MAX_MS) {
+                    setMessages(p => [...p, {
+                        id: `a-${Date.now()}`, role: 'ai', ts: new Date(),
+                        text: `⏱️ Discovery is taking longer than expected. It's still running in the background — refresh in a few minutes to pick up the results.`,
+                    }]);
+                    return;
+                }
+                importJobPollRef.current = setTimeout(tick, POLL_MS);
+            } catch {
+                // Transient network/API blip — keep polling rather than abandoning
+                // a job that is still running server-side.
+                if (Date.now() - started <= MAX_MS) {
+                    importJobPollRef.current = setTimeout(tick, POLL_MS);
+                }
+            }
+        };
+        tick();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedFromResolvedLeads]);
+
+    // Stop polling when the page goes away.
+    useEffect(() => () => {
+        if (importJobPollRef.current) clearTimeout(importJobPollRef.current);
+    }, []);
+
     const finishInboundImport = useCallback(async (parsed: ParsedInboundLead[], finalLocation: string, existingProcessingId?: string) => {
         const processingId = existingProcessingId || `l-${Date.now()}`;
         if (!existingProcessingId) {
@@ -2954,6 +3092,10 @@ export default function AdvancedSearchAIPage() {
                     body: JSON.stringify({
                         leads: leadsForSave,
                         location: finalLocation || undefined,
+                        // This screen polls GET /leads/import/jobs/:id, so the backend
+                        // may hand back a job instead of blocking for minutes while it
+                        // searches LinkedIn for each role at each company.
+                        supportsAsync: true,
                         detectedChannels: {
                             email: counts.email > 0,
                             whatsapp: counts.whatsapp > 0,
@@ -2966,6 +3108,25 @@ export default function AdvancedSearchAIPage() {
 
                 if (saveResponse.ok) {
                     const saveData = await saveResponse.json();
+
+                    // ── ASYNC DISCOVERY ──
+                    // Sheets that need LinkedIn discovery come back immediately with a
+                    // job id instead of people; the searching runs in a Cloud Task
+                    // chain. Poll until it finishes, then seed the panel from the job's
+                    // results — the same shape the synchronous path returns.
+                    if (saveData.async && saveData.jobId) {
+                        setImportJob({
+                            id: saveData.jobId, status: saveData.jobStatus || 'queued',
+                            percent: 0, processed: 0, total: saveData.total || parsed.length,
+                        });
+                        setMessages(p => p.filter(m => m.id !== processingId).concat({
+                            id: `a-${Date.now()}`, role: 'ai', ts: new Date(),
+                            text: `🔎 **Finding the right people at each company.**\n\nYour sheet lists companies and roles rather than named people, so I'm searching LinkedIn for each role at each company. This takes a couple of minutes for a large list — I'll update you as it progresses.`,
+                        }));
+                        pollImportJob(saveData.jobId);
+                        return;   // the poller finishes the import
+                    }
+
                     // Store real lead UUIDs so campaign creation can link to leads table
                     if (saveData.leadIds && saveData.leadIds.length > 0) {
                         setInboundLeadIds(saveData.leadIds);
@@ -5902,7 +6063,7 @@ export default function AdvancedSearchAIPage() {
                                                 : 'Qualifying...'
                                         }
                                         : m;
-                                    return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onLetAgentDeal={letAgentDeal} agentDealLoading={agentDealLoading} onStartTargeting={() => { setTgStep(0); setChatBlocked(false); }} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} isMobile={isMobile} rolePreviewing={rolePreviewing} roleIcp={businessProfile} />;
+                                    return <Bubble key={m.id} msg={displayMsg} onOpt={onOptClick} onShowPanel={setShowPanel} onStartCheckpoints={() => setCpStep(0)} onLetAgentDeal={letAgentDeal} agentDealLoading={agentDealLoading} onStartTargeting={() => { setTgStep(0); setChatBlocked(false); }} hasPanel={!!showPanel} leadsCount={leads.length} filteredLeadsCount={filteredLeads.length} onUploadClick={() => fileInputRef.current?.click()} useSalesNav={useSalesNav} isMobile={isMobile} rolePreviewing={rolePreviewing} roleIcp={businessProfile} discoveryPending={importDiscoveryPending} discoveryProgress={importJob ? `${importJob.percent}%` : ''} />;
                                 })
                             )}
                             {/* Import leads prompt — shown when conversation is about existing client relationships */}
@@ -8161,7 +8322,7 @@ function RoleCardView({ card, onOpt, previewing, icp }: { card: NonNullable<Chat
     );
 }
 
-function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, agentDealLoading, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav, isMobile, rolePreviewing, roleIcp }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onLetAgentDeal?: () => void; agentDealLoading?: boolean; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean; isMobile?: boolean; rolePreviewing?: boolean; roleIcp?: Record<string, string> }) {
+function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, agentDealLoading, onStartTargeting, hasPanel, leadsCount, filteredLeadsCount, onUploadClick, useSalesNav, isMobile, rolePreviewing, roleIcp, discoveryPending, discoveryProgress }: { msg: ChatMsg; onOpt: (v: string) => void; onShowPanel: (panel: 'leads' | 'workflow') => void; onStartCheckpoints: () => void; onLetAgentDeal?: () => void; agentDealLoading?: boolean; onStartTargeting: () => void; hasPanel: boolean; leadsCount: number; filteredLeadsCount?: number; onUploadClick?: () => void; useSalesNav?: boolean; isMobile?: boolean; rolePreviewing?: boolean; roleIcp?: Record<string, string>; discoveryPending?: boolean; discoveryProgress?: string }) {
     const user = useSelector((state: any) => state.auth?.user);
     const displayName = user?.name || "User";
     const userInitial = displayName.charAt(0).toUpperCase();
@@ -8464,11 +8625,23 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, a
                           rendered (msg.targeting) — otherwise it duplicates "Configure manually". */}
                       {!msg.targeting && (
                           <div className="mt-3 pt-3 border-t border-emerald-200/50 dark:border-emerald-800/50">
+                              {/* Gated on discovery: a campaign built while the search is
+                                  still running enrols rows it never reached — placeholders
+                                  with no name and no LinkedIn URL, which can never be
+                                  contacted and silently produce an empty campaign. */}
                               <button
                                 onClick={onStartCheckpoints}
-                                className="w-full px-4 py-2.5 bg-[#172560] dark:bg-blue-700 text-white border-none rounded-[10px] text-[13px] font-bold cursor-pointer transition-all hover:bg-[#0b1957] dark:hover:bg-blue-600 shadow-sm"
+                                disabled={discoveryPending}
+                                title={discoveryPending ? 'Still finding people for your list…' : undefined}
+                                className={`w-full px-4 py-2.5 border-none rounded-[10px] text-[13px] font-bold transition-all shadow-sm ${
+                                  discoveryPending
+                                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#172560] dark:bg-blue-700 text-white cursor-pointer hover:bg-[#0b1957] dark:hover:bg-blue-600'
+                                }`}
                               >
-                                  Create Outreach Journey</button>
+                                  {discoveryPending
+                                    ? `Finding people… ${discoveryProgress}`
+                                    : 'Create Outreach Journey'}</button>
                           </div>
                       )}
                   </div>
