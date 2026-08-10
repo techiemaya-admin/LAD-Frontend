@@ -21,7 +21,7 @@ const KNOWN_CHANNELS: readonly string[] = [
 ];
 
 // Kanban board only shows the active-pipeline stages (data.ts STAGES).
-const BOARD_STAGES: readonly string[] = ['new', 'engaged', 'qualified', 'sah'];
+const BOARD_STAGES: readonly string[] = ['new', 'contacted', 'engaged', 'qualified', 'sah'];
 
 function initials(name: string): string {
   return (
