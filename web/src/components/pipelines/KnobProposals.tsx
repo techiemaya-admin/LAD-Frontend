@@ -226,29 +226,48 @@ export function KnobProposals({
   );
 }
 
-/** The button that starts a scan, plus its own busy and error states. */
+/**
+ * The two ways to start a scan, plus its busy and error states.
+ *
+ * Reading everything is offered first because it needs no decisions. Picking
+ * specific chats is the better input — a studio knows which conversations went
+ * the way they want — but it is work, so it is the second option rather than
+ * the gate.
+ */
 export function ScanHistoryButton({
   isScanning,
   error,
   onScan,
+  onPick,
 }: {
   isScanning: boolean;
   error: string | null;
   onScan: () => void;
+  onPick: () => void;
 }) {
   return (
     <div className="mt-1">
-      <button
-        type="button"
-        onClick={onScan}
-        disabled={isScanning}
-        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-blue-950/40 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-[#071131] disabled:opacity-60"
-      >
-        {isScanning
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          : <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-        {isScanning ? 'Reading your history…' : 'Fill from my history'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onScan}
+          disabled={isScanning}
+          className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-blue-950/40 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-[#071131] disabled:opacity-60"
+        >
+          {isScanning
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            : <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
+          {isScanning ? 'Reading your history…' : 'Fill from my history'}
+        </button>
+        <button
+          type="button"
+          onClick={onPick}
+          disabled={isScanning}
+          className="text-xs text-gray-600 dark:text-slate-300 underline underline-offset-2 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
+        >
+          or pick specific chats
+        </button>
+      </div>
       {error && (
         <p role="alert" className="mt-1.5 text-xs text-amber-800 dark:text-amber-300">{error}</p>
       )}

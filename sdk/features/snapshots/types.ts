@@ -126,3 +126,21 @@ export interface KnobProposalsResult {
   /** Present when nothing could be read at all. */
   error?: string;
 }
+
+/**
+ * A conversation offered as a sample to read settings from.
+ *
+ * Shaped from the existing conversations list rather than a new endpoint —
+ * these are the same rows the Conversations page shows, and the ids are the
+ * same `conversations.id` the extractor reads by.
+ */
+export interface SampleConversation {
+  id: string;
+  /** Contact name, falling back to the phone number. */
+  name: string;
+  messageCount: number;
+  lastMessage: string;
+  lastMessageAt: string | null;
+  /** The stage it reached, e.g. 'booking_completed'. Null when unknown. */
+  stage: string | null;
+}

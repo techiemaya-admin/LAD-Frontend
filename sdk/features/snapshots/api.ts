@@ -5,7 +5,7 @@
 // 1:1, so /api/snapshot/* needs no additional plumbing.
 import { apiGet, apiPatch, apiPost } from '../../shared/apiClient';
 import type {
-  PipelineOverview, PipelineKey, KnobValues, KnobProposalsResult,
+  PipelineOverview, PipelineKey, KnobValues, KnobProposalsResult, SampleConversation,
 } from './types';
 
 const BASE = '/api/snapshot';
@@ -80,4 +80,43 @@ export async function requestKnobProposals(
     sampleConversationIds.length ? { sampleConversationIds } : {}
   );
   return res.data.data;
+}
+
+/**
+ * Conversations a studio can offer as samples.
+ *
+ * Reads the CONVERSATIONS feature's list endpoint rather than adding a snapshot
+ * one. These are the same rows the Conversations page shows and the same
+ * `conversations.id` the extractor reads by, so a second endpoint would be a
+ * second shape of the same data, free to drift.
+ *
+ * Sorted by recency by the server. Trivial threads are not filtered out here —
+ * message counts are shown instead, because "too short to be useful" is a
+ * judgement for the person picking, not for this function.
+ */
+export async function listSampleConversations(limit = 40): Promise<SampleConversation[]> {
+  const res = await apiGet<{ success: boolean; data: RawConversation[] }>(
+    `/api/whatsapp-conversations/conversations?limit=${limit}`
+  );
+  const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: r.lead_name || r.contact_name || r.phone || 'Unknown',
+    messageCount: Number(r.message_count) || 0,
+    lastMessage: r.last_message_content || '',
+    lastMessageAt: r.last_message_at || null,
+    stage: r.context_status || null,
+  }));
+}
+
+/** Only the fields this feature reads; the endpoint returns many more. */
+interface RawConversation {
+  id: string;
+  lead_name?: string;
+  contact_name?: string;
+  phone?: string;
+  message_count?: number;
+  last_message_content?: string;
+  last_message_at?: string;
+  context_status?: string;
 }
