@@ -256,7 +256,7 @@ export default function ScheduleMeetingModal({
               filtered.map(m => (
                 <button
                   key={m.id}
-                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-blue-700 hover:text-white dark:hover:bg-[#22C55E] dark:hover:text-[#000724] transition-colors group"
                   onClick={() => { setId(m.id); setSearch(''); setShowDropdown(false) }}
                 >
                   <div className="w-7 h-7 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0">

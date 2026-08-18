@@ -29,6 +29,13 @@ import {
   BookOpen 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { fetchWithTenant } from "@/lib/fetch-with-tenant";
 import { cn } from "@/lib/utils";
 
