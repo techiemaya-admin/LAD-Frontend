@@ -381,22 +381,6 @@ export const IntegrationsSettings: React.FC = () => {
         }
       } catch { setStatus('google', 'disconnected'); }
 
-      // Brand Assets folder — served by the playground worker, not the Next.js
-      // API, so this goes direct with the JWT rather than via fetchWithTenant.
-      setStatus('brand-assets', 'loading');
-      try {
-        const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
-        const token = safeStorage.getItem('token');
-        const res = await fetch(`${workerUrl}/brand-assets/status`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        if (!res.ok) { setStatus('brand-assets', 'disconnected'); }
-        else {
-          const data = await res.json();
-          setStatus('brand-assets', data?.asset_count > 0 || data?.drive_connected ? 'connected' : 'disconnected');
-        }
-      } catch { setStatus('brand-assets', 'disconnected'); }
-
       // Microsoft
       setStatus('microsoft', 'loading');
       try {
@@ -495,6 +479,31 @@ export const IntegrationsSettings: React.FC = () => {
       } catch {
         setStatus('routemagic', 'disconnected');
       }
+
+      // Brand Assets folder — served by the playground worker, not the Next.js
+      // API, so this goes direct with the JWT rather than via fetchWithTenant.
+      //
+      // Deliberately last in this chain. Every other check hits our own API,
+      // but this one hits a Cloud Run service in asia-south1 that has no
+      // minScale, so a first visit after an idle period pays a cold start.
+      // Anywhere earlier and every integration below it waits behind that.
+      // Being last also means the timeout can be generous: ConnectionStatus has
+      // no "unknown", so timing out has to claim 'disconnected', and a short
+      // fuse would mislabel a connected folder whenever the worker was cold.
+      setStatus('brand-assets', 'loading');
+      try {
+        const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+        const token = safeStorage.getItem('token');
+        const res = await fetch(`${workerUrl}/brand-assets/status`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) { setStatus('brand-assets', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('brand-assets', data?.asset_count > 0 || data?.drive_connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('brand-assets', 'disconnected'); }
     };
     checkAll();
   }, [setStatus]);
