@@ -199,10 +199,17 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
               <p className="text-[12.5px] text-slate-500 dark:text-slate-300 font-medium">
                 {prospect.company_name}
               </p>
-              <p className="text-[11.5px] text-slate-500 dark:text-slate-300 mt-1 flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" />
-                {prospect.location}
-              </p>
+              {/* Only render the pin when there is a location to pin. Rendering
+                  it unconditionally left a lone map-pin icon floating under the
+                  company for every prospect with no location — same orphaned
+                  decoration as the "·" separator in tables.tsx's NameCell. The
+                  network_distance block right below already guards this way. */}
+              {prospect.location && String(prospect.location).trim() && (
+                <p className="text-[11.5px] text-slate-500 dark:text-slate-300 mt-1 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" />
+                  {prospect.location}
+                </p>
+              )}
               {(prospect.network_distance || (prospect.mutual_connections_count ?? 0) > 0) && (
                 <p className="text-[11px] mt-1.5 flex items-center gap-2 flex-wrap">
                   {prospect.network_distance && (
