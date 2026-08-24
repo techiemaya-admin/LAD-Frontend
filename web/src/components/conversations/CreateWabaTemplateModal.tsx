@@ -314,7 +314,15 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
         setResult({ success: true, message: `Template "${safeName}" submitted for Meta review (status: ${data.status ?? 'PENDING'}).` });
         onCreated?.();
       } else {
-        setResult({ success: false, message: data.error || 'Meta rejected the template. Check the details and try again.' });
+        // Only claim Meta rejected it when Meta actually answered. A 500 from
+        // our own proxy also lands here with no `error`, and blaming Meta
+        // sends the user off to fix a template that is fine.
+        setResult({
+          success: false,
+          message: data.error
+            ? `Meta rejected the template: ${data.error}`
+            : "Couldn't submit the template - the request failed before Meta answered, so this isn't a rejection. Please try again.",
+        });
       }
     } catch (err: any) {
       setResult({ success: false, message: err?.message ?? 'Unexpected error submitting template.' });

@@ -36,6 +36,18 @@ import { cn } from '@/lib/utils';
 import { safeStorage } from '@lad/shared/storage';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { fetchJson } from '@/lib/fetch-json';
+
+/**
+ * Loose shape shared by the three contact-source endpoints. Typed rather than
+ * left as `any` so a missing array is a compile error here instead of an
+ * empty list in the UI.
+ */
+type ContactSourceResponse = {
+  data?: Record<string, unknown>[];
+  conversations?: Record<string, unknown>[];
+  total?: number;
+};
 import {
   Tooltip,
   TooltipContent,
@@ -102,6 +114,16 @@ async function fetchGroups(channel?: 'personal' | 'waba'): Promise<ChatGroup[]> 
   // Append ?channel=personal so the proxy routes to the correct backend.
   const url = channel === 'personal' ? `${API_BASE}?channel=personal` : API_BASE;
   const res = await fetch(url, { headers: authHeaders() });
+  // `fetch` does not throw on 4xx/5xx and an error body is not an array, so
+  // every branch below used to fall through to [] — which the list renders as
+  // "No groups yet. Create one first.", telling someone with groups to make
+  // some. Fail loudly and let the caller say we could not load them.
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({} as Record<string, unknown>));
+    throw new Error(
+      (body as { error?: string })?.error || `Couldn't load chat groups (${res.status})`,
+    );
+  }
   const data = await res.json();
   // Both backends return {data: [...]} or {success, data: [...]}
   return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
@@ -179,8 +201,9 @@ const CONTACT_SOURCES: ContactSource[] = [
     fetchContacts: async (page, search) => {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (search) params.set('search', search);
-      const res = await fetchWithTenant(`/api/social-integration/gohighlevel/contacts/local?${params}`);
-      const data = await res.json();
+      // fetchJson throws on a non-2xx instead of letting `data.data || []`
+      // below turn an outage into an honest-looking "0 contacts".
+      const data = await fetchJson<ContactSourceResponse>(`/api/social-integration/gohighlevel/contacts/local?${params}`, { raw: true });
       return {
         contacts: (data.data || []).map((c: Record<string, unknown>, idx: number) => ({
           id: String(c.id || c.source_id || c.phone || `crm-${page}-${idx}`),
@@ -203,8 +226,7 @@ const CONTACT_SOURCES: ContactSource[] = [
     fetchContacts: async (page, search) => {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (search) params.set('search', search);
-      const res = await fetchWithTenant(`/api/personal-whatsapp/contacts?${params}`);
-      const data = await res.json();
+      const data = await fetchJson<ContactSourceResponse>(`/api/personal-whatsapp/contacts?${params}`, { raw: true });
       return {
         contacts: (data.data || []).map((c: Record<string, unknown>, idx: number) => ({
           id: String(c.id || c.phone || c.whatsapp_id || `pwa-${page}-${idx}`),
@@ -225,8 +247,7 @@ const CONTACT_SOURCES: ContactSource[] = [
     fetchContacts: async (page, search) => {
       const params = new URLSearchParams({ limit: '50', offset: String((page - 1) * 50), channel: 'waba' });
       if (search) params.set('search', search);
-      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations?${params}`);
-      const data = await res.json();
+      const data = await fetchJson<ContactSourceResponse>(`/api/whatsapp-conversations/conversations?${params}`, { raw: true });
       const convs: Record<string, unknown>[] = data.conversations || data.data || [];
       return {
         contacts: convs.map((c, idx) => ({
@@ -301,6 +322,10 @@ export function ChatGroupManager({
   const isWA = variant === 'whatsapp';
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(false);
+  /** Set when the group load FAILED — distinct from "you have no groups". */
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  /** Set when the CONTACT SOURCE load failed — distinct from "no contacts". */
+  const [sourceError, setSourceError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -341,8 +366,13 @@ export function ChatGroupManager({
     if (!open) return;
     setLoading(true);
     fetchGroups(channel)
-      .then(setGroups)
-      .catch(() => {})
+      .then((g) => { setGroups(g); setGroupsError(null); })
+      // Was `.catch(() => {})`: a failed load left `groups` empty, which the
+      // list renders as "No groups yet" / "No groups. Create one first." —
+      // inviting the user to recreate groups they already have.
+      .catch((err) => {
+        setGroupsError(err instanceof Error ? err.message : 'Could not load chat groups');
+      })
       .finally(() => setLoading(false));
   }, [open, channel]);
 
@@ -381,9 +411,14 @@ export function ChatGroupManager({
       setSourceContacts(result.contacts);
       setSourceTotal(result.total);
       setSourcePage(page);
-    } catch {
+      setSourceError(null);
+    } catch (err) {
+      // This used to set an empty list and a zero total, so a failed load was
+      // rendered as "No contacts available." — a statement about the source,
+      // from a request that never answered. Keep the counts unset and say so.
       setSourceContacts([]);
       setSourceTotal(0);
+      setSourceError(err instanceof Error ? err.message : 'Could not load contacts');
     } finally {
       setSourceLoading(false);
     }
@@ -896,6 +931,11 @@ export function ChatGroupManager({
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
                         </div>
+                      ) : sourceError ? (
+                        <div className="text-center py-6 text-xs text-rose-600 dark:text-rose-400">
+                          Couldn&apos;t load contacts &mdash; {sourceError}.
+                          <br />This isn&apos;t &quot;no contacts&quot;; please try again.
+                        </div>
                       ) : sourceContacts.length === 0 ? (
                         <div className={cn("text-center py-6 text-xs", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                           {['google', 'microsoft', 'other'].includes(selectedSource)
@@ -1064,6 +1104,13 @@ export function ChatGroupManager({
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className={cn("h-6 w-6 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
+            </div>
+          ) : groupsError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-rose-600 dark:text-rose-400">
+              <p className="text-sm font-medium">Couldn&apos;t load your chat groups</p>
+              <p className="text-xs opacity-80 max-w-[260px] mt-1">
+                This isn&apos;t &quot;no groups&quot; &mdash; {groupsError}.
+              </p>
             </div>
           ) : filteredGroups.length === 0 ? (
             <div className={cn("flex flex-col items-center justify-center py-16", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
@@ -1344,13 +1391,20 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'de
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  /** Set when the group load FAILED — distinct from "you have no groups". */
+  const [groupsError, setGroupsError] = useState<string | null>(null);
   const isWA = variant === 'whatsapp';
 
   const loadGroups = useCallback(() => {
     setLoading(true);
     fetchGroups(channel)
-      .then(setGroups)
-      .catch(() => {})
+      .then((g) => { setGroups(g); setGroupsError(null); })
+      // Was `.catch(() => {})`: a failed load left `groups` empty, which the
+      // list renders as "No groups yet" / "No groups. Create one first." —
+      // inviting the user to recreate groups they already have.
+      .catch((err) => {
+        setGroupsError(err instanceof Error ? err.message : 'Could not load chat groups');
+      })
       .finally(() => setLoading(false));
   }, [channel]);
 
@@ -1420,6 +1474,10 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'de
             <div className="flex items-center justify-center py-4">
               <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
             </div>
+          ) : groupsError ? (
+            <p className="text-xs px-3 py-4 text-center text-rose-600 dark:text-rose-400">
+              Couldn&apos;t load groups &mdash; not &quot;none yet&quot;. Try again.
+            </p>
           ) : groups.length === 0 ? (
             <p className={cn("text-xs px-3 py-4 text-center", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>No groups. Create one first.</p>
           ) : (

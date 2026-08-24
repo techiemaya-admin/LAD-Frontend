@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchWithTenant } from "@/lib/fetch-with-tenant";
+import { fetchJson } from "@/lib/fetch-json";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -340,6 +341,8 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
 
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
+  /** Set when the config load FAILED — distinct from "this tenant has no AI config". */
+  const [configError, setConfigError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLTextAreaElement>(null);
@@ -359,11 +362,20 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
 
   const loadConfig = useCallback(async () => {
     setIsLoading(true);
+    setConfigError(null);
     try {
-      const res  = await fetchWithTenant(`${PLAYGROUND_API}/config`);
-      const data = await res.json();
+      // `fetchWithTenant` does not throw on 4xx/5xx, and there is no `else`
+      // below — so a failed config load quietly skipped the whole block and
+      // left the DEFAULT settings and an empty prompt list on screen, which
+      // reads as "this tenant has no AI configuration". fetchJson makes it
+      // reach the catch, which now says so.
+      const data = await fetchJson<{
+        success?: boolean;
+        settings?: PlaygroundSettings | null;
+        prompts?: PlaygroundPrompt[];
+      }>(`${PLAYGROUND_API}/config`, { raw: true });
       if (data.success) {
-        setSettings(data.settings);
+        setSettings(data.settings ?? null);
         setPrompts(data.prompts || []);
         setKnowledgeBase(data.settings?.knowledge_base || "");
 
@@ -379,6 +391,9 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
       }
     } catch (err) {
       console.error("[AIPlayground] Failed to load config:", err);
+      setConfigError(
+        err instanceof Error ? err.message : "Could not load your AI configuration",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -657,6 +672,24 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className={cn("h-6 w-6 animate-spin", isWhatsApp ? "text-gray-400 dark:text-neutral-500" : "text-blue-500 dark:text-blue-400")} />
+        </div>
+      ) : configError ? (
+        // Without this the panel rendered its DEFAULTS — empty prompt list,
+        // default model/tone — which reads as "this tenant has no AI
+        // configuration". Editing and saving from that state would overwrite
+        // the real prompt with a default one.
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 text-center">
+          <AlertCircle className="h-6 w-6 text-rose-500" />
+          <p className="text-sm font-medium text-rose-600 dark:text-rose-400">
+            Couldn&apos;t load your AI configuration
+          </p>
+          <p className="text-xs text-rose-600/80 dark:text-rose-400/80 max-w-[320px]">
+            This isn&apos;t an empty setup — {configError}. Nothing here reflects your
+            saved prompts, so don&apos;t save from this screen until it loads.
+          </p>
+          <Button size="sm" variant="outline" className="mt-2" onClick={loadConfig}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Try again
+          </Button>
         </div>
       ) : (
         <>
