@@ -1667,6 +1667,9 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
     templateName: string, languageCode: string, parameters: string[],
     _nameFormat: 'first' | 'full', _batch: { batchSize?: number; delayMin?: number; delayRandom?: number; dailyLimit?: number },
     headerParamCount: number, headerType: string, headerUrl: string,
+    // The number the template lives on. A template exists on one WABA, so the
+    // send has to leave from that number or Meta cannot find it.
+    accountId: string,
   ) => {
     const convId = conversationId || conversation?.id;
     if (!convId) {
@@ -1693,6 +1696,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             header_param_count: headerParamCount ?? 0,
             header_type: headerType || '',
             header_url: headerUrl || '',
+            account_id: accountId || '',
           }),
         }
       );
@@ -2998,6 +3002,9 @@ function WABASidebar({
       headerParamCount = 0,
       headerType = '',
       headerUrl = '',
+      // The number the template lives on. A template exists on one WABA, so the
+      // blast has to leave from that number or Meta cannot find it.
+      accountId = '',
     ) => {
       setTemplateSending(true);
       const totalCount = groupTemplateSendTarget?.count ?? 0;
@@ -3019,6 +3026,7 @@ function WABASidebar({
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
+                    account_id: accountId || '',
                     template_name: templateName,
                     language_code: languageCode,
                     parameters,
@@ -3069,6 +3077,7 @@ function WABASidebar({
             body: JSON.stringify({
               action: 'send-template',
               conversation_ids: Array.from(selectedChatIds),
+              account_id: accountId || '',
               template_name: templateName,
               language_code: languageCode,
               parameters,

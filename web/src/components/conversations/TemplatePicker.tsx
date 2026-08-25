@@ -69,7 +69,9 @@ export interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
+  /** accountId is the number the template LIVES on — a template exists on one
+   *  WABA, so the blast has to go out from that number or Meta cannot find it. */
+  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string, accountId: string) => void;
   sending?: boolean;
   /** Track progress: { sent: number; total: number; running: boolean } */
   sendProgress?: { sent: number; total: number; running: boolean } | null;
@@ -293,6 +295,7 @@ export function TemplatePicker({
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
+      selectedTemplate.account_id ?? '',
     );
   }, [selectedTemplate, paramValues, nameFormat, channel, batchSize, delayMin, delayRandom, dailyLimit, onSend, headerMediaUrl]);
 
