@@ -224,9 +224,14 @@ export interface KanbanLead {
   name: string;
   company: string;
   initials: string;
-  value: number;
+  /** Undefined when deal value isn't tracked for this prospect — distinct
+   *  from a real value of 0. KanbanBoard hides the badge/pipeline total
+   *  in that case rather than showing a misleading "AED 0". */
+  value?: number;
   stageKey: LifecycleStage;
-  fit: number;
+  /** Undefined when the prospect hasn't been fit-scored yet — distinct from a
+   *  real score of 0. KanbanBoard hides the badge entirely in that case. */
+  fit?: number;
   lastAt: string;
   channels: ChannelKey[];
   warmPath: string | null;
@@ -328,7 +333,7 @@ export const WARM_PATH: WarmPath = {
     headline: 'Head of Partnerships, BlueBridge',
     confidence: 0.92,
   },
-  shared_employer: { company: 'Cigna MENA', overlap: '2019–2022 (3 yrs)', confidence: 0.88 },
+  shared_employer: { company: 'Cigna MENA', overlap: '2019-2022 (3 yrs)', confidence: 0.88 },
   mutual_connections: [
     { name: 'Reem Al-Hashimi', title: 'VP Marketing, Sehha', confidence: 0.74 },
     { name: 'Daniel Okonkwo',  title: 'Founder, Loop Capital', confidence: 0.61 },
@@ -351,16 +356,16 @@ export interface ProspectEvent {
 }
 
 export const EVENTS: ProspectEvent[] = [
-  { seq: 187, channel: 'linkedin', event_type: 'message.received', direction: 'inbound',  occurred_at: '2026-05-27T08:14:00Z', payload: { preview: 'Thanks for the deck — would love to chat next week. Tuesday afternoons work for me.' } },
+  { seq: 187, channel: 'linkedin', event_type: 'message.received', direction: 'inbound',  occurred_at: '2026-05-27T08:14:00Z', payload: { preview: 'Thanks for the deck - would love to chat next week. Tuesday afternoons work for me.' } },
   { seq: 186, channel: 'intent',   event_type: 'website.visited',  direction: 'system',   occurred_at: '2026-05-26T22:48:00Z', payload: { pages: ['/pricing', '/case-studies/sehha'], duration_s: 412 } },
-  { seq: 185, channel: 'linkedin', event_type: 'message.sent',     direction: 'outbound', occurred_at: '2026-05-26T17:02:00Z', payload: { preview: 'Sharing the one-pager and 3 reference customers in MENA — happy to walk through any of them.' } },
-  { seq: 184, channel: 'whatsapp', event_type: 'message.sent',     direction: 'outbound', occurred_at: '2026-05-24T12:30:00Z', payload: { preview: 'Following up on LinkedIn — quicker here if easier.' } },
+  { seq: 185, channel: 'linkedin', event_type: 'message.sent',     direction: 'outbound', occurred_at: '2026-05-26T17:02:00Z', payload: { preview: 'Sharing the one-pager and 3 reference customers in MENA - happy to walk through any of them.' } },
+  { seq: 184, channel: 'whatsapp', event_type: 'message.sent',     direction: 'outbound', occurred_at: '2026-05-24T12:30:00Z', payload: { preview: 'Following up on LinkedIn - quicker here if easier.' } },
   { seq: 183, channel: 'intent',   event_type: 'hiring.detected',  direction: 'system',   occurred_at: '2026-05-21T09:00:00Z', payload: { role: 'Senior Performance Marketing Manager' } },
-  { seq: 182, channel: 'email',    event_type: 'email.opened',     direction: 'inbound',  occurred_at: '2026-05-22T09:11:00Z', payload: { subject: 'MENA growth benchmarks — Q2', opens: 3 } },
-  { seq: 181, channel: 'email',    event_type: 'email.sent',       direction: 'outbound', occurred_at: '2026-05-22T08:00:00Z', payload: { subject: 'MENA growth benchmarks — Q2', preview: 'Hi Sarah — saw the team is hiring on perf. Sharing benchmarks.' } },
+  { seq: 182, channel: 'email',    event_type: 'email.opened',     direction: 'inbound',  occurred_at: '2026-05-22T09:11:00Z', payload: { subject: 'MENA growth benchmarks - Q2', opens: 3 } },
+  { seq: 181, channel: 'email',    event_type: 'email.sent',       direction: 'outbound', occurred_at: '2026-05-22T08:00:00Z', payload: { subject: 'MENA growth benchmarks - Q2', preview: 'Hi Sarah - saw the team is hiring on perf. Sharing benchmarks.' } },
   { seq: 180, channel: 'intent',   event_type: 'funding.raised',   direction: 'system',   occurred_at: '2026-05-06T00:00:00Z', payload: { round: 'Series B', amount_usd: 34_000_000 } },
   { seq: 179, channel: 'linkedin', event_type: 'connection.accepted', direction: 'inbound',  occurred_at: '2026-05-15T14:20:00Z', payload: {} },
-  { seq: 178, channel: 'linkedin', event_type: 'connection.requested', direction: 'outbound', occurred_at: '2026-05-14T11:00:00Z', payload: { note: 'Hi Sarah — Anil mentioned your work at Cigna. Would love to connect.' } },
+  { seq: 178, channel: 'linkedin', event_type: 'connection.requested', direction: 'outbound', occurred_at: '2026-05-14T11:00:00Z', payload: { note: 'Hi Sarah - Anil mentioned your work at Cigna. Would love to connect.' } },
   { seq: 177, channel: 'system',   event_type: 'enrichment.completed', direction: 'system', occurred_at: '2026-05-13T04:21:00Z', payload: { provider: 'fullenrich' } },
   { seq: 176, channel: 'system',   event_type: 'fit.scored',          direction: 'system', occurred_at: '2026-05-12T10:00:00Z', payload: { score: 0.86 } },
 ];

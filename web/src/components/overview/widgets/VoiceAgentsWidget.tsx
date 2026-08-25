@@ -21,9 +21,9 @@ interface VoiceAgentsWidgetProps {
 }
 
 const statusStyles = {
-  active: 'bg-green-100 text-green-700',
-  busy: 'bg-amber-100 text-amber-700',
-  idle: 'bg-gray-100 text-gray-600',
+  active: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 border border-green-500/20',
+  busy: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20',
+  idle: 'bg-[#1a2a43] text-slate-300 dark:bg-[#1a2a43] dark:text-slate-300 border border-[#263859]',
 };
 
 // Helper to get full agent name
@@ -143,7 +143,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
   if (loading) {
     return (
-      <WidgetWrapper id={id} title="Voice Agents" icon={<Bot className="h-4 w-4" />}>
+      <WidgetWrapper id={id} title="Voice Agents" icon={<Bot className="h-4 w-4" />} className="bg-white dark:bg-[#071131]" headerClassName="bg-white dark:bg-[#071131]">
         <div className="flex items-center justify-center h-40">
           <p className="text-sm text-muted-foreground">Loading agents...</p>
         </div>
@@ -165,8 +165,9 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
                 <div
                   key={agent.id}
                   className={cn(
-                    'flex items-center justify-between p-3 rounded-xl border border-border bg-background/50',
-                    'hover:bg-secondary/30 transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]'
+                    'flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-blue-950/40',
+                    'bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0c1a42]',
+                    'transition-all duration-200 ease-out will-change-transform hover:-translate-y-0.5 hover:scale-[1.01]'
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -174,7 +175,7 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
                       <Bot className="h-4 w-4 text-primary" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm truncate" title={agent.name}>{agent.name}</p>
+                      <p className="font-medium text-sm truncate text-slate-800 dark:text-white" title={agent.name}>{agent.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <Badge
                           variant="secondary"
@@ -187,14 +188,14 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
                   </div>
                   <div className="flex items-center gap-4 text-right">
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 dark:text-slate-300">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <Phone className="h-3 w-3" />
                         Today
                       </p>
-                      <p className="font-semibold text-sm">{agent.callsToday}</p>
+                      <p className="font-semibold text-sm text-slate-900 dark:text-white">{agent.callsToday}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1  dark:text-slate-300">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <Activity className="h-3 w-3" />
                         Success
                       </p>
@@ -209,9 +210,9 @@ export const VoiceAgentsWidget: React.FC<VoiceAgentsWidgetProps> = ({ id }) => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
+              <div className="flex items-center justify-between pt-2 border-t border-[#E2E8F0] dark:border-[#262831] mt-auto">
                 <span className="text-xs text-muted-foreground">
-                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
                   {Math.min(currentPage * ITEMS_PER_PAGE, agents.length)} of {agents.length}
                 </span>
                 <div className="flex gap-2">

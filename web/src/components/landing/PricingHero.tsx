@@ -39,7 +39,7 @@ export default function PricingHero() {
           variants={itemVariants}
           className="text-4xl md:text-6xl font-bold text-[#222B45] mb-6"
         >
-          Hire Mr LAD —
+          Hire Mr LAD -
           <span className="text-blue-600 ml-3">pick a plan</span>
         </motion.h1>
         <motion.p 

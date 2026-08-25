@@ -94,7 +94,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
                         }
                       `}
                     >
-                      {/* Always show the step-type icon — colour conveys state */}
+                      {/* Always show the step-type icon - colour conveys state */}
                       <IconComponent className="w-3.5 h-3.5" strokeWidth={2} />
                     </div>
 
@@ -104,7 +104,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
                         className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full
                                    bg-emerald-500 flex items-center justify-center ring-1 ring-white dark:ring-[#0f172a]"
                       >
-                        {/* tiny SVG checkmark — avoids importing another Lucide icon at this size */}
+                        {/* tiny SVG checkmark - avoids importing another Lucide icon at this size */}
                         <svg viewBox="0 0 10 10" className="w-2 h-2" fill="none">
                           <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

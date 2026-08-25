@@ -91,8 +91,8 @@ export async function proxy(req: NextRequest) {
     }
 
     // Only clear the session + bounce to /login when the token is genuinely
-    // rejected (401/403). For any other non-ok response — chiefly a 5xx when the
-    // backend's DB pool is momentarily exhausted and /api/auth/me times out — KEEP
+    // rejected (401/403). For any other non-ok response - chiefly a 5xx when the
+    // backend's DB pool is momentarily exhausted and /api/auth/me times out - KEEP
     // the session and let the request through. A transient backend hiccup must not
     // log healthy users out (this was the root cause of stage auto-logouts).
     if (sessionInvalid) {

@@ -12,7 +12,7 @@
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
 
-  // Try cookie first (primary store — LAD uses httpOnly: false cookies)
+  // Try cookie first (primary store - LAD uses httpOnly: false cookies)
   const cookies = document.cookie ? document.cookie.split(';') : [];
   for (const cookie of cookies) {
     const [rawName, ...rawValueParts] = cookie.trim().split('=');
@@ -50,10 +50,27 @@ export async function fetchWithTenant(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
+  const body = options.body;
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  // JSON is only the right default for a string body (or none). Forcing it on
+  // a FormData upload sent the multipart bytes with an application/json header,
+  // so the server's JSON parser choked on the boundary:
+  //   SyntaxError: Unexpected token '-', "------WebK"... is not valid JSON
+  const wantsJson = !isFormData && (body === undefined || body === null || typeof body === 'string');
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(wantsJson ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   };
+
+  // A Content-Type on a FormData request is always wrong, whoever set it: only
+  // the browser knows the boundary, and it only adds the header when none is
+  // present. Strip it rather than let a caller reintroduce the same bug.
+  if (isFormData) {
+    for (const k of Object.keys(headers)) {
+      if (k.toLowerCase() === 'content-type') delete headers[k];
+    }
+  }
 
   const token = getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;

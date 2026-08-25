@@ -13,7 +13,7 @@ const PageSkeleton = () => {
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
         {Array.from({ length: 8 }, (_, index) => (
           <div key={index} className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-            <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm w-full flex flex-col h-full min-h-[120px]">
+            <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px]">
               <div className="flex-1 flex flex-col p-4">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-end mb-2">
@@ -41,9 +41,9 @@ const PageSkeleton = () => {
       </div>
 
       {/* Table/Content skeleton */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-slate-200 dark:border-blue-950/40 shadow-sm">
         {/* Table header skeleton */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800">
           <div className="flex gap-4">
             {Array.from({ length: 6 }, (_, index) => (
               <div key={index} className="h-4 bg-gray-200 dark:bg-slate-800 rounded animate-pulse flex-1"></div>
@@ -53,7 +53,7 @@ const PageSkeleton = () => {
 
         {/* Table rows skeleton */}
         {Array.from({ length: 5 }, (_, rowIndex) => (
-          <div key={rowIndex} className="px-6 py-4 border-b border-gray-100">
+          <div key={rowIndex} className="px-6 py-4 border-b border-gray-100 dark:border-slate-800">
             <div className="flex gap-4 items-center">
               {Array.from({ length: 6 }, (_, colIndex) => (
                 <div 

@@ -1,10 +1,11 @@
-import { memo, useMemo, useRef, useEffect, useCallback } from 'react';
+import { memo, useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { Message } from '@/types/conversation';
 import { MessageBubble } from './MessageBubble';
 import { DateSeparator } from './DateSeparator';
 import { isSameDay } from 'date-fns';
 import { Loader2, ChevronUp } from 'lucide-react';
+import { getConversationFeedback } from '@lad/frontend-features/conversations';
 
 interface Contact {
   id: string;
@@ -103,6 +104,24 @@ export const MessageList = memo(function MessageList({
   searchText,
   highlightedMessageId,
 }: MessageListProps) {
+  // Existing verdicts for this thread, so reopening it doesn't reset the
+  // thumbs. Best-effort: feedback is an enhancement, and failing to load it
+  // must never stop messages rendering.
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, 'like' | 'dislike'>>({});
+  useEffect(() => {
+    if (!conversationId) return;
+    let cancelled = false;
+    getConversationFeedback(conversationId)
+      .then((rows) => {
+        if (cancelled) return;
+        const map: Record<string, 'like' | 'dislike'> = {};
+        for (const r of rows) map[String(r.message_id)] = r.rating;
+        setFeedbackByMessage(map);
+      })
+      .catch(() => { /* non-fatal - thumbs simply start unset */ });
+    return () => { cancelled = true; };
+  }, [conversationId]);
+
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Build list items: prepend the "load older" header item, then date + messages
@@ -167,13 +186,15 @@ export const MessageList = memo(function MessageList({
   const itemContent = (index: number) => {
     const item = listItems[index];
     if (item.type === 'date') {
-      return <DateSeparator date={item.data as Date} />;
+      return <DateSeparator date={item.data as Date} variant="whatsapp" />;
     }
     const msg = item.data as Message;
     return (
       <div className="px-4 lg:px-8 py-[3px]">
         <MessageBubble
           message={msg}
+          conversationId={conversationId}
+          feedbackRating={feedbackByMessage[String(msg.id)] ?? null}
           contact={contact}
           onAgentClick={onAgentClick}
           onDeleteMessage={onDeleteMessage}

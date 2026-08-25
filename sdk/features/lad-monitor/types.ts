@@ -1,4 +1,4 @@
-// lad-monitor (admin observability) SDK — types
+// lad-monitor (admin observability) SDK - types
 // Mirrors the backend /api/admin/monitor/* response shapes.
 
 export interface DateRangeParams {
@@ -390,4 +390,121 @@ export interface MigrationStatusData {
     coreStatus: string;
     ledgerAdoption: number;
   };
+}
+
+// ── Strategy moderation (published workflow playbooks awaiting review) ───────
+
+export type StrategyReviewStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+/**
+ * A tenant-published strategy in the review queue. Carries only the SANITIZED
+ * `shared_definition` - the author's private definition is never returned by
+ * the moderation endpoint either.
+ */
+export interface StrategyForReview {
+  id: string;
+  tenant_id: string;
+  tenant_name: string | null;
+  name: string;
+  description: string | null;
+  shared_definition: {
+    version?: number;
+    source?: { key: string; cfg?: Record<string, any> };
+    nodes?: Array<{ type: string; title?: string; cfg?: Record<string, any> }>;
+    requiresFile?: boolean;
+    meta?: Record<string, any>;
+  };
+  node_types: string[];
+  share_status: StrategyReviewStatus;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  import_count: number;
+}
+
+// ── Community signups (founding-group applications) ─────────────────────────
+
+export type SignupStatus = 'new' | 'contacted' | 'accepted' | 'declined' | 'spam';
+
+/** Where a signup came from, so InMail can be told apart from organic. */
+export type SignupSource = 'landing' | 'inmail' | 'pdf' | 'referral' | 'other';
+
+export interface CommunitySignup {
+  id: string;
+  full_name: string;
+  email: string;
+  company: string | null;
+  linkedin_url: string | null;
+  playbook: string | null;
+  client_volume: string | null;
+  source: SignupSource;
+  status: SignupStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommunitySignupsResponse {
+  data: CommunitySignup[];
+  summary: Partial<Record<SignupStatus, number>>;
+  count: number;
+}
+
+// ── LLM routing (per-tenant, per-feature model selection) ───────────────────
+
+export type LlmProvider = 'anthropic' | 'openai' | 'gemini' | 'deepseek';
+
+/** One hop in a chain. Index 0 is the primary; the rest are fallbacks in order. */
+export interface LlmRoutingEntry {
+  provider: LlmProvider;
+  model: string;
+  /** Present on reads; the API derives it from array order on writes. */
+  priority?: number;
+  isActive?: boolean;
+}
+
+export interface LlmRoutingFeature {
+  featureKey: string;
+  chain: LlmRoutingEntry[];
+  updatedAt?: string;
+  updatedBy?: string | null;
+}
+
+/** A model the console may offer, with its rate per 1M tokens. */
+export interface LlmSelectableModel {
+  model: string;
+  input: number | null;
+  output: number | null;
+}
+
+/** A feature the console lists, and whether a rule on it would do anything. */
+export interface LlmRoutingFeatureMeta {
+  key: string;
+  label: string;
+  hint: string;
+  /**
+   * False until the call site goes through generateWithChain(). A rule on an
+   * unwired feature would save and be ignored, so the console disables it.
+   */
+  wired: boolean;
+}
+
+export interface LlmRoutingMeta {
+  providers: LlmProvider[];
+  /** The full catalogue, owned by the backend so the UI cannot drift from it. */
+  features: LlmRoutingFeatureMeta[];
+  /**
+   * provider -> models that provider actually serves. The console renders these
+   * as a dropdown, so an admin cannot type a retired or misspelled id, or pair
+   * a model with the wrong provider.
+   */
+  models: Record<LlmProvider, LlmSelectableModel[]>;
+  /** feature_key -> why it cannot be routed (provider-locked capability). */
+  nonRoutableFeatures: Record<string, string>;
+}
+
+/** Verdict from the dry-run endpoint. `ok: false` carries the reason. */
+export interface LlmRoutingValidation {
+  ok: boolean;
+  error?: string;
 }

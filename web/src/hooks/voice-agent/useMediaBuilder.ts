@@ -65,8 +65,17 @@ export function useMediaBuilder() {
 
   const workerUrl =
     process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+  // NEXT_PUBLIC_* is inlined at BUILD time, so a deployed bundle carries
+  // whatever was set when it was built. When that value is missing the old
+  // fallback pointed a hosted page at the user's own machine, which produced a
+  // stream of ERR_CONNECTION_REFUSED against localhost:8001. Only fall back to
+  // localhost when we are actually on localhost; otherwise treat MAGe as
+  // unconfigured and skip it, since these calls are best-effort anyway.
+  const onLocalhost =
+    typeof window !== "undefined" &&
+    /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const mageUrl =
-    process.env.NEXT_PUBLIC_MAGE_API_URL || "http://localhost:8001";
+    process.env.NEXT_PUBLIC_MAGE_API_URL || (onLocalhost ? "http://localhost:8001" : "");
 
   const getAuthHeaders = () => {
     const token = safeStorage.getItem("token");
@@ -140,6 +149,7 @@ export function useMediaBuilder() {
 
   const establishMageHold = useCallback(
     async (id: string) => {
+      if (!mageUrl) return;
       try {
         console.warn(`[MediaBuilder] Establishing hold for MAGe ${id}...`);
         
@@ -197,7 +207,7 @@ export function useMediaBuilder() {
 
   const releaseMageHold = useCallback(
     async (id: string) => {
-      if (!id) return;
+      if (!id || !mageUrl) return;
       if (mageHoldAbortRef.current) {
         mageHoldAbortRef.current.abort();
       }

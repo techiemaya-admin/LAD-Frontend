@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — country picker built on the same chip pattern. Provides quick
+// R8 Phase 5 - country picker built on the same chip pattern. Provides quick
 // adds for the most common MENA + global targets; falls through to free
 // text so anything else works too.
 

@@ -1,5 +1,5 @@
 /**
- * Chat Settings Proxy — channel-aware
+ * Chat Settings Proxy - channel-aware
  *
  * ?channel=personal (default)
  *   GET/PUT → Node.js LAD_backend  /api/personal-whatsapp/chat-settings

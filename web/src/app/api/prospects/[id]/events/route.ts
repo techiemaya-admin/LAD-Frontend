@@ -1,5 +1,5 @@
 /**
- * GET /api/prospects/[id]/events — event timeline for a prospect.
+ * GET /api/prospects/[id]/events - event timeline for a prospect.
  */
 import { NextRequest } from 'next/server';
 

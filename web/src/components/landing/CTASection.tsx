@@ -39,14 +39,14 @@ export default function CTASection() {
       description: 'Get 100 credits to test',
       icon: <Zap className="w-6 h-6" />,
       action: '/onboarding',
-      highlight: true
+      highlight: false  
     },
     {
       type: 'secondary',
       label: 'See him in action',
-      description: 'Watch a 15 min demo',
+      description: 'Book a live demo',
       icon: <Calendar className="w-6 h-6" />,
-      action: '/demo',
+      action: '/contact',
       highlight: false
     },
     {

@@ -23,7 +23,7 @@ const API_BASE_WABA = '/api/whatsapp-conversations/chat-groups';
 const API_BASE_INSTAGRAM = '/api/instagram-conversations/chat-groups';
 // Instagram routes go through a different Next.js proxy (LAD-Instagram-Comms
 // service on :8002). For 'personal' and 'waba' we keep the historical WABA
-// proxy URL — the WABA Python service handles both channels via a query param.
+// proxy URL - the WABA Python service handles both channels via a query param.
 function pickApiBase(channel: CreateBroadcastGroupModalProps['channel']): string {
   if (channel === 'instagram') return API_BASE_INSTAGRAM;
   return API_BASE_WABA;

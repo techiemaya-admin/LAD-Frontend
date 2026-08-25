@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
@@ -42,6 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export interface ChatGroup {
   color: string;
   description: string | null;
   conversation_count: number;
-  /** Count of chat_group_members rows — what the backend's getChatGroups returns. */
+  /** Count of chat_group_members rows - what the backend's getChatGroups returns. */
   member_count?: number;
   created_at: string | null;
   /** Present for groups synced from native WhatsApp groups via Baileys */
@@ -73,6 +74,8 @@ interface ChatGroupManagerProps {
   onOpenGroupInfo?: (group: ChatGroup) => void;
   /** When 'personal', shows the "Sync WA Groups" button to import native WhatsApp groups */
   channel?: 'personal' | 'waba';
+  /** Visual theme variant: 'default' or 'whatsapp' (neutral zinc + emerald green) */
+  variant?: 'default' | 'whatsapp';
 }
 
 // ── Color palette for new groups ─────────────────────────────────
@@ -118,7 +121,7 @@ async function createGroup(name: string, color: string, description?: string, ch
   if (data.success && data.data) return data.data;
   // Direct group object (id present = success)
   if (data.id) return data as ChatGroup;
-  // 409: group name already exists — fetch existing groups and return the match
+  // 409: group name already exists - fetch existing groups and return the match
   if (res.status === 409) {
     const listRes = await fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() });
     const listData = await listRes.json();
@@ -154,7 +157,7 @@ interface SourceContact {
   name: string | null;
   phone: string | null;
   email: string | null;
-  channel?: string;          // 'personal' | 'waba' | 'crm' etc — saved with group membership
+  channel?: string;          // 'personal' | 'waba' | 'crm' etc - saved with group membership
   company_name?: string | null;
   profile_photo?: string | null;
 }
@@ -291,7 +294,11 @@ export function ChatGroupManager({
   onSendTemplateToGroups,
   onOpenGroupInfo,
   channel,
+  variant = 'default',
 }: ChatGroupManagerProps) {
+  // Contact pickers list every candidate by name, falling back to their number.
+  const { displayPhone, displayNameOrPhone } = usePhoneMasking();
+  const isWA = variant === 'whatsapp';
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -358,7 +365,7 @@ export function ChatGroupManager({
 
   // Groups list is bounded (typically <50 per tenant) so we keep this filter
   // client-side, but debounce the input so the .filter() doesn't run on every
-  // keystroke — matches the pattern used everywhere else.
+  // keystroke - matches the pattern used everywhere else.
   const debouncedSearch = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
   const filteredGroups = debouncedSearch
     ? groups.filter((g) => g.name.toLowerCase().includes(debouncedSearch))
@@ -516,7 +523,7 @@ export function ChatGroupManager({
         const refreshed = await fetchGroups(channel);
         setGroups(refreshed);
       } else {
-        setSyncMessage(data.error || 'Sync failed — is a WAPA account connected?');
+        setSyncMessage(data.error || 'Sync failed - is a WAPA account connected?');
       }
     } catch {
       setSyncMessage('Failed to reach the service. Check your connection.');
@@ -529,12 +536,20 @@ export function ChatGroupManager({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent
+        className={cn(
+          "h-[90vh] flex flex-col p-0 gap-0 overflow-hidden",
+          isWA && "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-2xl rounded-2xl"
+        )}
+      >
         {/* Header */}
-        <div className="bg-primary/5 border-b border-border px-4 py-3">
+        <div className={cn(
+          "px-4 py-3 border-b",
+          isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" : "bg-primary/5 border-border"
+        )}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Megaphone className="h-5 w-5 text-primary" />
+            <DialogTitle className={cn("flex items-center gap-2 text-base", isWA && "text-zinc-900 dark:text-zinc-100 font-semibold")}>
+              <Megaphone className={cn("h-5 w-5", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-primary")} />
               {isGroupSelectMode ? (
                 <span>
                   {selectedGroupIds.size > 0
@@ -544,7 +559,13 @@ export function ChatGroupManager({
               ) : (
                 <>
                   Broadcasts
-                  <Badge variant="secondary" className="text-[10px] ml-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "text-[10px] ml-1",
+                      isWA && "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 font-medium"
+                    )}
+                  >
                     {groups.length}
                   </Badge>
                 </>
@@ -558,7 +579,10 @@ export function ChatGroupManager({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-[11px] px-2"
+                        className={cn(
+                          "h-7 text-[11px] px-2",
+                          isWA && "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        )}
                         onClick={() => setSelectedGroupIds(new Set(filteredGroups.map(g => g.id)))}
                       >
                         Select All
@@ -567,7 +591,10 @@ export function ChatGroupManager({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-[11px] px-2"
+                        className={cn(
+                          "h-7 text-[11px] px-2",
+                          isWA && "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        )}
                         onClick={() => setSelectedGroupIds(new Set())}
                       >
                         Clear
@@ -576,7 +603,10 @@ export function ChatGroupManager({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-[11px] px-2"
+                      className={cn(
+                        "h-7 text-[11px] px-2",
+                        isWA && "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      )}
                       onClick={() => { setIsGroupSelectMode(false); setSelectedGroupIds(new Set()); }}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -586,7 +616,12 @@ export function ChatGroupManager({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-[11px] px-2 text-muted-foreground"
+                    className={cn(
+                      "h-7 text-[11px] px-2",
+                      isWA
+                        ? "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        : "text-muted-foreground"
+                    )}
                     onClick={() => { setIsGroupSelectMode(true); setIsCreating(false); }}
                     title="Select groups to send template"
                   >
@@ -600,52 +635,72 @@ export function ChatGroupManager({
 
           {/* Search */}
           <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
             <Input
               placeholder="Search groups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 text-xs pl-8 bg-background"
+              className={cn(
+                "h-8 text-xs pl-8",
+                isWA
+                  ? "bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700/80 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50 rounded-xl"
+                  : "bg-background"
+              )}
             />
           </div>
         </div>
 
         {/* New Group button + optional WA Sync */}
-        <div className="px-2 py-2 border-b border-border">
+        <div className={cn("px-2 py-2 border-b", isWA ? "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900" : "border-border")}>
           {!isCreating ? (
             <div className="space-y-1">
               <button
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left group",
+                  isWA ? "hover:bg-zinc-100 dark:hover:bg-zinc-800/50" : "hover:bg-muted/50"
+                )}
                 onClick={() => setIsCreating(true)}
               >
-                <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Plus className="h-5 w-5 text-primary" />
+                <div className={cn(
+                  "h-11 w-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+                  isWA ? "bg-emerald-50 dark:bg-emerald-950/50" : "bg-primary/10"
+                )}>
+                  <Plus className={cn("h-5 w-5", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-primary")} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">New Group</p>
-                  <p className="text-[11px] text-muted-foreground">Create a group to organize conversations</p>
+                  <p className={cn("text-sm font-medium", isWA ? "text-zinc-900 dark:text-zinc-100 font-semibold" : "")}>New Group</p>
+                  <p className={cn("text-[11px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>Create a group to organize conversations</p>
                 </div>
               </button>
 
-              {/* Sync WA Groups — Personal WhatsApp only */}
+              {/* Sync WA Groups - Personal WhatsApp only */}
               {channel === 'personal' && (
                 <div>
                   <button
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#dcfce7] transition-colors text-left disabled:opacity-50"
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left disabled:opacity-50",
+                      isWA ? "hover:bg-emerald-50 dark:hover:bg-emerald-950/40" : "hover:bg-[#dcfce7]"
+                    )}
                     onClick={handleSyncWaGroups}
                     disabled={isSyncing}
                   >
-                    <div className="h-11 w-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#dcfce7' }}>
+                    <div
+                      className={cn(
+                        "h-11 w-11 rounded-full flex items-center justify-center flex-shrink-0",
+                        isWA ? "bg-emerald-100 dark:bg-emerald-900/40" : ""
+                      )}
+                      style={{ backgroundColor: isWA ? undefined : '#dcfce7' }}
+                    >
                       {isSyncing
-                        ? <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#16a34a' }} />
-                        : <RefreshCw className="h-5 w-5" style={{ color: '#16a34a' }} />
+                        ? <Loader2 className={cn("h-5 w-5 animate-spin", isWA ? "text-emerald-600 dark:text-emerald-400" : "")} style={{ color: isWA ? undefined : '#16a34a' }} />
+                        : <RefreshCw className={cn("h-5 w-5", isWA ? "text-emerald-600 dark:text-emerald-400" : "")} style={{ color: isWA ? undefined : '#16a34a' }} />
                       }
                     </div>
                     <div>
-                      <p className="text-sm font-medium" style={{ color: '#15803d' }}>
+                      <p className={cn("text-sm font-medium", isWA ? "text-emerald-700 dark:text-emerald-400 font-semibold" : "")} style={{ color: isWA ? undefined : '#15803d' }}>
                         {isSyncing ? 'Syncing WA Groups…' : 'Sync WA Groups'}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className={cn("text-[11px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
                         Import groups from your connected WhatsApp number
                       </p>
                     </div>
@@ -654,8 +709,8 @@ export function ChatGroupManager({
                     <p className={cn(
                       'text-[11px] px-4 py-1.5 rounded-lg mx-1 text-center',
                       syncMessage.toLowerCase().includes('fail') || syncMessage.toLowerCase().includes('error')
-                        ? 'bg-destructive/10 text-destructive'
-                        : 'bg-green-50 text-green-700'
+                        ? (isWA ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-destructive/10 text-destructive')
+                        : (isWA ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-green-50 text-green-700')
                     )}>
                       {syncMessage}
                     </p>
@@ -664,14 +719,20 @@ export function ChatGroupManager({
               )}
             </div>
           ) : (
-            <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
+            <div className={cn(
+              "p-3 rounded-xl border space-y-2.5",
+              isWA ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40" : "border-primary/20 bg-primary/5"
+            )}>
               {createStep === 'details' ? (
                 <>
                   <Input
                     placeholder="Group name"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="h-9 text-sm"
+                    className={cn(
+                      "h-9 text-sm",
+                      isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/30" : ""
+                    )}
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && newName.trim() && handleNextStep()}
                   />
@@ -679,30 +740,51 @@ export function ChatGroupManager({
                     placeholder="Description (optional)"
                     value={newDesc}
                     onChange={(e) => setNewDesc(e.target.value)}
-                    className="h-8 text-xs"
+                    className={cn(
+                      "h-8 text-xs",
+                      isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/30" : ""
+                    )}
                   />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted-foreground mr-1 font-medium">Color:</span>
+                    <span className={cn("text-[10px] mr-1 font-medium", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>Color:</span>
                     {COLOR_OPTIONS.map((c) => (
                       <button
                         key={c}
                         onClick={() => setNewColor(c)}
                         className={cn(
                           'h-5 w-5 rounded-full transition-all',
-                          newColor === c ? 'ring-2 ring-offset-1 ring-primary scale-110' : 'hover:scale-110'
+                          newColor === c
+                            ? (isWA ? 'ring-2 ring-offset-1 ring-emerald-500 scale-110' : 'ring-2 ring-offset-1 ring-primary scale-110')
+                            : 'hover:scale-110'
                         )}
                         style={{ backgroundColor: c }}
                       />
                     ))}
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" className="h-8 text-xs flex-1" onClick={handleNextStep} disabled={!newName.trim()}>
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "h-8 text-xs flex-1",
+                        isWA ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs" : ""
+                      )}
+                      onClick={handleNextStep}
+                      disabled={!newName.trim()}
+                    >
                       Next: Add Contacts
                     </Button>
-                    <Button size="sm" className="h-8 text-xs" variant="outline" onClick={handleCreate} disabled={!newName.trim()}>
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "h-8 text-xs",
+                        isWA ? "border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" : ""
+                      )}
+                      variant="outline"
+                      onClick={handleCreate}
+                      disabled={!newName.trim()}
+                    >
                       Skip & Create
                     </Button>
-
                   </div>
                 </>
               ) : (
@@ -711,13 +793,17 @@ export function ChatGroupManager({
                   <div className="flex items-center gap-2 mb-1">
                     <button
                       onClick={() => setCreateStep('details')}
-                      className="text-muted-foreground hover:text-foreground"
+                      className={cn("hover:text-foreground", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <span className="text-sm font-medium">Add contacts to &quot;{newName}&quot;</span>
+                    <span className={cn("text-sm font-medium", isWA ? "text-zinc-900 dark:text-zinc-100 font-semibold" : "")}>
+                      Add contacts to &quot;{newName}&quot;
+                    </span>
                     {selectedContacts.size > 0 && (
-                      <Badge variant="default" className="text-[10px] ml-auto">{selectedContacts.size} selected</Badge>
+                      <Badge variant="default" className={cn("text-[10px] ml-auto", isWA ? "bg-emerald-600 text-white" : "")}>
+                        {selectedContacts.size} selected
+                      </Badge>
                     )}
                   </div>
 
@@ -725,9 +811,14 @@ export function ChatGroupManager({
                   <div className="relative">
                     <button
                       onClick={() => setSourceDropdownOpen(!sourceDropdownOpen)}
-                      className="w-full flex items-center justify-between h-8 px-3 rounded-md border border-input bg-background text-sm"
+                      className={cn(
+                        "w-full flex items-center justify-between h-8 px-3 rounded-md border text-sm transition-colors",
+                        isWA
+                          ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                          : "border-input bg-background"
+                      )}
                     >
-                      <span className={selectedSource ? 'text-foreground' : 'text-muted-foreground'}>
+                      <span className={selectedSource ? (isWA ? "text-zinc-900 dark:text-zinc-100" : "text-foreground") : (isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                         {selectedSource
                           ? CONTACT_SOURCES.find(s => s.key === selectedSource)?.label
                           : 'Select contact source...'}
@@ -735,16 +826,22 @@ export function ChatGroupManager({
                       <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', sourceDropdownOpen && 'rotate-180')} />
                     </button>
                     {sourceDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 rounded-md border border-border bg-card shadow-lg z-50 py-1">
+                      <div className={cn(
+                        "absolute top-full left-0 right-0 mt-1 rounded-md border shadow-lg z-50 py-1",
+                        isWA ? "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100" : "bg-card border-border"
+                      )}>
                         {CONTACT_SOURCES.map((src) => (
                           <button
                             key={src.key}
                             onClick={() => handleSelectSource(src.key)}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 text-left text-sm"
+                            className={cn(
+                              "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
+                              isWA ? "hover:bg-zinc-100 dark:hover:bg-zinc-700/60 text-zinc-900 dark:text-zinc-100" : "hover:bg-muted/50"
+                            )}
                           >
                             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: src.color }} />
                             <span>{src.label}</span>
-                            {selectedSource === src.key && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                            {selectedSource === src.key && <Check className={cn("h-3.5 w-3.5 ml-auto", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-primary")} />}
                           </button>
                         ))}
                       </div>
@@ -758,15 +855,20 @@ export function ChatGroupManager({
                         <Badge
                           key={c.id}
                           variant="secondary"
-                          className="text-[10px] pl-1.5 pr-1 py-0.5 gap-1 cursor-pointer hover:bg-destructive/10"
+                          className={cn(
+                            "text-[10px] pl-1.5 pr-1 py-0.5 gap-1 cursor-pointer",
+                            isWA
+                              ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-950 dark:hover:text-red-400"
+                              : "hover:bg-destructive/10"
+                          )}
                           onClick={() => toggleContact(c)}
                         >
-                          {c.name || c.phone || c.email || 'Unknown'}
+                          {displayNameOrPhone(c.name, c.phone, c.email || 'Unknown')}
                           <X className="h-2.5 w-2.5" />
                         </Badge>
                       ))}
                       {selectedContacts.size > 8 && (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className={cn("text-[10px]", isWA && "border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400")}>
                           +{selectedContacts.size - 8} more
                         </Badge>
                       )}
@@ -777,24 +879,27 @@ export function ChatGroupManager({
                   {selectedSource && (
                     <>
                       <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Search className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
                         <Input
                           type="text"
                           placeholder="Search contacts..."
                           value={sourceSearch}
                           onChange={(e) => handleSourceSearch(e.target.value)}
-                          className="h-7 text-xs pl-7"
+                          className={cn(
+                            "h-7 text-xs pl-7",
+                            isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus-visible:ring-1 focus-visible:ring-emerald-500/30" : ""
+                          )}
                         />
                       </div>
 
                       {sourceLoading ? (
                         <div className="flex items-center justify-center py-6">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
                         </div>
                       ) : sourceContacts.length === 0 ? (
-                        <div className="text-center py-6 text-xs text-muted-foreground">
+                        <div className={cn("text-center py-6 text-xs", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                           {['google', 'microsoft', 'other'].includes(selectedSource)
-                            ? 'Coming soon — integration not yet configured.'
+                            ? 'Coming soon - integration not yet configured.'
                             : sourceSearch ? 'No contacts found.' : 'No contacts available.'}
                         </div>
                       ) : (
@@ -809,27 +914,32 @@ export function ChatGroupManager({
                                   setSelectedContacts(prev => {
                                     const next = new Map(prev);
                                     if (allOnPageSelected) {
-                                      // Deselect all on this page
                                       sourceContacts.forEach(c => next.delete(c.id));
                                     } else {
-                                      // Select all on this page
                                       sourceContacts.forEach(c => next.set(c.id, c));
                                     }
                                     return next;
                                   });
                                 }}
-                                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-muted/50 border-b border-border mb-1"
+                                className={cn(
+                                  "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors border-b mb-1",
+                                  isWA ? "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800" : "border-border hover:bg-muted/50"
+                                )}
                               >
                                 <div className={cn(
                                   'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
-                                  allOnPageSelected ? 'bg-primary border-primary' : someSelected ? 'bg-primary/40 border-primary' : 'border-muted-foreground/30'
+                                  allOnPageSelected
+                                    ? (isWA ? 'bg-emerald-600 border-emerald-600' : 'bg-primary border-primary')
+                                    : someSelected
+                                    ? (isWA ? 'bg-emerald-600/40 border-emerald-600' : 'bg-primary/40 border-primary')
+                                    : (isWA ? 'border-zinc-300 dark:border-zinc-600' : 'border-muted-foreground/30')
                                 )}>
-                                  {(allOnPageSelected || someSelected) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  {(allOnPageSelected || someSelected) && <Check className="h-3 w-3 text-white" />}
                                 </div>
-                                <span className="text-xs font-semibold text-muted-foreground">
+                                <span className={cn("text-xs font-semibold", isWA ? "text-zinc-700 dark:text-zinc-300" : "text-muted-foreground")}>
                                   {allOnPageSelected ? 'Deselect All' : 'Select All'}
                                 </span>
-                                <span className="text-[10px] text-muted-foreground ml-auto">
+                                <span className={cn("text-[10px] ml-auto", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                                   {selectedContacts.size} selected
                                 </span>
                               </button>
@@ -846,16 +956,23 @@ export function ChatGroupManager({
                                     onClick={() => toggleContact(contact)}
                                     className={cn(
                                       'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors',
-                                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
+                                      isSelected
+                                        ? (isWA ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-primary/10')
+                                        : (isWA ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800/60' : 'hover:bg-muted/50')
                                     )}
                                   >
                                     <div className={cn(
                                       'h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
-                                      isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                                      isSelected
+                                        ? (isWA ? 'bg-emerald-600 border-emerald-600' : 'bg-primary border-primary')
+                                        : (isWA ? 'border-zinc-300 dark:border-zinc-600' : 'border-muted-foreground/30')
                                     )}>
-                                      {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                      {isSelected && <Check className="h-3 w-3 text-white" />}
                                     </div>
-                                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                                    <div className={cn(
+                                      "h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-medium flex-shrink-0",
+                                      isWA ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200" : "bg-muted"
+                                    )}>
                                       {contact.profile_photo ? (
                                         <img src={contact.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" />
                                       ) : (
@@ -864,8 +981,8 @@ export function ChatGroupManager({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-1.5">
-                                        <p className="text-xs font-medium truncate">
-                                          {contact.name || contact.phone || contact.email || 'Unknown'}
+                                        <p className={cn("text-xs font-medium truncate", isWA ? "text-zinc-900 dark:text-zinc-100" : "")}>
+                                          {displayNameOrPhone(contact.name, contact.phone, contact.email || 'Unknown')}
                                         </p>
                                         {contact.channel && (() => {
                                           const ch = contact.channel.startsWith('personal') ? 'personal' : contact.channel;
@@ -880,10 +997,10 @@ export function ChatGroupManager({
                                           );
                                         })()}
                                       </div>
-                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                      <div className={cn("flex items-center gap-2 text-[10px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
                                         {contact.phone && (
                                           <span className="flex items-center gap-0.5">
-                                            <Phone className="h-2.5 w-2.5" />{contact.phone}
+                                            <Phone className="h-2.5 w-2.5" />{displayPhone(contact.phone)}
                                           </span>
                                         )}
                                         {contact.email && (
@@ -903,20 +1020,20 @@ export function ChatGroupManager({
 
                       {/* Pagination for source contacts */}
                       {sourceTotal > 50 && (
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                        <div className={cn("flex items-center justify-between text-[10px] pt-1", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
                           <span>
                             {Math.min((sourcePage - 1) * 50 + 1, sourceTotal)}-{Math.min(sourcePage * 50, sourceTotal)} of {sourceTotal}
                           </span>
                           <div className="flex gap-1">
                             <Button
-                              variant="outline" size="sm" className="h-6 px-2 text-[10px]"
+                              variant="outline" size="sm" className={cn("h-6 px-2 text-[10px]", isWA && "border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                               disabled={sourcePage <= 1 || sourceLoading}
                               onClick={() => loadSourceContacts(selectedSource, sourcePage - 1, sourceSearch)}
                             >
                               Prev
                             </Button>
                             <Button
-                              variant="outline" size="sm" className="h-6 px-2 text-[10px]"
+                              variant="outline" size="sm" className={cn("h-6 px-2 text-[10px]", isWA && "border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                               disabled={sourcePage * 50 >= sourceTotal || sourceLoading}
                               onClick={() => loadSourceContacts(selectedSource, sourcePage + 1, sourceSearch)}
                             >
@@ -930,12 +1047,11 @@ export function ChatGroupManager({
 
                   {/* Create button */}
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" className="h-8 text-xs flex-1" onClick={handleCreate}>
+                    <Button size="sm" className={cn("h-8 text-xs flex-1", isWA ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs" : "")} onClick={handleCreate}>
                       {selectedContacts.size > 0
                         ? `Create Group with ${selectedContacts.size} Contact${selectedContacts.size > 1 ? 's' : ''}`
                         : 'Create Group'}
                     </Button>
-
                   </div>
                 </>
               )}
@@ -944,20 +1060,20 @@ export function ChatGroupManager({
         </div>
 
         {/* Groups list - WhatsApp style */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className={cn("flex-1 min-h-0 w-full overflow-x-auto", isWA ? "bg-white dark:bg-zinc-900" : "")}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className={cn("h-6 w-6 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
             </div>
           ) : filteredGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+            <div className={cn("flex flex-col items-center justify-center py-16", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
+              <div className={cn("h-16 w-16 rounded-full flex items-center justify-center mb-3", isWA ? "bg-zinc-100 dark:bg-zinc-800" : "bg-muted/50")}>
                 <Users className="h-8 w-8 opacity-40" />
               </div>
-              <p className="text-sm font-medium">
+              <p className={cn("text-sm font-medium", isWA ? "text-zinc-700 dark:text-zinc-300" : "")}>
                 {searchQuery ? 'No groups found' : 'No groups yet'}
               </p>
-              <p className="text-xs mt-1 text-center px-6">
+              <p className={cn("text-xs mt-1 text-center px-6", isWA ? "text-zinc-500 dark:text-zinc-400" : "")}>
                 {searchQuery
                   ? 'Try a different search'
                   : channel === 'personal'
@@ -971,13 +1087,16 @@ export function ChatGroupManager({
                 <div key={group.id}>
                   {editingId === group.id ? (
                     /* Inline edit mode */
-                    <div className="mx-2 my-1 p-3 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
+                    <div className={cn(
+                      "mx-2 my-1 p-3 rounded-xl border space-y-2",
+                      isWA ? "border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/20 dark:border-emerald-500/30" : "border-primary/30 bg-primary/5"
+                    )}>
                       <div className="flex items-center gap-2">
                         <GroupAvatar name={editName || group.name} color={editColor} size="sm" />
                         <Input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="h-8 text-sm flex-1"
+                          className={cn("h-8 text-sm flex-1", isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus-visible:ring-1 focus-visible:ring-emerald-500/30" : "")}
                           autoFocus
                           onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
                         />
@@ -986,7 +1105,8 @@ export function ChatGroupManager({
                         value={editDesc}
                         onChange={(e) => setEditDesc(e.target.value)}
                         placeholder="Description"
-                        className="h-7 text-xs"
+                        className={cn("h-7 text-xs max-w-[30vw]", isWA ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus-visible:ring-1 focus-visible:ring-emerald-500/30" : "")}
+                        style={{ maxWidth: '30vw' }}
                       />
                       <div className="flex items-center gap-1">
                         {COLOR_OPTIONS.map((c) => (
@@ -995,26 +1115,28 @@ export function ChatGroupManager({
                             onClick={() => setEditColor(c)}
                             className={cn(
                               'h-4 w-4 rounded-full transition-all',
-                              editColor === c ? 'ring-2 ring-offset-1 ring-primary scale-110' : ''
+                              editColor === c ? (isWA ? 'ring-2 ring-offset-1 ring-emerald-500 scale-110' : 'ring-2 ring-offset-1 ring-primary scale-110') : ''
                             )}
                             style={{ backgroundColor: c }}
                           />
                         ))}
                       </div>
                       <div className="flex gap-1.5 pt-0.5">
-                        <Button size="sm" className="h-7 text-[11px] flex-1" onClick={handleUpdate}>
+                        <Button size="sm" className={cn("h-7 text-[11px] flex-1", isWA ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" : "")} onClick={handleUpdate}>
                           Save
                         </Button>
-
                       </div>
                     </div>
                   ) : confirmDeleteId === group.id ? (
                     /* Delete confirmation */
-                    <div className="mx-2 my-1 p-3 rounded-xl border border-destructive/30 bg-destructive/5 flex items-center gap-3">
+                    <div className={cn(
+                      "mx-2 my-1 p-3 rounded-xl border flex items-center gap-3",
+                      isWA ? "border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 text-zinc-900 dark:text-zinc-100" : "border-destructive/30 bg-destructive/5"
+                    )}>
                       <GroupAvatar name={group.name} color={group.color} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">Delete &quot;{group.name}&quot;?</p>
-                        <p className="text-[11px] text-muted-foreground">This cannot be undone</p>
+                        <p className={cn("text-[11px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>This cannot be undone</p>
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -1025,21 +1147,19 @@ export function ChatGroupManager({
                         >
                           Delete
                         </Button>
-
                       </div>
                     </div>
                   ) : (
                     /* WhatsApp-style group row */
                     <div
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group/row border-b border-border/30 last:border-b-0",
+                        "flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group/row border-b last:border-b-0",
                         isGroupSelectMode && selectedGroupIds.has(group.id)
-                          ? "bg-primary/8 hover:bg-primary/12"
-                          : "hover:bg-muted/40"
+                          ? (isWA ? "bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 border-zinc-200/50 dark:border-zinc-800/50" : "bg-primary/8 hover:bg-primary/12 border-border/30")
+                          : (isWA ? "hover:bg-zinc-100 dark:hover:bg-zinc-800/50 border-zinc-200/50 dark:border-zinc-800/50" : "hover:bg-muted/40 border-border/30")
                       )}
                       onClick={() => {
                         if (isGroupSelectMode) {
-                          // Toggle selection
                           setSelectedGroupIds(prev => {
                             const next = new Set(prev);
                             if (next.has(group.id)) next.delete(group.id);
@@ -1056,8 +1176,8 @@ export function ChatGroupManager({
                       {isGroupSelectMode ? (
                         <div className="h-11 w-11 flex items-center justify-center flex-shrink-0">
                           {selectedGroupIds.has(group.id)
-                            ? <CheckSquare className="h-5 w-5 text-primary" />
-                            : <Square className="h-5 w-5 text-muted-foreground" />
+                            ? <CheckSquare className={cn("h-5 w-5", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-primary")} />
+                            : <Square className={cn("h-5 w-5", isWA ? "text-zinc-400 dark:text-zinc-600" : "text-muted-foreground")} />
                           }
                         </div>
                       ) : (
@@ -1066,7 +1186,7 @@ export function ChatGroupManager({
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium truncate">{group.name}</span>
+                          <span className={cn("text-sm font-medium truncate", isWA ? "text-zinc-900 dark:text-zinc-100 font-semibold" : "")}>{group.name}</span>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {group.metadata?.wa_group && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold"
@@ -1075,18 +1195,28 @@ export function ChatGroupManager({
                               </span>
                             )}
                             {!isGroupSelectMode && (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/row:opacity-100 transition-opacity" />
+                              <ChevronRight className={cn("h-4 w-4 opacity-0 group-hover/row:opacity-100 transition-opacity", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-xs text-muted-foreground truncate">
-                            <Users className="h-3 w-3 inline mr-1" />
-                            {group.metadata?.wa_group && group.metadata.participant_count
-                              ? `${group.metadata.participant_count} member${group.metadata.participant_count !== 1 ? 's' : ''}`
-                              : `${group.conversation_count} conversation${group.conversation_count !== 1 ? 's' : ''}`
-                            }
-                            {group.description ? ` · ${group.description}` : ''}
+                          <p className={cn("text-xs flex items-center gap-1 min-w-0", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
+                            <Users className="h-3 w-3 inline mr-1 flex-shrink-0" />
+                            <span className="flex-shrink-0">
+                              {group.metadata?.wa_group && group.metadata.participant_count
+                                ? `${group.metadata.participant_count} member${group.metadata.participant_count !== 1 ? 's' : ''}`
+                                : `${group.conversation_count} conversation${group.conversation_count !== 1 ? 's' : ''}`
+                              }
+                            </span>
+                            {group.description && (
+                              <span
+                                className="truncate inline-block align-bottom max-w-[30vw]"
+                                style={{ maxWidth: '30vw' }}
+                                title={group.description}
+                              >
+                                {` · ${group.description}`}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1098,7 +1228,7 @@ export function ChatGroupManager({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className={cn("h-7 w-7", isWA && "hover:bg-zinc-200 dark:hover:bg-zinc-700")}
                               title="Group info"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1106,13 +1236,13 @@ export function ChatGroupManager({
                                 onOpenChange(false);
                               }}
                             >
-                              <Info className="h-3.5 w-3.5 text-primary" />
+                              <Info className={cn("h-3.5 w-3.5", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-primary")} />
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className={cn("h-7 w-7", isWA && "hover:bg-zinc-200 dark:hover:bg-zinc-700")}
                             title="Broadcast to group"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1120,21 +1250,21 @@ export function ChatGroupManager({
                               onOpenChange(false);
                             }}
                           >
-                            <Send className="h-3.5 w-3.5 text-blue-600" />
+                            <Send className={cn("h-3.5 w-3.5", isWA ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600")} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className={cn("h-7 w-7", isWA && "hover:bg-zinc-200 dark:hover:bg-zinc-700")}
                             title="Edit group"
                             onClick={(e) => { e.stopPropagation(); startEdit(group); }}
                           >
-                            <Edit3 className="h-3.5 w-3.5" />
+                            <Edit3 className={cn("h-3.5 w-3.5", isWA ? "text-zinc-600 dark:text-zinc-400" : "")} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className={cn("h-7 w-7", isWA && "hover:bg-zinc-200 dark:hover:bg-zinc-700")}
                             title="Delete group"
                             onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(group.id); }}
                           >
@@ -1148,16 +1278,20 @@ export function ChatGroupManager({
               ))}
             </div>
           )}
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        {/* Sticky send-template bar — shown when groups are selected */}
+        {/* Sticky send-template bar - shown when groups are selected */}
         {isGroupSelectMode && selectedGroupIds.size > 0 && (
-          <div className="border-t border-border bg-background px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <div className={cn(
+            "px-4 py-3 flex items-center gap-3 flex-shrink-0 border-t",
+            isWA ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100" : "border-border bg-background"
+          )}>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">
+              <p className={cn("text-sm font-semibold", isWA ? "text-zinc-900 dark:text-zinc-100" : "")}>
                 {selectedGroupIds.size} group{selectedGroupIds.size !== 1 ? 's' : ''} selected
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className={cn("text-[11px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
                 {(() => {
                   const sel = groups.filter(g => selectedGroupIds.has(g.id));
                   const total = sel.reduce((acc, g) =>
@@ -1170,7 +1304,10 @@ export function ChatGroupManager({
             </div>
             <Button
               size="sm"
-              className="h-9 gap-2 text-xs font-semibold"
+              className={cn(
+                "h-9 gap-2 text-xs font-semibold rounded-xl",
+                isWA ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs" : ""
+              )}
               onClick={() => {
                 const sel = groups.filter(g => selectedGroupIds.has(g.id));
                 if (onSendTemplateToGroups) {
@@ -1200,12 +1337,14 @@ interface AddToGroupDropdownProps {
   selectedIds: Set<string>;
   onDone: () => void;
   channel?: 'personal' | 'waba';
+  variant?: 'default' | 'whatsapp';
 }
 
-export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupDropdownProps) {
+export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'default' }: AddToGroupDropdownProps) {
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isWA = variant === 'whatsapp';
 
   const loadGroups = useCallback(() => {
     setLoading(true);
@@ -1238,7 +1377,12 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0 flex items-center justify-center text-violet-600 hover:bg-violet-50"
+            className={cn(
+              "h-7 w-7 p-0 flex items-center justify-center transition-colors rounded-lg",
+              isWA
+                ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                : "text-violet-600 hover:bg-violet-50"
+            )}
             onClick={() => { setIsOpen(true); loadGroups(); }}
           >
             <FolderPlus className="h-3.5 w-3.5" />
@@ -1253,31 +1397,45 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
 
   return (
     <div className="relative">
-      <div className="absolute bottom-full right-0 mb-1 w-52 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Add to Group</span>
-          <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
+      <div className={cn(
+        "absolute bottom-full right-0 mb-1 w-52 rounded-xl border shadow-xl z-50 overflow-hidden",
+        isWA
+          ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
+          : "border-border bg-card"
+      )}>
+        <div className={cn(
+          "flex items-center justify-between px-3 py-2 border-b",
+          isWA ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60" : "border-border bg-muted/30"
+        )}>
+          <span className={cn(
+            "text-[10px] font-semibold uppercase tracking-wider",
+            isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground"
+          )}>Add to Group</span>
+          <button onClick={() => setIsOpen(false)} className={cn("hover:text-foreground", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="max-h-56 overflow-y-auto py-1">
           {loading ? (
             <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
             </div>
           ) : groups.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-3 py-4 text-center">No groups. Create one first.</p>
+            <p className={cn("text-xs px-3 py-4 text-center", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>No groups. Create one first.</p>
           ) : (
             groups.map((g) => (
               <button
                 key={g.id}
                 onClick={() => handleAddToGroup(g.id)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 transition-colors text-left",
+                  isWA ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "hover:bg-muted/50"
+                )}
               >
                 <GroupAvatar name={g.name} color={g.color} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium truncate block">{g.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{g.conversation_count} chats</span>
+                  <span className={cn("text-xs font-medium truncate block", isWA ? "text-zinc-900 dark:text-zinc-100" : "")}>{g.name}</span>
+                  <span className={cn("text-[10px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>{g.conversation_count} chats</span>
                 </div>
               </button>
             ))
@@ -1286,7 +1444,16 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel }: AddToGroupD
       </div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex items-center justify-center text-violet-600 hover:bg-violet-50">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 w-7 p-0 flex items-center justify-center transition-colors rounded-lg",
+              isWA
+                ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                : "text-violet-600 hover:bg-violet-50"
+            )}
+          >
             <FolderPlus className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>

@@ -29,7 +29,7 @@ const AgentGuide = () => {
   const zones = [
     {
       threshold: 0,
-      message: "👋 Welcome! I'm LAD — your AI sales agent. Let me show you around!",
+      message: "👋 Welcome! I'm LAD, your AI sales agent. Let me show you around!",
     },
     {
       threshold: 0.12,
@@ -37,7 +37,7 @@ const AgentGuide = () => {
     },
     {
       threshold: 0.28,
-      message: "🚀 Getting started takes just 5 steps — no technical skills needed!",
+      message: "🚀 Getting started takes just 5 steps. No technical skills needed!",
     },
     {
       threshold: 0.44,
@@ -49,7 +49,7 @@ const AgentGuide = () => {
     },
     {
       threshold: 0.74,
-      message: "💰 Find the plan that fits your team — credits are valid for 1 month!",
+      message: "💰 Find the plan that fits your team. Credits are valid for 1 month!",
     },
     {
       threshold: 0.9,

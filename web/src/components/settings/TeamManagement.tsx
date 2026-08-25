@@ -11,6 +11,7 @@ import {
   X,
   Phone,
   Mail,
+  MoreHorizontal,
   User,
   Shield,
   Eye as EyeIcon,
@@ -318,98 +319,102 @@ export const TeamManagement: React.FC = () => {
       {loading && users.length === 0 ? (
         <TeamManagementSkeleton />
       ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50/50 dark:bg-transparent border-b border-gray-100 dark:border-zinc-800/80">
+        <div className="bg-white dark:bg-[#071131]/60 rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-slate-50/50 dark:bg-transparent border-b border-slate-200 dark:border-blue-950/40">
                 <tr>
-                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">Team Member</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">Role & Status</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">Permissions</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">Privacy</th>
-                  <th className="px-8 py-5 text-right text-[10px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">Actions</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Team Member</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Role &amp; Status</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Permissions</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Privacy</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-950/30">
                 {users.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-8 py-16 text-center">
                       <div className="flex flex-col items-center">
-                        <div className="p-4 rounded-full bg-gray-50 dark:bg-zinc-900 mb-4">
-                          <UserPlus className="h-8 w-8 text-gray-300 dark:text-zinc-600" />
+                        <div className="p-4 rounded-full bg-slate-100 dark:bg-[#030a21] mb-4 border border-slate-200 dark:border-blue-950/40">
+                          <UserPlus className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100">No team members</h3>
-                        <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1 max-w-xs">Start by adding your first team member to collaborate on conversations.</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No team members</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 max-w-xs">Start by adding your first team member to collaborate on conversations.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  // Row layout merges develop's 5-column schema (matches
-                  // the header) with HEAD's dark-mode hover state.
                   users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-900/20 transition-colors group">
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-[#0B1957] dark:bg-zinc-800 flex items-center justify-center text-white dark:text-zinc-200 font-bold shadow-sm border dark:border-zinc-700">
+                    <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                      {/* Team Member */}
+                      <td className="px-6 py-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-[#030a21] border border-slate-200 dark:border-blue-900/40 flex items-center justify-center text-slate-800 dark:text-white font-bold text-sm shrink-0">
                             {(user.name || user.email || '?').charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-900 dark:text-zinc-100">{user.name || '—'}</span>
-                            <span className="text-xs text-gray-500 dark:text-slate-300 flex items-center gap-1.5 mt-0.5">
-                              <Mail className="h-3 w-3 opacity-60 text-gray-400 dark:text-slate-300" />
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{user.name || '-'}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <Mail className="h-3 w-3 opacity-60 text-slate-400" />
                               {user.email}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="flex flex-col gap-3">
+
+                      {/* Role & Status */}
+                      <td className="px-6 py-6">
+                        <div className="flex flex-col gap-2.5">
                           {user.role === 'owner' ? (
-                            <Badge className={cn("w-fit px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider", getRoleBadgeColor(user.role))}>
+                            <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-800/40 w-fit">
                               Owner
-                            </Badge>
+                            </span>
                           ) : (
                             <Select
                               value={user.role}
                               onValueChange={(val) => handleUpdateRole(user.id, val)}
                             >
-                              <SelectTrigger className={cn("h-8 w-fit min-w-[160px] border-none shadow-none text-xs font-bold rounded-lg px-3 bg-transparent dark:bg-transparent", getRoleBadgeColor(user.role))}>
+                              <SelectTrigger className="h-9 w-fit min-w-[140px] bg-slate-50 dark:bg-[#030a21] border border-slate-200 dark:border-[#1e293b] text-blue-600 dark:text-blue-400 font-semibold text-xs rounded-xl px-3.5 shadow-none focus:ring-0">
                                 <SelectValue placeholder="Select role" />
                               </SelectTrigger>
-                              <SelectContent className="dark:bg-[#112240] dark:border-zinc-800">
-                                {ROLE_OPTIONS.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium dark:text-zinc-300 dark:focus:bg-zinc-900">
+                              <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+                                {ROLE_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs focus:bg-blue-600 focus:text-white cursor-pointer">
                                     {opt.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           )}
-                          <div className={cn(
-                            "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider pl-1",
-                            user.status === 'inactive' ? "text-rose-600 dark:text-rose-400" : "text-green-600 dark:text-emerald-400"
-                          )}>
-                            <div className={cn(
-                              "h-1.5 w-1.5 rounded-full animate-pulse",
-                              user.status === 'inactive' ? "bg-rose-500" : "bg-green-500"
-                            )} />
-                            {user.status || 'Active'}
+
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide uppercase pl-0.5">
+                            <span className={cn("h-1.5 w-1.5 rounded-full", user.status === 'inactive' ? "bg-rose-500" : "bg-emerald-500 dark:bg-emerald-400")} />
+                            <span className={user.status === 'inactive' ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
+                              {user.status || 'ACTIVE'}
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+
+                      {/* Permissions List */}
+                      <td className="px-6 py-6">
                         <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                          {PAGE_CAPABILITIES.map(page => {
+                          {PAGE_CAPABILITIES.map((page) => {
                             const isChecked = user.capabilities?.includes(page.key);
                             return (
-                              <label key={page.key} className="flex items-center gap-2 cursor-pointer group w-fit">
-                                <div className={cn(
-                                  "w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors",
-                                  isChecked ? "bg-[#0B1957] border-[#0B1957] dark:bg-zinc-100 dark:border-zinc-100" : "border-gray-300 dark:border-zinc-700 group-hover:border-[#0B1957] dark:group-hover:border-zinc-500"
-                                )}>
-                                  {isChecked && <div className="w-1.5 h-1.5 bg-white dark:bg-[#112240] rounded-full" />}
+                              <label key={page.key} className="flex items-center gap-2.5 cursor-pointer group w-fit">
+                                <div
+                                  className={cn(
+                                    "w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0",
+                                    isChecked
+                                      ? "border-blue-500 bg-blue-500 shadow-sm shadow-blue-500/50"
+                                      : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-[#030a21] group-hover:border-slate-400 dark:group-hover:border-slate-500"
+                                  )}
+                                >
+                                  {isChecked && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                                 </div>
-                                <span className="text-xs text-gray-600 dark:text-zinc-400 group-hover:text-gray-900 dark:group-hover:text-zinc-200 transition-colors">
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                                   {page.label}
                                 </span>
                                 <input
@@ -423,41 +428,35 @@ export const TeamManagement: React.FC = () => {
                           })}
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+
+                      {/* Privacy Toggle */}
+                      <td className="px-6 py-6">
                         <div className="flex flex-col gap-1.5">
                           <button
                             onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
                             className={cn(
                               "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                              user.maskPhoneNumber ? "bg-orange-500 dark:bg-orange-600" : "bg-gray-200 dark:bg-zinc-800"
+                              user.maskPhoneNumber ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-800"
                             )}
                           >
                             <span
                               className={cn(
-                                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out dark:bg-zinc-100",
+                                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
                                 user.maskPhoneNumber ? "translate-x-5" : "translate-x-0"
                               )}
                             />
                           </button>
-                          <span className="text-[9px] font-bold text-gray-400 dark:text-slate-300 uppercase tracking-widest">
+                          <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                             {user.maskPhoneNumber ? 'Phone Masked' : 'Phone Visible'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-900 dark:hover:text-zinc-100">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="h-9 w-9 p-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+
+                      {/* Actions */}
+                      <td className="px-6 py-6 text-right">
+                        <button className="p-2 rounded-xl bg-slate-100 dark:bg-[#030a21] border border-slate-200 dark:border-blue-950/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center justify-center">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -470,8 +469,7 @@ export const TeamManagement: React.FC = () => {
 
       {/* Add User Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="w-full h-full sm:h-auto sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[100vh] sm:max-h-[90vh] bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831] rounded-none sm:rounded-2xl">
-
+        <DialogContent className="w-full max-h-[85vh] sm:max-h-[90vh] sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831] rounded-xl sm:rounded-2xl my-auto">
           {/* Synchronized Header Row UI */}
           <DialogHeader className="p-4 md:p-6 border-b border-slate-100 dark:border-[#262831] dark:bg-[#0e1a3a]/60 shrink-0">
             <div className="flex items-center gap-3">

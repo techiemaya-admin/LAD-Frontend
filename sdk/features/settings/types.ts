@@ -1,5 +1,5 @@
 /**
- * Settings Feature — Types
+ * Settings Feature - Types
  * sdk/features/settings/types.ts
  */
 

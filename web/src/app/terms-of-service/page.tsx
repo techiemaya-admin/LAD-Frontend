@@ -228,24 +228,24 @@ export default function TermsOfServicePage() {
       <h2 id="general">18. General</h2>
       <ul>
         <li>
-          <strong>Entire agreement.</strong> These Terms, together with any order or plan details and
+          <strong>Entire agreement:</strong> These Terms, together with any order or plan details and
           our policies referenced here, are the entire agreement between you and us regarding the
           Services.
         </li>
         <li>
-          <strong>Assignment.</strong> You may not assign these Terms without our consent; we may
+          <strong>Assignment:</strong> You may not assign these Terms without our consent; we may
           assign them in connection with a merger, acquisition, or sale of assets.
         </li>
         <li>
-          <strong>Severability.</strong> If any provision is held unenforceable, the remaining
+          <strong>Severability:</strong> If any provision is held unenforceable, the remaining
           provisions remain in effect.
         </li>
         <li>
-          <strong>Waiver.</strong> Failure to enforce any provision is not a waiver of our right to do
+          <strong>Waiver:</strong> Failure to enforce any provision is not a waiver of our right to do
           so later.
         </li>
         <li>
-          <strong>Force majeure.</strong> Neither party is liable for delays or failures caused by
+          <strong>Force majeure:</strong> Neither party is liable for delays or failures caused by
           events beyond its reasonable control.
         </li>
       </ul>
@@ -257,7 +257,10 @@ export default function TermsOfServicePage() {
           <strong>Email:</strong> <a href="mailto:support@techiemaya.com">support@techiemaya.com</a>
         </li>
         <li>
-          <strong>TechieMaya FZE</strong> — IDS Business Center, Al Karama, Dubai, United Arab Emirates
+          <strong>Company:</strong> TechieMaya FZE
+        </li>
+        <li>
+          <strong>Address:</strong> IDS Business Center, Al Karama, Dubai, United Arab Emirates
         </li>
       </ul>
     </LegalPageLayout>

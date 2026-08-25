@@ -1,15 +1,15 @@
 /**
- * Prospects feature — useProspectFollowups hook.
+ * Prospects feature - useProspectFollowups hook.
  *
  * Upcoming scheduled automatic follow-ups for a prospect, across channels.
  */
 import { useQuery } from '@tanstack/react-query';
 
 import * as api from '../api';
-import type { ProspectFollowup } from '../api';
+import type { ProspectFollowupsResult } from '../api';
 
 export function useProspectFollowups(id: string | undefined, enabled = true) {
-  return useQuery<ProspectFollowup[]>({
+  return useQuery<ProspectFollowupsResult>({
     queryKey: ['prospect-followups', id],
     queryFn: () => api.getProspectFollowups(id as string),
     staleTime: 30_000,

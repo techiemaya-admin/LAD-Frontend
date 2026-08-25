@@ -13,7 +13,7 @@ export interface WorkflowPreviewStep {
 export type WorkflowLayout = 'horizontal' | 'vertical';
 
 /* ═══════════════════════════════════════════════════════════════════
-   HORIZONTAL "SNAKE" LAYOUT — the sequence flows left→right and wraps to
+   HORIZONTAL "SNAKE" LAYOUT - the sequence flows left→right and wraps to
    the next row (boustrophedon), so a long multi-channel pipeline stays
    compact and fully visible in the portrait preview panel instead of
    running off the bottom as one tall column. Still a faithful 1:1 mirror
@@ -29,7 +29,7 @@ const Y_STRIDE = 156;   // vertical gap between rows (circle + label + turn slac
 const X0 = 40;          // left margin
 const Y0 = 20;          // top margin
 
-/** Columns per row — adaptive so the flow stays roughly square (best fit for fitView). */
+/** Columns per row - adaptive so the flow stays roughly square (best fit for fitView). */
 function snakeCols(n: number): number {
   return Math.min(4, Math.max(2, Math.ceil(Math.sqrt(n))));
 }
@@ -97,7 +97,7 @@ export function createReactFlowEdges(
     const b = cellFor(i + 1, cols);
     let sourceHandle: string, targetHandle: string;
     if (a.row !== b.row) {
-      // Row turn — drop straight down to the node below.
+      // Row turn - drop straight down to the node below.
       sourceHandle = 'bottom'; targetHandle = 'top';
     } else if (a.row % 2 === 0) {
       // Even row: flowing left → right.

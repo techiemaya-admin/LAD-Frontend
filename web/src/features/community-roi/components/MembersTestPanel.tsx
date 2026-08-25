@@ -229,15 +229,15 @@ export default function MembersTestPanel() {
               </div>
               <div>
                 <div className="text-xs text-slate-600 uppercase">Email</div>
-                <div className="font-semibold text-slate-900">{member.email || '—'}</div>
+                <div className="font-semibold text-slate-900">{member.email || '-'}</div>
               </div>
               <div>
                 <div className="text-xs text-slate-600 uppercase">Phone</div>
-                <div className="font-semibold text-slate-900">{member.phone || '—'}</div>
+                <div className="font-semibold text-slate-900">{member.phone || '-'}</div>
               </div>
               <div>
                 <div className="text-xs text-slate-600 uppercase">Industry</div>
-                <div className="font-semibold text-slate-900">{member.industry || '—'}</div>
+                <div className="font-semibold text-slate-900">{member.industry || '-'}</div>
               </div>
             </div>
 

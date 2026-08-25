@@ -88,7 +88,7 @@ export function MessageSettings({
 }: MessageSettingsProps = {}) {
   const { settings, updateSetting } = useMessageSettings();
 
-  // Per-tenant inbound debounce — persisted server-side via the WABA
+  // Per-tenant inbound debounce - persisted server-side via the WABA
   // chat-settings API (NOT localStorage), because it controls server
   // behaviour (asyncio.sleep before AI generation), not just UI behaviour.
   const [inboundDebounce, setInboundDebounce] = useState<number>(INBOUND_DEBOUNCE_DEFAULT);

@@ -1,4 +1,4 @@
-/** GET /api/email-conversations/groups | POST — create group */
+/** GET /api/email-conversations/groups | POST - create group */
 import { NextRequest } from 'next/server';
 import { proxyToWABA } from '../utils/proxy';
 

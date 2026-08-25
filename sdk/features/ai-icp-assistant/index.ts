@@ -76,7 +76,12 @@ export type { AIChatState } from './hooks/useAIChat';
 export type { ChatMessage as AIChatMessage } from './hooks/useAIChat';
 
 export { useCampaignCreation } from './hooks/useCampaignCreation';
-export type { CampaignStep, CampaignPayload, CampaignCreationState } from './hooks/useCampaignCreation';
+export type {
+  CampaignStep,
+  CampaignPayload,
+  CampaignCreationState,
+  CampaignCreationFailure,
+} from './hooks/useCampaignCreation';
 
 export { useVoiceAgent } from './hooks/useVoiceAgent';
 export type { VoiceAgent, PhoneNumber, VoiceAgentState } from './hooks/useVoiceAgent';
@@ -101,7 +106,7 @@ export type {
   WorkflowNode,
 } from './types';
 
-// R8 — Tenant ICP Definitions (canonical active ICP)
+// R8 - Tenant ICP Definitions (canonical active ICP)
 export type {
   IcpStructured,
   IcpDefinition,
@@ -135,11 +140,14 @@ export {
   BUSINESS_PROFILE_OPTIONAL_FIELDS,
   BUSINESS_PROFILE_COMPANY_HALF,
   BUSINESS_PROFILE_ICP_HALF,
+  BUSINESS_PROFILE_OFFER_HALF,
   BUSINESS_PROFILE_ALL_FIELDS,
+  BUSINESS_PROFILE_BASICS_FIELDS,
   emptyBusinessProfile,
   computeCompleteness,
+  computeOfferCompleteness,
 } from './businessProfile';
-export { getBusinessProfile, saveBusinessProfile } from './businessProfileApi';
+export { getBusinessProfile, saveBusinessProfile, uploadCompanyLogo } from './businessProfileApi';
 export { useBusinessProfile } from './hooks/useBusinessProfile';
 export type { UseBusinessProfileResult } from './hooks/useBusinessProfile';
 export { useIcpDefinitionMutations } from './hooks/useIcpDefinitionMutations';
@@ -150,7 +158,7 @@ export type {
 export { useIcpSearchHistory } from './hooks/useIcpSearchHistory';
 export type { UseIcpSearchHistoryResult } from './hooks/useIcpSearchHistory';
 
-// D6 — SearchDispatcher HTTP client + hooks
+// D6 - SearchDispatcher HTTP client + hooks
 export {
   runSearch,
   listDispatchedSearches,

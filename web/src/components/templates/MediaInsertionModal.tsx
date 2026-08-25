@@ -45,7 +45,7 @@ export default function MediaInsertionModal({
       const seen = new Set<string>();
       const media: MediaFile[] = [];
 
-      // Source 1: localStorage — URLs saved immediately after each upload
+      // Source 1: localStorage - URLs saved immediately after each upload
       try {
         const stored: Array<{ url: string; name: string; uploadedAt: string }> =
           JSON.parse(localStorage.getItem('email_media_uploads') || '[]');
@@ -86,7 +86,7 @@ export default function MediaInsertionModal({
             });
           }
         }
-      } catch { /* non-fatal — localStorage results still shown */ }
+      } catch { /* non-fatal - localStorage results still shown */ }
 
       // Sort newest first
       media.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());

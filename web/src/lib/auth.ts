@@ -25,7 +25,7 @@ export async function login(payload: LoginPayload): Promise<void> {
     const msg = await safeError(res);
     throw new Error(msg || "Login failed");
   }
-  // Token is set as httpOnly cookie by the API route — no client-side storage needed.
+  // Token is set as httpOnly cookie by the API route - no client-side storage needed.
   // Still parse the response body (callers may need user data).
   await res.json().catch(() => null);
 }

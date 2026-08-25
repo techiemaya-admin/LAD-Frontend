@@ -167,7 +167,7 @@
     /* Borders & Inputs */
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: #0B1957;
 
     /* Channel Colors */
     --whatsapp: 142 70% 45%;
@@ -182,7 +182,7 @@
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-ring: #0B1957;
 
     /* Message Bubbles - WhatsApp Theme */
     --message-incoming: 0 0% 100%;
@@ -235,7 +235,7 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles — WhatsApp styling */
+  /* Message bubbles - WhatsApp styling */
   .message-bubble-incoming {
     background: #ffffff;
     color: #111b21;
@@ -260,12 +260,12 @@
   }
 
   .dark .message-bubble-incoming {
-    background-color: #202c33;
+    background-color: #242626;
     color: #e9edef;
   }
 
   .dark .message-bubble-outgoing {
-    background-color: #005c4b;
+    background-color: #144d37;
     color: #e9edef;
   }
 
@@ -351,7 +351,7 @@
     scrollbar-color: #e5e7eb transparent;
   }
   
-  /* Global dark mode scrollbar — applies to ALL scrollable elements */
+  /* Global dark mode scrollbar - applies to ALL scrollable elements */
   .dark *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -608,7 +608,7 @@
   /* Border & Input */
   --border: oklch(92% 0.013 255.508);
   --input: oklch(96% 0.007 247.896);
-  --ring: oklch(62% 0.194 149.214);
+  --ring: #0B1957;
 
   /* Muted */
   --muted: oklch(96% 0.007 247.896);
@@ -629,7 +629,7 @@
   --sidebar-accent: oklch(62% 0.194 149.214);
   --sidebar-accent-foreground: oklch(98% 0.014 180.72);
   --sidebar-border: oklch(92% 0.013 255.508);
-  --sidebar-ring: oklch(62% 0.194 149.214);
+  --sidebar-ring: #0B1957;
 }
 
 /* ------------------------------
@@ -650,9 +650,9 @@
   --secondary: #1A2A43;
   --secondary-foreground: #E0E0E0;
 
-  /* Accent - Neon Mint (Highlight) */
-  --accent: #2EE6A6;
-  --accent-foreground: #000724;
+  /* Accent - Light Blue (Highlight) */
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
 
   /* Neutral */
   --neutral: #1a2f6b;
@@ -687,7 +687,7 @@
   /* Border & Input - Electric Blue accent */
   --border: #2B7CFF;
   --input: #1A2A43;
-  --ring: #2EE6A6;
+  --ring: #2B7CFF;
 
   /* Muted */
   --muted: #2B7CFF;
@@ -705,10 +705,10 @@
   --sidebar-foreground: #E0E0E0;
   --sidebar-primary: #2B7CFF;
   --sidebar-primary-foreground: #000724;
-  --sidebar-accent: #2EE6A6;
-  --sidebar-accent-foreground: #000724;
+  --sidebar-accent: #2563eb;
+  --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1a2a43;
-  --sidebar-ring: #2EE6A6;
+  --sidebar-ring: #2B7CFF;
 }
 
 /* Background override */
@@ -788,4 +788,69 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* -------------------------------------------------------------
+   GLOBAL DARK MODE DROPDOWN & SELECT STYLES
+   Ensures popovers use #071131 navy background with subtle #1c2c4e border,
+   and option hover/focused/active states use standard light blue (#2563eb).
+----------------------------------------------------------------- */
+.dark select {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+}
+
+.dark select option {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:active,
+.dark select option:checked {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-content"],
+.dark [data-radix-select-content],
+.dark [role="menu"],
+.dark [role="listbox"] {
+  background-color: #071131 !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-item"]:focus,
+.dark [data-slot="select-item"][data-highlighted],
+.dark [data-slot="select-item"][data-state="checked"],
+.dark [role="option"]:focus,
+.dark [role="option"][data-highlighted],
+.dark [role="option"][aria-selected="true"],
+.dark [role="menuitem"]:focus,
+.dark [role="menuitem"][data-highlighted] {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
+.dark input:focus,
+.dark input:focus-visible,
+.dark textarea:focus,
+.dark textarea:focus-visible,
+.dark select:focus,
+.dark select:focus-visible,
+.dark [data-slot="input"]:focus,
+.dark [data-slot="input"]:focus-visible,
+.dark [data-slot="textarea"]:focus,
+.dark [data-slot="textarea"]:focus-visible,
+.dark [data-slot="select-trigger"]:focus,
+.dark [data-slot="select-trigger"]:focus-visible {
+  border-color: rgba(43, 124, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(43, 124, 255, 0.25) !important;
+  outline: none !important;
+}
+
+
 

@@ -47,9 +47,11 @@ jobs:
   # `tsc --noEmit` catches exactly this class ("X is not exported / Cannot find
   # module") at PR time.
   #
-  # PHASE 1 (this PR): REPORT-ONLY. develop currently has ~363 pre-existing type
-  # errors (masked until now by an invalid `ignoreDeprecations` value that made
-  # tsc short-circuit). We do NOT block merges on that debt — the job surfaces
+  # PHASE 1: REPORT-ONLY. develop carries a few hundred pre-existing type errors
+  # (originally masked by an invalid `ignoreDeprecations` value that made tsc
+  # short-circuit); the current count is the BASELINE constant set below, which
+  # must be re-anchored whenever it drifts — see the note there. We do NOT block
+  # merges on that debt — the job surfaces
   # the count + full error list in the PR summary and warns on regressions above
   # the baseline, but always exits 0.
   #
@@ -82,10 +84,15 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Known pre-existing error count on develop when this gate was added.
-          # Burn this down over time; when it reaches 0, flip the gate to blocking
-          # (see PHASE 2 note above).
-          BASELINE=363
+          # Known pre-existing error count on develop. Burn this down over time;
+          # when it reaches 0, flip the gate to blocking (see PHASE 2 note above).
+          #
+          # Re-anchor this whenever it drifts. While it sat at 363 and develop was
+          # at 379, EVERY pull request inherited a "16 above baseline" warning that
+          # had nothing to do with its own changes — which trains everyone to scroll
+          # past the one annotation that is supposed to mean "you just broke an
+          # import". A baseline that is always wrong is the same as no baseline.
+          BASELINE=379
           npx tsc --noEmit > /tmp/tsc.log 2>&1 || true
           COUNT=$(grep -cE ': error TS' /tmp/tsc.log || true)
           {

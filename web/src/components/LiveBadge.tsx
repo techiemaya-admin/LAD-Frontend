@@ -14,24 +14,22 @@ export function LiveBadge({ isConnected = true, showOffline = false, className }
   const connected = Boolean(isConnected);
 
   if (!connected && showOffline) {
-    return (
-      <Badge
-        className={className}
-        style={{ backgroundColor: '#FEE2E2', color: '#B91C1C' }}
-      >
-        <WifiOff className="w-3 h-3 mr-1" />
-        Offline
-      </Badge>
-    );
-  }
-
   return (
     <Badge
-      className={className}
-      style={{ backgroundColor: '#dbfce7', color: 'green' }}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-400 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 ${className}`}
     >
-      <Wifi className="w-3 h-3 mr-1" />
-      Live
+      <WifiOff className="w-3 h-3" />
+      Offline
     </Badge>
   );
+}
+
+return (
+  <Badge
+    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 ${className}`}
+  >
+    <Wifi className="w-3 h-3" />
+    Live
+  </Badge>
+);
 }

@@ -1,4 +1,4 @@
-// extractIcp.ts — Phase 4 of R8.
+// extractIcp.ts - Phase 4 of R8.
 //
 // Maps the chat's freeform `businessProfile` state object to the canonical
 // `IcpStructured` shape that tenant_icp_definitions expects.
@@ -43,7 +43,7 @@ export interface BusinessProfile {
 
 /**
  * Build a canonical IcpStructured from the chat's businessProfile object.
- * Falls back gracefully when fields are missing — every section is optional
+ * Falls back gracefully when fields are missing - every section is optional
  * by schema and downstream consumers handle partial ICPs.
  */
 export function extractStructuredIcp(
@@ -152,8 +152,8 @@ function parseEmployeeRange(v?: string): { min?: number; max?: number } | undefi
   const trimmed = v.trim();
   if (!trimmed) return undefined;
 
-  // Match "50-500", "50 to 500", "50–500"
-  const range = trimmed.match(/(\d{1,7})\s*[-–to]+\s*(\d{1,7})/i);
+  // Match "50-500", "50 to 500", "50-500"
+  const range = trimmed.match(/(\d{1,7})\s*[--to]+\s*(\d{1,7})/i);
   if (range) {
     return { min: parseInt(range[1], 10), max: parseInt(range[2], 10) };
   }
@@ -192,7 +192,7 @@ function summarise(p: BusinessProfile): string | undefined {
   if (p.valueProposition) parts.push(p.valueProposition);
   if (p.targetCustomers) parts.push(`Target: ${p.targetCustomers}`);
   if (!parts.length) return undefined;
-  // Cap at 280 chars — this is for audit/debug, not the canonical record.
+  // Cap at 280 chars - this is for audit/debug, not the canonical record.
   const joined = parts.join(' · ');
   return joined.length > 280 ? `${joined.slice(0, 277)}…` : joined;
 }

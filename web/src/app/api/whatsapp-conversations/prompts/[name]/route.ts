@@ -1,5 +1,5 @@
 /**
- * Single Prompt Proxy — Personal WhatsApp (Node.js backend)
+ * Single Prompt Proxy - Personal WhatsApp (Node.js backend)
  * GET    /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name
  * PUT    /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name
  * DELETE /api/whatsapp-conversations/prompts/:name → Node.js /api/personal-whatsapp/prompts/:name

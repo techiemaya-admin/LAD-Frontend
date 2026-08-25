@@ -38,18 +38,6 @@ export const StickyScroll = ({
     setActiveCard(closestBreakpointIndex);
   });
 
-  const backgroundColors = [
-    "#ffffff", // light background
-    "#ffffff",
-    "#ffffff",
-  ];
-
-  const darkBackgroundColors = [
-    "#0f172a", // slate-900
-    "#000000", // black
-    "#171717", // neutral-900
-  ];
-
   const linearGradients = [
     "linear-gradient(to bottom right, #3B82F6, #06b6d4)", // blue to cyan
     "linear-gradient(to bottom right, #06b6d4, #3B82F6)", // cyan to blue
@@ -67,9 +55,6 @@ export const StickyScroll = ({
 
   return (
     <motion.div
-      animate={{
-        backgroundColor: backgroundColors[activeCard % backgroundColors.length],
-      }}
       className="py-20 relative bg-gradient-to-b from-background via-background to-background relative flex h-[30rem] justify-center space-x-10 overflow-y-scroll rounded-md p-10 bg-white dark:bg-slate-950 scrollbar-hide"
       style={{
         scrollbarWidth: 'none',

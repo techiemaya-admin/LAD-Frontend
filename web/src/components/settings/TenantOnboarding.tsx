@@ -38,7 +38,7 @@ interface CreateAccountForm {
   display_name: string;
   slug: string;
   database_url: string;
-  tenant_id: string;         // Optional — leave blank to auto-create a new tenant
+  tenant_id: string;         // Optional - leave blank to auto-create a new tenant
   phone_number_id: string;
   access_token: string;
   business_account_id: string;
@@ -70,7 +70,7 @@ async function fetchAccounts(): Promise<WhatsAppAccount[]> {
 
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {
   const body: Record<string, any> = { ...form };
-  // Remove empty optional fields (including tenant_id — blank = auto-create new tenant)
+  // Remove empty optional fields (including tenant_id - blank = auto-create new tenant)
   for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'app_id', 'app_secret', 'ai_api_key', 'escalation_phone']) {
     if (!body[key]) delete body[key];
   }
@@ -240,7 +240,7 @@ export function TenantOnboarding() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
+    <div className="bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
       {/* Header */}
       <div className="p-6 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center justify-between">
@@ -319,10 +319,10 @@ export function TenantOnboarding() {
               />
             </div>
 
-            {/* Tenant ID (optional — link to existing LAD tenant) */}
+            {/* Tenant ID (optional - link to existing LAD tenant) */}
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tenant ID <span className="text-gray-400 dark:text-slate-300 font-normal">(optional — leave blank to create a new tenant, or paste an existing LAD tenant UUID to link this account)</span>
+                Tenant ID <span className="text-gray-400 dark:text-slate-300 font-normal">(optional: leave blank to create a new tenant, or paste an existing LAD tenant UUID to link this account)</span>
               </label>
               <input
                 type="text"
@@ -343,7 +343,7 @@ export function TenantOnboarding() {
               >
                 {FLOW_TEMPLATES.map((ft) => (
                   <option key={ft.id} value={ft.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                    {ft.label} — {ft.description}
+                    {ft.label}: {ft.description}
                   </option>
                 ))}
               </select>
@@ -443,7 +443,7 @@ export function TenantOnboarding() {
             {/* App ID */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                App ID <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App ID — required for template media uploads)</span>
+                App ID <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App ID, required for template media uploads)</span>
               </label>
               <input
                 type="text"
@@ -457,7 +457,7 @@ export function TenantOnboarding() {
             {/* App Secret */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                App Secret <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App Secret — for webhook payload verification)</span>
+                App Secret <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App Secret, used for webhook payload verification)</span>
               </label>
               <input
                 type="password"
@@ -468,7 +468,7 @@ export function TenantOnboarding() {
               />
             </div>
 
-            {/* Human-Escalation Phone — tenant's own agent number for AI hand-offs */}
+            {/* Human-Escalation Phone - tenant's own agent number for AI hand-offs */}
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Human Escalation Phone
@@ -581,18 +581,6 @@ export function TenantOnboarding() {
                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{account.id}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-400 dark:text-slate-300">Phone Number ID</span>
-                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">{account.phone_number_id || '—'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-400 dark:text-slate-300">Business Account ID</span>
-                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">{account.business_account_id || '—'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-400 dark:text-slate-300">App ID</span>
-                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">{(account as any).app_id || '—'}</p>
-                      </div>
-                      <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Webhook URL</span>
                         <p className="font-mono text-xs text-indigo-600 dark:text-indigo-400">/webhook/{account.slug}</p>
                       </div>
@@ -605,7 +593,7 @@ export function TenantOnboarding() {
                       <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Human Escalation Phone</span>
                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
-                          {((account as any).metadata?.escalation_phone as string) || '—'}
+                          {((account as any).metadata?.escalation_phone as string) || '-'}
                         </p>
                       </div>
                     </div>

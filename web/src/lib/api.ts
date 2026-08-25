@@ -1,6 +1,11 @@
 import { loadingFetch } from "@/lib/loading-fetch";
 import { safeStorage } from '@lad/shared/storage';
+import { ApiError, apiErrorFromResponse } from '@lad/shared/apiError';
 import { logger } from "@/lib/logger";
+
+// Re-exported so call sites can `import { ApiError } from '@/lib/api'` next to
+// the helper they already use.
+export { ApiError } from '@lad/shared/apiError';
 // Use backend URL directly
 const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/+$/, "");
 function authHeaders() {
@@ -60,7 +65,7 @@ export async function apiGet<T>(path: string, options?: { signal?: AbortSignal }
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`GET ${path} ${res.status}`);
+    throw new ApiError(`GET ${path} ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -74,15 +79,9 @@ export async function apiPost<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    // Try to extract error message from response body
-    let errorMessage = `POST ${path} ${res.status}`;
-    try {
-      const errorData = await res.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch (e) {
-      // If response is not JSON, use default error message
-    }
-    throw new Error(errorMessage);
+    // ApiError carries the status and the backend's `code` (e.g.
+    // CAMPAIGN_NAME_TAKEN) alongside the same message this used to throw.
+    throw await apiErrorFromResponse(res, `POST ${path} ${res.status}`, 'message');
   }
   return res.json();
 }
@@ -96,7 +95,7 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`PUT ${path} ${res.status}`);
+    throw new ApiError(`PUT ${path} ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -111,7 +110,7 @@ export async function apiPatch<T>(path: string, body: any): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`PATCH ${path} ${res.status}`);
+    throw new ApiError(`PATCH ${path} ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -125,7 +124,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`DELETE ${path} ${res.status}`);
+    throw new ApiError(`DELETE ${path} ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -142,17 +141,12 @@ export async function proxyPost<T>(path: string, body: any): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    let errorMessage = `POST ${path} ${res.status}`;
-    try {
-      const errorData = await res.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch (e) { /* ignore */ }
-    throw new Error(errorMessage);
+    throw await apiErrorFromResponse(res, `POST ${path} ${res.status}`, 'message');
   }
   return res.json();
 }
 
-/** GET via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** GET via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyGet<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -163,17 +157,12 @@ export async function proxyGet<T>(path: string, options?: { signal?: AbortSignal
     signal: options?.signal,
   });
   if (!res.ok) {
-    let msg = `GET ${path} ${res.status}`;
-    try {
-      const errorData = await res.json();
-      msg = errorData.message || errorData.error || msg;
-    } catch { /* ignore */ }
-    throw new Error(msg);
+    throw await apiErrorFromResponse(res, `GET ${path} ${res.status}`, 'message');
   }
   return res.json();
 }
 
-/** PATCH via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** PATCH via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyPatch<T>(path: string, body: any): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -183,17 +172,27 @@ export async function proxyPatch<T>(path: string, body: any): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    let msg = `PATCH ${path} ${res.status}`;
-    try {
-      const errorData = await res.json();
-      msg = errorData.message || errorData.error || msg;
-    } catch { /* ignore */ }
-    throw new Error(msg);
+    throw await apiErrorFromResponse(res, `PATCH ${path} ${res.status}`, 'message');
   }
   return res.json();
 }
 
-/** DELETE via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** PUT via Next.js API proxy - relative URL, no BACKEND_URL base. */
+export async function proxyPut<T>(path: string, body: any): Promise<T> {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const res = await loadingFetch(p, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw await apiErrorFromResponse(res, `PUT ${path} ${res.status}`, 'message');
+  }
+  return res.json();
+}
+
+/** DELETE via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyDelete<T>(path: string): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -202,12 +201,7 @@ export async function proxyDelete<T>(path: string): Promise<T> {
     headers: { ...authHeaders() },
   });
   if (!res.ok) {
-    let msg = `DELETE ${path} ${res.status}`;
-    try {
-      const errorData = await res.json();
-      msg = errorData.message || errorData.error || msg;
-    } catch { /* ignore */ }
-    throw new Error(msg);
+    throw await apiErrorFromResponse(res, `DELETE ${path} ${res.status}`, 'message');
   }
   return res.json();
 }
@@ -222,7 +216,7 @@ export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   });
   if (!res.ok) {
     handleAuthError(res.status, p);
-    throw new Error(`UPLOAD ${path} ${res.status}`);
+    throw new ApiError(`UPLOAD ${path} ${res.status}`, res.status);
   }
   return res.json();
 }

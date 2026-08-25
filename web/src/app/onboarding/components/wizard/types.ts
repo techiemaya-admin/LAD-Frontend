@@ -1,4 +1,4 @@
-// R8 Phase 3 — types and step config for the linear signup wizard.
+// R8 Phase 3 - types and step config for the linear signup wizard.
 
 export type WizardStepId = 'welcome' | 'company' | 'icp' | 'review' | 'integrations';
 

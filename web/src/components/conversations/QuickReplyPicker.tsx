@@ -31,6 +31,8 @@ export function QuickReplyPicker({ onSelect, contactName, disabled }: QuickReply
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newShortcut, setNewShortcut] = useState('');
+  /** Set when a create/delete was rejected, so the UI stops looking like a no-op. */
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const fetchReplies = useCallback(async () => {
     try {
@@ -78,6 +80,7 @@ export function QuickReplyPicker({ onSelect, contactName, disabled }: QuickReply
 
   const handleCreate = useCallback(async () => {
     if (!newTitle.trim() || !newContent.trim()) return;
+    setMutationError(null);
     try {
       const res = await fetch(API_BASE, {
         method: 'POST',
@@ -90,25 +93,37 @@ export function QuickReplyPicker({ onSelect, contactName, disabled }: QuickReply
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setReplies((prev) => [...prev, data.data]);
-        setNewTitle('');
-        setNewContent('');
-        setNewCategory('');
-        setNewShortcut('');
+      // `fetch` does not throw on 4xx/5xx, so a rejected create landed here and
+      // did nothing at all: no reply added, no message, the form still full.
+      // Pressing the button and having nothing happen reads as a broken button.
+      if (!res.ok || !data.success) {
+        setMutationError(data?.error || `Couldn't save that quick reply (${res.status}).`);
+        return;
       }
+      setReplies((prev) => [...prev, data.data]);
+      setNewTitle('');
+      setNewContent('');
+      setNewCategory('');
+      setNewShortcut('');
     } catch {
-      // silently fail
+      setMutationError("Couldn't save that quick reply — check your connection.");
     }
   }, [newTitle, newContent, newCategory, newShortcut]);
 
   const handleDelete = useCallback(
     async (id: string) => {
+      setMutationError(null);
       try {
-        await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        // Was unconditional: a rejected DELETE still removed the row locally, so
+        // the reply looked deleted and reappeared on the next open.
+        const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          setMutationError(`Couldn't delete that quick reply (${res.status}).`);
+          return;
+        }
         setReplies((prev) => prev.filter((r) => r.id !== id));
       } catch {
-        // silently fail
+        setMutationError("Couldn't delete that quick reply — check your connection.");
       }
     },
     []
@@ -193,6 +208,12 @@ export function QuickReplyPicker({ onSelect, contactName, disabled }: QuickReply
               Add Quick Reply
             </Button>
           </div>
+        )}
+
+        {mutationError && (
+          <p className="text-[11px] text-rose-600 dark:text-rose-400 px-1">
+            {mutationError}
+          </p>
         )}
 
         {/* Reply list */}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getMigrationStatus } from '../api';
 import type { MigrationStatusData } from '../types';
 
-/** R4 — read-only per-tenant migration drift matrix. */
+/** R4 - read-only per-tenant migration drift matrix. */
 export function useMigrationStatus() {
   const [data, setData] = useState<MigrationStatusData | null>(null);
   const [loading, setLoading] = useState(true);

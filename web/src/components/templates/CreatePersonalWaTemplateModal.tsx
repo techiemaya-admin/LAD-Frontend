@@ -143,7 +143,7 @@ export default function CreatePersonalWaTemplateModal({ open, onClose, editing, 
             <div className="flex flex-col">
               <DialogTitle>{editing ? 'Edit WAPA Template' : 'New WAPA Template'}</DialogTitle>
               <DialogDescription>
-                Saved message for personal WhatsApp — no Meta approval required
+                Saved message for personal WhatsApp - no Meta approval required
               </DialogDescription>
             </div>
           </div>

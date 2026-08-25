@@ -8,7 +8,7 @@
  * (`WidgetWrapper`) with `chromeless` so the inner card/title don't duplicate
  * the wrapper's.
  *
- * Surface: rendered on /overview for all tenants — appears in every default
+ * Surface: rendered on /overview for all tenants - appears in every default
  * dashboard layout and is migrated onto existing user layouts via the persist
  * migration in `dashboardStore.ts`.
  */
@@ -28,7 +28,11 @@ export const BroadcastPerformanceWidget: React.FC<BroadcastPerformanceWidgetProp
       title="Broadcast Performance"
       icon={<MessageSquare className="h-4 w-4" />}
     >
-      <BroadcastPerformanceContainer chromeless />
+      <div className="w-full overflow-x-auto custom-scrollbar">
+        <div className="min-w-[720px]">
+          <BroadcastPerformanceContainer chromeless />
+        </div>
+      </div>
     </WidgetWrapper>
   );
 };

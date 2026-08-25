@@ -1,8 +1,8 @@
 /**
- * Settings Feature — React Hooks
+ * Settings Feature - React Hooks
  * sdk/features/settings/hooks.ts
  *
- * web/ components must import from here — never call api.ts directly.
+ * web/ components must import from here - never call api.ts directly.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

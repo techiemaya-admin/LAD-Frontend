@@ -1,12 +1,12 @@
 /**
- * Tenant ICP Definitions — CRUD client for the canonical active ICP.
+ * Tenant ICP Definitions - CRUD client for the canonical active ICP.
  *
  * Distinct from the existing profiles endpoints (which manage exploratory
  * drafts). These functions wrap /api/ai-icp-assistant/definitions/* served by
  * LAD_backend's TenantIcpDefinitionController (R8).
  *
  * Companion files:
- *   - types.ts            — IcpDefinition, IcpStructured, SearchStrategy
+ *   - types.ts            - IcpDefinition, IcpStructured, SearchStrategy
  *   - hooks/useActiveIcpDefinition.ts
  *   - hooks/useIcpDefinitionMutations.ts
  *   - hooks/useIcpSearchHistory.ts
@@ -63,12 +63,12 @@ async function request<T>(
     },
   });
 
-  // Try to parse JSON regardless of status — many endpoints return JSON errors
+  // Try to parse JSON regardless of status - many endpoints return JSON errors
   let body: any = null;
   try {
     body = await response.json();
   } catch {
-    /* no JSON body — fine for 204s */
+    /* no JSON body - fine for 204s */
   }
 
   if (!response.ok) {

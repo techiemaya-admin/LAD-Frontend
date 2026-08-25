@@ -8,13 +8,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 type SortKey = 'recent' | 'contact' | 'channel' | 'subject';
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'recent', label: 'Newest first' },
-  { value: 'contact', label: 'Contact A–Z' },
-  { value: 'subject', label: 'Task A–Z' },
+  { value: 'contact', label: 'Contact A-Z' },
+  { value: 'subject', label: 'Task A-Z' },
   { value: 'channel', label: 'Channel' },
 ];
 
@@ -49,6 +50,9 @@ const targetLabel = (a: Automation) =>
 export const ZohoAutomationsPanel: React.FC = () => {
   const [items, setItems] = useState<Automation[]>([]);
   const [enabled, setEnabled] = useState(true);
+  const [connected, setConnected] = useState(true);
+  /** The server could not determine the connection state — not the same as "off". */
+  const [statusUnavailable, setStatusUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [queryScanning, setQueryScanning] = useState(false);
@@ -61,11 +65,19 @@ export const ZohoAutomationsPanel: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetchWithTenant(`${ZOHO_API}/automations`);
-      const data = await res.json();
-      if (res.ok && data?.success) {
+      const [automationsRes, statusRes] = await Promise.all([
+        fetchWithTenant(`${ZOHO_API}/automations`),
+        fetchWithTenant(`${ZOHO_API}/status`),
+      ]);
+      const data = await automationsRes.json();
+      if (automationsRes.ok && data?.success) {
         setItems(data.data || []);
         setEnabled(data.automation_enabled !== false);
+      }
+      const statusData = await statusRes.json();
+      if (statusRes.ok && statusData?.success) {
+        setConnected(!!statusData.data?.connected);
+        setStatusUnavailable(!!statusData.data?.status_unavailable);
       }
     } catch { /* ignore */ } finally {
       setLoading(false);
@@ -73,6 +85,12 @@ export const ZohoAutomationsPanel: React.FC = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Why the scan controls are disabled. "Connect Zoho CRM first" is wrong when
+  // we simply could not read the status — the tenant may well be connected.
+  const blockedReason = statusUnavailable
+    ? "Couldn't check your Zoho connection — try again shortly"
+    : 'Connect Zoho CRM first';
 
   const handleScan = async () => {
     setScanning(true); setBanner(null);
@@ -82,7 +100,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
       if (res.ok && data?.success) {
         const s = data.data || {};
         const li = s.resolved_linkedin ? ` (${s.resolved_linkedin} LinkedIn profiles resolved)` : '';
-        setBanner({ kind: 'ok', text: `Scanned ${s.scanned || 0} tasks — ${s.proposed || 0} proposed, ${s.skipped || 0} skipped${li}.` });
+        setBanner({ kind: 'ok', text: `Scanned ${s.scanned || 0} tasks - ${s.proposed || 0} proposed, ${s.skipped || 0} skipped${li}.` });
         load();
       } else {
         setBanner({ kind: 'err', text: data?.error || 'Scan failed' });
@@ -105,7 +123,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
       if (res.ok && data?.success) {
         const s = data.data || {};
         const li = s.resolved_linkedin ? `, ${s.resolved_linkedin} LinkedIn resolved` : '';
-        setBanner({ kind: 'ok', text: `Searched Zoho for "${query}" — ${s.scanned || 0} matching tasks, ${s.proposed || 0} actionable, ${s.skipped || 0} skipped${li} (see History).` });
+        setBanner({ kind: 'ok', text: `Searched Zoho for "${query}": ${s.scanned || 0} matching tasks, ${s.proposed || 0} actionable, ${s.skipped || 0} skipped${li} (see History).` });
         setShowHistory(true);
         load();
       } else {
@@ -163,7 +181,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
 
   const visibleProposals = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = q ? proposals.filter((a) => matchesSearch(a, q)) : proposals;
+    const list = q ? proposals.filter((a) => matchesSearch(a, q)) : proposals;
     const sorted = [...list];
     if (sortBy === 'contact') sorted.sort((a, b) => (a.contact_name || '').localeCompare(b.contact_name || ''));
     else if (sortBy === 'subject') sorted.sort((a, b) => (a.subject || '').localeCompare(b.subject || ''));
@@ -180,32 +198,64 @@ export const ZohoAutomationsPanel: React.FC = () => {
   }, [history, search]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+    <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <div>
-            <div className="text-sm font-semibold text-foreground">Task Automations</div>
-            <p className="text-xs text-muted-foreground">
-              Turn open Zoho tasks into LinkedIn / WhatsApp / Email actions — you approve each before it sends.
+            <div className="text-sm font-semibold text-[#172560] dark:text-white">Task Automations</div>
+            <p className="text-xs text-slate-500 dark:text-[#7a8ba3]">
+              Turn open Zoho tasks into LinkedIn / WhatsApp / Email actions. You approve each before it sends.
             </p>
           </div>
         </div>
-        <Button onClick={handleScan} disabled={scanning}>
-          {scanning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+        <button
+          onClick={handleScan}
+          disabled={scanning || !connected}
+          title={connected ? undefined : blockedReason}
+          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {scanning ? 'Scanning…' : 'Scan open tasks'}
-        </Button>
+        </button>
       </div>
 
+      {!loading && !connected && statusUnavailable && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 text-sm text-amber-800 dark:text-amber-300">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          Couldn&apos;t check your Zoho connection, so scanning is paused. This isn&apos;t
+          &quot;not connected&quot; — please try again shortly.
+        </div>
+      )}
+      {!loading && !connected && !statusUnavailable && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 text-sm text-amber-800 dark:text-amber-300">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <span>
+            Zoho CRM isn&apos;t connected. Connect it in Settings → Integrations to scan and sync tasks.
+            {/* Proposals are rows in this tenant's DB, so they survive a
+                disconnect. Showing them under a bare "isn't connected" banner
+                made them look like live, sendable work — and, because they came
+                from whichever Zoho account was connected at the time, like data
+                from somewhere else entirely. Name where they came from. */}
+            {proposals.length > 0 && (
+              <>
+                {' '}The {proposals.length} draft{proposals.length === 1 ? '' : 's'} below {proposals.length === 1 ? 'was' : 'were'} imported
+                by an earlier scan, from the Zoho account that was connected then. {proposals.length === 1 ? 'It' : 'They'} can&apos;t
+                be sent while Zoho is disconnected — reject {proposals.length === 1 ? 'it' : 'them'} if they&apos;re no longer wanted.
+              </>
+            )}
+          </span>
+        </div>
+      )}
       {!enabled && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
           Automation execution is currently disabled. Proposals will still appear, but approving is blocked until an admin sets <code className="mx-1">ZOHO_TASK_AUTOMATION_ENABLED=true</code>.
         </div>
       )}
       {banner && (
         <div className={`flex items-start gap-2 rounded-lg p-3 text-sm border ${
-          banner.kind === 'ok' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+          banner.kind === 'ok' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300'
         }`}>
           {banner.kind === 'ok' ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
           {banner.text}
@@ -215,30 +265,45 @@ export const ZohoAutomationsPanel: React.FC = () => {
       {!loading && (
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-8"
+            <div className="relative flex items-center w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                className="w-full pl-9 pr-3 h-9 rounded-lg text-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Search a task or contact (e.g. Eric)…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleQueryScan(); }}
               />
             </div>
-            <Button variant="outline" size="sm" disabled={queryScanning || !search.trim()} onClick={handleQueryScan} title="Search all open Zoho tasks and interpret matches">
+            <button
+              type="button"
+              disabled={queryScanning || !search.trim() || !connected}
+              onClick={handleQueryScan}
+              title={connected ? 'Search all open Zoho tasks and interpret matches' : blockedReason}
+              className="h-9 px-3.5 rounded-lg text-sm font-medium border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#09153b] text-[#172560] dark:text-white hover:bg-slate-50 dark:hover:bg-[#122254] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {queryScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span className="hidden sm:inline ml-1.5">Search Zoho</span>
-            </Button>
+              <span className="hidden sm:inline">Search Zoho</span>
+            </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sort</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortKey)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-            >
-              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <span className="text-xs text-slate-500 dark:text-[#7a8ba3]">Sort</span>
+            <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortKey)}>
+              <SelectTrigger className="h-9 px-3 rounded-lg text-xs font-medium border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40">
+                {SORT_OPTIONS.map((o) => (
+                  <SelectItem
+                    key={o.value}
+                    value={o.value}
+                    className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white text-xs"
+                  >
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
@@ -255,45 +320,65 @@ export const ZohoAutomationsPanel: React.FC = () => {
         <div className="text-center py-8 text-muted-foreground text-sm space-y-3">
           <div>No pending proposals match “{search}”.</div>
           {search.trim() && (
-            <Button variant="outline" size="sm" disabled={queryScanning} onClick={handleQueryScan}>
+            <Button variant="outline" size="sm" disabled={queryScanning || !connected} onClick={handleQueryScan}>
               {queryScanning ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Search className="h-4 w-4 mr-1.5" />}
               Search all Zoho tasks for “{search.trim()}”
             </Button>
           )}
           {search.trim() && visibleHistory.length > 0 && (
-            <div className="text-xs">{visibleHistory.length} matching item(s) in History below — likely skipped (e.g. no LinkedIn URL, or unsupported channel).</div>
+            <div className="text-xs">{visibleHistory.length} matching item(s) in History below. Likely skipped (e.g. no LinkedIn URL, or unsupported channel).</div>
           )}
         </div>
       ) : (
         <div className="space-y-3">
           {visibleProposals.map((a) => (
-            <div key={a.id} className="rounded-lg border border-border p-3 space-y-2">
+            <div key={a.id} className="rounded-lg border border-slate-200 dark:border-blue-950/40 bg-slate-50/50 dark:bg-[#040b25] p-3.5 space-y-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   {channelIcon(a.channel)}
-                  <span className="text-sm font-medium text-foreground truncate">{a.subject || 'Task'}</span>
-                  {a.action && <Badge variant="secondary" className="capitalize">{a.action.replace(/_/g, ' ')}</Badge>}
-                  {a.status === 'failed' && <Badge variant="secondary" className="bg-red-100 text-red-700">retry</Badge>}
+                  <span className="text-sm font-semibold text-[#172560] dark:text-white truncate">{a.subject || 'Task'}</span>
+                  {a.action && <Badge variant="secondary" className="capitalize bg-slate-100 dark:bg-[#0e1d4d] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-blue-950/40">{a.action.replace(/_/g, ' ')}</Badge>}
+                  {a.status === 'failed' && <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50">retry</Badge>}
                 </div>
-                <span className="text-xs text-muted-foreground truncate">{a.contact_name} · {targetLabel(a)}</span>
+                <span className="text-xs text-slate-500 dark:text-[#7a8ba3] truncate">{a.contact_name} · {targetLabel(a)}</span>
               </div>
 
               <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[72px]"
+                className="w-full rounded-md border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white placeholder:text-slate-400 px-3 py-2 text-sm min-h-[72px] focus:outline-none focus:ring-2 focus:ring-primary/50"
                 value={drafts[a.id] ?? a.message ?? ''}
                 onChange={(e) => setDrafts((d) => ({ ...d, [a.id]: e.target.value }))}
               />
 
-              {a.error && <p className="text-xs text-red-600">{a.error}</p>}
+              {a.error && <p className="text-xs text-red-600 dark:text-red-400">{a.error}</p>}
 
               <div className="flex items-center gap-2">
-                <Button size="sm" disabled={busyId === a.id || !enabled} onClick={() => handleApprove(a)}>
-                  {busyId === a.id ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />}
+                <button
+                  type="button"
+                  // Also gated on `connected`. Proposals OUTLIVE the Zoho
+                  // connection that produced them — they are rows in the
+                  // tenant DB, not live Zoho data — so after a disconnect this
+                  // list still renders them with a live-looking button. The
+                  // backend already refuses (it fetches the Zoho token before
+                  // sending, so nothing goes out), but an enabled button that
+                  // cannot succeed reads as "these are ready to send" for
+                  // messages drafted against an account we no longer have.
+                  // Scan and Search were already gated this way.
+                  disabled={busyId === a.id || !enabled || !connected}
+                  onClick={() => handleApprove(a)}
+                  title={connected ? undefined : blockedReason}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {busyId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                   Approve & send
-                </Button>
-                <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => handleReject(a)}>
-                  <X className="h-4 w-4 mr-1.5" /> Reject
-                </Button>
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === a.id}
+                  onClick={() => handleReject(a)}
+                  className="h-8 px-3 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" /> Reject
+                </button>
               </div>
             </div>
           ))}
@@ -301,7 +386,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
       )}
 
       {history.length > 0 && (
-        <div className="pt-2 border-t border-border">
+        <div className="pt-2 border-t border-slate-200 dark:border-blue-950/40">
           <button onClick={() => setShowHistory((v) => !v)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
             {showHistory ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             History ({search.trim() ? `${visibleHistory.length} of ${history.length}` : history.length})
@@ -318,7 +403,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
                       : a.status === 'rejected' ? <X className="h-3.5 w-3.5 text-muted-foreground" />
                       : <Ban className="h-3.5 w-3.5 text-muted-foreground" />}
                     <span className="text-foreground truncate">{a.subject || 'Task'}</span>
-                    <span className="text-muted-foreground truncate">— {a.contact_name || ''}</span>
+                    <span className="text-muted-foreground truncate">: {a.contact_name || ''}</span>
                   </span>
                   <span className="text-muted-foreground capitalize flex-shrink-0">
                     {a.status === 'skipped' ? (a.reason || 'skipped') : a.status}

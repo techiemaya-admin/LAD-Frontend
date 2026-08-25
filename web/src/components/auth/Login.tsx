@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import {
   loginStart,
@@ -77,7 +78,7 @@ const Login: React.FC = () => {
     dispatch(loginStart());
     try {
       // The login response already carries the user (id/name/role/tenant/
-      // capabilities) — navigate on it immediately instead of blocking on a
+      // capabilities) - navigate on it immediately instead of blocking on a
       // second /api/auth/me round trip that re-fetches the same data.
       const loginResp = await authService.login(formData);
       const user = (loginResp?.user || {}) as any;
@@ -103,27 +104,24 @@ const Login: React.FC = () => {
   };
 
   return (
-      <div className="w-full max-w-[430px] p-8 rounded-2xl shadow-2xl border backdrop-blur-xl from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 border-gray-200 dark:border-gray-700">
-        {/* Logo */}
-        <picture>
-          <source media="(prefers-color-scheme: dark)" srcSet="/MrLAD-logo-white.svg" />
-          {/* The dark:block helper combined with a light-only counter-class ensures compliance in app-level toggles */}
-          <img
-              src="/MrLAD-logo-white.svg"
-              className="hidden dark:block w-24 mx-auto mb-2 opacity-100 drop-shadow-md"
-              alt="logo"
-          />
-          <img
-              src="/MrLAD-logo.svg"
-              className="dark:hidden w-24 mx-auto mb-2 opacity-100 drop-shadow-md"
-              alt="logo"
-          />
-        </picture>
+      <div className="w-full max-w-[400px] sm:max-w-[420px] p-6 sm:p-7 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-b from-white to-gray-50 dark:from-[#071131] dark:to-[#071131] border-gray-200 dark:border-gray-700 mx-auto">
+        {/* Logo - driven by the app theme (.dark class), not OS prefers-color-scheme */}
+        <img
+          src="/MrLAD-logo.svg"
+          className="w-20 sm:w-24 mx-auto mb-2 opacity-100 drop-shadow-md block dark:hidden"
+          alt="logo"
+        />
+        <img
+          src="/MrLAD-logo-white.svg"
+          className="w-20 sm:w-24 mx-auto mb-2 opacity-100 drop-shadow-md hidden dark:block"
+          alt=""
+          aria-hidden="true"
+        />
         {/* Title */}
-        <h2 className="text-center text-2xl font-bold text-gray-900 dark:text-white mb-1">
+        <h2 className="text-center text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">
           👋 Welcome Back!
         </h2>
-        <p className="text-center text-gray-600 dark:text-gray-200 mb-6 text-sm">
+        <p className="text-center text-gray-600 dark:text-gray-200 mb-4 sm:mb-6 text-xs sm:text-sm">
           We&apos;re happy to see you again. Please sign in.
         </p>
         {formErrors.submit && (
@@ -131,7 +129,7 @@ const Login: React.FC = () => {
             ❗ {formErrors.submit}
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           {/* Email Input */}
           <div>
             <label className="text-gray-900 dark:text-white text-sm font-semibold">Email</label>
@@ -145,7 +143,7 @@ const Login: React.FC = () => {
                 type="email"
                 placeholder="you@example.com"
                 className="
-                  w-full rounded-xl pl-10 pr-3 py-3
+                  w-full rounded-xl pl-10 pr-3 py-2.5 sm:py-3
                   bg-white/80 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-600
                   text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
                   focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
@@ -177,7 +175,7 @@ const Login: React.FC = () => {
                 disabled={loading}
                 placeholder="•••••••••"
                 className="
-                  w-full rounded-xl pl-10 pr-10 py-3
+                  w-full rounded-xl pl-10 pr-10 py-2.5 sm:py-3
                   bg-white/80 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-600
                   text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
                   focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
@@ -205,17 +203,26 @@ const Login: React.FC = () => {
             )}
           </div>
           {/* Remember Me Checkbox */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
+          <div className="flex items-center space-x-2">
+            <Checkbox
               id="rememberMe"
               checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+              className="
+                h-4 w-4 rounded-md
+                border-gray-300 dark:border-gray-600
+                bg-white/80 dark:bg-gray-800/40
+                data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500
+                data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500
+                data-[state=checked]:text-white
+                focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400
+                hover:border-blue-500 dark:hover:border-blue-400
+                transition-colors cursor-pointer
+              "
             />
             <label
               htmlFor="rememberMe"
-              className="ml-2 text-sm text-gray-700 dark:text-white cursor-pointer select-none"
+              className="text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer select-none"
             >
               Remember
             </label>
@@ -224,11 +231,11 @@ const Login: React.FC = () => {
           <Button
             type="submit"
             className="
-              w-full p-3 rounded-lg text-base font-semibold
-              bg-primary dark:bg-[#000724] text-[#ffffff]
+              w-full p-2.5 sm:p-3 rounded-lg text-sm sm:text-base font-semibold
+              bg-primary dark:bg-blue-600 dark:hover:bg-blue-500 text-[#ffffff]
               hover:shadow-lg hover:shadow-primary/50 transition-all duration-300
               transform hover:scale-105 active:scale-95
-              uppercase tracking-wide border border-white/20
+              uppercase tracking-wide border border-white/20 cursor-pointer
             "
           >
             {loading ? "⏳ Signing in..." : "Sign In"}

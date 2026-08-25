@@ -6,10 +6,14 @@
  * WABA proxy pattern.
  *
  * The Bearer token from the browser is passed through so the Python service
- * can decode the tenant_id from it (see api/_tenant.py). The X-Tenant-ID
- * header is forwarded too in case the caller wants to override.
+ * can decode the tenant_id from it (see api/_tenant.py). We also forward an
+ * X-Tenant-ID header, but only the tenant the caller is AUTHORISED to act on:
+ * a client x-tenant-id that names a different tenant is honoured solely for the
+ * super admin (see utils/tenant-scope). It used to forward the client header
+ * verbatim, which let any user override the tenant and read another's data.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveAuthorizedTenantId } from '../../utils/tenant-scope';
 
 function getInstagramServiceUrl(): string {
   return (
@@ -41,7 +45,7 @@ async function handler(
     const authHeader = req.headers.get('authorization');
     const cookieToken = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value;
     const bearer = authHeader || (cookieToken ? `Bearer ${cookieToken}` : null);
-    const tenantId = req.headers.get('x-tenant-id');
+    const tenantId = resolveAuthorizedTenantId(req, { logLabel: 'instagram-conversations' });
 
     const headers: Record<string, string> = {};
     if (bearer) headers['Authorization'] = bearer;

@@ -49,7 +49,7 @@ interface SendResp {
 
 interface Props {
   campaignId: string;
-  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id — backend accepts either
+  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id - backend accepts either
   contactName?: string;
   /** Called after a successful send so the parent can refetch the conversation */
   onSent?: () => void;
@@ -93,7 +93,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
       setMessage(data.message || '');
       if (!data.message) {
         setInfo(m === 'ai'
-          ? 'AI returned an empty message — try regenerating.'
+          ? 'AI returned an empty message - try regenerating.'
           : 'Template is empty.');
       }
     } catch (e: any) {
@@ -118,7 +118,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
   // ── Template library picker ────────────────────────────────────────────────
   const handleTemplateSelect = (tpl: LinkedInMessageTemplate | null) => {
     if (!tpl) {
-      // "Custom Messages" — drop the template + media, keep the current text so
+      // "Custom Messages" - drop the template + media, keep the current text so
       // the user can type their own.
       setSelectedTemplateId(null);
       setSelectedMedia(null);
@@ -180,17 +180,17 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="mx-4 my-3 rounded-lg border border-blue-200 bg-blue-50/40 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
+    <div className="mx-4 my-3 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/40">
         <div className="flex items-center gap-2">
-          <Send className="w-3.5 h-3.5 text-blue-600" />
-          <p className="text-xs font-semibold text-blue-900">
+          <Send className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
             Send follow-up now
           </p>
         </div>
 
         {/* Mode toggle */}
-        <div className="inline-flex rounded-md border border-blue-200 bg-white overflow-hidden text-[11px]">
+        <div className="inline-flex rounded-md border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 overflow-hidden text-[11px]">
           <button
             type="button"
             onClick={() => switchMode('ai')}
@@ -199,7 +199,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
               'inline-flex items-center gap-1 px-2 py-1 transition-colors',
               mode === 'ai'
                 ? 'bg-blue-600 text-white'
-                : 'text-slate-700 hover:bg-blue-50',
+                : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800',
             )}
             title="Generate a personalised follow-up using web presence + recent posts"
           >
@@ -211,10 +211,10 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
             onClick={() => switchMode('template')}
             disabled={isPreviewing || isSending}
             className={cn(
-              'inline-flex items-center gap-1 px-2 py-1 transition-colors border-l border-blue-200',
+              'inline-flex items-center gap-1 px-2 py-1 transition-colors border-l border-blue-200 dark:border-blue-800',
               mode === 'template'
                 ? 'bg-blue-600 text-white'
-                : 'text-slate-700 hover:bg-blue-50',
+                : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800',
             )}
             title="Use the campaign's static follow-up template"
           >
@@ -271,7 +271,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
               isPreviewing
                 ? mode === 'ai' ? 'Generating personalised follow-up…' : 'Loading template…'
                 : mode === 'template' && !hasTemplate
-                  ? 'No template configured for this campaign — switch to AI or add one in Edit Campaign.'
+                  ? 'No template configured for this campaign - switch to AI or add one in Edit Campaign.'
                   : 'Edit the follow-up message before sending…'
             }
             rows={5}

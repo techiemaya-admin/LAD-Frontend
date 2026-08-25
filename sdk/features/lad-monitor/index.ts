@@ -1,5 +1,5 @@
 /**
- * lad-monitor — admin observability feature SDK.
+ * lad-monitor - admin observability feature SDK.
  * Internal cross-tenant monitoring: dashboard, per-tenant health, Cloud Run logs.
  */
 
@@ -20,6 +20,15 @@ export {
   getTaskHealth,
   getLlmCost,
   getMigrationStatus,
+  getStrategiesForReview,
+  reviewStrategy,
+  getCommunitySignups,
+  updateCommunitySignup,
+  getLlmRoutingMeta,
+  getTenantLlmRouting,
+  setLlmRoutingChain,
+  clearLlmRoutingChain,
+  validateLlmRoutingChain,
 } from './api';
 
 // Hooks
@@ -32,3 +41,6 @@ export { useCostPerSah } from './hooks/useCostPerSah';
 export { useTaskHealth } from './hooks/useTaskHealth';
 export { useLlmCost } from './hooks/useLlmCost';
 export { useMigrationStatus } from './hooks/useMigrationStatus';
+export { useStrategyReview } from './hooks/useStrategyReview';
+export { useCommunitySignups } from './hooks/useCommunitySignups';
+export { useLlmRouting } from './hooks/useLlmRouting';

@@ -5,11 +5,14 @@
  * It handles authentication, base URL, and common request/response logic.
  */
 import { safeStorage } from './storage';
+import { ApiError, apiErrorFromResponse } from './apiError';
 
 type ApiResponse<T = any> = {
   data: T;
   status: number;
   statusText: string;
+  /** Raw response headers (e.g. for reading X-Total-Count on paginated lists). */
+  headers?: Headers;
 };
 type RequestOptions = {
   headers?: Record<string, string>;
@@ -84,9 +87,13 @@ class ApiClient {
     try {
       const response = await fetch(url.toString(), config);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
+        // ApiError, not Error: the status and the backend's `code` have to reach
+        // the caller so it can distinguish (say) a 409 name clash from a 500.
+        // `message` is unchanged, so existing `catch (e) => e.message` sites are
+        // unaffected.
+        throw await apiErrorFromResponse(
+          response,
+          `HTTP ${response.status}: ${response.statusText}`
         );
       }
       // Check if response has content before parsing JSON (e.g., 204 No Content)
@@ -102,6 +109,7 @@ class ApiClient {
         data,
         status: response.status,
         statusText: response.statusText,
+        headers: response.headers,
       };
     } catch (error) {
       if (error instanceof Error) {

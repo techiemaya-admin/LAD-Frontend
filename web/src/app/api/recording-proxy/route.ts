@@ -12,10 +12,10 @@ export async function GET(req: NextRequest) {
     let targetUrl: string;
 
     if (url.includes("storage.googleapis.com") || url.startsWith("http://") || url.startsWith("https://")) {
-      // Already a public/signed HTTPS URL — fetch directly
+      // Already a public/signed HTTPS URL - fetch directly
       targetUrl = url;
     } else if (url.startsWith("gs://")) {
-      // Step 1: Try public GCS HTTPS URL (fast path — works if bucket/object is public)
+      // Step 1: Try public GCS HTTPS URL (fast path - works if bucket/object is public)
       const publicUrl = "https://storage.googleapis.com/" + url.slice("gs://".length);
       let resolved = false;
       try {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
           resolved = true;
         }
       } catch {
-        // Not public — fall through to backend streaming
+        // Not public - fall through to backend streaming
       }
 
       if (!resolved) {

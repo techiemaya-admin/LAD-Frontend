@@ -20,7 +20,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Mirror the sidebar pin state — listen for the same custom event the
+  // Mirror the sidebar pin state - listen for the same custom event the
   // sidebar dispatches on toggle, AND read the saved preference on mount.
   useEffect(() => {
     try {
@@ -34,7 +34,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('sidebar:pinned-changed', onChange);
   }, []);
 
-  // Reusable margin class — `ml-64` (256px) when pinned, otherwise the
+  // Reusable margin class - `ml-64` (256px) when pinned, otherwise the
   // narrow 16px rail (`ml-16`). The sidebar still overlays the page on
   // hover-expand (unpinned), which keeps the existing UX intact.
   const sidebarMargin = sidebarPinned ? 'md:ml-64' : 'md:ml-16';

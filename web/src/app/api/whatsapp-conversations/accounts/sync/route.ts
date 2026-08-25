@@ -7,7 +7,7 @@
  * which causes WhatsApp to push full message history via messaging-history.set.
  *
  * Only applicable to personal WA (Baileys). WABA and other channels do not
- * require session-level reconnects — return 200 immediately for those.
+ * require session-level reconnects - return 200 immediately for those.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { proxyToPythonService, getWABAServiceUrl } from '../../utils/python-proxy';

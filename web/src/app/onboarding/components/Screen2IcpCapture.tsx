@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 — ICP capture step. Renders the split-layout IcpDiscoveryChat
+// R8 Phase 3 - ICP capture step. Renders the split-layout IcpDiscoveryChat
 // (chat left, live ICP card right). The old approach of embedding
 // AdvancedSearchAIPage caused layout issues and surfaced the lead-search chat
 // instead of a guided ICP capture; this self-contained component fixes both.

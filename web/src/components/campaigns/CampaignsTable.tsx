@@ -113,12 +113,12 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
       cell: ({ getValue }) => {
         const status = getValue();
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs capitalize dark:!px-0 dark:!py-0 dark:!rounded-none dark:!bg-transparent dark:!border-transparent dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${
-            getStatusColor(status) === 'success' ? 'bg-green-100 text-green-700 dark:!text-emerald-400' :
-            getStatusColor(status) === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:!text-amber-300' :
-            getStatusColor(status) === 'error' ? 'bg-red-100 text-red-700 dark:!text-rose-400' :
-            getStatusColor(status) === 'info' ? 'bg-gray-100 text-gray-700 dark:!text-sky-400' :
-            'bg-gray-100 text-gray-700 dark:!text-slate-300'
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium capitalize transition-colors ${
+            getStatusColor(status) === 'success' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50' :
+            getStatusColor(status) === 'warning' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/50' :
+            getStatusColor(status) === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/50' :
+            getStatusColor(status) === 'info' ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800/50' :
+            'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700/60'
           }`}>
             {getStatusIconComponent(status)}
             {status}
@@ -192,9 +192,9 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
   });
 
   return (
-    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm overflow-hidden">
       {/* Filters Section */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex gap-2 sm:gap-3 flex-row justify-between items-center">
           <div className="relative flex-1 sm:min-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] dark:text-slate-300 h-4 w-4" />
@@ -258,7 +258,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                       <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="h-6 w-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse ml-auto"></div>
@@ -269,7 +269,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
             </Table>
             
             {/* Skeleton for pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-[#262831]">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] dark:border-blue-950/40">
               <div className="flex items-center gap-2">
                 <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-12"></div>
                 <div className="h-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-12"></div>
@@ -366,22 +366,32 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
 
             {/* Pagination Controls */}
             {filteredCampaigns.length > 0 && (
-              <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
+              <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8FAFC] dark:bg-[#000724]">
                 <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
                   <span>Show</span>
-                  <select
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e) => {
-                      table.setPageSize(Number(e.target.value));
+                  <Select
+                    value={String(table.getState().pagination.pageSize)}
+                    onValueChange={(val) => {
+                      table.setPageSize(Number(val));
                     }}
-                    className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-slate-300"
                   >
-                  {[10, 20, 50, 100].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                  </select>
+                    <SelectTrigger className="w-[70px] h-7 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
+                      <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] max-w-[70px] w-[70px] p-0">
+                      <div className="*:data-[slot=select-viewport]:min-w-[70px] *:data-[slot=select-viewport]:w-[70px] *:data-[slot=select-viewport]:p-1">
+                        {[10, 20, 50, 100].map((pageSize) => (
+                          <SelectItem
+                            key={pageSize}
+                            value={String(pageSize)}
+                            className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
+                          >
+                            {pageSize}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    </SelectContent>
+                  </Select>
                   <span className="whitespace-nowrap">
                     of {table.getFilteredRowModel().rows.length} campaigns
                   </span>

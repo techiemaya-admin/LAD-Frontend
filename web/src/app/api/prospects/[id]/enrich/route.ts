@@ -1,7 +1,7 @@
 /**
- * POST /api/prospects/[id]/enrich — Option C on-open enrichment trigger.
+ * POST /api/prospects/[id]/enrich - Option C on-open enrichment trigger.
  *
- * Resolves tenant_id (DEV_TENANT_OVERRIDE / JWT / cookie — same as the
+ * Resolves tenant_id (DEV_TENANT_OVERRIDE / JWT / cookie - same as the
  * Master-Agent proxy) and forwards to LAD_backend's service-token-guarded
  * enrich endpoint, which does the Unipile profile fetch + emits the
  * enrichment.profile_enriched event to the Master Agent. Best-effort.
@@ -10,14 +10,23 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-function tenantFromJwt(token: string): string | null {
+// Same super-admin identity as the shared master-agent-proxy and the backend's
+// requireSuperAdmin: the SIGNED `email` claim, which the client cannot forge.
+const SUPER_ADMIN_EMAIL = (
+  process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com'
+).toLowerCase();
+
+function claimsFromJwt(token: string): { tenantId: string | null; email: string | null } {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) return { tenantId: null, email: null };
     const p = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return p.tenantId || p.tenant_id || p.organizationId || p.orgId || null;
+    return {
+      tenantId: p.tenantId || p.tenant_id || p.organizationId || p.orgId || null,
+      email: typeof p.email === 'string' ? p.email : null,
+    };
   } catch {
-    return null;
+    return { tenantId: null, email: null };
   }
 }
 
@@ -25,19 +34,30 @@ function resolveTenantId(req: NextRequest): string | null {
   if (process.env.NODE_ENV === 'development' && process.env.DEV_TENANT_OVERRIDE) {
     return process.env.DEV_TENANT_OVERRIDE;
   }
-  const header = req.headers.get('x-tenant-id');
-  if (header) return header;
+  // Read the caller's claims (Authorization then cookie).
+  let claims = { tenantId: null as string | null, email: null as string | null };
   const auth = req.headers.get('authorization');
-  if (auth) {
-    const t = tenantFromJwt(auth.replace(/^Bearer\s+/i, ''));
-    if (t) return t;
+  if (auth) claims = claimsFromJwt(auth.replace(/^Bearer\s+/i, ''));
+  if (!claims.tenantId && !claims.email) {
+    const cookie = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
+    if (cookie) claims = claimsFromJwt(cookie);
   }
-  const cookie = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
-  if (cookie) {
-    const t = tenantFromJwt(cookie);
-    if (t) return t;
+
+  // Same gate as the read path (PR #947): x-tenant-id may name a different
+  // tenant only for a super-admin. Without it, an ordinary user could trigger
+  // enrichment against another tenant's prospect by forging the header.
+  const header = req.headers.get('x-tenant-id');
+  if (header && header !== claims.tenantId) {
+    const isSuperAdmin =
+      !!claims.email && claims.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL;
+    if (isSuperAdmin) return header;
+    console.warn('[prospects/enrich] ignoring x-tenant-id from non-super-admin caller', {
+      requested: header,
+      jwtTenant: claims.tenantId,
+    });
+    return claims.tenantId;
   }
-  return null;
+  return claims.tenantId;
 }
 
 export async function POST(

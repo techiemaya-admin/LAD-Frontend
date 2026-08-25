@@ -95,14 +95,14 @@ export default function MonitorLogsPage() {
               entries.map((e, i) => (
                 <tr key={e.id || i} className="align-top hover:bg-gray-50 dark:hover:bg-gray-800/40">
                   <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                    {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '—'}
+                    {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '-'}
                   </td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex rounded px-1.5 py-0.5 font-medium ${SEV_STYLES[e.severity] || SEV_STYLES.DEFAULT}`}>
                       {e.severity}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-gray-600 dark:text-gray-400">{e.service || '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-gray-600 dark:text-gray-400">{e.service || '-'}</td>
                   <td className="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">
                     {e.httpStatus ? <span className="mr-1 text-gray-400">[{e.httpMethod} {e.httpStatus}]</span> : null}
                     {e.message}

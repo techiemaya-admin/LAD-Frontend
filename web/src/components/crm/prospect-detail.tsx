@@ -1,6 +1,6 @@
 'use client';
 // Prospect detail panel that opens below the kanban / table when a contact is
-// selected. Compositional file — most of the visual logic lives in the smaller
+// selected. Compositional file - most of the visual logic lives in the smaller
 // sub-components below.
 
 import * as React from 'react';
@@ -17,27 +17,60 @@ import {
   type WarmPath,
 } from './data';
 import WarmPathPanel from './warm-path-panel';
+import LeadReportSection from './lead-report-section';
+import AcceleratorSection from './accelerator-section';
+import { useLeadReport, LeadReportError } from '@/hooks/useLeadReport';
 import type { ProspectFollowup } from '@lad/frontend-features/prospects';
 
 interface ProspectDetailProps {
   prospect: ProspectFixture;
   warmPath: WarmPath;
-  /** When true, render a "Sample data" caption — the warm-path graph isn't
+  /** When true, render a "Sample data" caption - the warm-path graph isn't
    *  wired to a live relationship-graph source yet (R18). */
   warmPathSample?: boolean;
   events?: ProspectEvent[];
+  /** The events fetch failed — Activity/Recent activity below render off
+   *  `events` regardless, so without this flag a failed fetch (events=[])
+   *  is visually identical to a genuinely quiet contact. */
+  eventsError?: boolean;
+  /**
+   * We have no events to show and are not still loading them. Distinct from
+   * "this contact has no activity": rendering 0 for a failed load told the user
+   * the lead was quiet when we simply did not know.
+   */
+  eventsUnavailable?: boolean;
+  /** True when `events` was cut off by the fetch's own page-size limit —
+   *  the backend has no total-event-count endpoint, so MiniFeed's "N total
+   *  events" label would otherwise silently overclaim completeness for any
+   *  contact with more history than fits in one fetch. */
+  eventsTruncated?: boolean;
   onClose: () => void;
   /** Soft-delete this prospect ("not a fit"). When omitted, the button is hidden. */
   onRemove?: () => void;
   isRemoving?: boolean;
-  /** CRM "Take action" — do-not-contact / quiet (pause outreach). */
-  onAction?: (p: { doNotContact?: boolean; quietDays?: number }) => void;
+  /** CRM "Take action" - do-not-contact / quiet (pause outreach). */
+  onAction?: (p: { doNotContact?: boolean; quietDays?: number; clearQuiet?: boolean }) => void;
   isActing?: boolean;
   doNotContact?: boolean;
   quietUntil?: string | null;
   /** Upcoming scheduled automatic follow-ups for this prospect. */
   followups?: ProspectFollowup[];
   followupsLoading?: boolean;
+  /** The follow-ups fetch failed — without this flag it renders identically
+   *  to "no follow-ups queued" (loading=false, followups=[]). */
+  followupsError?: boolean;
+  /**
+   * Channels the Master Agent could not read (MA #16). The list it returned is
+   * a FLOOR for these — without saying so, a dropped LinkedIn lookup reads as
+   * "no LinkedIn follow-ups are queued".
+   */
+  followupsDegradedChannels?: string[];
+  /**
+   * The prospect's `core_lead_id` - the id `campaign_leads` and
+   * `campaign_analytics` are keyed by, and the only one the report API resolves.
+   * Omitted or null ⇒ the report + accelerator sections are not rendered.
+   */
+  coreLeadId?: string | null;
 }
 
 function degreeLabel(nd?: string | null): string {
@@ -47,7 +80,16 @@ function degreeLabel(nd?: string | null): string {
   return (nd && (m[nd] || nd.replace(/_/g, ' ').toLowerCase())) || '';
 }
 
-export default function ProspectDetail({ prospect, warmPath, warmPathSample = false, events = [], onClose, onRemove, isRemoving = false, onAction, isActing = false, doNotContact = false, quietUntil = null, followups = [], followupsLoading = false }: ProspectDetailProps) {
+// `crm.*` events (crm.quiet_set, crm.do_not_contact_set, crm.deleted) are things the
+// operator did to the record, not things the prospect did. They arrive on the "system"
+// channel, which the heatmap maps to the "Signal" (intent) row — so an operator toggling
+// DNC twice used to read as two buying-intent signals, and inflated "Engagement · 7d" by
+// two. Keep them out of both aggregates; the timeline below still shows them as audit trail.
+function isOperatorEvent(e: ProspectEvent): boolean {
+  return String(e.event_type || '').startsWith('crm.');
+}
+
+export default function ProspectDetail({ prospect, warmPath, warmPathSample = false, events = [], eventsError = false, eventsUnavailable = false, eventsTruncated = false, onClose, onRemove, isRemoving = false, onAction, isActing = false, doNotContact = false, quietUntil = null, followups = [], followupsLoading = false, followupsError = false, followupsDegradedChannels = [], coreLeadId = null }: ProspectDetailProps) {
   const [warmOpen, setWarmOpen] = useState(false);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,6 +101,7 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
     let total = 0;
     let lastDir: ProspectEvent['direction'] | null = null;
     for (const e of events) {
+      if (isOperatorEvent(e)) continue;
       const d = new Date(e.occurred_at);
       const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
       if (diff >= 0 && diff < days) {
@@ -77,7 +120,7 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
       dailyCounts: daily,
       total7d: total,
       routes,
-      topConnection: warmPath?.top_connection?.name || '—',
+      topConnection: warmPath?.top_connection?.name || '-',
       lastDir,
     };
   }, [warmPath, events]);
@@ -121,20 +164,26 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
             <button
               onClick={onRemove}
               disabled={isRemoving}
-              title="Remove this prospect — not a fit"
+              title="Remove this prospect - not a fit"
               className="h-9 px-3 flex-1 md:flex-none rounded-lg text-[12.5px] font-medium text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 inline-flex items-center justify-center md:justify-start gap-1.5 disabled:opacity-50"
             >
               <Trash2 className="w-4 h-4" /> {isRemoving ? 'Removing…' : 'Not a fit'}
             </button>
           )}
-          <button className="h-9 px-3 flex-1 md:flex-none rounded-lg text-[12.5px] font-medium text-[#172560] dark:text-white border border-slate-200 dark:border-[#262831] hover:bg-slate-50 dark:hover:bg-[#1a2a43] inline-flex items-center justify-center md:justify-start gap-1.5">
+          <button
+            disabled
+            title="Not available yet"
+            className="h-9 px-3 flex-1 md:flex-none rounded-lg text-[12.5px] font-medium text-[#172560] dark:text-white border border-slate-200 dark:border-[#262831] inline-flex items-center justify-center md:justify-start gap-1.5 opacity-50 cursor-not-allowed"
+          >
             <MoreHorizontal className="w-4 h-4" /> More
           </button>
           <button
             type="button"
-            className="h-10 px-4 flex-1 md:flex-none rounded-xl text-xs font-bold uppercase tracking-wider text-white !text-white inline-flex items-center justify-center gap-2 shadow-md transition-all duration-200 hover:opacity-95 active:scale-[0.99] cursor-pointer outline-none border-none
-            bg-[#0b1957] hover:bg-[#122572]
-            dark:bg-[#2563eb] dark:hover:bg-blue-700"
+            disabled
+            title="Not available yet"
+            className="h-10 px-4 flex-1 md:flex-none rounded-xl text-xs font-bold uppercase tracking-wider text-white !text-white inline-flex items-center justify-center gap-2 shadow-md transition-all duration-200 outline-none border-none opacity-50 cursor-not-allowed
+            bg-[#0b1957]
+            dark:bg-[#2563eb]"
           >
             <SendHorizontal className="w-4 h-4 shrink-0 stroke-[2.5] text-white !text-white" />
             <span className="text-white !text-white">Message</span>
@@ -145,7 +194,7 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
       {/* Hero + KPI row */}
       <LadCard padded={false}>
         <div className="flex flex-col lg:flex-row">
-          <div className="p-5 lg:p-6 lg:w-[34%] border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#262831] flex items-center gap-4">
+          <div className="p-5 lg:p-6 lg:w-[34%] border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#1c2c4e] flex items-center gap-4">
             <div
               className="w-16 h-16 rounded-2xl grid place-items-center text-white text-[20px] font-semibold shrink-0"
               style={{ background: `linear-gradient(135deg, ${T.primary}, ${T.primaryHead})` }}
@@ -172,10 +221,17 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
               <p className="text-[12.5px] text-slate-500 dark:text-slate-300 font-medium">
                 {prospect.company_name}
               </p>
-              <p className="text-[11.5px] text-slate-500 dark:text-slate-300 mt-1 flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" />
-                {prospect.location}
-              </p>
+              {/* Only render the pin when there is a location to pin. Rendering
+                  it unconditionally left a lone map-pin icon floating under the
+                  company for every prospect with no location — same orphaned
+                  decoration as the "·" separator in tables.tsx's NameCell. The
+                  network_distance block right below already guards this way. */}
+              {prospect.location && String(prospect.location).trim() && (
+                <p className="text-[11.5px] text-slate-500 dark:text-slate-300 mt-1 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" />
+                  {prospect.location}
+                </p>
+              )}
               {(prospect.network_distance || (prospect.mutual_connections_count ?? 0) > 0) && (
                 <p className="text-[11px] mt-1.5 flex items-center gap-2 flex-wrap">
                   {prospect.network_distance && (
@@ -199,7 +255,7 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
 
           <div className="lg:flex-1 grid grid-cols-2 lg:grid-cols-4">
             <KpiFit value={prospect.fit_score} />
-            <KpiSpark counts={kpis.dailyCounts} total={kpis.total7d} />
+            <KpiSpark counts={kpis.dailyCounts} total={eventsUnavailable ? null : kpis.total7d} />
             <KpiRoutes
               count={kpis.routes}
               top={kpis.topConnection}
@@ -225,7 +281,15 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
         <WarmPathPanel wp={warmPath} prospect={prospect} open={warmOpen} onToggle={toggleWarm} />
       </div>
 
-      <ActivityHeatmap events={events} days={30} />
+      {(eventsError || eventsUnavailable) && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/30 p-3 text-[12.5px] text-rose-700 dark:text-rose-300">
+          Couldn&apos;t load this contact&apos;s activity — the Activity chart and Recent activity below may be
+          missing events, not showing that the contact is actually quiet.
+        </div>
+      )}
+      <ActivityHeatmap events={events} days={30} unavailable={eventsUnavailable} />
+
+      <AcceleratorPanels coreLeadId={coreLeadId} firstName={prospect.full_name?.split(' ')[0]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <FitRadar p={prospect} />
@@ -236,14 +300,83 @@ export default function ProspectDetail({ prospect, warmPath, warmPathSample = fa
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <MiniFeed events={events} />
+          <MiniFeed events={events} truncated={eventsTruncated} unavailable={eventsUnavailable} />
         </div>
         <div className="space-y-4">
           <Actions onAction={onAction} isActing={isActing} doNotContact={doNotContact} quietUntil={quietUntil} />
-          <NextFollowups followups={followups} loading={followupsLoading} />
+          <NextFollowups followups={followups} loading={followupsLoading} error={followupsError} degradedChannels={followupsDegradedChannels} />
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Lead report + accelerator ────────────────────────────────────────────
+
+/**
+ * The two accelerator sections, sharing one fetch.
+ *
+ * Renders NOTHING when the lead is not enrolled in a campaign - most CRM
+ * contacts are not, and an empty "no sequence" card on every one of them would
+ * be noise rather than information.
+ */
+function AcceleratorPanels({ coreLeadId, firstName }: { coreLeadId: string | null; firstName?: string }) {
+  const {
+    bundle, isLoading, loadError, state, refusalMessage, advance, isAdvancing,
+    approve, reject, isDeciding, settledElsewhere, actionError,
+  } = useLeadReport(coreLeadId);
+
+  if (!coreLeadId || isLoading) return null;
+
+  // A failed fetch used to render EXACTLY like "this contact isn't in a
+  // campaign": both fell into the `return null` below, so the Lead Report and
+  // Accelerator cards were simply absent. Not-enrolled is the overwhelmingly
+  // common case, so nothing ever prompted the user to suspect the cards were
+  // MISSING rather than legitimately not applicable — a lead sitting on an
+  // unapproved report looked like a lead with no report at all.
+  //
+  // 404 is the one status that genuinely means "there is nothing here", so it
+  // keeps rendering nothing. Everything else is an outage and says so.
+  if (loadError && !(loadError instanceof LeadReportError && loadError.status === 404)) {
+    return (
+      <LadCard>
+        <LadCardHeader title="Lead Report" subtitle="Could not load" />
+        <p className="text-[13px] text-rose-600 dark:text-rose-300">
+          Couldn&apos;t load this lead&apos;s report and sequence — this isn&apos;t
+          necessarily &quot;not in a campaign.&quot; If they are enrolled, any pending
+          audit and its approval state are hidden right now.
+        </p>
+      </LadCard>
+    );
+  }
+
+  if (!bundle?.enrolled) return null;
+
+  return (
+    <>
+      <LeadReportSection
+        state={state}
+        report={bundle.report}
+        grounding={bundle.grounding}
+        leadFirstName={firstName}
+        refusalMessage={refusalMessage}
+        actionError={actionError}
+        settledElsewhere={settledElsewhere}
+        onAdvance={advance}
+        isAdvancing={isAdvancing}
+        onApprove={approve}
+        onReject={reject}
+        isDeciding={isDeciding}
+      />
+      {bundle.sequence && (
+        <AcceleratorSection
+          sequence={bundle.sequence}
+          canAdvance={Boolean(bundle.has_report_step)}
+          onAdvance={advance}
+          isAdvancing={isAdvancing}
+        />
+      )}
+    </>
   );
 }
 
@@ -258,7 +391,7 @@ function KpiFit({ value }: { value: number | null }) {
     : value >= 0.4 ? 'Partial match'
     : 'Weak match';
   return (
-    <div className="p-4 lg:p-5 border-r border-b lg:border-b-0 border-slate-100 dark:border-[#262831] flex items-center gap-3">
+    <div className="p-4 lg:p-5 border-r border-b lg:border-b-0 border-slate-100 dark:border-[#1c2c4e] flex items-center gap-3">
       <div className="relative w-14 h-14 shrink-0">
         <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={T.badgeBg} strokeWidth="3.6" />
@@ -275,7 +408,7 @@ function KpiFit({ value }: { value: number | null }) {
             className="text-[14px] font-bold tabular-nums text-[#172560] dark:text-white"
             style={{ fontFamily: '"Space Grotesk", system-ui' }}
           >
-            {scored ? pct : '—'}
+            {scored ? pct : '-'}
           </span>
         </div>
       </div>
@@ -292,7 +425,9 @@ function KpiFit({ value }: { value: number | null }) {
   );
 }
 
-function KpiSpark({ counts, total }: { counts: number[]; total: number }) {
+// `total: null` = we could not load the events, which is NOT the same as zero
+// activity. Render a dash rather than a number we cannot stand behind.
+function KpiSpark({ counts, total }: { counts: number[]; total: number | null }) {
   const max = Math.max(1, ...counts);
   const w = 100, h = 26, n = counts.length;
   const step = w / (n - 1);
@@ -300,7 +435,7 @@ function KpiSpark({ counts, total }: { counts: number[]; total: number }) {
   const lastX = (n - 1) * step;
   const lastY = h - (counts[n - 1] / max) * h;
   return (
-    <div className="p-4 lg:p-5 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#262831]">
+    <div className="p-4 lg:p-5 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-[#1c2c4e]">
       <p className="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-300 font-semibold">
         Engagement · 7d
       </p>
@@ -309,27 +444,43 @@ function KpiSpark({ counts, total }: { counts: number[]; total: number }) {
           className="text-2xl font-bold tabular-nums text-[#1e293b] dark:text-white"
           style={{ fontFamily: '"Space Grotesk", system-ui' }}
         >
-          {total}
+          {total ?? '—'}
         </span>
-        <span className="text-[11px] text-slate-500 dark:text-slate-300">events</span>
+        <span className="text-[11px] text-slate-500 dark:text-slate-300">
+          {total == null ? 'not loaded' : 'events'}
+        </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-7 mt-2" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-7 mt-2 overflow-visible" preserveAspectRatio="none">
         <defs>
           <linearGradient id="sparkLad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={T.primary} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={T.primary} stopOpacity="0" />
+            {/* Light mode uses T.primary, dark mode switches to bright blue */}
+            <stop offset="0%" className="[stop-color:var(--spark-color,#0B1957)] dark:[stop-color:#3b82f6]" stopOpacity="0.4" />
+            <stop offset="100%" className="[stop-color:var(--spark-color,#0B1957)] dark:[stop-color:#3b82f6]" stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Area Fill */}
         <polyline points={`0,${h} ${pts} ${w},${h}`} fill="url(#sparkLad)" stroke="none" />
+
+        {/* Stroke Line: uses T.primary in light mode, bright blue in dark mode */}
         <polyline
           points={pts}
           fill="none"
           stroke={T.primary}
-          strokeWidth="1.6"
+          className="stroke-[#0B1957] dark:stroke-[#3b82f6]"
+          strokeWidth="1.8"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        <circle cx={lastX} cy={lastY} r="2.2" fill={T.primary} />
+
+        {/* Endpoint Circle */}
+        <circle
+          cx={lastX}
+          cy={lastY}
+          r="2.5"
+          fill={T.primary}
+          className="fill-[#0B1957] dark:fill-[#60a5fa]"
+        />
       </svg>
     </div>
   );
@@ -342,30 +493,29 @@ function KpiRoutes({
     <button
       onClick={onClick}
       aria-expanded={open}
-      className="text-left w-full p-4 lg:p-5 border-r border-slate-100 dark:border-[#262831] hover:bg-[#f1f3fb] dark:hover:bg-[#0e1a3a] transition group"
+      className="text-left w-full p-4 lg:p-5 border-r border-slate-100 dark:border-[#1c2c4e] hover:bg-[#f1f3fb] dark:hover:bg-[#0e1d4d] transition group"
     >
       <div className="flex items-start justify-between">
         <p className="text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-300 font-semibold">
           Warm routes
         </p>
         <span
-          className="inline-flex items-center gap-1 text-[10.5px] font-medium opacity-70 group-hover:opacity-100"
-          style={{ color: T.primary }}
+          className="inline-flex items-center gap-1 text-[10.5px] font-medium opacity-70 group-hover:opacity-100 text-[#0B1957] dark:text-slate-400 transition-colors"
         >
           {open ? 'Hide' : 'Open'}
           {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </span>
-      </div>
-      <div className="flex items-baseline gap-2 mt-1">
-        <span
-          className="text-2xl font-bold tabular-nums text-[#1e293b] dark:text-white"
-          style={{ fontFamily: '"Space Grotesk", system-ui' }}
-        >
-          {count}
-        </span>
-        <span className="text-[11px] font-medium" style={{ color: T.primary }}>
-          paths
-        </span>
+        </div>
+        <div className="flex items-baseline gap-2 mt-1">
+          <span
+            className="text-2xl font-bold tabular-nums text-[#1e293b] dark:text-white"
+            style={{ fontFamily: '"Space Grotesk", system-ui' }}
+          >
+            {count}
+          </span>
+          <span className="text-[11px] font-medium text-[#0B1957] dark:text-slate-400">
+            paths
+          </span>
       </div>
       <div className="mt-2 flex items-center gap-1.5">
         <div
@@ -418,7 +568,7 @@ function KpiLast({
 
 // ── Activity heatmap ─────────────────────────────────────────────────────
 // Map raw event channels (incl. aliases) onto the heatmap's canonical rows.
-// Personal WA (wapa) and Business WA (waba) both roll up under "WhatsApp" — without
+// Personal WA (wapa) and Business WA (waba) both roll up under "WhatsApp" - without
 // this, wapa events fall through to the "Signal" (intent) catch-all.
 const HEATMAP_CHANNEL: Record<string, ChannelKey> = {
   whatsapp: 'whatsapp', waba: 'whatsapp', wapa: 'whatsapp', personal_whatsapp: 'whatsapp',
@@ -429,11 +579,12 @@ const HEATMAP_CHANNEL: Record<string, ChannelKey> = {
   intent: 'intent', signal: 'intent', fit: 'intent', system: 'intent',
 };
 
-function ActivityHeatmap({ events, days = 30 }: { events: ProspectEvent[]; days?: number }) {
+function ActivityHeatmap({ events, days = 30, unavailable = false }: { events: ProspectEvent[]; days?: number; unavailable?: boolean }) {
   const ch: ChannelKey[] = ['linkedin', 'whatsapp', 'email', 'voice', 'instagram', 'intent'];
   const grid: Record<string, number[]> = {};
   ch.forEach((c) => (grid[c] = new Array(days).fill(0)));
   for (const e of events) {
+    if (isOperatorEvent(e)) continue;
     const d = new Date(e.occurred_at);
     const diff = Math.floor((new Date().getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     if (diff < 0 || diff >= days) continue;
@@ -443,7 +594,14 @@ function ActivityHeatmap({ events, days = 30 }: { events: ProspectEvent[]; days?
   const max = Math.max(1, ...ch.flatMap((c) => grid[c]));
   return (
     <LadCard>
-      <LadCardHeader title="Activity" subtitle={`Last ${days} days · all channels`} />
+      <LadCardHeader
+        title="Activity"
+        subtitle={
+          // An all-empty grid is indistinguishable from a genuinely quiet
+          // contact, so say which one this is.
+          unavailable ? 'could not be loaded' : `Last ${days} days · all channels`
+        }
+      />
       <div className="space-y-1.5">
         {ch.map((c) => {
           const cells = grid[c];
@@ -508,7 +666,7 @@ function FitRadar({ p }: { p: ProspectFixture }) {
       <LadCard>
         <LadCardHeader title="Fit signals" subtitle="Not scored yet" />
         <div className="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-300">
-          No fit signals for this prospect yet — fit is computed when it&apos;s
+          No fit signals for this prospect yet - fit is computed when it&apos;s
           discovered via a search (Apollo · Sales Nav · ABM).
         </div>
       </LadCard>
@@ -705,7 +863,7 @@ function IntentStrip({ signals }: { signals: ProspectFixture['intent_signals'] }
           return (
             <div
               key={i}
-              className="relative rounded-2xl border border-slate-200 dark:border-[#262831] p-4 overflow-hidden"
+              className="relative rounded-2xl border border-slate-200 dark:border-[#1c2c4e] dark:bg-[#09153b]/50 p-4 overflow-hidden"
             >
               <div
                 className="absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-10"
@@ -748,11 +906,24 @@ function IntentStrip({ signals }: { signals: ProspectFixture['intent_signals'] }
 }
 
 // ── Mini feed ────────────────────────────────────────────────────────────
-function MiniFeed({ events }: { events: ProspectEvent[] }) {
+function MiniFeed({ events, truncated = false, unavailable = false }: { events: ProspectEvent[]; truncated?: boolean; unavailable?: boolean }) {
   const recent = events.slice(0, 6);
   return (
     <LadCard>
-      <LadCardHeader title="Recent activity" subtitle={`${events.length} total events`} />
+      <LadCardHeader
+        title="Recent activity"
+        subtitle={
+          // The backend's events endpoint has no total-count support (unlike
+          // /api/prospects), so "N total events" would overclaim completeness
+          // for any contact whose real history exceeds the fetch limit.
+          // `unavailable` is a third case again: we have no events because the
+          // fetch did not deliver, so "0 total events" would be a claim about
+          // the contact rather than about us.
+          unavailable
+            ? 'could not be loaded'
+            : truncated ? `${events.length}+ events (most recent shown)` : `${events.length} total events`
+        }
+      />
       <ul className="space-y-2.5">
         {recent.map((e) => {
           const m = CH[e.channel] || CH.system;
@@ -793,7 +964,7 @@ function MiniFeed({ events }: { events: ProspectEvent[] }) {
 
 // ── Action strip ─────────────────────────────────────────────────────────
 function Actions({ onAction, isActing, doNotContact, quietUntil }: {
-  onAction?: (p: { doNotContact?: boolean; quietDays?: number }) => void;
+  onAction?: (p: { doNotContact?: boolean; quietDays?: number; clearQuiet?: boolean }) => void;
   isActing?: boolean;
   doNotContact?: boolean;
   quietUntil?: string | null;
@@ -803,26 +974,35 @@ function Actions({ onAction, isActing, doNotContact, quietUntil }: {
     <LadCard>
       <LadCardHeader title="Take action" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <ActionBtn Icon={Route} label="Ask for intro" hint="via Anil" primary />
-        <ActionBtn Icon={SendHorizontal} label="Send message" hint="best: LinkedIn" />
+        <ActionBtn Icon={Route} label="Ask for intro" hint="Not available yet" primary disabled />
+        <ActionBtn Icon={SendHorizontal} label="Send message" hint="Not available yet" disabled />
         <ActionBtn
           Icon={MoonStar}
           label={quietActive ? 'Quieted' : 'Quiet 7d'}
-          hint={quietActive ? `until ${new Date(quietUntil!).toLocaleDateString()}` : 'pause outreach'}
+          hint={quietActive ? `until ${new Date(quietUntil!).toLocaleDateString()}` : 'pause agent replies'}
           active={quietActive}
           disabled={isActing}
-          onClick={() => onAction?.({ quietDays: quietActive ? 0 : 7 })}
+          onClick={() => onAction?.(quietActive ? { clearQuiet: true } : { quietDays: 7 })}
         />
         <ActionBtn
           Icon={Ban}
           label="Do not contact"
-          hint={doNotContact ? 'suppressed — click to lift' : 'hard suppress'}
+          // Was "hard suppress" / "suppressed". Both overstated what the flag
+          // does: quiet_until and do_not_contact are surfaced to the agent's
+          // prompt (tenant_context_service builds a CROSS-CHANNEL STATE block
+          // from them), but no send path gates on either — a running campaign
+          // sequence keeps executing its steps regardless. Say what is true.
+          hint={doNotContact ? 'flagged - click to lift' : 'tell the agent to stop'}
           danger
           active={!!doNotContact}
           disabled={isActing}
           onClick={() => onAction?.({ doNotContact: !doNotContact })}
         />
       </div>
+      <p className="mt-2.5 text-[11.5px] text-slate-500 dark:text-slate-400 leading-snug">
+        Agent replies honour these. A running campaign sequence does not — pause
+        the campaign to stop its steps.
+      </p>
     </LadCard>
   );
 }
@@ -843,7 +1023,7 @@ function ActionBtn({
     ? 'text-white shadow-sm hover:opacity-95'
     : danger
     ? 'text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40'
-    : 'text-[#172560] dark:text-white border border-slate-200 dark:border-[#262831] hover:bg-slate-50 dark:hover:bg-[#1a2a43]';
+    : 'text-[#172560] dark:text-white border border-slate-200 dark:border-[#1c2c4e] hover:bg-slate-50 dark:hover:bg-[#0e1d4d]';
   return (
     <button
       type="button"
@@ -897,17 +1077,39 @@ function futureWhen(iso?: string | null): { abs: string; badge: string | null } 
 }
 
 /** Upcoming automatic follow-ups the Master Agent has scheduled across channels. */
-function NextFollowups({ followups, loading }: { followups: ProspectFollowup[]; loading?: boolean }) {
+function NextFollowups({
+  followups, loading, error, degradedChannels = [],
+}: { followups: ProspectFollowup[]; loading?: boolean; error?: boolean; degradedChannels?: string[] }) {
   return (
     <LadCard>
       <LadCardHeader
         title="Next follow-ups"
         subtitle={
-          loading ? 'Loading…' : followups.length ? `${followups.length} scheduled` : 'Automatic outreach'
+          error
+            ? 'Could not load'
+            : loading
+              ? 'Loading…'
+              : degradedChannels.length
+                // A count we know is short must not be stated as a total.
+                ? `${followups.length}+ scheduled`
+                : followups.length
+                  ? `${followups.length} scheduled`
+                  : 'Automatic outreach'
         }
       />
-      {loading ? (
+      {error ? (
+        <p className="text-[13px] text-rose-600 dark:text-rose-300">
+          Couldn&apos;t check the schedule — this isn&apos;t necessarily &quot;no follow-ups queued.&quot;
+        </p>
+      ) : loading ? (
         <p className="text-[13px] text-slate-500 dark:text-slate-300">Checking the schedule…</p>
+      ) : followups.length === 0 && degradedChannels.length ? (
+        // The ONE case the server can tell us about and we previously could
+        // not: nothing came back, but only because a channel was unreadable.
+        <p className="text-[13px] text-amber-700 dark:text-amber-300">
+          Couldn&apos;t read {degradedChannels.join(', ')} follow-ups, so this isn&apos;t
+          necessarily &quot;none queued.&quot;
+        </p>
       ) : followups.length === 0 ? (
         <div className="flex items-center gap-2 text-[13px] text-slate-500 dark:text-slate-300">
           <CalendarClock className="w-4 h-4 shrink-0" />
@@ -953,6 +1155,12 @@ function NextFollowups({ followups, loading }: { followups: ProspectFollowup[]; 
             );
           })}
         </ul>
+      )}
+      {!error && !loading && followups.length > 0 && degradedChannels.length > 0 && (
+        <p className="mt-2 text-[11.5px] text-amber-700 dark:text-amber-300">
+          {degradedChannels.join(', ')} follow-ups couldn&apos;t be read — there may be more
+          than shown.
+        </p>
       )}
     </LadCard>
   );

@@ -1,5 +1,5 @@
 /**
- * Settings Feature — Public SDK Exports
+ * Settings Feature - Public SDK Exports
  * sdk/features/settings/index.ts
  *
  * Import in web/ components:

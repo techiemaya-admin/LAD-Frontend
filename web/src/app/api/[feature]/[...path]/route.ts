@@ -27,7 +27,7 @@ import { getBackendUrl } from '../../utils/backend';
 import { getWAPAServiceUrl } from '../../whatsapp-conversations/utils/python-proxy';
 
 /**
- * Per-feature backend resolver (Phase 5+ — Personal WhatsApp lives in
+ * Per-feature backend resolver (Phase 5+ - Personal WhatsApp lives in
  * LAD-WAPA-Comms now, NOT LAD_backend).
  *   personal-whatsapp                          → LAD-WAPA-Comms
  *   whatsapp-conversations  + channel=personal → LAD-WAPA-Comms
@@ -36,7 +36,7 @@ import { getWAPAServiceUrl } from '../../whatsapp-conversations/utils/python-pro
  *
  * The whatsapp-conversations case exists because some frontend calls hit
  * `/api/whatsapp-conversations/<sub>/<path>` (e.g. /conversations/bulk/send-template)
- * that have NO dedicated route.ts file — they fall through to this catch-all.
+ * that have NO dedicated route.ts file - they fall through to this catch-all.
  * For channel=personal those need to go to WAPA, not LAD_backend (whose explicit
  * mount is now disabled by PERSONAL_WHATSAPP_LOCAL=false).
  *

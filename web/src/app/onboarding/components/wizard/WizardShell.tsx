@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 — top-level shell for the linear signup wizard. Owns step state,
+// R8 Phase 3 - top-level shell for the linear signup wizard. Owns step state,
 // keeps it in sync with the ?step= query param, animates transitions, and
 // renders the appropriate Screen component.
 
@@ -84,7 +84,7 @@ export default function WizardShell() {
 
   const direction = useMemo(() => {
     // Track per-render direction so transitions slide correctly. We can't tell
-    // direction from a single render — Framer's `custom` prop pattern fits, but
+    // direction from a single render - Framer's `custom` prop pattern fits, but
     // for the wizard's simple linear flow we always slide forward except on back.
     return 1;
   }, []);

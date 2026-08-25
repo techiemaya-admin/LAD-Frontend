@@ -359,7 +359,7 @@ export default function WhatsAppTemplateCreatePage() {
       );
       const data = await res.json();
       if (data.success) {
-        setResult({ success: true, message: `"${safeName}" submitted — status: ${data.status ?? 'PENDING'}` });
+        setResult({ success: true, message: `"${safeName}" submitted - status: ${data.status ?? 'PENDING'}` });
       } else {
         setResult({ success: false, message: data.error || 'Meta rejected the template.' });
       }
@@ -388,49 +388,49 @@ export default function WhatsAppTemplateCreatePage() {
   return (
     <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724] transition-colors duration-200" onClick={() => setShowBtnMenu(false)}>
 
-      {/* ── Sticky header bar — back only ── */}
-      <div className="bg-white border-b border-[#E2E8F0] dark:bg-[#000c3b] dark:border-gray-800 px-4 md:px-6 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
-        <button
-          onClick={() => router.push('/conversations/templates')}
-          className="flex items-center gap-1.5 text-sm text-[#64748B] hover:text-[#1E293B] dark:text-gray-400 dark:hover:text-white font-medium transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-        <div className="h-5 w-px bg-[#E2E8F0] dark:bg-gray-800" />
-        <span className="text-sm font-semibold text-[#1E293B] dark:text-white">Create WhatsApp template</span>
-      </div>
-        {/* ── Mobile Tabs ── */}
-        <div className="md:hidden bg-white dark:bg-[#000c3b] border-b border-[#E2E8F0] dark:border-gray-800 sticky top-[60px] z-10">
-          <div className="flex">
-            <button
-                onClick={() => setMobileTab('details')}
-                className="flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-blue-400"
-                data-state={mobileTab === 'details' ? 'active' : 'inactive'}
-            >
-              Template details
-            </button>
-            <button
-                onClick={() => setMobileTab('content')}
-                className="flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-blue-400"
-                data-state={mobileTab === 'content' ? 'active' : 'inactive'}
-            >
-              Content and button
-            </button>
-            <button
-                onClick={() => setMobileTab('preview')}
-                className="flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-blue-400"
-                data-state={mobileTab === 'preview' ? 'active' : 'inactive'}
-            >
-              Preview
-            </button>
-          </div>
+      {/* ── Sticky header bar with integrated tabs ── */}
+      <div className="bg-white dark:bg-[#000724] border-b border-[#E2E8F0] dark:border-gray-800 sticky top-0 z-20 shadow-sm transition-colors">
+        <div className="px-4 md:px-6 py-4 sm:py-5 flex items-center gap-3">
+          <button
+            onClick={() => router.push('/conversations/templates')}
+            className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-gray-800 text-[#64748B] hover:text-[#1E293B] dark:text-gray-300 dark:hover:text-white font-medium transition-colors cursor-pointer bg-transparent"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <span className="text-base font-semibold text-[#1E293B] dark:text-white">Create WhatsApp template</span>
         </div>
+
+        {/* Integrated Mobile Tabs */}
+        <div className="md:hidden flex px-4 border-t border-[#E2E8F0] dark:border-gray-800/60">
+          <button
+            onClick={() => setMobileTab('details')}
+            className="flex-1 py-3.5 text-center text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-white"
+            data-state={mobileTab === 'details' ? 'active' : 'inactive'}
+          >
+            Template details
+          </button>
+          <button
+            onClick={() => setMobileTab('content')}
+            className="flex-1 py-3.5 text-center text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-white"
+            data-state={mobileTab === 'content' ? 'active' : 'inactive'}
+          >
+            Content and button
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className="flex-1 py-3.5 text-center text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer border-transparent text-[#64748B] dark:text-gray-400 hover:text-[#1E293B] dark:hover:text-white data-[state=active]:border-[#0b1957] dark:data-[state=active]:border-blue-500 data-[state=active]:text-[#0b1957] dark:data-[state=active]:text-white"
+            data-state={mobileTab === 'preview' ? 'active' : 'inactive'}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
 
       {/* ── Two-column layout ── */}
       <div className="flex">
 
         {/* ─── Left: Form ─── */}
-        <div className={`flex-1 p-4 md:p-6 space-y-4 min-w-0 max-w-4xl ${mobileTab === 'preview' ? 'hidden' : ''}`}>
+        <div className={`flex-1 p-5 md:p-8 space-y-6 min-w-0 max-w-4xl ${mobileTab === 'preview' ? 'hidden' : ''}`}>
 
           {/* ── Template name & language section ── */}
           <div className={`bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'details' ? 'hidden md:block' : ''}`}>
@@ -937,7 +937,7 @@ export default function WhatsAppTemplateCreatePage() {
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs text-[#94A3B8] dark:text-gray-500">Components</span>
                       <span className="text-xs text-[#1E293B] dark:text-white text-right">
-                    {buildComponents().map((c: any) => c.type).join(', ') || '—'}
+                    {buildComponents().map((c: any) => c.type).join(', ') || '-'}
                   </span>
                     </div>
                   </div>
@@ -1067,7 +1067,7 @@ export default function WhatsAppTemplateCreatePage() {
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs text-[#94A3B8] dark:text-gray-500">Components</span>
                   <span className="text-xs text-[#1E293B] dark:text-white text-right">
-                    {buildComponents().map((c: any) => c.type).join(', ') || '—'}
+                    {buildComponents().map((c: any) => c.type).join(', ') || '-'}
                   </span>
                 </div>
               </div>
@@ -1078,7 +1078,7 @@ export default function WhatsAppTemplateCreatePage() {
         </div>
 
         {/* ── Mobile Fixed Submit Bar ── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#000c3b] border-t border-[#E2E8F0] dark:border-gray-800 p-4 z-30">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#000724] border-t border-[#E2E8F0] dark:border-gray-800 p-4 z-30">
           <button
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}

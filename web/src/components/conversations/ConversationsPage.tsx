@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { AIPlayground } from './AIPlayground';
+import { AILearningsPanel } from './AILearningsPanel';
 import { LinkedInConversationView } from './LinkedInConversationView';
 import { EmailChannelView } from './EmailChannelView';
 import InstagramConversationView from './InstagramConversationView';
 import { WABusinessView } from './WABusinessView';
 import { Button } from '@/components/ui/button';
-import { FlaskConical, X } from 'lucide-react';
+import { FlaskConical, GraduationCap, X } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { ChannelIcon } from './ChannelIcon';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,7 @@ type WaTab = 'personal' | 'waba' | 'instagram' | 'linkedin' | 'gmail' | 'outlook
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Check which channels are connected — uses the same endpoints as
+// Utility: Check which channels are connected - uses the same endpoints as
 // the Integrations settings page for consistency.
 // All checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab — prefer Personal WA, then WABA, then LinkedIn,
+// Determine default tab - prefer Personal WA, then WABA, then LinkedIn,
 // then Gmail, then Outlook
 // ─────────────────────────────────────────────────────────────────────────────
 function getDefaultTab(status: ChannelConnectionStatus): WaTab {
@@ -138,7 +139,7 @@ function getDefaultTab(status: ChannelConnectionStatus): WaTab {
   return 'personal'; // fallback (nothing connected)
 }
 
-// All possible tabs in display order — matches the Integrations page order:
+// All possible tabs in display order - matches the Integrations page order:
 // Personal WA, WA Business, Instagram, LinkedIn, then Email channels
 const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
   { id: 'personal',  label: 'WAPA',  sublabel: 'personal_whatsapp' },
@@ -157,32 +158,45 @@ function getTabColor(tabId: WaTab): string {
   switch (tabId) {
     case 'personal':  return '#25D366'; // WhatsApp green
     case 'waba':      return '#128C7E'; // WhatsApp Business teal
-    case 'instagram': return '#E1306C'; // Instagram pink — pulled from the official gradient mid-stop
+    case 'instagram': return '#E1306C'; // Instagram pink - pulled from the official gradient mid-stop
     case 'linkedin':  return '#0077B5'; // LinkedIn blue
     case 'gmail':     return '#EA4335'; // Gmail red
     case 'outlook':   return '#0078D4'; // Outlook blue
-    case 'custom':    return '#059669'; // Emerald — matches integration tile
+    case 'custom':    return '#059669'; // Emerald - matches integration tile
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page shell — handles only tab + AI playground state
+// Page shell - handles only tab + AI playground state
 // ─────────────────────────────────────────────────────────────────────────────
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isLearningsOpen, setIsLearningsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   // null = still loading; once resolved, only connected channels are shown
   const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
 
-  // Check which channels are connected on mount — all parallel requests
+  // Check which channels are connected on mount - all parallel requests
   useEffect(() => {
     getConnectedChannels().then((status) => {
       setChannelStatus(status);
       setActiveTab(getDefaultTab(status));
     });
   }, []);
+
+  // Broadcast active tab change to sidebar and other components for dynamic theme adjustments
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('conversations:channel-changed', { detail: { channel: activeTab } }));
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('conversations:channel-changed', { detail: { channel: null } }));
+      }
+    };
+  }, [activeTab]);
 
   // Show only tabs whose channel is actively connected.
   // While loading (null) render nothing so there's no flash of wrong tabs.
@@ -196,17 +210,27 @@ export function ConversationsPage() {
       })
     : [];
 
+  const isBlackGrayDarkTheme = activeTab !== 'linkedin';
+
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI toggle — now always visible */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
-        {/* Channel tabs — only connected channels are rendered */}
-        <div className="flex items-center gap-1">
+      {/* Top bar: WA channel tabs + AI toggle - now always visible */}
+      <div
+        className={cn(
+          "h-10 flex items-center justify-between px-3 border-b shrink-0 gap-2 transition-colors duration-300",
+          "bg-card border-border",
+          isBlackGrayDarkTheme
+            ? "dark:bg-zinc-900 dark:border-zinc-800"
+            : "dark:bg-[#0C162F] dark:border-slate-800"
+        )}
+      >
+        {/* Channel tabs - only connected channels are rendered */}
+        <div className="flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
           {/* Loading skeleton while connection status is being resolved */}
           {channelStatus === null && (
             <>
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
             </>
           )}
           {visibleTabs.map(({ id, label, sublabel }) => (
@@ -214,72 +238,125 @@ export function ConversationsPage() {
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
+                'group flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all shrink-0 whitespace-nowrap',
                 activeTab === id
                   ? 'text-white shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-gray-300/30 dark:hover:bg-zinc-500/30'
               )}
-              style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
+              style={
+                activeTab === id
+                  ? { backgroundColor: getTabColor(id) }
+                  : undefined
+              }
             >
               <ChannelIcon
                 channel={sublabel as any}
                 size={16}
                 overrideColor={activeTab === id ? '#ffffff' : undefined}
+                // className={cn(
+                //   id === 'linkedin' && activeTab !== id && 'dark:group-hover:[&_svg]:!text-white'
+                // )}
               />
               {label}
             </button>
           ))}
         </div>
 
-        {/* AI Playground toggle */}
-        <Button
-          variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
-          size="sm"
-          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
-          onClick={() => setIsPlaygroundOpen((v) => !v)}
-          title="Open AI Playground to test your system prompt"
-        >
-          <FlaskConical className="h-3.5 w-3.5" />
-          Test AI
-        </Button>
-      </div>
+        <div className="flex items-center gap-1 ml-auto shrink-0">
+          {/* AI Playground toggle */}
+          <Button
+            variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+            size="sm"
+            className={cn(
+              'gap-1.5 text-xs h-7 shrink-0',
+              isPlaygroundOpen && 'text-primary',
+              isBlackGrayDarkTheme
+                ? 'dark:hover:bg-black dark:hover:text-white'
+                : 'dark:hover:bg-[#2B7CFF] dark:hover:text-white'
+            )}
+            onClick={() => setIsPlaygroundOpen((v) => !v)}
+            title="Open AI Playground to test your system prompt"
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Test AI
+          </Button>
 
-      {/* Channel views — only the active tab is mounted */}
+          {/* AI Learnings - what the agent has been taught from thumbs-down
+            feedback. Sits beside Test AI because both answer "why did it say
+            that?": one lets you probe the prompt, the other shows what human
+            review has since added to it. */}
+          <Button
+            variant={isLearningsOpen ? "secondary" : "ghost"}
+            size="sm"
+            className={`gap-1.5 text-xs h-7 shrink-0 ${isLearningsOpen ? "text-primary" : ""}`}
+            onClick={() => setIsLearningsOpen((v) => !v)}
+            title="View and manage what the AI has learned from feedback"
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            AI Learnings
+          </Button>
+
+          <AILearningsPanel
+            open={isLearningsOpen}
+            onClose={() => setIsLearningsOpen(false)}
+          />
+        </div>
+      </div>
+      {/* Channel views - only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-      {channelStatus === null ? (
+        {channelStatus === null ? (
           <div className="flex-1 bg-background" />
         ) : (
           <>
-        {activeTab === 'personal' && (
-          // Personal WA reuses the rich WhatsApp-Business view (same UI as WABA),
-          // driven against LAD-WAPA-Comms via backendChannel="personal".
-          <WABusinessView
-            backendChannel="personal"
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-          />
-        )}
-        {activeTab === 'waba' && (
-          <WABusinessView
-            backendChannel="waba"
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-          />
-        )}
-        {activeTab === 'instagram' && <InstagramConversationView />}
-        {activeTab === 'linkedin'  && <LinkedInConversationView />}
-        {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
-        {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
-        {activeTab === 'custom'    && <EmailChannelView provider="custom"  connectedEmail={channelStatus?.customEmail  ?? undefined} />}
-        </>
+            {activeTab === "personal" && (
+              // Personal WA reuses the rich WhatsApp-Business view (same UI as WABA),
+              // driven against LAD-WAPA-Comms via backendChannel="personal".
+              <WABusinessView
+                backendChannel="personal"
+                isSidebarCollapsed={isSidebarCollapsed}
+                setIsSidebarCollapsed={setIsSidebarCollapsed}
+              />
+            )}
+            {activeTab === "waba" && (
+              <WABusinessView
+                backendChannel="waba"
+                isSidebarCollapsed={isSidebarCollapsed}
+                setIsSidebarCollapsed={setIsSidebarCollapsed}
+              />
+            )}
+            {activeTab === "instagram" && <InstagramConversationView />}
+            {activeTab === "linkedin" && <LinkedInConversationView />}
+            {activeTab === "gmail" && (
+              <EmailChannelView
+                provider="gmail"
+                connectedEmail={channelStatus?.gmailEmail ?? undefined}
+              />
+            )}
+            {activeTab === "outlook" && (
+              <EmailChannelView
+                provider="outlook"
+                connectedEmail={channelStatus?.outlookEmail ?? undefined}
+              />
+            )}
+            {activeTab === "custom" && (
+              <EmailChannelView
+                provider="custom"
+                connectedEmail={channelStatus?.customEmail ?? undefined}
+              />
+            )}
+          </>
         )}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}
       <AnimatePresence>
-        {showBroadcastModal && (activeTab === 'personal' || activeTab === 'waba') && (
-          <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab as 'personal' | 'waba'} />
-        )}
+        {showBroadcastModal &&
+          (activeTab === "personal" || activeTab === "waba") && (
+            <BroadcastModal
+              onClose={() => setShowBroadcastModal(false)}
+              activeTab={activeTab as "personal" | "waba"}
+            />
+          )}
       </AnimatePresence>
 
       {/* AI Playground slide-over */}
@@ -293,7 +370,10 @@ export function ConversationsPage() {
               className="fixed inset-0 z-40 bg-black/30 sm:hidden"
               onClick={() => setIsPlaygroundOpen(false)}
             />
-            <AIPlayground onClose={() => setIsPlaygroundOpen(false)} />
+            <AIPlayground
+              onClose={() => setIsPlaygroundOpen(false)}
+              variant={activeTab === 'personal' || activeTab === 'waba' ? 'whatsapp' : 'conversations'}
+            />
           </>
         )}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 /**
- * GET /api/prospects/[id]/followups — upcoming scheduled automatic follow-ups
+ * GET /api/prospects/[id]/followups - upcoming scheduled automatic follow-ups
  * for a prospect, across channels. Forwarded to the Master Agent.
  */
 import { NextRequest } from 'next/server';

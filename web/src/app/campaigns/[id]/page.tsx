@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Save, Play, Eye, Pause, Loader2 } from 'lucide-react';
 import { useCampaignStore } from '@/store/campaignStore';
-import { useCampaign, updateCampaign, createCampaign, pauseCampaign } from '@lad/frontend-features/campaigns';
+import { useCampaign, updateCampaign, createCampaign, pauseCampaign, campaignSaveErrorMessage } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import { StepLibrary, FlowCanvas, StepSettings } from '@/components/campaigns';
+import LinkedInApprovalsPanel from '@/components/campaigns/LinkedInApprovalsPanel';
 export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -92,7 +93,7 @@ export default function CampaignDetailPage() {
       push({
         variant: 'error',
         title: 'Error',
-        description: error.message || 'Failed to save campaign',
+        description: campaignSaveErrorMessage(error, name),
       });
     } finally {
       setSaving(false);
@@ -173,7 +174,7 @@ export default function CampaignDetailPage() {
   return (
     <div className="h-screen flex flex-col bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
-      <div className="border-b border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#1a2a43] px-6 py-4 z-10">
+      <div className="border-b border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] px-6 py-4 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -204,7 +205,7 @@ export default function CampaignDetailPage() {
               onClick={() => router.push(`/onboarding/advanced-search-ai?campaignId=${campaignId}`)}
               disabled={saving}
             >
-              Edit Workflow
+              Edit Accelerator
             </Button>
             <Button
               variant="outline"
@@ -241,6 +242,9 @@ export default function CampaignDetailPage() {
         {/* Center - Flow Canvas */}
         <div className="flex-1 relative">
           <FlowCanvas />
+          {/* Approval node read-back. Renders nothing unless this campaign has
+              an auto-post schedule with the approval gate switched on. */}
+          <LinkedInApprovalsPanel campaignId={campaignId} />
         </div>
         {/* Right Sidebar - Step Settings */}
         <StepSettings />

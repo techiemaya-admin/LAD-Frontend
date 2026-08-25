@@ -1,5 +1,5 @@
 'use client';
-// /campaigns/workflow — thin route wrapper around the embeddable
+// /campaigns/workflow - thin route wrapper around the embeddable
 // CustomWorkflowBuilder (also opened in-place from the advanced-search-ai
 // "+" menu). Closing from this route returns to the campaigns list.
 

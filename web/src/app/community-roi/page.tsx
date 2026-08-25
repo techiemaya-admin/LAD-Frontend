@@ -115,7 +115,7 @@ export default function CommunityROIDashboard() {
     // { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
 
-  // Server now returns only the matching subset — no client-side filter needed.
+  // Server now returns only the matching subset - no client-side filter needed.
   const filteredMembers = Array.isArray(members) ? members : []
 
   return (
@@ -334,13 +334,13 @@ export default function CommunityROIDashboard() {
                 <RelationshipHeatmapWithRecommendations />
               </div>
 
-              {/* 1-2-1 Verification Claims — admin review queue (self-hides when empty) */}
+              {/* 1-2-1 Verification Claims - admin review queue (self-hides when empty) */}
               <VerificationClaimsPanel />
 
-              {/* Broadcast Performance — per-template delivery & read-rate */}
+              {/* Broadcast Performance - per-template delivery & read-rate */}
               <BroadcastPerformanceContainer />
 
-              {/* Unified Audit Log — who changed what across the BNI flow */}
+              {/* Unified Audit Log - who changed what across the BNI flow */}
               <AuditLogPanel />
 
               {/* Leaderboards (Excel KPIs) */}

@@ -58,7 +58,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [hideEmpty, setHideEmpty] = useState(false);
   const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
-  // Build filters from local state — include the channel override so both the
+  // Build filters from local state - include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   // hide_empty / sort_by are part of the queryKey via spread, so toggling either
   // triggers a fresh fetch from page 0 instead of mutating already-loaded pages.
@@ -80,21 +80,14 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     [conversationsQuery.data],
   );
 
-  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  // allConversations: same data (no separate unfiltered query needed - unread counts computed from loaded batch)
   const allConversations = conversations;
-
-  // Auto-select first conversation if none selected
-  const effectiveSelectedId = useMemo(() => {
-    if (selectedId && conversations.find((c) => c.id === selectedId)) {
-      return selectedId;
-    }
-    return conversations[0]?.id || null;
-  }, [selectedId, conversations]);
 
   // Selected conversation (with messages loaded separately)
   const selectedConversation = useMemo(() => {
-    return conversations.find((c) => c.id === effectiveSelectedId) || null;
-  }, [conversations, effectiveSelectedId]);
+    if (!selectedId) return null;
+    return conversations.find((c) => c.id === selectedId) || null;
+  }, [conversations, selectedId]);
 
   // Unread counts
   const unreadCounts = useMemo(() => {
@@ -120,7 +113,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
 
     // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
-      // Non-critical — the next poll will re-sync from DB
+      // Non-critical - the next poll will re-sync from DB
     });
   }, [hookOptions?.channel]);
 
@@ -129,8 +122,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     mutationFn: sendMessageApi,
     onSuccess: () => {
       // Invalidate messages and conversation list to show updated last message
-      if (effectiveSelectedId) {
-        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(effectiveSelectedId) });
+      if (selectedId) {
+        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(selectedId) });
       }
       queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
     },
@@ -138,13 +131,13 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
 
   const sendMessage = useCallback(
     async (payload: RichMessagePayload) => {
-      if (!effectiveSelectedId || !selectedConversation) return;
+      if (!selectedId || !selectedConversation) return;
       // Require at least some content for text messages (also guard against missing type)
       const payloadType = payload.type || 'text';
       if (payloadType === 'text' && !payload.content?.trim()) return;
 
       return sendMutation.mutateAsync({
-        conversationId: effectiveSelectedId,
+        conversationId: selectedId,
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
         channel: hookOptions?.channel,
@@ -168,7 +161,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
         pollOptions:     payload.pollOptions,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
+    [selectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations
@@ -201,7 +194,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     conversations,
     allConversations,
     selectedConversation,
-    selectedId: effectiveSelectedId,
+    selectedId,
     selectConversation,
     channelFilter,
     setChannelFilter,

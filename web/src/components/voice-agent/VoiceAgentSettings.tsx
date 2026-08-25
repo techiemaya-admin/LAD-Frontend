@@ -11,7 +11,7 @@ import { SidebarSkeleton } from './SidebarSkeleton';
 import { VoiceLibrary } from './VoiceLibrary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentPlaygroundModal } from './AgentPlaygroundModal';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Volume2 } from 'lucide-react';
 
 export function VoiceAgentSettings() {
   const { toast } = useToast();
@@ -389,7 +389,14 @@ export function VoiceAgentSettings() {
       <div className="mx-auto">
         <Tabs defaultValue="agents" className="w-full">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-0 mb-6">
-            <h1 className="text-2xl font-bold font-display">Voice Agents Workspace</h1>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl text-primary dark:text-blue-400">
+                <Volume2 className="h-6 w-6" />
+              </div>
+              <h1 className="text-2xl font-bold font-display text-foreground dark:text-white">
+                Voice Agents Workspace
+              </h1>
+            </div>
             {/* FIXED:
    - dark:bg-[#00051d] locks the background container track color in dark mode.
    - data-[state=active]:dark:bg-blue-650 makes the active tab pop in a clean blue layout.

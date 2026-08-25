@@ -1,7 +1,7 @@
 // Sentry server/edge instrumentation (R3/R18).
 // Next.js calls register() once at server startup. Init is a no-op until
 // SENTRY_DSN is configured, so the app runs unchanged before Sentry is set up.
-// NOTE: requires `@sentry/nextjs` to be installed (it's in package.json) — run
+// NOTE: requires `@sentry/nextjs` to be installed (it's in package.json) - run
 // `npm install` if the import below fails to resolve.
 import * as Sentry from '@sentry/nextjs';
 

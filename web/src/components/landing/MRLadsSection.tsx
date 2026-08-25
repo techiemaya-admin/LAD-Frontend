@@ -72,7 +72,7 @@ export default function MRLadsSection() {
             Mr LADS
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-medium">
-            Meet Mr LAD — your AI Sales Employee for sales and marketing. Hire one AI Sales Employee who finds your ideal customers, starts conversations, builds relationships, and books meetings for your business 24/7.
+            Meet Mr LAD, your AI Sales Employee for sales and marketing. Hire one AI Sales Employee who finds your ideal customers, starts conversations, builds relationships, and books meetings for your business 24/7.
           </p>
         </motion.div>
 
@@ -105,7 +105,7 @@ export default function MRLadsSection() {
           style={{ y: contentY }}
         >
           <p className="text-center text-muted-foreground mb-12 text-sm">
-            More than 12,000 teams have put Mr LAD to work and close deals with companies like:
+            More than 12,000 teams have put Mr LAD to work to close deals faster.
           </p>
         </motion.div>
       </div>

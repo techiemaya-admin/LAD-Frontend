@@ -3,9 +3,9 @@
  * Builder canvas.
  *
  * The `workflowPreview` steps array is the SINGLE SOURCE OF TRUTH. The guided
- * config's structural selections — the channels (linkedin / email / whatsapp /
+ * config's structural selections - the channels (linkedin / email / whatsapp /
  * voice_call), the LinkedIn actions (connect / message / profile_view) and the
- * trigger condition — are DERIVED from it (`deriveConfig`), and editing a
+ * trigger condition - are DERIVED from it (`deriveConfig`), and editing a
  * toggle reconciles back into it (`applyConfig`). Because both the toggles and
  * the canvas mutate the same array, add/remove in either surface reflects in
  * the other in real time.
@@ -16,7 +16,7 @@
  *
  * Channel account/template selections (email from-address, WA account, voice
  * agent, …) are campaign-level, not per-step, so they stay in their own state
- * and are merged at launch — they are intentionally NOT part of this module.
+ * and are merged at launch - they are intentionally NOT part of this module.
  *
  * Per-step content (a step's message / delay) lives on the step object and is
  * edited via the canvas StepEditor or the config forms; this module preserves
@@ -65,7 +65,7 @@ const TYPE_BY_CHANNEL: Record<string, string> = {
 /**
  * Step types that are NOT modeled by the guided-config toggles but must SURVIVE
  * a rebuild. buildStepsFromConfig re-derives the array from the toggle config,
- * so any type it doesn't know is silently dropped the moment a toggle changes —
+ * so any type it doesn't know is silently dropped the moment a toggle changes  - 
  * preserved types are re-inserted at (approximately) their original position.
  */
 const PRESERVED_TYPES = new Set(['media_generation']);
@@ -131,7 +131,7 @@ function makeStep(kind: string, existing?: SyncStep): SyncStep {
  * Rebuild the canonical steps array for a target structural config, PRESERVING
  * every existing step's per-step content (message/delay/condition/leadLimit/id)
  * by matching on type. Channel steps are materialised even without a trigger
- * (the wait_for_condition step is added only when a trigger is set) — this is
+ * (the wait_for_condition step is added only when a trigger is set) - this is
  * what lets "channels selected before a trigger" round-trip without loss.
  *
  * Canonical order: lead_generation → LinkedIn actions (connect, message,
@@ -152,15 +152,15 @@ export function buildStepsFromConfig(
   // The lead-search node is the campaign's lead SOURCE, not an outreach channel.
   // It's included by default (this page discovers leads via LinkedIn search), but
   // OMITTED for direct-contact / inbound-import campaigns where leads are provided
-  // directly (initial_leads) — mirroring the launch builder, which gates the same
+  // directly (initial_leads) - mirroring the launch builder, which gates the same
   // node on `!isDirectContact && !inboundMode`. Without this the canvas showed a
   // "LinkedIn Lead Search" node those campaigns never actually run.
   if (opts.includeLeadSource !== false) {
     const leadGen = take('lead_generation');
     // When LinkedIn isn't a selected OUTREACH channel, don't title the source
-    // node as if it were a LinkedIn action — it reads as "why is LinkedIn here
+    // node as if it were a LinkedIn action - it reads as "why is LinkedIn here
     // when I picked Email + Voice". Relabel it neutrally (leads are still sourced
-    // via LinkedIn search — see the description).
+    // via LinkedIn search - see the description).
     if (!liSelected) {
       leadGen.title = 'Find Leads';
       leadGen.description = 'Discover target leads via LinkedIn search';
@@ -191,7 +191,7 @@ export function buildStepsFromConfig(
     if (type) out.push(take(type));
   }
 
-  // Re-insert preserved (toggle-agnostic) steps — e.g. the AI Media node — at
+  // Re-insert preserved (toggle-agnostic) steps - e.g. the AI Media node - at
   // their original position, clamped to the rebuilt array. Without this they
   // would vanish from the canvas on the next guided-toggle change.
   existing.forEach((s, i) => {

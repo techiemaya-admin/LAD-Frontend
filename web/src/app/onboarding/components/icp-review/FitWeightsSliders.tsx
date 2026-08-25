@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — six sliders for the fit_weights block. Used to bias the fit
+// R8 Phase 5 - six sliders for the fit_weights block. Used to bias the fit
 // scorer toward whichever signals matter most for this tenant.
 
 import * as React from 'react';

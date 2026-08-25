@@ -42,13 +42,17 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /** Restyle the backdrop - needed to raise a dialog above a high-z-index
+   *  overlay, since the portal makes it a sibling of <body>, not a child. */
+  overlayClassName?: string
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
@@ -61,9 +65,9 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute right-8 top-8 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-0 focus:ring-offset-0 disabled:pointer-events-none z-50 border-0 bg-transparent p-0"
+            className="absolute right-4 top-4 sm:right-6 sm:top-6 md:right-8 md:top-8 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-0 focus:ring-offset-0 disabled:pointer-events-none z-50 border-0 bg-transparent p-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
           >
-            <XIcon className="h-6 w-6" />
+            <XIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}

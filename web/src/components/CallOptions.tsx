@@ -837,7 +837,7 @@ export function CallOptions(props: CallOptionsProps) {
             </thead>
             <tbody>
               {bulkEntries.slice(0, visibleCount).map((row, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t first:border-t-0 dark:border-[#262831]">
                   {/* --- radio + edit before phone --- */}
                   <td className="p-2 align-middle text-center">
                     <div className="flex items-center justify-center gap-2">
@@ -944,8 +944,8 @@ export function CallOptions(props: CallOptionsProps) {
     );
   };
   return (
-    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#000724] border border-gray-100 dark:border-[#262831]">
-      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#000724] rounded-3xl px-5 py-1 border border-white/30 dark:border-[#000724] mb-1 -mx-2 mt-2">
+    <Card className="rounded-2xl transition-all p-2 bg-white dark:bg-[#071131] border border-gray-100 dark:border-blue-950/40">
+      <CardHeader className="backdrop-blur-xl bg-white/80 dark:bg-[#071131] rounded-3xl px-5 py-1 border border-white/30 dark:border-none mb-1 -mx-2 mt-2">
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
           <PhoneCall className="w-5 h-5 inline mr-2" /> Call Options
         </CardTitle>
@@ -955,30 +955,30 @@ export function CallOptions(props: CallOptionsProps) {
         <div className="flex gap-3">
           <Button
             variant={!useCsv ? "default" : "outline"}
-            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-[#262831] dark:text-white dark:hover:bg-[#1a2a43] dark:hover:text-white"
+            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/40 dark:text-white dark:hover:bg-slate-800/70 dark:data-[variant=outline]:bg-slate-800/50"
             onClick={() => onUseCsvChange(false)}
           >
             Single Call
           </Button>
           <Button
             variant={useCsv ? "default" : "outline"}
-            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-[#262831] dark:text-white dark:hover:bg-[#1a2a43] dark:hover:text-white"
+            className="flex-1 h-12 rounded-[10px] transition-colors dark:border-blue-950/40 dark:text-white dark:hover:bg-slate-800/70 dark:data-[variant=outline]:bg-slate-800/50"
             onClick={() => onUseCsvChange(true)}
           >
             Bulk List
           </Button>
         </div>
         {!useCsv ? (
-          // — Single Call UI with Country Selector —
+          // - Single Call UI with Country Selector  - 
           <div className="space-y-3">
             {/* Phone Number with Country Dropdown */}
             <div className="relative">
-              <div className="flex rounded-[10px] border border-gray-200 dark:border-[#262831] overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 focus-within:border-gray-200 h-12">
+              <div className="flex rounded-[10px] border border-gray-200 dark:border-blue-950/40 overflow-hidden focus-within:ring-2 focus-within:ring-gray-200 focus-within:border-gray-200 h-12 bg-white dark:bg-slate-800/50">
                 {/* Country Dropdown Button */}
                 <button
                   type="button"
                   onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#1a2a43] border-r border-gray-200 dark:border-[#262831] hover:bg-gray-100 dark:hover:bg-[#253456] transition-colors min-w-[80px]"
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-800/50 border-r border-gray-200 dark:border-blue-950/40 hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors min-w-[80px]"
                 >
                   <Image
                     src={`https://flagcdn.com/w40/${selectedCountry.code.toLowerCase()}.png`}
@@ -997,18 +997,18 @@ export function CallOptions(props: CallOptionsProps) {
                   value={dial}
                   onChange={(e) => onDialChange(e.target.value)}
                   placeholder="Enter phone number"
-                  className="flex-1 px-3 py-2 text-sm outline-none bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                  className="flex-1 px-3 py-2 text-sm outline-none bg-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 />
               </div>
 
               {/* Country Dropdown Menu */}
               {showCountryDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-[280px] max-h-64 overflow-y-auto bg-white dark:bg-[#1a2a43] border border-gray-200 dark:border-[#262831] rounded-[10px] shadow-lg z-50">
-                  <div className="sticky top-0 bg-white dark:bg-[#1a2a43] border-b border-gray-100 dark:border-[#262831] p-2">
+                <div className="absolute top-full left-0 mt-1 w-[280px] max-h-64 overflow-y-auto bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-[10px] shadow-lg z-50">
+                  <div className="sticky top-0 bg-white dark:bg-[#071131] border-b border-gray-100 dark:border-blue-950/40 p-2">
                     <input
                       type="text"
                       placeholder="Search country..."
-                      className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-[#262831] rounded-lg outline-none focus:border-gray-200 bg-white dark:bg-[#253456] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg outline-none focus:border-gray-200 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                       onChange={(e) => {
                         const searchTerm = e.target.value.toLowerCase();
                         const filtered = COUNTRIES.filter(
@@ -1023,8 +1023,8 @@ export function CallOptions(props: CallOptionsProps) {
                           dropdownList.innerHTML = '';
                           filtered.forEach((country) => {
                             const item = document.createElement('button');
-                            item.className = 'w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors text-left';
-                            item.innerHTML = `<img src="https://flagcdn.com/w40/${country.code.toLowerCase()}.png" alt="${country.name}" width="24" height="16"  /><span class="flex-1 text-sm text-gray-700">${country.name}</span><span class="text-sm font-medium text-gray-500">${country.dialCode}</span>`;
+                            item.className = 'w-full flex items-center gap-3 px-3 py-2 hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary dark:hover:text-primary-foreground transition-colors text-left group';
+                            item.innerHTML = `<img src="https://flagcdn.com/w40/${country.code.toLowerCase()}.png" alt="${country.name}" width="24" height="16"  /><span class="flex-1 text-sm text-gray-700 dark:text-white group-hover:text-primary-foreground">${country.name}</span><span class="text-sm font-medium text-slate-400 dark:text-slate-300 group-hover:text-primary-foreground/80">${country.dialCode}</span>`;
                             item.onclick = () => {
                               setSelectedCountry(country);
                               setShowCountryDropdown(false);
@@ -1036,29 +1036,37 @@ export function CallOptions(props: CallOptionsProps) {
                     />
                   </div>
                   <div id="country-dropdown-list" className="py-1">
-                    {COUNTRIES.map((country) => (
-                      <button
-                        key={country.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(country);
-                          setShowCountryDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#253456] transition-colors text-left ${selectedCountry.code === country.code ? 'bg-gray-50 dark:bg-[#253456]' : ''
+                    {COUNTRIES.map((country) => {
+                      const isSelected = selectedCountry.code === country.code;
+                      return (
+                        <button
+                          key={country.code}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCountry(country);
+                            setShowCountryDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left group hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary dark:hover:text-primary-foreground ${
+                            isSelected ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground' : ''
                           }`}
-                      >
-                        <Image
-                          src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
-                          alt={country.name}
-                          width={20}
-                          height={20}
-                          className=""
-                          unoptimized
-                        />
-                        <span className="flex-1 text-sm text-gray-700 dark:text-white">{country.name}</span>
-                        <span className="text-sm font-medium text-gray-500 dark:text-[#7a8ba3]">{country.dialCode}</span>
-                      </button>
-                    ))}
+                        >
+                          <Image
+                            src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
+                            alt={country.name}
+                            width={20}
+                            height={20}
+                            className=""
+                            unoptimized
+                          />
+                          <span className={`flex-1 text-sm ${isSelected ? 'text-primary-foreground' : 'text-gray-700 dark:text-white group-hover:text-primary-foreground'}`}>
+                            {country.name}
+                          </span>
+                          <span className={`text-sm font-medium ${isSelected ? 'text-primary-foreground/80' : 'text-slate-400 dark:text-slate-300 group-hover:text-primary-foreground/80'}`}>
+                            {country.dialCode}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1067,7 +1075,7 @@ export function CallOptions(props: CallOptionsProps) {
               value={clientName}
               onChange={(e) => onClientNameChange(e.target.value)}
               placeholder="Lead name (optional)"
-              className="h-12 rounded-[10px]"
+              className="h-12 rounded-[10px] dark:bg-input/30 dark:border-blue-950/60"
             />
           </div>
         ) : (
@@ -1095,19 +1103,20 @@ export function CallOptions(props: CallOptionsProps) {
       </CardContent>
       {/* Summary editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="dark:bg-[#071131] dark:border-blue-950/40">
+          <DialogHeader className="dark:bg-[#071131] dark:border-blue-950/40">
             <DialogTitle className="flex items-center gap-2">
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
+              className="dark:bg-slate-800/50 dark:border-blue-950/40"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1120,7 +1129,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-[#262831] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-[#1a2a43] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
@@ -1142,24 +1151,37 @@ export function CallOptions(props: CallOptionsProps) {
                         body: JSON.stringify({ context: text }),
                       }
                     );
-                    const data = await res.json();
-                    if (data.success) {
-                      const generated = data.generatedText as string;
-                      setEditorValues((v) => (
-                        dataType === 'employee'
-                          ? { ...v, company_sales_summary: generated, summary: generated }
-                          : { ...v, sales_summary: generated, summary: generated }
-                      ));
-                    } else {
-                      logger.error('Gemini API error', { error: data.error });
+                    const data = await res.json().catch(() => ({}));
+                    // `fetch` does not throw on 4xx/5xx, so a server error was
+                    // only logged: the spinner stopped, the summary was
+                    // unchanged, and nothing told the user it had failed.
+                    if (!res.ok || !data.success) {
+                      logger.error('Gemini API error', { error: data?.error, status: res.status });
+                      push({
+                        variant: 'error',
+                        title: 'Rephrase failed',
+                        description: data?.error || 'Your summary is unchanged. Please try again.',
+                      });
+                      return;
                     }
+                    const generated = data.generatedText as string;
+                    setEditorValues((v) => (
+                      dataType === 'employee'
+                        ? { ...v, company_sales_summary: generated, summary: generated }
+                        : { ...v, sales_summary: generated, summary: generated }
+                    ));
                   } catch (err) {
                     logger.error('Rephrase operation failed', { error: err });
+                    push({
+                      variant: 'error',
+                      title: 'Rephrase failed',
+                      description: 'Your summary is unchanged. Please check your connection.',
+                    });
                   } finally {
                     setIsRephrasing(false);
                   }
                 }}
-                className="absolute right-2 top-2 p-2 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
+                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-slate-800/50 hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
               >
                 {isRephrasing ? (
                   <span className="animate-spin text-gray-600">⏳</span>
@@ -1169,7 +1191,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4">
+          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#071131] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 

@@ -5,7 +5,7 @@
  *
  * For self-hosted webmail (Roundcube, Snappymail, cPanel mail), Zoho, Yandex,
  * Fastmail, and any other mailbox NOT federated with Google/Microsoft. Outbound
- * (SMTP) only — IMAP inbound parity is a separate, future feature.
+ * (SMTP) only - IMAP inbound parity is a separate, future feature.
  *
  * Flow:
  *   1. User fills SMTP host/port/secure/user/password + From address/name.
@@ -24,8 +24,8 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 // ── Smart defaults so the form isn't intimidating ────────────────────────────
 //
 // Most providers offer one of two flavours:
-//   • SMTPS    on 465  (TLS handshake first — `secure: true`)
-//   • STARTTLS on 587  (plain → upgraded — `secure: false`)
+//   • SMTPS    on 465  (TLS handshake first - `secure: true`)
+//   • STARTTLS on 587  (plain → upgraded - `secure: false`)
 //
 // We default to 587/false because it's the most widely supported. The user can
 // flip the toggle if their provider only offers 465.
@@ -88,11 +88,11 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
     }
   }, []); // ← stable identity, runs once
 
-  // Initial load — fires exactly once when the component mounts.
+  // Initial load - fires exactly once when the component mounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, []);
 
-  // Handle the "TLS / STARTTLS" toggle — auto-flip the port to the conventional
+  // Handle the "TLS / STARTTLS" toggle - auto-flip the port to the conventional
   // value so users don't have to remember 465 vs 587.
   const setSecure = (secure: boolean) => {
     setForm(f => ({
@@ -122,7 +122,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
       });
       const data = await r.json();
       if (r.ok && data.success) {
-        setTestResult({ ok: true, message: 'Connection successful — credentials work.' });
+        setTestResult({ ok: true, message: 'Connection successful - credentials work.' });
       } else {
         setTestResult({ ok: false, message: data.error || data.message || 'Connection test failed.' });
       }
@@ -203,7 +203,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
           <div>
             <CardTitle>Custom Email (SMTP / Webmail)</CardTitle>
             <CardDescription>
-              Connect any mailbox via SMTP — Roundcube, cPanel mail, Zoho, Yandex,
+              Connect any mailbox via SMTP - Roundcube, cPanel mail, Zoho, Yandex,
               Fastmail, or your own server. Use this when Google or Microsoft can&apos;t.
             </CardDescription>
           </div>
@@ -248,7 +248,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="smtp.webaaps.live"
                   value={form.host}
                   onChange={e => setForm(f => ({ ...f, host: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
               <div>
@@ -258,12 +258,12 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="587"
                   value={form.port}
                   onChange={e => setForm(f => ({ ...f, port: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
             </div>
 
-            {/* TLS toggle — auto-flips port between 465 and 587 */}
+            {/* TLS toggle - auto-flips port between 465 and 587 */}
             <div className="flex items-center gap-2 text-xs">
               <button
                 type="button"
@@ -292,7 +292,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   // Mirror to from_address if user hasn't customised it
                   from_address: f.from_address || e.target.value,
                 }))}
-                className="mt-1"
+                className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 autoComplete="off"
               />
             </div>
@@ -306,7 +306,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   autoComplete="new-password"
-                  className="pr-9"
+                  className="pr-9 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
                 <button
                   type="button"
@@ -330,11 +330,11 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="you@yourdomain.com (defaults to username)"
                   value={form.from_address}
                   onChange={e => setForm(f => ({ ...f, from_address: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
                 {form.from_address && !fromAddressLooksLikeEmail && (
                   <p className="text-[11px] text-red-600 mt-1">
-                    Must be an email address (e.g. <code>you@yourdomain.com</code>) — not a hostname.
+                    Must be an email address (e.g. <code>you@yourdomain.com</code>) - not a hostname.
                   </p>
                 )}
               </div>
@@ -344,7 +344,7 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   placeholder="WebApps Sales"
                   value={form.display_name}
                   onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
             </div>

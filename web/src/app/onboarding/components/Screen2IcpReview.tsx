@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — structured-form view of the ICP captured by the chat. Reads
+// R8 Phase 5 - structured-form view of the ICP captured by the chat. Reads
 // the active definition via useActiveIcpDefinition, lets the tenant tweak
 // every field, saves via update() + updateTuning() on Continue.
 
@@ -54,7 +54,7 @@ export default function Screen2IcpReview({
     if (!definition) return;
     setIcp(definition.icp_definition);
     // Postgres NUMERIC columns deserialize as strings via JSON (to preserve
-    // precision), so coerce explicitly — `?? 0.6` alone doesn't catch "0.60".
+    // precision), so coerce explicitly - `?? 0.6` alone doesn't catch "0.60".
     const fit = Number(definition.min_fit_score);
     setMinFit(Number.isFinite(fit) ? fit : 0.6);
     const cap = Number(definition.daily_search_cap);
@@ -82,7 +82,7 @@ export default function Screen2IcpReview({
       });
       onContinue();
     } catch {
-      // useIcpDefinitionMutations surfaces the error in `saveError` — fall through.
+      // useIcpDefinitionMutations surfaces the error in `saveError` - fall through.
     }
   };
 
@@ -201,7 +201,7 @@ export default function Screen2IcpReview({
         </Section>
 
         {/* Job titles */}
-        <Section title="Job titles" hint="Free text — partial matches are OK.">
+        <Section title="Job titles" hint="Free text. Partial matches are OK.">
           <IndustryChipInput
             value={icp.person.job_titles_includes ?? []}
             onChange={(v) => updatePerson('job_titles_includes', v)}

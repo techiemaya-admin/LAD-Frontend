@@ -5,7 +5,7 @@ import { RefreshCw, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { useCronHealth, type CronHeartbeat } from '@lad/frontend-features/lad-monitor';
 
 function relativeTime(seconds: number | null): string {
-  if (seconds === null || seconds === undefined) return '—';
+  if (seconds === null || seconds === undefined) return '-';
   if (seconds < 60) return `${seconds}s ago`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -109,7 +109,7 @@ export default function MonitorCronsPage() {
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{relativeTime(job.secondsSinceBeat)}</td>
                   <td className="px-4 py-3 text-gray-500">every {interval(job.expectedIntervalSeconds)}</td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{job.consecutiveFailures}</td>
-                  <td className="px-4 py-3 max-w-xs truncate text-gray-500" title={job.lastError || ''}>{job.lastError || '—'}</td>
+                  <td className="px-4 py-3 max-w-xs truncate text-gray-500" title={job.lastError || ''}>{job.lastError || '-'}</td>
                 </tr>
               ))
             )}

@@ -30,6 +30,13 @@ interface ExtendedCampaignLead extends CampaignLead {
   has_connected?: boolean;
   has_replied?: boolean;
 }
+// Filter keys mirror the server's engagement stages; these are their UI labels.
+const FILTER_LABELS: Record<string, string> = {
+  sent: 'contacted',
+  connected: 'connected',
+  replied: 'responded',
+};
+
 export default function CampaignLeadsPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,16 +45,24 @@ export default function CampaignLeadsPage() {
   const campaignId = params.id as string;
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
 
   // Fetch campaign to get campaign_type
   const { campaign, loading: campaignLoading } = useCampaign(campaignId);
   const isInboundCampaign = campaign?.campaign_type === 'inbound';
 
-  // Use SDK hook for leads
-  const { leads: campaignLeads, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
+  // Use SDK hook for leads.
+  // Both the engagement filter and the search run SERVER-SIDE: the filter is
+  // resolved from campaign_analytics using the same definitions as the stat
+  // cards, so this list always matches the card that linked here. Filtering in
+  // the browser could only ever see one page of leads and used looser matching,
+  // which is why the two disagreed.
+  const { leads: campaignLeads, total, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
-    useMemo(() => ({ search: searchQuery || undefined }), [searchQuery])
+    useMemo(() => ({
+      search: searchQuery || undefined,
+      filter: filterParams as 'all' | 'sent' | 'connected' | 'replied',
+      limit: 1000,
+    }), [searchQuery, filterParams])
   );
 
   // Convert to extended type for UI
@@ -60,9 +75,6 @@ export default function CampaignLeadsPage() {
   // Fetch summaries for all leads using the SDK hook
   const { summaries, loading: summariesLoading } = useLeadsSummaries(campaignId, leadIds);
 
-  // Note: Pagination would ideally come from SDK
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   // Reveal state for employee contacts
   const [revealedContacts, setRevealedContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
   const [revealingContacts, setRevealingContacts] = useState<Record<string, { phone?: boolean; email?: boolean; linkedin?: boolean }>>({});
@@ -89,14 +101,6 @@ export default function CampaignLeadsPage() {
       });
     }
   }, [leadsError, push]);
-  // Update total when leads change (this would ideally come from SDK)
-  useEffect(() => {
-    if (leads) {
-      setTotal(leads.length);
-      setTotalPages(Math.ceil(leads.length / 50));
-    }
-  }, [leads]);
-
   const handleRevealPhone = async (employee: ExtendedCampaignLead) => {
     const idKey = employee.id || employee.name || '';
     setRevealingContactsSafe(prev => ({ ...prev, [idKey]: { ...prev[idKey], phone: true } }));
@@ -117,10 +121,10 @@ export default function CampaignLeadsPage() {
         });
         refetch();
       } else if (response.success && response.status === 'pending') {
-        // Async path — request submitted to Apollo phone service, webhook delivers within 2-5 min
+        // Async path - request submitted to Apollo phone service, webhook delivers within 2-5 min
         push({
           title: 'Request Submitted',
-          description: response.message || 'Phone reveal submitted. The number will appear within 2–5 minutes — refresh to check.'
+          description: response.message || 'Phone reveal submitted. The number will appear within 2-5 minutes - refresh to check.'
         });
       } else {
         push({ title: 'Error', description: response.error || 'Failed to reveal phone number' });
@@ -357,10 +361,10 @@ export default function CampaignLeadsPage() {
           setConnectedSenders(data.data);
           setFollowupFromEmail(data.data[0].email);
         }
-      } catch { /* non-fatal — user will see "no account" error on send */ }
+      } catch { /* non-fatal - user will see "no account" error on send */ }
     }
 
-    // Use cached message if available — skip LLM call entirely
+    // Use cached message if available - skip LLM call entirely
     const cacheKey = `${lead.id}_${channel}`;
     const cached = followupCache.current.get(cacheKey);
     if (cached) {
@@ -369,7 +373,7 @@ export default function CampaignLeadsPage() {
       return;
     }
 
-    // No cache — generate via LLM
+    // No cache - generate via LLM
     setFollowupMessage('');
     setFollowupSubject('');
     setFollowupContext(null);
@@ -444,36 +448,10 @@ export default function CampaignLeadsPage() {
       setFollowupSending(false);
     }
   }, [followupLead, followupChannel, followupMessage, followupSubject, followupFromEmail, followupContext, campaignId, push, refetch]);
-  const filteredLeads = useMemo(() => {
-    // Cast to any[] so we can access backend-provided fields (has_sent, has_connected, has_replied)
-    // that are not in the SDK type definition
-    let result = leads as any[];
-
-    if (filterParams !== 'all') {
-      result = result.filter((lead: any) => {
-        const status = lead.status?.toLowerCase() || '';
-        if (filterParams === 'sent') {
-          return lead.has_sent === true || status.includes('sent') || status.includes('invit') || status.includes('connection');
-        }
-        if (filterParams === 'connected') {
-          return lead.has_connected === true || status.includes('connect') || status.includes('accept') || status.includes('contacted');
-        }
-        if (filterParams === 'replied') {
-          return lead.has_replied === true || status.includes('repli') || status.includes('respond') || status.includes('reply');
-        }
-        return true;
-      });
-    }
-
-    if (!searchQuery) return result;
-    const query = searchQuery.toLowerCase();
-    return result.filter((lead: any) =>
-      lead.name?.toLowerCase().includes(query) ||
-      lead.email?.toLowerCase().includes(query) ||
-      lead.company?.toLowerCase().includes(query) ||
-      lead.title?.toLowerCase().includes(query)
-    );
-  }, [leads, searchQuery, filterParams]);
+  // The server already applied both the engagement filter and the search  - 
+  // re-filtering here would only remove rows the server deliberately returned
+  // (its search covers more fields than name/email/company/title).
+  const filteredLeads = leads;
   if (loading && leads.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-[#000724]">
@@ -485,56 +463,29 @@ export default function CampaignLeadsPage() {
     );
   }
   return (
-    <div className="w-full h-screen overflow-auto bg-slate-50 dark:sm:bg-[#000724] dark:bg-[#050814]">
+    <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
       <div className="p-6 pb-12">
         {/* Header */}
-
-        {/* Desktop only */}
-        <div className="hidden sm:block">
-          <div className="mb-6 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-                className="min-w-auto"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-              </Button>
-              <div>
-                <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
-                  {campaign?.name || 'Campaign Leads'}
-                </h4>
-                <p className="text-sm text-slate-500 dark:text-slate-300">
-                  {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} leads
-                </p>
-              </div>
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+              className="min-w-auto dark:bg-[#071131] dark:border-[#1e293b] dark:text-white"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+            </Button>
+            <div>
+              <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+                {campaign?.name || 'Campaign Leads'}
+              </h4>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                {total} {filterParams !== 'all' ? FILTER_LABELS[filterParams] ?? filterParams : ''} leads
+                {total > filteredLeads.length && ` (showing ${filteredLeads.length})`}
+              </p>
             </div>
           </div>
         </div>
-
-        {/* Mobile only */}
-        <div className="block sm:hidden">
-          <button
-                onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-                className="flex items-center gap-2 text-[10px] font-semibold uppercase text-blue-500 hover:text-blue-700"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to campaign leads</span>
-          </button>
-          <div className="mb-6 flex justify-between items-center border-b border-slate-200 dark:border-white pb-3">
-            <div className="flex items-center gap-4">
-              <div className="mt-5">
-                <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-3">
-                  {campaign?.name || 'Campaign Leads'}
-                </h4>
-                <p className="text-sm text-slate-500 dark:text-slate-300">
-                  {filteredLeads.length} {filterParams !== 'all' ? filterParams : ''} active CRM lead records
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
 
         {/* Filter Tabs */}
         <div className="mb-4 flex gap-2 flex-wrap">
@@ -547,37 +498,39 @@ export default function CampaignLeadsPage() {
             <button
               key={tab.key}
               onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=${tab.key}`)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${filterParams === tab.key
-                  ? 'bg-blue-700 text-white border-[#0b1957] shadow-sm'
-                  : 'bg-white dark:bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#262831] hover:border-[#0b1957] hover:text-[#0b1957]'
-                }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                filterParams === tab.key
+                  ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
+                  : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
+              }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Search */}
+        {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
             <Input
-              className="pl-10 bg-white dark:bg-transparent dark:md:bg-[#1a2a43] dark:border-white dark:md:border-none rounded-lg"
+              className="pl-10 bg-white dark:bg-[#071131] border-slate-200 dark:border-[#1e293b]/60 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
               placeholder="Search leads by name, email, company, or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
+
         {/* Employee Cards Grid */}
         {filteredLeads.length === 0 ? (
-          <Card className="rounded-2xl border border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200 dark:border-[#1e293b]/60 bg-white dark:bg-[#071131] shadow-sm">
             <CardContent className="text-center py-12">
-              <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h6 className="text-lg font-semibold text-slate-500 mb-2">
+              <Users className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+              <h6 className="text-lg font-semibold text-slate-500 dark:text-slate-300 mb-2">
                 {searchQuery ? 'No leads match your search' : 'No leads found'}
               </h6>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-400 dark:text-slate-400">
                 {searchQuery ? 'Try adjusting your search terms' : 'Leads will appear here once the campaign starts generating them'}
               </p>
             </CardContent>
@@ -585,7 +538,7 @@ export default function CampaignLeadsPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredLeads.map((lead: CampaignLead, index: number) => {
+              {filteredLeads.map((lead: CampaignLead) => {
                 return (
                   <div key={lead.id} className="flex flex-col">
                     <EmployeeCard
@@ -615,7 +568,7 @@ export default function CampaignLeadsPage() {
                       profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
                       hideUnlockFeatures={isInboundCampaign}
                     />
-                    {/* Follow-up count pill — shows how many follow-ups have been sent */}
+                    {/* Follow-up count pill */}
                     {(lead as any).manual_followup_count > 0 && (
                       <div className="flex justify-center mt-1.5">
                         <span className="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">
@@ -624,11 +577,11 @@ export default function CampaignLeadsPage() {
                         </span>
                       </div>
                     )}
-                    {/* Manual Follow-up — always visible below each card */}
+                    {/* Action buttons */}
                     <div className="flex gap-1.5 mt-2 px-1">
                       <button
                         onClick={() => openFollowupDialog(lead as ExtendedCampaignLead, 'linkedin')}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#0b1957] dark:bg-primary text-white dark:text-primary-foreground text-xs font-semibold hover:bg-[#1a2d8f] dark:hover:bg-primary/90 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#0b1957] dark:bg-blue-600 text-white text-xs font-semibold hover:bg-[#1a2d8f] dark:hover:bg-blue-500 active:scale-95 transition-all shadow-sm cursor-pointer"
                       >
                         <Linkedin className="w-3.5 h-3.5" />
                         Follow-up
@@ -636,14 +589,14 @@ export default function CampaignLeadsPage() {
                       <button
                         onClick={() => openFollowupDialog(lead as ExtendedCampaignLead, 'email')}
                         title="Email follow-up"
-                        className="flex items-center justify-center w-9 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        className="flex items-center justify-center w-9 rounded-xl bg-slate-100 dark:bg-[#071131] dark:border dark:border-[#1e293b]/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1e293b] active:scale-95 transition-all shadow-sm cursor-pointer"
                       >
                         <Mail className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => openFollowupDialog(lead as ExtendedCampaignLead, 'whatsapp')}
                         title="WhatsApp follow-up"
-                        className="flex items-center justify-center w-9 rounded-xl bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-950/50 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        className="flex items-center justify-center w-9 rounded-xl bg-green-50 dark:bg-emerald-950/30 dark:border dark:border-emerald-800/40 text-green-600 dark:text-emerald-400 hover:bg-green-100 dark:hover:bg-emerald-950/60 active:scale-95 transition-all shadow-sm cursor-pointer"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                       </button>
@@ -652,62 +605,44 @@ export default function CampaignLeadsPage() {
                 );
               })}
             </div>
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-4 mt-8">
-                <Button
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <p className="flex items-center text-slate-500">
-                  Page {page} of {totalPages}
-                </p>
-                <Button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
-            )}
           </>
         )}
-        {/* Profile Summary Dialog */}
-        <ProfileSummaryDialog
-          open={summaryDialogOpen}
-          onClose={handleCloseSummaryDialog}
-          employee={selectedEmployee}
-          summary={profileSummary}
-          loading={summaryLoading}
-          error={summaryError}
-        />
+      </div>
 
-        {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
-        <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-          <DialogContent className="max-w-2xl w-full">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-[#0b1957]">
-                <Send className="w-5 h-5" />
-                Manual Follow-up
-                {followupContext?.leadName && (
-                  <span className="text-slate-500 font-normal text-base ml-1">
-                    → {followupContext.leadName}
-                    {followupContext.company ? `, ${followupContext.company}` : ''}
-                  </span>
-                )}
-              </DialogTitle>
-            </DialogHeader>
+      {/* Profile Summary Dialog */}
+      <ProfileSummaryDialog
+        open={summaryDialogOpen}
+        onClose={handleCloseSummaryDialog}
+        employee={selectedEmployee}
+        summary={profileSummary}
+        loading={summaryLoading}
+        error={summaryError}
+      />
 
+      {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
+      <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
+        <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-[#0b1957] dark:text-white">
+              <Send className="w-5 h-5" />
+              Manual Follow-up
+              {followupContext?.leadName && (
+                <span className="text-slate-500 dark:text-slate-400 font-normal text-base ml-1">
+                  → {followupContext.leadName}
+                  {followupContext.company ? `, ${followupContext.company}` : ''}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Scrollable Body Container */}
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-3">
             {/* Channel Tabs */}
-            <div className="flex gap-2 border-b border-slate-200 pb-3">
+            <div className="flex gap-2 border-b border-slate-200 dark:border-blue-950/40 px-4 sm:px-5 pb-3">
               {([
-                { key: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, color: 'bg-[#0b1957] text-white' },
-                { key: 'email',    label: 'Email',    icon: <Mail className="w-4 h-4" />,     color: 'bg-slate-700 text-white'  },
-                { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, color: 'bg-green-600 text-white' },
+                { key: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" /> },
+                { key: 'email',    label: 'Email',    icon: <Mail className="w-4 h-4" />     },
+                { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
               ] as const).map(ch => (
                 <button
                   key={ch.key}
@@ -717,8 +652,10 @@ export default function CampaignLeadsPage() {
                       if (followupLead) openFollowupDialog(followupLead, ch.key);
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                    followupChannel === ch.key ? ch.color : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    followupChannel === ch.key
+                      ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
+                      : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
                   }`}
                 >
                   {ch.icon}
@@ -729,47 +666,47 @@ export default function CampaignLeadsPage() {
 
             {/* Email From + Subject */}
             {followupChannel === 'email' && (
-              <div className="space-y-3">
+              <div className="space-y-3 px-4 sm:px-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">From</label>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 block">From</label>
                   {connectedSenders.length > 0 ? (
                     <select
                       value={followupFromEmail}
                       onChange={e => setFollowupFromEmail(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]"
+                      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700/80 rounded-md bg-white dark:bg-slate-800/80 text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:focus:ring-[#2B7CFF]"
                     >
                       {connectedSenders.map(s => (
                         <option key={s.email} value={s.email}>{s.label}</option>
                       ))}
                     </select>
                   ) : (
-                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-md px-3 py-2">
                       No connected email account — connect Gmail or Outlook in Settings → Integrations.
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Subject</label>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 block">Subject</label>
                   <Input
                     placeholder="e.g. Quick follow-up from our conversation"
                     value={followupSubject}
                     onChange={e => setFollowupSubject(e.target.value)}
-                    className="text-sm"
+                    className="text-sm dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
                   />
                 </div>
               </div>
             )}
 
             {/* Message area */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <div className="px-4 sm:px-5">
+              <div className="flex items-center justify-between mb-1.5 px-1 py-1">
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Message
                 </label>
                 <button
                   onClick={regenerateFollowup}
                   disabled={followupPreviewing}
-                  className="flex items-center gap-1 text-xs text-[#0b1957] hover:underline disabled:opacity-50"
+                  className="flex items-center gap-1 text-xs text-[#0b1957] dark:text-[#2B7CFF] hover:underline disabled:opacity-50 font-medium"
                 >
                   {followupPreviewing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -781,25 +718,25 @@ export default function CampaignLeadsPage() {
               </div>
 
               {followupPreviewing ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-                  <div className="flex items-center gap-2 text-[#0b1957]">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <div className="flex items-center gap-2 text-[#0b1957] dark:text-[#2B7CFF]">
                     <Sparkles className="w-5 h-5 animate-pulse" />
                     <span className="text-sm font-medium">Generating personalised message…</span>
                   </div>
-                  <p className="text-xs text-slate-400">Reading web presence, recent posts &amp; past conversation</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-400">Reading web presence, recent posts &amp; past conversation</p>
                 </div>
               ) : (
                 <Textarea
                   value={followupMessage}
                   onChange={e => setFollowupMessage(e.target.value)}
-                  rows={7}
+                  rows={6}
                   placeholder="Your follow-up message will appear here…"
-                  className="resize-none text-sm leading-relaxed"
+                  className="resize-y min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
                 />
               )}
 
               {followupChannel === 'linkedin' && followupMessage.length > 0 && (
-                <p className={`text-right text-xs mt-1 ${followupMessage.length > 2000 ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                <p className={`text-right text-xs mt-1 ${followupMessage.length > 2000 ? 'text-red-500 font-semibold' : 'text-slate-400 dark:text-slate-400'}`}>
                   {followupMessage.length} / 2000
                 </p>
               )}
@@ -807,16 +744,16 @@ export default function CampaignLeadsPage() {
 
             {/* Past conversation history (collapsible) */}
             {followupContext && followupContext.pastMessageCount > 0 && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mx-4 sm:mx-5">
                 <button
                   onClick={() => setFollowupHistoryOpen(v => !v)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-600 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors"
                 >
                   <span>Conversation history ({followupContext.pastMessageCount} messages)</span>
                   {followupHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {followupHistoryOpen && (
-                  <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-52 overflow-y-auto">
                     {followupContext.pastMessages.map((msg, i) => (
                       <div key={i} className="px-4 py-3">
                         <div className="flex items-center gap-2 mb-1">
@@ -828,10 +765,10 @@ export default function CampaignLeadsPage() {
                             {msg.channel}
                           </span>
                           <span className="text-xs text-slate-400">{msg.type}</span>
-                          <span className="text-xs text-slate-300 ml-auto">{new Date(msg.sentAt).toLocaleDateString()}</span>
+                          <span className="text-xs text-slate-300 dark:text-slate-500 ml-auto">{new Date(msg.sentAt).toLocaleDateString()}</span>
                         </div>
-                        {msg.subject && <p className="text-xs font-medium text-slate-700 mb-0.5">📧 {msg.subject}</p>}
-                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{msg.content}</p>
+                        {msg.subject && <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mb-0.5">📧 {msg.subject}</p>}
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">{msg.content}</p>
                       </div>
                     ))}
                   </div>
@@ -841,44 +778,42 @@ export default function CampaignLeadsPage() {
 
             {/* Context pills */}
             {followupContext && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 px-4 sm:px-5">
                 {followupContext.hasWebPresence && (
-                  <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full font-medium">
+                  <span className="text-xs bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2.5 py-1 rounded-full font-medium">
                     ✓ Web presence used
                   </span>
                 )}
                 {followupContext.postsUsed > 0 && (
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
+                  <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium">
                     ✓ {followupContext.postsUsed} recent post{followupContext.postsUsed !== 1 ? 's' : ''} analysed
                   </span>
                 )}
                 {followupContext.connectionMessage && (
-                  <span className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-medium">
+                  <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 px-2.5 py-1 rounded-full font-medium">
                     ✓ Connection message context
                   </span>
                 )}
               </div>
             )}
+          </div>
 
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="outline" onClick={() => setFollowupDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={sendFollowup}
-                disabled={followupSending || followupPreviewing || !followupMessage.trim()}
-                className="bg-[#0b1957] hover:bg-[#1a2d8f] text-white gap-2"
-              >
-                {followupSending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
-                ) : (
-                  <><Send className="w-4 h-4" /> Send via {followupChannel}</>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          {/* Footer (Always Pinned to Bottom) */}
+          <DialogFooter className="shrink-0 pt-3 pb-4 px-4 sm:px-5 border-t border-slate-100 dark:border-blue-950/40">
+            <Button
+              onClick={sendFollowup}
+              disabled={followupSending || followupPreviewing || !followupMessage.trim()}
+              className="bg-[#0b1957] dark:bg-blue-600 hover:bg-[#1a2d8f] dark:hover:bg-blue-500 text-white gap-2"
+            >
+              {followupSending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+              ) : (
+                <><Send className="w-4 h-4" /> Send via {followupChannel}</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

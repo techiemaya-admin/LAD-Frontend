@@ -1,5 +1,5 @@
 /**
- * RunSearchPanel — top-of-page widget on /prospects that triggers a new
+ * RunSearchPanel - top-of-page widget on /prospects that triggers a new
  * SearchDispatcher run and shows the result inline.
  *
  * Backend contract: POST /api/ai-icp-assistant/search.
@@ -108,7 +108,7 @@ function RunningStrip() {
   return (
     <div className="border-t border-gray-200 bg-blue-50 px-5 py-3 text-sm text-blue-700">
       <span className="inline-block animate-pulse">●</span>{' '}
-      Finding prospects… typically 3–8s.
+      Finding prospects… typically 3-8s.
     </div>
   );
 }
@@ -124,8 +124,8 @@ function ErrorStrip({
   const friendly =
     message === 'no_active_icp'
       ? "No active ICP found. Define your Ideal Customer Profile in onboarding first."
-      : message === 'unauthorised — tenant id missing'
-        ? 'Session expired — please sign in again.'
+      : message === 'unauthorised - tenant id missing'
+        ? 'Session expired - please sign in again.'
         : message;
 
   return (
@@ -169,7 +169,7 @@ function ResultStrip({
             candidate{count === 1 ? '' : 's'} discovered
           </span>
           <span className="ml-2 text-xs text-gray-500">
-            search id {result.searchId?.slice(0, 8) ?? '—'} · cost $
+            search id {result.searchId?.slice(0, 8) ?? '-'} · cost $
             {(result.totalCostUsd || 0).toFixed(2)}
           </span>
         </div>

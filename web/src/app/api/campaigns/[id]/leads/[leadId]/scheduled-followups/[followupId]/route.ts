@@ -10,7 +10,7 @@ function getAuthHeaders(req: NextRequest): Record<string, string> {
   return headers;
 }
 
-/** DELETE /api/campaigns/[id]/leads/[leadId]/scheduled-followups/[followupId] — remove a pending follow-up */
+/** DELETE /api/campaigns/[id]/leads/[leadId]/scheduled-followups/[followupId] - remove a pending follow-up */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; leadId: string; followupId: string }> }

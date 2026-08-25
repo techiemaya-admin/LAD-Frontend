@@ -89,9 +89,9 @@ export default function MonitorTenantsPage() {
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.calls}</td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.pipelineLeads}</td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.voiceAgentsCount}</td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.totalConversations ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.messagesLast7d ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.totalContacts ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.totalConversations ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.messagesLast7d ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.conversations?.totalContacts ?? '-'}</td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtMoney(t.billing.creditsBalance, t.billing.currency)}</td>
                   <td className="px-4 py-3">
                     <span className={t.errorRate > 20 ? 'text-red-600 dark:text-red-400' : t.errorRate > 5 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}>

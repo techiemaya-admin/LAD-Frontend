@@ -21,6 +21,8 @@ import {
   Bot,
   Check
 } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from '@/contexts/TenantContext';
+import { WhatsAppRelinkBanner, type LinkState } from './WhatsAppRelinkBanner';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -230,21 +233,35 @@ async function logoutAccount(accountId: string, tenantId: string | null): Promis
   }
 }
 
+/**
+ * Is the account still there after a disconnect?
+ *
+ * Disconnected used to be assumed the moment the request returned, so a logout
+ * that changed nothing server-side still painted the UI as disconnected - and
+ * the next page load, reading the same untouched state, showed Connected again.
+ * Re-reading the account list is what turns that silent failure into a message.
+ */
+async function isStillConnected(tenantId: string | null): Promise<boolean> {
+  const accounts = await listAccounts(tenantId);
+  return accounts.some((acc) => acc.status === 'connected');
+}
+
+/** Read the auth token from the `token` cookie. Null during SSR. */
+function readTokenCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    if (rawName?.trim() === 'token') {
+      return decodeURIComponent(rawValueParts.join('=') || '');
+    }
+  }
+  return null;
+}
+
 async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]> {
   try {
-    const token = typeof document !== 'undefined'
-      ? (() => {
-          const cookies = document.cookie ? document.cookie.split(';') : [];
-          for (const cookie of cookies) {
-            const [rawName, ...rawValueParts] = cookie.trim().split('=');
-            const name = rawName?.trim();
-            if (name === 'token') {
-              return decodeURIComponent(rawValueParts.join('=') || '');
-            }
-          }
-          return null;
-        })()
-      : null;
+    const token = readTokenCookie();
 
     const headers: Record<string, string> = {};
     if (tenantId) headers['X-Tenant-ID'] = tenantId;
@@ -259,6 +276,35 @@ async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]>
   }
 }
 
+/**
+ * Durable link state, from WAPA's GET /accounts/link-state.
+ *
+ * Why this exists alongside listAccounts(): when WhatsApp revokes the linked
+ * device the service wipes the credentials, so the account DISAPPEARS from
+ * /accounts entirely. An empty account list therefore looks identical to "never
+ * connected", and the page just shows Disconnected with no explanation - which
+ * is how one tenant sat dead for three days without anyone realising the link
+ * had been revoked rather than never set up. This endpoint reads the state that
+ * survives the wipe, so we can say what actually happened and when.
+ */
+async function fetchLinkState(tenantId: string | null): Promise<LinkState | null> {
+  try {
+    const headers: Record<string, string> = {};
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    const token = readTokenCookie();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${PERSONAL_WA_API}/accounts/link-state`, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || data.success === false) return null;
+    return data as LinkState;
+  } catch {
+    // Fail open: a banner is an extra, it must never break the settings page.
+    return null;
+  }
+}
+
 // ── Component ────────────────────────────────────────────────────
 
 export const WhatsAppIntegration: React.FC = () => {
@@ -266,6 +312,7 @@ export const WhatsAppIntegration: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [account, setAccount] = useState<PersonalAccount | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [linkState, setLinkState] = useState<LinkState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
@@ -311,7 +358,7 @@ export const WhatsAppIntegration: React.FC = () => {
     const members = await fetchTeamMembers(tenantId);
     setTeamMembers(members);
     if (members.length > 0 && (!bulkAssignUserId || bulkAssignUserId === 'ai_agent')) {
-      // Keep AI Agent as default — don't auto-select first team member
+      // Keep AI Agent as default - don't auto-select first team member
     }
     setTeamMembersLoading(false);
   }, [tenantId, bulkAssignUserId]);
@@ -362,6 +409,11 @@ export const WhatsAppIntegration: React.FC = () => {
         // Load contacts when connected
         await loadContacts();
       }
+
+      // Independent of the account list on purpose: the interesting case is
+      // when that list came back EMPTY because the credentials were revoked.
+      const ls = await fetchLinkState(tenantId);
+      setLinkState(ls);
     };
 
     const loadAutoAssign = async () => {
@@ -449,6 +501,9 @@ export const WhatsAppIntegration: React.FC = () => {
         setQrImage(null);
         setPairingCode(null);
         setStatus('connected');
+        // The re-link the banner was asking for just happened - drop it now
+        // rather than waiting for a reload to refetch the state.
+        setLinkState(null);
         // Load contacts after successful connection
         loadContacts();
       } else if (statusResult.status === 'error' || statusResult.status === 'disconnected' || statusResult.status === 'expired') {
@@ -467,12 +522,28 @@ export const WhatsAppIntegration: React.FC = () => {
   const handleLogout = useCallback(async () => {
     if (!account) return;
     setLoading(true);
-    await logoutAccount(account.id, tenantId);
+    const ok = await logoutAccount(account.id, tenantId);
     cleanup();
+
+    // Confirm against the server rather than assuming. A disconnect that fails
+    // silently must not look identical to one that worked - that gap is what
+    // made "disconnect, refresh, still connected" impossible to notice from the UI.
+    const stillConnected = ok ? await isStillConnected(tenantId) : true;
+
+    if (!ok || stillConnected) {
+      setStatus('connected');
+      setError(
+        'WhatsApp could not be disconnected - the connection is still active on the server. Please try again, and contact support if it persists.',
+      );
+      setLoading(false);
+      return;
+    }
+
     setAccount(null);
     setQrImage(null);
     setStatus('disconnected');
     setError(null);
+    setLinkState(await fetchLinkState(tenantId));
     setLoading(false);
   }, [account, tenantId, cleanup]);
 
@@ -511,14 +582,22 @@ export const WhatsAppIntegration: React.FC = () => {
 
   const statusLabel = () => {
     switch (status) {
-      case 'connected': return 'Connected';
-      case 'qr_scanning': return 'Waiting for scan...';
-      case 'pairing': return 'Waiting for code entry...';
-      case 'connecting': return 'Preparing link...';
-      case 'error': return 'Error';
-      default: return 'Disconnected';
+      case 'connected':
+        return { text: 'Connected', classes: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' };
+      case 'qr_scanning':
+        return { text: 'Waiting for scan...', classes: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' };
+      case 'pairing':
+        return { text: 'Waiting for code entry...', classes: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' };
+      case 'connecting':
+        return { text: 'Preparing link...', classes: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' };
+      case 'error':
+        return { text: 'Error', classes: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' };
+      default:
+        return { text: '• Disconnected', classes: 'bg-gray-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
     }
   };
+
+  const currentStatusLabel = statusLabel();
 
   const StatusIcon = () => {
     switch (status) {
@@ -534,11 +613,16 @@ export const WhatsAppIntegration: React.FC = () => {
   // ── UI ──────────────────────────────────────────────────────
 
   return (
-    <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724]">
+    <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
       <CardHeader>
         <div className="flex gap-3 items-center">
-          <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
-            <MessageSquare className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <div className="p-4 bg-slate-100 dark:bg-slate-900/70 rounded-2xl border border-slate-200 dark:border-blue-950/40">
+            <FontAwesomeIcon
+              icon={faWhatsapp}
+              size="2x"
+              style={{ width: 44, height: 44 }}
+              className="text-green-600 dark:text-green-400"
+            />
           </div>
           <div>
             <CardTitle className="text-slate-800 dark:text-white">WhatsApp Integration</CardTitle>
@@ -549,22 +633,30 @@ export const WhatsAppIntegration: React.FC = () => {
 
       <CardContent className="space-y-4">
         {/* Connection Status */}
-        <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-[#060e29] border border-slate-200 dark:border-slate-800/60 rounded-xl shadow-sm">
+        <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-blue-950/40 rounded-xl shadow-sm">
           <div className="flex gap-4 items-center">
-            <Smartphone className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+              <Smartphone className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+            </div>
             <div>
               <p className="text-sm font-semibold text-[#0b1957] dark:text-white">Connection Status</p>
-              <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5">{statusLabel()}</p>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold mt-0.5 ${currentStatusLabel.classes}`}>
+                {currentStatusLabel.text}
+              </span>
             </div>
           </div>
-          <StatusIcon />
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+            <StatusIcon />
+          </div>
         </div>
 
         {/* Connected Account Info */}
         {status === 'connected' && account && (
           <div className="p-4 bg-green-50/60 border border-green-200 dark:bg-green-950/20 dark:border-green-900/40 rounded-xl transition-all">
             <div className="flex items-center gap-2 mb-2">
-              <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+                <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
               <span className="text-sm font-semibold text-green-800 dark:text-green-300">Account Connected</span>
             </div>
             {account.phone_number && (
@@ -578,10 +670,17 @@ export const WhatsAppIntegration: React.FC = () => {
           </div>
         )}
 
+        {/* Re-link required - WhatsApp revoked the device (or another client took
+            it over). Nothing recovers this on its own. Suppressed once we're
+            connected again; the banner itself no-ops for a deliberate logout. */}
+        {status !== 'connected' && <WhatsAppRelinkBanner linkState={linkState} />}
+
         {/* Error Message */}
         {error && (
           <div className="flex items-center gap-2 text-xs p-3 bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 rounded-xl text-red-700 dark:text-red-400">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40 flex-shrink-0">
+              <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+            </div>
             {error}
           </div>
         )}
@@ -596,8 +695,8 @@ export const WhatsAppIntegration: React.FC = () => {
                 disabled={loading}
                 className={`text-sm font-medium rounded-lg border px-3 py-2 transition disabled:opacity-50 ${
                   linkMethod === 'qr'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? 'border-green-500 bg-green-50 text-green-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : 'border-slate-700 bg-slate-950/60 text-slate-200 hover:bg-slate-800/70 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/70'
                 }`}
               >
                 Scan QR code
@@ -608,8 +707,8 @@ export const WhatsAppIntegration: React.FC = () => {
                 disabled={loading}
                 className={`text-sm font-medium rounded-lg border px-3 py-2 transition disabled:opacity-50 ${
                   linkMethod === 'phone'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? 'border-green-500 bg-green-50 text-green-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : 'border-slate-700 bg-slate-950/60 text-slate-200 hover:bg-slate-800/70 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/70'
                 }`}
               >
                 Use phone number
@@ -628,7 +727,7 @@ export const WhatsAppIntegration: React.FC = () => {
                   onChange={(e) => setPhoneInput(e.target.value)}
                   placeholder="e.g. 971501234567"
                   disabled={loading}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  className="w-full rounded-lg border border-gray-300 bg-white dark:bg-slate-800/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 />
               </div>
             )}
@@ -637,7 +736,7 @@ export const WhatsAppIntegration: React.FC = () => {
 
         {/* QR Code Display (QR method) */}
         {qrImage && status === 'qr_scanning' && (
-          <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 p-5 rounded-xl text-center bg-slate-50/50 dark:bg-[#060e29]/40">
+          <div className="border-2 border-dashed border-slate-200 dark:border-blue-950/40 p-5 rounded-xl text-center bg-slate-50/50 dark:bg-[#071131]/40">
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Scan with WhatsApp</span>
               <span className={`text-sm font-mono ${timer < 60 ? 'text-red-500 font-bold dark:text-red-400' : 'text-slate-500 dark:text-slate-300'}`}>
@@ -684,7 +783,7 @@ export const WhatsAppIntegration: React.FC = () => {
               status === 'pairing' ||
               (linkMethod === 'phone' && phoneInput.replace(/\D/g, '').length < 8)
             }
-            className="w-full h-11 bg-[#0b1957] dark:bg-primary text-white dark:text-primary-foreground font-semibold rounded-xl transition-all active:scale-[0.98] cursor-pointer shadow-md shadow-[#0b1957]/10"
+            className="w-full h-11 bg-[#0b1957] dark:bg-[#1e40af] text-white dark:text-white font-semibold rounded-xl transition-all active:scale-[0.98] cursor-pointer shadow-md shadow-[#0b1957]/10"
           >
             {loading ? (
               <Loader2 className="animate-spin mr-2 h-4 w-4" />
@@ -719,7 +818,9 @@ export const WhatsAppIntegration: React.FC = () => {
         <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 mt-2">
           <div className="flex items-start justify-between gap-4">
             <div className="flex gap-3 items-start">
-              <Users className="h-5 w-5 text-slate-500 dark:text-slate-300 mt-0.5" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40 mt-0.5">
+                <Users className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+              </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">Auto-assign contacts</p>
                 <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 leading-relaxed">
@@ -734,7 +835,7 @@ export const WhatsAppIntegration: React.FC = () => {
             />
           </div>
           {autoAssign.enabled && (
-            <div className="mt-3 ml-8 space-y-2 bg-slate-50/50 dark:bg-[#060e29]/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/40">
+            <div className="mt-3 ml-8 space-y-2 bg-slate-50/50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-blue-950/40">
               <div className="flex items-center gap-2 text-xs">
                 <span className="w-2 h-2 rounded-full bg-blue-500 dark:bg-indigo-400" />
                 <span className="text-slate-600 dark:text-slate-300">Saved contacts → <span className="font-semibold text-slate-800 dark:text-white">Human Agent</span></span>
@@ -750,7 +851,9 @@ export const WhatsAppIntegration: React.FC = () => {
         {/* Assign All Chats to Team Member */}
         <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 mt-2">
           <div className="flex gap-3 items-start mb-3">
-            <UserCheck className="h-5 w-5 text-slate-500 dark:text-slate-300 mt-0.5" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40 mt-0.5">
+              <UserCheck className="h-5 w-5 text-slate-500 dark:text-slate-300" />
+            </div>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-white">Assign chats to team member</p>
               <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 leading-relaxed">
@@ -768,17 +871,17 @@ export const WhatsAppIntegration: React.FC = () => {
                       disabled={teamMembersLoading}
                   >
                     <SelectTrigger
-                className="flex-1 h-9 px-3 text-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724] text-[#172560] dark:text-white rounded-md focus:ring-1 focus:ring-indigo-500/30"
+                className="flex-1 h-9 px-3 text-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white rounded-md focus:ring-1 focus:ring-indigo-500/30"
                 onFocus={() => { if (teamMembers.length === 0) loadTeamMembers(); }}
                     >
                       <SelectValue placeholder="Select assignment..." />
                     </SelectTrigger>
 
-                    <SelectContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800/80 rounded-xl p-1 shadow-xl min-w-[200px]">
+                    <SelectContent className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl min-w-[200px]">
                       {/* AI Agent Option */}
                       <SelectItem
                           value="ai_agent"
-                          className="text-sm text-[#172560] dark:text-white focus:bg-[#22C55E] focus:text-white data-[state=checked]:bg-[#22C55E] data-[state=checked]:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
+                          className="text-sm text-[#172560] dark:text-white focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:bg-blue-600/20 dark:data-[state=checked]:text-white cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
                       >
                         <span className="flex items-center gap-2">🤖 AI Agent (release assignment)</span>
                         {bulkAssignUserId === "ai_agent" && (
@@ -805,7 +908,7 @@ export const WhatsAppIntegration: React.FC = () => {
                             <SelectItem
                                 key={m.user_id}
                                 value={m.user_id}
-                                className="text-sm text-[#172560] dark:text-white focus:bg-[#22C55E] focus:text-white data-[state=checked]:bg-[#22C55E] data-[state=checked]:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:text-[#000724] cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 mt-0.5 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
+                                className="text-sm text-[#172560] dark:text-white focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:bg-blue-600/20 dark:data-[state=checked]:text-white cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 mt-0.5 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
                             >
                 <span className="flex items-center justify-between w-full">
                   <span>{m.name}</span>
@@ -876,7 +979,7 @@ export const WhatsAppIntegration: React.FC = () => {
 
             <Button
               size="sm"
-              className={`w-full h-10 font-bold rounded-xl active:scale-[0.99] transition-all cursor-pointer ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-none' : 'bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground'}`}
+              className={`w-full h-10 font-bold rounded-xl active:scale-[0.99] transition-all cursor-pointer ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-none' : 'bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground'}`}
               disabled={!bulkAssignUserId || teamMembersLoading}
               onClick={() => {
                 setBulkAssignResult(null);
@@ -941,7 +1044,9 @@ export const WhatsAppIntegration: React.FC = () => {
               <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 {/* Contact Searching Node Input */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <div className="absolute left-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+                    <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  </div>
                   <Input
                     placeholder="Search name or number..."
                     value={contactsSearch}
@@ -953,7 +1058,7 @@ export const WhatsAppIntegration: React.FC = () => {
                         loadContacts(1, val);
                       }, 400);
                     }}
-                    className="pl-9 h-9 text-sm bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800 rounded-lg"
+                    className="pl-9 h-9 text-sm bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 rounded-lg"
                   />
                 </div>
 
@@ -976,7 +1081,7 @@ export const WhatsAppIntegration: React.FC = () => {
                               key={contact.phone}
                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-[#060e29]/60 border border-transparent dark:hover:border-slate-800/30 transition-all"
                             >
-                              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center">
+                              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 flex items-center justify-center border border-slate-200 dark:border-blue-950/40">
                                 {contact.is_saved ? (
                                   <span className="text-sm font-semibold text-[#0b1957] dark:text-primary">
                                     {(contact.name || '?').charAt(0).toUpperCase()}
@@ -1008,7 +1113,7 @@ export const WhatsAppIntegration: React.FC = () => {
                     {contactsTotal > 100 && (
                       <div className="flex items-center justify-between pt-2 text-xs font-medium text-slate-500 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/40">
                         <span>
-                          Showing {(contactsPage - 1) * 100 + 1}–{Math.min(contactsPage * 100, contactsTotal)} of {contactsTotal}
+                          Showing {(contactsPage - 1) * 100 + 1}-{Math.min(contactsPage * 100, contactsTotal)} of {contactsTotal}
                         </span>
                         <div className="flex gap-1.5">
                           <Button
@@ -1105,7 +1210,7 @@ export const WhatsAppIntegration: React.FC = () => {
             <Button
               onClick={handleBulkAssign}
               disabled={bulkAssigning}
-              className={`font-semibold rounded-xl h-10 px-4 cursor-pointer transition-all ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-none' : 'bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground'}`}
+              className={`font-semibold rounded-xl h-10 px-4 cursor-pointer transition-all ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-none' : 'bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground'}`}
             >
               {bulkAssigning && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
               {bulkAssignUserId === 'ai_agent' ? 'Yes, release to AI Agent' : 'Yes, assign chats'}

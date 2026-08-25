@@ -15,7 +15,7 @@ function getAuthHeaders(req: NextRequest): Record<string, string> {
 
 /**
  * POST /api/campaigns/email-templates/upload-attachment
- * Upload a document attachment (PDF, DOCX, etc.) for email templates — 20 MB limit
+ * Upload a document attachment (PDF, DOCX, etc.) for email templates - 20 MB limit
  */
 export async function POST(req: NextRequest) {
   try {

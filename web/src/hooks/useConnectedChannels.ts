@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * useConnectedChannels — which conversation channels does this tenant have
+ * useConnectedChannels - which conversation channels does this tenant have
  * integrated right now?
  *
  * Used by Chat Settings to show settings only for connected channels (hidden
  * channels reappear automatically when the tenant reconnects, because
- * visibility is derived from live status on every mount — nothing is deleted).
+ * visibility is derived from live status on every mount - nothing is deleted).
  *
  * Probes mirror IntegrationsSettings.refreshStatuses, but with different
  * error semantics because here a wrong answer HIDES a tenant's settings:
  *   - 2xx with no active account  → 'disconnected' (positively not connected)
  *   - 404                         → 'disconnected' (route/service absent in
- *     this environment — the channel is genuinely unusable here, not flaky)
- *   - 5xx / network error / other → 'unknown' (transient — FAIL-OPEN, treated
+ *     this environment - the channel is genuinely unusable here, not flaky)
+ *   - 5xx / network error / other → 'unknown' (transient - FAIL-OPEN, treated
  *     as visible so an outage can never make settings vanish)
  */
 
@@ -34,7 +34,7 @@ const INITIAL: Record<ChannelId, ChannelStatus> = {
 
 type ProbeResult =
   | { kind: 'ok'; data: any }
-  | { kind: 'absent' }     // HTTP 404 — endpoint not available in this env
+  | { kind: 'absent' }     // HTTP 404 - endpoint not available in this env
   | { kind: 'error' };     // network failure or non-404 error status
 
 async function probe(path: string, init?: RequestInit): Promise<ProbeResult> {
@@ -142,7 +142,7 @@ export function useConnectedChannels() {
     void refresh();
   }, [refresh]);
 
-  /** Visible unless positively disconnected — loading/unknown stay visible. */
+  /** Visible unless positively disconnected - loading/unknown stay visible. */
   const isVisible = useCallback(
     (id: ChannelId) => statuses[id] !== 'disconnected',
     [statuses],

@@ -47,7 +47,7 @@ class ProxyClient {
 
     // Inject channel param so the proxy routes to the correct backend.
     // Prefer the per-request override; fall back to localStorage, then default to
-    // 'waba' — matching the Next proxy's default and the primary channel. Personal-WA
+    // 'waba' - matching the Next proxy's default and the primary channel. Personal-WA
     // callers always pass channel: 'personal' explicitly, so this default is safe.
     if (typeof window !== 'undefined' && !url.searchParams.has('channel')) {
       const channel = options?.channel ?? safeStorage.getItem('whatsappChannel') ?? 'waba';
@@ -164,7 +164,7 @@ class ProxyClient {
 
 /**
  * A thin wrapper around ProxyClient that hard-wires the channel for every request.
- * This is the backbone of the tab-scoped conversation views — each tab creates
+ * This is the backbone of the tab-scoped conversation views - each tab creates
  * its own ChannelBoundClient so queries never share routing state.
  */
 export class ChannelBoundClient {

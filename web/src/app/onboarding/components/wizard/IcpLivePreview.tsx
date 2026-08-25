@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 redesign — right column of the ICP discovery split layout. Reads
+// R8 Phase 3 redesign - right column of the ICP discovery split layout. Reads
 // the in-progress IcpStructured and renders each filled field as chips/pills/
 // range so the tenant sees their ICP take shape as they answer.
 
@@ -38,7 +38,7 @@ export default function IcpLivePreview({
   const sizeRange = icp.company.size_employees;
   const sizeLabel = sizeRange
     ? sizeRange.min != null && sizeRange.max != null
-      ? `${sizeRange.min}–${sizeRange.max}`
+      ? `${sizeRange.min}-${sizeRange.max}`
       : sizeRange.min != null
       ? `${sizeRange.min}+`
       : sizeRange.max != null

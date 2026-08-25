@@ -135,6 +135,35 @@ export const ProductCard = ({
   };
   translate: MotionValue<number>;
 }) => {
+  // Cards without a real destination ('#' placeholder) render as a
+  // non-interactive figure so keyboard users don't hit dead tab stops and
+  // clicks don't snap the page back to the top.
+  const hasLink = !!product.link && product.link !== "#";
+
+  const inner = (
+    <>
+      {/* Image Background */}
+      <img
+        src={product.thumbnail}
+        alt={product.title}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover object-center rounded-3xl"
+        style={{ display: 'block' }}
+      />
+
+      {/* Dark overlay on hover / focus */}
+      <div className="absolute inset-0 rounded-3xl bg-black opacity-0 group-hover/product:opacity-70 group-focus-within/product:opacity-70 transition-opacity duration-200" />
+
+      {/* Title on hover / focus */}
+      <div className="absolute inset-0 flex items-end rounded-3xl opacity-0 group-hover/product:opacity-100 group-focus-within/product:opacity-100 transition-opacity duration-200">
+        <h2 className="text-white text-2xl font-bold p-6">
+          {product.title}
+        </h2>
+      </div>
+    </>
+  );
+
   return (
     <motion.div
       style={{
@@ -146,28 +175,18 @@ export const ProductCard = ({
       key={product.title}
       className="group/product h-72 md:h-96 w-[18rem] md:w-[30rem] relative shrink-0"
     >
-      <a
-        href={product.link}
-        className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow"
-      >
-        {/* Image Background */}
-        <img
-          src={product.thumbnail}
-          alt={product.title}
-          className="w-full h-full object-cover object-center rounded-3xl"
-          style={{ display: 'block' }}
-        />
-
-        {/* Dark overlay on hover */}
-        <div className="absolute inset-0 rounded-3xl bg-black opacity-0 group-hover/product:opacity-70 transition-opacity duration-200" />
-
-        {/* Title on hover */}
-        <div className="absolute inset-0 flex items-end rounded-3xl opacity-0 group-hover/product:opacity-100 transition-opacity duration-200">
-          <h2 className="text-white text-2xl font-bold p-6">
-            {product.title}
-          </h2>
+      {hasLink ? (
+        <a
+          href={product.link}
+          className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {inner}
+        </a>
+      ) : (
+        <div className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow">
+          {inner}
         </div>
-      </a>
+      )}
     </motion.div>
   );
 };

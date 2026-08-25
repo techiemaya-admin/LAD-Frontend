@@ -1,6 +1,7 @@
 "use client";
 
 import { Zap, MessageSquare, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { CometCard } from "@/components/ui/comet-card";
 import { useRef } from "react";
 
@@ -45,13 +46,15 @@ function AgentCard({ agent, index }: { agent: Agent; index: number }) {
         {/* Card */}
         <div className="bg-background border-2 border-primary/20 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-primary/40 transition-all duration-300 flex flex-col h-full backdrop-blur-sm">
           {/* Video Container with Colored Border Frame */}
-          <div className="relative h-80 md:h-96 overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center">
+          <div className="relative h-80 md:h-96 overflow-hidden bg-white dark:bg-gray-900">
             <video
               ref={videoRef}
               loop
               muted
               playsInline
-              className="object-contain transition-transform duration-500"
+              preload="none"
+              poster={agent.videoSrc.replace(/\.mp4$/, "-poster.jpg")}
+              className="w-full h-full object-cover object-top transition-transform duration-500"
             >
               <source src={agent.videoSrc} type="video/mp4" />
             </video>
@@ -80,9 +83,12 @@ function AgentCard({ agent, index }: { agent: Agent; index: number }) {
             </p>
 
             {/* Action Button with Glow */}
-            <button className="w-full bg-primary hover:shadow-lg hover:shadow-primary/50 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform uppercase text-sm tracking-wide border border-white/20">
+            <Link
+              href="/contact"
+              className="block w-full text-center bg-primary hover:shadow-lg hover:shadow-primary/50 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform uppercase text-sm tracking-wide border border-white/20"
+            >
               See him in action
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -106,7 +112,7 @@ export default function MeetOurAgentSection() {
       name: "On WhatsApp",
       role: "Conversations",
       description:
-        "He chats instantly on WhatsApp, answers questions, qualifies leads, and books meetings — day or night.",
+        "He chats instantly on WhatsApp, answers questions, qualifies leads, and books meetings around the clock.",
       videoSrc: "/agent-alex.mp4",
       icon: <MessageSquare className="w-5 h-5" />,
     },
@@ -115,7 +121,7 @@ export default function MeetOurAgentSection() {
       name: "On Voice",
       role: "Calls",
       description:
-        "He makes and takes calls, follows up by phone, and never misses a lead — in any timezone.",
+        "He makes and takes calls, follows up by phone, and never misses a lead, no matter the timezone.",
       videoSrc: "/agent-max.mp4",
       icon: <TrendingUp className="w-5 h-5" />,
     },
@@ -124,7 +130,7 @@ export default function MeetOurAgentSection() {
       name: "On Instagram",
       role: "Social",
       description:
-        "He turns Instagram DMs and comments into booked conversations, so no inbound ever slips through.",
+        "He turns Instagram DMs and comments into booked meetings, so no inbound lead ever slips through.",
       videoSrc: "/agent-luna.mp4",
       icon: <Zap className="w-5 h-5" />,
     },
@@ -133,7 +139,7 @@ export default function MeetOurAgentSection() {
       name: "On Email",
       role: "Nurture",
       description:
-        "He keeps every inbox warm with timely, personalized follow-ups until each lead is ready to talk.",
+        "He sends timely, personalized follow-ups that nurture every lead until they’re ready to convert.",
       videoSrc: "/agent-ava.mp4",
       icon: <MessageSquare className="w-5 h-5" />,
     },
@@ -142,7 +148,7 @@ export default function MeetOurAgentSection() {
       name: "Insights",
       role: "Analytics",
       description:
-        "He reads every conversation across channels and shows you what is working — a 360 view of each lead.",
+        "He reads every conversation across channels and shows you what is working, giving you a 360° view of every lead.",
       videoSrc: "/agent-Emma.mp4",
       icon: <TrendingUp className="w-5 h-5" />,
     },
@@ -161,7 +167,7 @@ export default function MeetOurAgentSection() {
             One Employee. <span className="text-primary">Every Channel.</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Mr LAD is one AI Sales Employee — not a team of hires to manage. He prospects, chats, calls, and posts across every channel, doing the work of a whole team.
+            Mr LAD is one AI Sales Employee, not a team of hires to manage. He prospects, chats, calls, and posts across every channel, doing the work of a whole team.
           </p>
         </div>
 

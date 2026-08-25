@@ -243,7 +243,7 @@ export function CallLogsTable({
 
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
-    if (!leadName || !leadName.trim()) return "—";
+    if (!leadName || !leadName.trim()) return "-";
 
     const cleaned = leadName.trim();
     const placeholders = [
@@ -258,7 +258,7 @@ export function CallLogsTable({
     const lowerName = cleaned.toLowerCase();
     // Check if the entire name is a placeholder
     if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
-      return "—";
+      return "-";
     }
 
     return cleaned;
@@ -302,12 +302,12 @@ export function CallLogsTable({
   };
 
   const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return "—";
+    if (!dateStr) return "-";
     return formatDateTimeUnified(dateStr);
   };
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return "—";
+    if (!seconds) return "-";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
@@ -427,7 +427,7 @@ export function CallLogsTable({
                 e.stopPropagation();
                 onSelectAll(!isChecked, visibleIds);
               }}
-              className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-blue-500/80 dark:border-blue-500/50 bg-transparent text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 cursor-pointer appearance-none checked:bg-primary checked:border-primary indeterminate:bg-primary indeterminate:border-primary relative checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-[4px] checked:after:h-[8px] checked:after:border-white checked:after:border-r-2 checked:after:border-b-2 checked:after:rotate-45 indeterminate:after:content-[''] indeterminate:after:absolute indeterminate:after:left-[3px] indeterminate:after:top-[6px] indeterminate:after:w-[8px] indeterminate:after:h-[2px] indeterminate:after:bg-white transition-all"
+              className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-gray dark:border-blue-500/50 bg-transparent text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 cursor-pointer appearance-none checked:bg-primary checked:border-primary indeterminate:bg-primary indeterminate:border-primary relative checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-[4px] checked:after:h-[8px] checked:after:border-white checked:after:border-r-2 checked:after:border-b-2 checked:after:rotate-45 indeterminate:after:content-[''] indeterminate:after:absolute indeterminate:after:left-[3px] indeterminate:after:top-[6px] indeterminate:after:w-[8px] indeterminate:after:h-[2px] indeterminate:after:bg-white transition-all"
             />
           </div>
         );
@@ -441,7 +441,7 @@ export function CallLogsTable({
               e.stopPropagation();
               onSelectCall(row.original.id);
             }}
-            className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-blue-500/80 dark:border-blue-500/50 bg-transparent text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 cursor-pointer appearance-none checked:bg-primary checked:border-primary relative checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-[4px] checked:after:h-[8px] checked:after:border-white checked:after:border-r-2 checked:after:border-b-2 checked:after:rotate-45 transition-all"
+            className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-gray dark:border-blue-500/50 bg-transparent text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 cursor-pointer appearance-none checked:bg-primary checked:border-primary relative checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-[4px] checked:after:h-[8px] checked:after:border-white checked:after:border-r-2 checked:after:border-b-2 checked:after:rotate-45 transition-all"
           />
         </div>
       ),
@@ -467,7 +467,7 @@ export function CallLogsTable({
       header: 'Agent',
       size: 120,
       maxSize: 150,
-      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "—"}</span>,
+      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "-"}</span>,
     },
     {
       id: 'lead_name',
@@ -476,7 +476,7 @@ export function CallLogsTable({
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
-        const hasLead = leadName !== "—";
+        const hasLead = leadName !== "-";
         return (
           <div className="group flex items-center gap-2">
             <span className="text-muted-foreground">{leadName}</span>
@@ -508,9 +508,9 @@ export function CallLogsTable({
         const type = getValue() as string;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:tracking-wide ${type === "Outbound"
-              ? "bg-warning/15 text-warning border border-warning/30 dark:!text-amber-300"
-              : "bg-primary/15 text-primary border border-primary/30 dark:!text-sky-400"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${type === "Outbound"
+              ? "bg-warning/15 text-warning border-warning/30 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-500/40"
+              : "bg-primary/15 text-primary border-primary/30 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-500/40"
               }`}
           >
             {type === "Outbound" ? (
@@ -539,7 +539,7 @@ export function CallLogsTable({
       header: "Response",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
-          {getStatusReason(row.original) || "—"}
+          {getStatusReason(row.original) || "-"}
         </span>
       ),
     },
@@ -639,7 +639,7 @@ export function CallLogsTable({
     //     const cost = row.original.cost || row.original.call_cost;
     //     return (
     //       <span className="font-mono text-sm">
-    //         {cost ? `$${Number(cost).toFixed(2)}` : "—"}
+    //         {cost ? `$${Number(cost).toFixed(2)}` : " - "}
     //       </span>
     //     );
     //   },
@@ -728,7 +728,7 @@ export function CallLogsTable({
       <TableRow
         key={`batch-${batchId}`}
         onClick={() => onToggleBatch?.(batchId)}
-        className="cursor-pointer bg-white dark:bg-[#000724] hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831]"
+        className="cursor-pointer bg-white dark:bg-[#000724] hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831]"
       >
         <TableCell colSpan={columns.length} className="py-4">
           <div className="flex items-center gap-3">
@@ -788,9 +788,9 @@ export function CallLogsTable({
 
     // DEBUG: Log what's happening with batch calls
     const rowClassName = cn(
-        "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] transition-colors",
+        "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831] transition-colors",
         selectedCalls.has(callId) ? "bg-primary/5" : "bg-white dark:bg-[#000724]",
-        indent && "bg-slate-50/40 dark:bg-slate-900/30 border-l-4 border-l-blue-500/50"
+        indent && "border-l-4 border-l-blue-500/50"
     );
 
     if (indent) {
@@ -877,23 +877,23 @@ export function CallLogsTable({
   return (
     <div id="call-logs-table" className="bg-white dark:bg-[#000724] rounded-lg border border-[#E2E8F0] dark:border-[#262831] shadow-sm overflow-hidden">
       {/* Search Bar & Filters Area */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000c3b]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           <div className="relative flex-1 max-w-full lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] dark:text-slate-300 h-4 w-4" />
             <input
               type="text"
               placeholder="Search Call Logs..."
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="w-full pl-10 h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full pl-10 h-10 rounded-md border border-[#E2E8F0] dark:border-blue-950/40 bg-transparent dark:bg-slate-800/50 dark:text-white placeholder:text-[#64748B] dark:placeholder:text-slate-300 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
 
           {/* Filters grouped together in one row */}
           <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center justify-end">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -906,7 +906,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={dateFilter} onValueChange={onDateFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Date Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -917,7 +917,7 @@ export function CallLogsTable({
               </SelectContent>
             </Select>
             <Select value={callFilter} onValueChange={onCallFilterChange}>
-              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10">
+              <SelectTrigger className="flex-1 sm:min-w-[130px] sm:w-auto h-10 shrink-0">
                 <SelectValue placeholder="Call Type" />
               </SelectTrigger>
               <SelectContent>
@@ -997,9 +997,9 @@ export function CallLogsTable({
       <div className="w-full overflow-auto scrollbar-hide max-h-[calc(100vh-320px)] border-b border-[#E2E8F0] dark:border-[#262831] relative">
         <div className="min-w-[1000px] w-full">
           <Table containerClassName="overflow-visible" className="border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#1a2a43] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+            <TableHeader className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#000724] shadow-xs border-b border-[#E2E8F0] dark:border-[#262831]">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#1a2a43] hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="bg-[#F8FAFC] dark:bg-[#000724] hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
@@ -1092,7 +1092,7 @@ export function CallLogsTable({
                   // Check if there's any data
                   if (timelineItems.length === 0) {
                     return (
-                      <TableRow>
+                      <TableRow className="hover:bg-transparent">
                         <TableCell
                           colSpan={columns.length}
                           className="text-center py-16"
@@ -1112,7 +1112,7 @@ export function CallLogsTable({
                               </div>
                               <button
                                 onClick={() => router.push('/make-call')}
-                                className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                                className="px-6 py-2.5 bg-primary hover:bg-primary/90 rounded-lg text-white transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
                               >
                                 <Plus className="w-4 h-4" />
                                 Go to Make Call
@@ -1174,7 +1174,7 @@ export function CallLogsTable({
                   });
                 })()
               ) : table.getRowModel().rows.length === 0 ? (
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={columns.length}
                     className="text-center py-16"
@@ -1229,7 +1229,7 @@ export function CallLogsTable({
                   <TableRow
                     key={row.id}
                     onClick={() => onRowClick(row.original.id)}
-                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a2a43] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : ""
+                    className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#253456] border-b border-[#E2E8F0] dark:border-[#262831] ${selectedCalls.has(row.original.id) ? "bg-primary/5" : "bg-white dark:bg-[#000724]"
                       }`}
                   >
                     {row.getVisibleCells().map((cell, cellIndex) => (
@@ -1255,26 +1255,38 @@ export function CallLogsTable({
           </Table>
         </div>
       </div>
-      {/* Pagination Controls – Server-Side Pagination */}
+      {/* Pagination Controls-Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
-        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] dark:bg-[#000724]">
+        <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page */}
           <div className="flex items-center gap-2 text-xs xs:text-sm text-[#64748B] dark:text-slate-300">
             <div className="flex items-center gap-2">
               <span>Show</span>
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  const newSize = parseInt(e.target.value, 10);
+              <Select
+                value={String(perPage)}
+                onValueChange={(val) => {
+                  const newSize = parseInt(val, 10);
                   onPageSizeChange?.(newSize);
                   onPageChange?.(1);
                 }}
-                className="border border-[#E2E8F0] dark:border-[#262831] rounded px-2 py-1 text-sm bg-transparent dark:bg-[#1a2a43] dark:text-white"
               >
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-[70px] h-7 text-xs bg-transparent border-slate-200 dark:border-blue-950/40 text-slate-800 dark:text-white">
+                  <SelectValue placeholder={perPage} />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 min-w-[70px] max-w-[70px] w-[70px] p-0">
+                  <div className="*:data-[slot=select-viewport]:min-w-[70px] *:data-[slot=select-viewport]:w-[70px] *:data-[slot=select-viewport]:p-1">
+                    {[10, 20, 50, 100].map((size) => (
+                      <SelectItem
+                        key={size}
+                        value={String(size)}
+                        className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white pl-3 pr-6 text-xs justify-start"
+                      >
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
               <span className="whitespace-nowrap">of {(globalFilter || statusFilter !== 'all' || leadTagFilter) ? leadTagFilteredItems.length : totalRecords} {callFilter === 'batch' ? 'batches' : 'calls'}</span>
             </div>
             {(globalFilter || statusFilter !== 'all' || leadTagFilter) && (
@@ -1342,18 +1354,18 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831]">
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
           {/* Added padding and matching sub-borders to the dialog header line */}
-          <DialogHeader className="p-6 border-b border-slate-100 dark:border-[#262831] dark:bg-[#0e1a3a]/60">
+          <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-500 text-blue-600 dark:text-blue-950 border border-blue-100 dark:border-transparent shadow-sm flex items-center justify-center w-10 h-10">
+              <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400 border border-blue-100 dark:border-blue-900/40 shadow-sm flex items-center justify-center w-10 h-10">
                 <CalendarRange className="h-5 w-5" />
               </div>
               <DialogTitle className="dark:text-white text-[#0b1957] text-left font-semibold text-lg leading-tight">
                   <span className="block md:inline">Schedule</span>{' '}
                   <span className="block md:inline">Appointment</span>
                   {selectedLead?.name && (
-                      <span className="block md:inline">
+                      <span className="block md:inline text-slate-500 dark:text-slate-400 font-normal">
                       <span> — </span>
                       <span className="md:hidden"><br /></span>
                                       {selectedLead.name}

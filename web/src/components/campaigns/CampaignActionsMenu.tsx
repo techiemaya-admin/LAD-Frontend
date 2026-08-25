@@ -39,7 +39,7 @@ export default function CampaignActionsMenu({
 }: CampaignActionsMenuProps) {
   const router = useRouter();
 
-  // Zoho "Push to Zoho" — only shown when Zoho CRM is connected for this tenant.
+  // Zoho "Push to Zoho" - only shown when Zoho CRM is connected for this tenant.
   const [zohoConnected, setZohoConnected] = useState(false);
   const [pushingZoho, setPushingZoho] = useState(false);
 
@@ -68,7 +68,7 @@ export default function CampaignActionsMenu({
       const data = await res.json();
       if (res.ok && data?.success) {
         const d = data.data;
-        alert(`Pushed campaign leads to Zoho: ${d.inserted} inserted, ${d.updated} updated${d.failed ? `, ${d.failed} failed` : ''}${d.skipped_no_email ? ` (${d.skipped_no_email} skipped — no email)` : ''}.`);
+        alert(`Pushed campaign leads to Zoho: ${d.inserted} inserted, ${d.updated} updated${d.failed ? `, ${d.failed} failed` : ''}${d.skipped_no_email ? ` (${d.skipped_no_email} skipped - no email)` : ''}.`);
       } else {
         alert(`Push to Zoho failed: ${data?.error || 'unknown error'}`);
       }
@@ -93,7 +93,7 @@ export default function CampaignActionsMenu({
       <DropdownMenuContent align="end">
         {/* Always visible */}
         <DropdownMenuItem onClick={() => { router.push(`/onboarding/advanced-search-ai?campaignId=${selectedCampaign.id}`); onClose(); }}>
-          <Edit className="mr-2 h-4 w-4" /> Edit Workflow
+          <Edit className="mr-2 h-4 w-4" /> Edit Accelerator
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}/analytics`); onClose(); }}>
           <Eye className="mr-2 h-4 w-4" /> View Analytics

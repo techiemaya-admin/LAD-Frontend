@@ -27,6 +27,7 @@ import {
   PinOff,
   Contact,
   Gauge,
+  SlidersHorizontal,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -41,7 +42,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
 
-// Internal observability console is super-admin only — gated by email, matching
+// Internal observability console is super-admin only - gated by email, matching
 // the backend `requireSuperAdmin` gate on /api/admin/monitor.
 const SUPER_ADMIN_EMAIL = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com').toLowerCase();
 
@@ -97,6 +98,12 @@ type NavItem = {
   details: string;
   requiredCapability?: string;
   requiredFeature?: string; // For feature-flag based access
+  /**
+   * Show only for a workspace on a vertical snapshot. Used instead of
+   * `requiredFeature` because the snapshot's feature key is vertical-specific
+   * (`wellness.snapshot`, …) and this list needs a static predicate.
+   */
+  requiresCuratedWorkspace?: boolean;
   children?: Omit<NavItem, 'children'>[];
 };
 export function Sidebar() {
@@ -104,7 +111,7 @@ export function Sidebar() {
   const router = useRouter();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
-  const { hasFeature, user: authUser } = useAuth();
+  const { hasFeature, user: authUser, isCuratedWorkspace } = useAuth();
   const { tenant, setTenantById, tenants } = useTenant();
   const { isDark } = useTheme();
   const reduxUser = useSelector((state: RootState) => state.auth.user);
@@ -117,7 +124,7 @@ export function Sidebar() {
   // Hover-expand state. Suppressed when `isPinned` is true (then we stay
   // expanded regardless of cursor position).
   const [isHovered,   setIsHovered]   = useState(false);
-  // Persisted user preference — when true, the sidebar stays expanded
+  // Persisted user preference - when true, the sidebar stays expanded
   // permanently and the hover behaviour is disabled.
   const [isPinned,    setIsPinned]    = useState(false);
   // Effective expanded flag the rest of the file already consumes.
@@ -125,6 +132,22 @@ export function Sidebar() {
   const [displayName, setDisplayName] = useState("User");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeConversationChannel, setActiveConversationChannel] = useState<string | null>(null);
+
+  // Listen for channel changes broadcasted from ConversationsPage
+  useEffect(() => {
+    const handleChannelChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setActiveConversationChannel(detail?.channel ?? null);
+    };
+    window.addEventListener('conversations:channel-changed', handleChannelChange);
+    return () => window.removeEventListener('conversations:channel-changed', handleChannelChange);
+  }, []);
+
+  const isBlackGrayChannel =
+    pathname.startsWith('/conversations') &&
+    activeConversationChannel !== null &&
+    activeConversationChannel !== 'linkedin';
 
   // Load + persist pin preference (localStorage). Runs after hydration so
   // SSR HTML matches the initial client render (always unpinned on first
@@ -133,7 +156,7 @@ export function Sidebar() {
     try {
       const saved = window.localStorage.getItem('sidebar.pinned');
       if (saved === '1') setIsPinned(true);
-    } catch { /* localStorage blocked — fine, default is unpinned */ }
+    } catch { /* localStorage blocked - fine, default is unpinned */ }
   }, []);
   const togglePinned = () => {
     setIsPinned(prev => {
@@ -152,6 +175,9 @@ export function Sidebar() {
   };
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
+  // Closed by default: the point of the dropdown is that the tenant list costs
+  // one row until somebody wants to switch.
+  const [isTenantListOpen, setIsTenantListOpen] = useState(false);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
@@ -187,6 +213,16 @@ export function Sidebar() {
       details: "See your overall dashboard and metrics.",
       requiredCapability: "view_overview",
       requiredFeature: "overview",
+    },
+    // Curated workspaces only. Sits high because for a snapshot tenant this IS
+    // the home screen - it replaces the workflow builder as the place they go
+    // to decide what Mr LAD is doing.
+    {
+      href: "/pipelines",
+      label: "Pipelines",
+      icon: SlidersHorizontal,
+      details: "Switch the pipelines built for your industry on and off.",
+      requiresCuratedWorkspace: true,
     },
     {
       href: "/onboarding/advanced-search-ai",
@@ -278,15 +314,20 @@ export function Sidebar() {
   ];
 
   // Helper: does the user have access to this nav item?
-  // Tenant feature flag is the hard gate — if the tenant doesn't have the
+  // Tenant feature flag is the hard gate - if the tenant doesn't have the
   // feature enabled, NO user of that tenant sees it (including owner/admin).
   // Within an enabled feature, owner/admin see it automatically; other roles
   // additionally need the matching capability.
   // Items without any required* field are public (always shown).
   const hasNavAccess = (item: NavItem): boolean => {
+    // Snapshot gate - checked before the early return below, because an item
+    // scoped to a curated workspace may carry no capability or feature key of
+    // its own and would otherwise read as public.
+    if (item.requiresCuratedWorkspace && !isCuratedWorkspace) return false;
+
     if (!item.requiredCapability && !item.requiredFeature) return true;
 
-    // Tenant feature gate — applies to every role, no bypass.
+    // Tenant feature gate - applies to every role, no bypass.
     if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
 
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
@@ -298,7 +339,7 @@ export function Sidebar() {
   // Filter navigation strictly. Previously we showed every item when the
   // user had no capabilities, which leaked admin-only features (Overview,
   // Pipeline, Make a Call, …) to fresh accounts on first login. Now an
-  // unassigned user sees an empty sidebar — the right signal to assign
+  // unassigned user sees an empty sidebar - the right signal to assign
   // them features in Settings → Team.
   const baseNav = isHydrated
     ? allNavItems.filter(hasNavAccess).map(item => ({
@@ -312,7 +353,7 @@ export function Sidebar() {
   // tenant users. The backend independently enforces the same gate.
   const isSuperAdmin =
     isHydrated && (user?.email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
-  const nav = isSuperAdmin
+  const nav: NavItem[] = isSuperAdmin
     ? [
         ...baseNav,
         {
@@ -326,7 +367,14 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center justify-between px-3">
+      <div
+        className={cn(
+          "md:hidden fixed top-0 left-0 right-0 h-14 z-[60] backdrop-blur-2xl border-b flex items-center justify-between px-3 transition-colors duration-300",
+          isBlackGrayChannel
+            ? "border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900"
+            : "border-sidebar-border bg-sidebar/95"
+        )}
+      >
         <button
           aria-label="Open menu"
           className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
@@ -341,7 +389,7 @@ export function Sidebar() {
             loading="eager"
             fetchPriority="high"
             decoding="async"
-            className="w-6 h-6 object-contain"
+            className="w-8 h-8 object-contain"
           />
           <span className="text-sm font-medium text-sidebar-foreground/90">
             {displayName}
@@ -352,7 +400,10 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-[50%] bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
+          "md:hidden fixed inset-y-0 left-0 w-[50%] backdrop-blur-2xl border-r shadow-2xl z-[70] flex flex-col transition-colors duration-300",
+          isBlackGrayChannel
+            ? "border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-[#171717]"
+            : "border-sidebar-border bg-sidebar/95",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -430,7 +481,7 @@ export function Sidebar() {
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      // Only the fully-active parent gets the white icon —
+                      // Only the fully-active parent gets the white icon  - 
                       // section-active keeps dark icon for legibility on
                       // light-background sidebars.
                       selfActive ? "text-white" : "text-sidebar-foreground",
@@ -441,7 +492,7 @@ export function Sidebar() {
 
                 {hasChildren && (
                   <div className="pl-10 space-y-0.5 mt-1 border-l-2 border-white/10 ml-4">
-                    {n.children.map((child) => {
+                    {n.children!.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
                       return (
@@ -469,7 +520,7 @@ export function Sidebar() {
           })()}
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
-        <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
+        <div className={cn("border-t p-3 space-y-2 mt-auto border-sidebar-border", isBlackGrayChannel && "dark:border-zinc-800")}>
           {/* Tenant Selector */}
           <div className="mb-2">
             <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 font-bold px-3">Tenant</span>
@@ -553,11 +604,14 @@ export function Sidebar() {
       )}
       <aside
         className={cn(
-          "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
-          "bg-white dark:bg-[#000724]",
+          "hidden md:flex flex-col shrink-0 h-screen border-r",
+          "bg-white border-gray-200",
+          isBlackGrayChannel
+            ? "dark:bg-[#171717] dark:border-zinc-800"
+            : "dark:bg-[#000724] dark:border-[#1a2a43]",
           "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
           "overflow-hidden fixed left-0 top-0 z-[5000]",
-          isExpanded ? "w-64" : "w-16",
+          isExpanded ? "w-64 shadow-2xl" : "w-16",
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { if (!isPinned) setIsHovered(false); }}
@@ -576,7 +630,7 @@ export function Sidebar() {
             fetchPriority="high"
             decoding="async"
             className={cn(
-              "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
+              "object-contain transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
               isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
             onError={(e) => {
@@ -585,7 +639,7 @@ export function Sidebar() {
           />
         </div>
 
-        {/* Pin toggle — keeps the sidebar permanently expanded.
+        {/* Pin toggle - keeps the sidebar permanently expanded.
             Only shown when the sidebar is expanded (otherwise it would
             overflow the 16px-wide rail) and only on md+ (mobile uses the
             burger menu and doesn't need a pin). */}
@@ -611,7 +665,7 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
           {(() => {
-            // Set of every URL claimed as a child anywhere in the nav tree —
+            // Set of every URL claimed as a child anywhere in the nav tree  - 
             // prevents a top-level item from greedily lighting up when the
             // current pathname belongs to another section's sub-item.
             const ownedChildHrefs = new Set<string>(
@@ -641,6 +695,13 @@ export function Sidebar() {
               <div key={n.href} className="relative group">
                 <NavLink
                   href={n.href}
+                  // Collapsed, this renders as a bare 48px icon — the label
+                  // span below is gated on isExpanded, so without these the
+                  // link has NO accessible name and screen readers announce
+                  // eight identical "link"s. The title also gives sighted
+                  // users a hover tooltip telling them where each icon goes.
+                  aria-label={n.label}
+                  title={!isExpanded ? n.label : undefined}
                   className={cn(
                     "relative flex items-center rounded-2xl overflow-visible",
                     "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
@@ -656,10 +717,10 @@ export function Sidebar() {
                       "absolute inset-0 z-0 rounded-2xl",
                       "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
                       selfActive
-                        ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+                        ? "bg-primary/95"
                         : childOnPath
-                          ? "bg-primary/10 backdrop-blur-sm"  // soft tint — works on light & dark
-                          : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]",
+                          ? "bg-primary/10 backdrop-blur-sm"  // soft tint - works on light & dark
+                          : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]",
                     )}
                   />
                   {/* Icon wrapper */}
@@ -796,8 +857,8 @@ export function Sidebar() {
           })()}
         </nav>
         {/* User Profile Inline Section */}
-        <div className="overflow-y-auto border-t border-sidebar-border mt-auto">
-          {/* Avatar / profile row — click to toggle inline panel */}
+        <div className={cn("border-t mt-auto border-sidebar-border", isBlackGrayChannel && "dark:border-zinc-800")}>
+          {/* Avatar / profile row - click to toggle inline panel */}
           <div
             onClick={() => setIsUserPanelOpen((v) => !v)}
             className={cn(
@@ -838,7 +899,7 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* Inline user panel — shown when isUserPanelOpen */}
+          {/* Inline user panel - shown when isUserPanelOpen */}
           <div
             className={cn(
               "overflow-hidden transition-all duration-300 ease-in-out",
@@ -846,33 +907,65 @@ export function Sidebar() {
             )}
           >
             <div className="px-2 pb-2 space-y-1">
-              {/* Tenant section — only if multiple tenants */}
+              {/* Tenant section - only if multiple tenants.
+                  A dropdown rather than an inline list: this panel is capped at
+                  max-h-96, so one row per tenant pushes Settings, Pricing and
+                  Logout past the clip and out of reach for anyone in enough
+                  workspaces. Closed, it costs one row whatever the count. */}
               {tenants.length > 1 && (
                 <div className="px-2 pt-1 pb-0.5">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold">Tenant</span>
-                  <div className="mt-1 space-y-0.5">
-                    {tenants.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTenantById(t.id)}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
-                          tenant.id === t.id
-                            ? "bg-primary/20 text-primary font-semibold"
-                            : "text-muted-foreground hover:bg-white/5",
-                        )}
-                      >
-                        <span className="truncate">{t.name}</span>
-                        {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsTenantListOpen((open) => !open)}
+                    aria-expanded={isTenantListOpen}
+                    // The current tenant is the label, so the closed state still
+                    // answers "which workspace am I in?" without opening it.
+                    className="mt-1 w-full flex items-center justify-between gap-2 px-2 py-1 rounded-lg text-xs
+                               text-foreground/90 hover:bg-white/5 transition active:scale-95 select-none"
+                  >
+                    <span className="truncate font-semibold">{tenant.name}</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-3 w-3 flex-shrink-0 text-muted-foreground/60 transition-transform duration-200",
+                        isTenantListOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {isTenantListOpen && (
+                    // Scrolls rather than growing without bound — the parent
+                    // clips, so an unbounded list would hide its own options.
+                    <div className="mt-0.5 space-y-0.5 max-h-40 overflow-y-auto">
+                      {tenants.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTenantById(t.id);
+                            setIsTenantListOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
+                            tenant.id === t.id
+                              ? "bg-primary/20 text-primary font-semibold"
+                              : "text-muted-foreground hover:bg-white/5",
+                          )}
+                        >
+                          <span className="truncate">{t.name}</span>
+                          {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Settings */}
               <NavLink
                 href="/settings"
+                // Collapsed, the label span is not rendered, so the link would
+                // have no accessible name at all — see the nav items above.
+                aria-label="Settings"
+                title={!isExpanded ? "Settings" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all",
                   "text-gray-700 dark:text-gray-300 hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
@@ -894,7 +987,7 @@ export function Sidebar() {
                 {/* Group the leading icon + label together so the layout
                     mirrors the Settings row above and the Logout row below.
                     When the sidebar collapses, only the ThemeToggle remains
-                    visible (centered) — the leading Palette icon hides to
+                    visible (centered) - the leading Palette icon hides to
                     avoid two icons in a 40px-wide column. */}
                 {isExpanded && (
                   <div className="flex items-center gap-2">
@@ -908,6 +1001,8 @@ export function Sidebar() {
               {/* Logout */}
               <button
                 onClick={handleLogout}
+                aria-label="Logout"
+                title="Logout"
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all w-full",
                   "text-red-500 hover:bg-red-500/10 active:scale-95 select-none",

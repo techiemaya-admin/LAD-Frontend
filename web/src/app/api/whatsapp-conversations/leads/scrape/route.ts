@@ -9,7 +9,7 @@
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../../utils/python-proxy';
 
-export const maxDuration = 300; // scraping + LLM call can take 60–120s on large pages
+export const maxDuration = 300; // scraping + LLM call can take 60-120s on large pages
 
 export async function POST(req: NextRequest) {
   // Force WABA channel routing to Python service (LAD-WABA-Comms)

@@ -3,10 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldAlert, LayoutDashboard, Building2, ScrollText, Clock, Target, ListChecks, Sparkles, Database } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, Building2, ScrollText, Clock, Target, ListChecks, Sparkles, Database, ShieldCheck, Inbox, Route } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Client-side gate for UX only — the real enforcement is server-side
+// Client-side gate for UX only - the real enforcement is server-side
 // (backend requireSuperAdmin on every /api/admin/monitor route). Keep this
 // email in sync with the backend SUPER_ADMIN_EMAIL.
 const SUPER_ADMIN_EMAIL = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com').toLowerCase();
@@ -16,9 +16,12 @@ const TABS = [
   { href: '/admin/monitor/tenants', label: 'Tenants', icon: Building2, exact: false },
   { href: '/admin/monitor/sah', label: 'Cost / SAH', icon: Target, exact: false },
   { href: '/admin/monitor/llm-cost', label: 'LLM Spend', icon: Sparkles, exact: false },
+  { href: '/admin/monitor/llm-routing', label: 'LLM Routing', icon: Route, exact: false },
   { href: '/admin/monitor/crons', label: 'Crons', icon: Clock, exact: false },
   { href: '/admin/monitor/tasks', label: 'Tasks', icon: ListChecks, exact: false },
   { href: '/admin/monitor/migrations', label: 'Migrations', icon: Database, exact: false },
+  { href: '/admin/monitor/strategies', label: 'Shared Strategies', icon: ShieldCheck, exact: false },
+  { href: '/admin/monitor/signups', label: 'Community Signups', icon: Inbox, exact: false },
   { href: '/admin/monitor/logs', label: 'Cloud Logs', icon: ScrollText, exact: false },
 ];
 

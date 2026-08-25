@@ -1,5 +1,5 @@
 // Using UI proxy routes that set/read httpOnly cookies
-// Token is stored ONLY in httpOnly cookies — never in localStorage.
+// Token is stored ONLY in httpOnly cookies - never in localStorage.
 
 export type Credentials = {
   email: string;
@@ -35,7 +35,7 @@ const authService = {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || 'Invalid credentials');
     }
-    // httpOnly cookie is set by the API route — no localStorage needed
+    // httpOnly cookie is set by the API route - no localStorage needed
     return await response.json();
   },
 

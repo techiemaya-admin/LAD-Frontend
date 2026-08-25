@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LinkedInFunnelWidget — the outbound LinkedIn funnel.
+ * LinkedInFunnelWidget - the outbound LinkedIn funnel.
  *
  * Sent → Accepted → Replied across all campaigns, with accept/reply rates and
  * the account's weekly connection-limit usage. Data: LAD backend
@@ -17,7 +17,13 @@ interface Stats {
   total_sent?: number;
   total_connected?: number;
   total_replied?: number;
-  avg_connection_rate?: number;
+  // GET /api/campaigns/stats -> CampaignCRUDController.getCampaignStats sends
+  // `connection_rate` (no avg_ prefix) - a sibling code path, CampaignModel's
+  // per-campaign stats method, names the equivalent field `avg_connection_rate`,
+  // and this widget was written against that name. Since this endpoint never
+  // sends `avg_connection_rate`, the read below always missed and the widget
+  // showed "Accept rate 0%" regardless of the real rate.
+  connection_rate?: number;
   avg_reply_rate?: number;
   linkedin_network_size?: number | null;
   linkedin_rate_limits?: {
@@ -64,7 +70,7 @@ export const LinkedInFunnelWidget: React.FC<{ id: string }> = ({ id }) => {
   const sent = data?.total_sent ?? 0;
   const accepted = data?.total_connected ?? 0;
   const replied = data?.total_replied ?? 0;
-  const acceptRate = pct(data?.avg_connection_rate);
+  const acceptRate = pct(data?.connection_rate);
   const replyRate = pct(data?.avg_reply_rate);
   const weeklyUsed = data?.linkedin_rate_limits?.weekly?.total ?? null;
   const weeklyMax = data?.linkedin_rate_limits?.weekly?.max ?? null;
@@ -119,7 +125,7 @@ export const LinkedInFunnelWidget: React.FC<{ id: string }> = ({ id }) => {
             <div className="bg-muted/40 dark:bg-white/5 rounded-lg px-3 py-2">
               <p className="text-[11px] text-muted-foreground">Network size</p>
               <p className="text-lg font-medium dark:text-[#E0E0E0]">
-                {data?.linkedin_network_size != null ? num(data.linkedin_network_size) : '—'}
+                {data?.linkedin_network_size != null ? num(data.linkedin_network_size) : '-'}
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@
  *
  * Routing:
  *   ?channel=personal → LAD_backend (Node.js) personal WhatsApp service
- *   ?channel=waba     → LAD-WABA-Comms (Python FastAPI) — DEFAULT
+ *   ?channel=waba     → LAD-WABA-Comms (Python FastAPI) - DEFAULT
  *
  * GET  /api/whatsapp-conversations/chat-groups
  * POST /api/whatsapp-conversations/chat-groups

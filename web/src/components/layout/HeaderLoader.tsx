@@ -57,7 +57,7 @@ export function HeaderLoader() {
     creepRef.current = setInterval(() => {
       setProgress((p) => {
         if (p >= 90) return p;
-        // Asymptotic creep — moves faster early, slower near 90%
+        // Asymptotic creep - moves faster early, slower near 90%
         const remaining = 90 - p;
         return Math.min(90, p + Math.max(0.5, remaining * 0.08));
       });

@@ -348,7 +348,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
         <div className="p-6 space-y-8 bg-white dark:bg-[#000c3b] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
           {/* Scaling Indicator */}
           <div className="space-y-4">
-            <h4 className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Scaling — Where this lead sits</h4>
+            <h4 className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Scaling - Where this lead sits</h4>
             <div className="relative h-6 flex items-center">
               {/* Background Line */}
               <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
@@ -394,7 +394,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
               ) : score >= 5 ? (
                 "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
               ) : (
-                "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
+                "This lead sits in the lower-middle tier - above cold contacts but below qualified leads. One recovery call could shift this score significantly."
               ))}
             </p>
           </div>
@@ -754,7 +754,7 @@ const LeadField = ({ label, value }: { label: string; value?: any }) => (
   <div className="bg-white/60 dark:bg-[#000724]/60 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
     <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5 font-medium uppercase tracking-wide">{label}</span>
     <span className="text-gray-900 dark:text-white font-medium text-sm break-all">
-      {value !== null && value !== undefined && value !== '' ? String(value) : '—'}
+      {value !== null && value !== undefined && value !== '' ? String(value) : '-'}
     </span>
   </div>
 );
@@ -788,7 +788,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
   }
 
 
-  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
+  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '-';
   const phoneValue =
     lead.phone ??
     ([lead.country_code, lead.base_number].filter(Boolean).join('') || undefined);

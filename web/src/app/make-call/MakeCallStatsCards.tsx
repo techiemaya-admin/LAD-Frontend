@@ -26,15 +26,15 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
-            <div className="w-8 h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-input/30 rounded-full animate-pulse"></div>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse mb-2 w-3/4"></div>
-            <div className="h-8 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-input/30 rounded animate-pulse mb-2 w-3/4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-input/30 rounded animate-pulse w-1/2"></div>
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@ interface StatCardProps {
 
 const StatCard = ({ title, value, icon, bgColor }: StatCardProps) => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">

@@ -31,6 +31,7 @@ jobs:
             ':(exclude)**/__tests__/**' \
             ':(exclude)**/*test*.{js,ts,py}' \
             ':(exclude).github/**' \
+            ':(exclude).claude/**' \
             ':(exclude)*.yaml' \
             ':(exclude)*.yml' \
             || true)
@@ -72,6 +73,7 @@ jobs:
             ':(exclude)migrations/**' \
             ':(exclude)**/migrations/**' \
             ':(exclude)*.sql' \
+            ':(exclude).claude/**' \
             | grep -E '^\+[^+]' \
             | grep -c 'organization_id' \
             || true)
@@ -87,6 +89,7 @@ jobs:
               ':(exclude)migrations/**' \
               ':(exclude)**/migrations/**' \
               ':(exclude)*.sql' \
+              ':(exclude).claude/**' \
               | grep -E '^\+[^+]' \
               | grep -n 'organization_id' \
               | head -50

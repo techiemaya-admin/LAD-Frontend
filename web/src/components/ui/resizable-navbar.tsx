@@ -71,8 +71,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
   return (
     <motion.div
       ref={ref}
-      // IMPORTANT: Forces all nested anchor/link tags to obey the dark text rule on mobile layouts
-      className={cn("sticky inset-x-0 top-20 z-40 w-full dark:text-gray-400 [&_a]:dark:text-gray-400 [&_a:hover]:dark:text-white", className)}
+      className={cn("sticky inset-x-0 top-20 z-40 w-full dark:text-gray-400", className)}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
@@ -124,7 +123,7 @@ export const NavItems = ({ items, className, onItemClick, activePath }: NavItems
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 dark:text-gray-400 transition duration-200 hover:text-zinc-800 dark:hover:text-white lg:flex lg:space-x-2 pointer-events-none",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium transition duration-200 lg:flex lg:space-x-2 pointer-events-none",
         className,
       )}
     >
@@ -142,8 +141,10 @@ export const NavItems = ({ items, className, onItemClick, activePath }: NavItems
               onMouseEnter={() => setHovered(idx)}
               onClick={onItemClick}
               className={cn(
-                "relative px-4 py-2 text-neutral-600 dark:text-gray-400 block",
-                isActive && "font-bold text-[#0b1957] dark:text-[#2563eb]"
+                "relative px-4 py-2 block transition-colors",
+                isActive
+                  ? "font-bold text-[#0b1957] dark:text-[#2563eb]"
+                  : "text-neutral-600 dark:text-gray-400 hover:text-zinc-800 dark:hover:text-white"
               )}
             >
               {hovered === idx && (

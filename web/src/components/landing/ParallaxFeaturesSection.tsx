@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Lock, Zap, Users, TrendingUp } from 'lucide-react';
 import { StickyScroll } from '@/components/ui/sticky-scroll-reveal';
@@ -10,7 +11,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'Conversations Started/Month',
       description:
-        'Mr LAD opens 1,000+ personalized conversations with the right people every month — at a steady, human pace that keeps your accounts in good standing.',
+        'Mr LAD opens 1,000+ personalized conversations with the right people every month while maintaining a steady, human pace that keeps your accounts in good standing.',
       stat: '1,000+',
       icon: <Lock className="w-12 h-12 text-white" />,
       color: 'from-blue-500 to-cyan-500',
@@ -27,7 +28,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'Every Channel, One Employee',
       description:
-        'Mr LAD works LinkedIn, WhatsApp, Instagram, email, and voice at once, with personalized messages — coordinated across every channel so nothing slips through.',
+        'Mr LAD works across LinkedIn, WhatsApp, Instagram, email, and voice at once, delivering personalized messages across every channel so nothing slips through.',
       stat: '2,000+',
       icon: <Zap className="w-12 h-12 text-white" />,
       color: 'from-cyan-500 to-blue-500',
@@ -61,7 +62,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'A Full Calendar, On Autopilot',
       description:
-        'Scale your pipeline without hiring more reps. Mr LAD follows up, qualifies, and books meetings straight onto your calendar — synced to your CRM in real time.',
+        'Scale your pipeline without hiring more reps. Mr LAD follows up, qualifies, and books meetings straight onto your calendar while keeping your CRM synced in real time.',
       stat: '5-7x',
       icon: <TrendingUp className="w-12 h-12 text-white" />,
       color: 'from-green-500 to-emerald-500',
@@ -78,7 +79,7 @@ const StickyScrollFeatures = () => {
   ];
 
   return (
-    <section className="py-20 relative bg-gradient-to-b from-background via-background to-background">
+    <section id="features" className="py-20 relative bg-gradient-to-b from-background via-background to-background scroll-mt-24">
       {/* Background Blobs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -97,7 +98,7 @@ const StickyScrollFeatures = () => {
             <span className="text-primary">Does Every Day</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Mr LAD is one AI Sales Employee who works every channel, around the clock — reaching thousands of qualified prospects every month so your calendar stays full.
+            Mr LAD is one AI Sales Employee who works across every channel around the clock, reaching thousands of qualified prospects every month so your calendar stays full.
           </p>
         </motion.div>
 
@@ -115,7 +116,7 @@ const StickyScrollFeatures = () => {
             Ready to hire Mr LAD?
           </h3>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join teams that are already booking 10-15x more meetings with one AI Sales Employee working every channel.
+            Join teams that are already booking 5-7x more meetings with one AI Sales Employee working every channel.
           </p>
 
           <motion.div
@@ -123,9 +124,12 @@ const StickyScrollFeatures = () => {
             whileTap={{ scale: 0.95 }}
             className="inline-block"
           >
-            <button className="px-10 py-4 bg-primary text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+            <Link
+              href="/onboarding"
+              className="inline-block px-10 py-4 bg-primary text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+            >
               Hire Mr LAD
-            </button>
+            </Link>
           </motion.div>
 
           <p className="text-xs text-muted-foreground mt-4">

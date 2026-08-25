@@ -6,3 +6,10 @@ export * from "./features/community-roi";
 
 export { safeStorage } from "./shared/storage";
 export { apiClient, apiGet, apiPost, apiPut, apiDelete, apiPatch } from "./shared/apiClient";
+export {
+  ApiError,
+  isApiError,
+  apiErrorCode,
+  apiErrorStatus,
+  apiErrorFromResponse,
+} from "./shared/apiError";

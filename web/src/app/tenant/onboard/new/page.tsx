@@ -15,24 +15,24 @@ const SUPER_ADMIN_EMAIL = 'admin@techiemaya.com';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FormData {
-  // Step 1 — Company
+  // Step 1 - Company
   companyName: string;
   slug: string;
   email: string;
   planTier: string;
   environment: 'develop' | 'stage';
 
-  // Step 2 — Admin User
+  // Step 2 - Admin User
   adminFirstName: string;
   adminLastName: string;
   adminEmail: string;
   adminPassword: string;
 
-  // Step 3 — Database
+  // Step 3 - Database
   createDatabase: boolean;
   customDbUrl: string;
 
-  // Step 4 — WABA (optional)
+  // Step 4 - WABA (optional)
   enableWaba: boolean;
   wabaSlug: string;
   wabaPhoneNumberId: string;
@@ -43,7 +43,7 @@ interface FormData {
   wabaVerifyToken: string;
   wabaAppSecret: string;
 
-  // Step 5 — Features & Voice
+  // Step 5 - Features & Voice
   features: string[];
   featureFlags: string[];
   capabilities: string[];
@@ -77,7 +77,7 @@ interface StepLog {
 
 // These hardcoded lists are FALLBACKS used only if /api/tenant/manage/meta is
 // unreachable. The live source of truth is provision.js (surfaced via the
-// /meta endpoint) — keep these roughly in sync, but the meta fetch on mount
+// /meta endpoint) - keep these roughly in sync, but the meta fetch on mount
 // will override them with the canonical lists. Essentials (always-on,
 // non-deselectable) are also fetched from meta.
 const DEFAULT_FEATURES = [
@@ -108,14 +108,14 @@ const DEFAULT_CAPABILITIES = [
   'view_scraper', 'view_settings', 'view_pricing', 'voice-agent',
 ];
 
-// Hardcoded essentials — used until /meta loads, then replaced.
+// Hardcoded essentials - used until /meta loads, then replaced.
 // Keep these in sync with ESSENTIAL_OWNER_CAPABILITIES / ESSENTIAL_TENANT_FEATURES
 // in LAD_backend/features/admin/routes/provision.js (also surfaced via /meta).
 const FALLBACK_ESSENTIAL_FEATURES = [
   'conversations', 'campaigns', 'followups',
   // 'ai_assistant' = AI-template generation; 'ai-chat' = sidebar AI Assistant
-  // nav. Distinct feature keys — both required, otherwise new tenants hit
-  // "Feature Not Available — unlock ai-chat".
+  // nav. Distinct feature keys - both required, otherwise new tenants hit
+  // "Feature Not Available - unlock ai-chat".
   'ai_assistant', 'ai-chat',
   'whatsapp-conversations',
 ];
@@ -256,7 +256,7 @@ function Toggle({ checked, onChange, label }: {
 
 function TagGroup({ items, selected, onChange, locked = [] }: {
   items: string[]; selected: string[]; onChange: (v: string[]) => void;
-  /** Keys that must remain enabled — rendered with a distinct style and not toggleable. */
+  /** Keys that must remain enabled - rendered with a distinct style and not toggleable. */
   locked?: string[];
 }) {
   const lockedSet = new Set(locked);
@@ -274,7 +274,7 @@ function TagGroup({ items, selected, onChange, locked = [] }: {
             key={item}
             type="button"
             onClick={() => toggle(item)}
-            title={isLocked ? 'Required — always enabled. Cannot be removed.' : undefined}
+            title={isLocked ? 'Required - always enabled. Cannot be removed.' : undefined}
             className={`px-2.5 py-1 rounded text-xs font-mono transition-all border inline-flex items-center gap-1
               ${isLocked
                 ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 cursor-not-allowed'
@@ -367,7 +367,7 @@ function StepAdmin({ form, set }: { form: FormData; set: (k: keyof FormData, v: 
         <FieldRow label="Admin Email" required>
           <TextInput value={form.adminEmail} onChange={v => set('adminEmail', v)} placeholder="jane@acme.com" type="email" />
         </FieldRow>
-        <FieldRow label="Password" required hint="Min 8 chars — save this, it won't be shown again">
+        <FieldRow label="Password" required hint="Min 8 chars. Save this, it won't be shown again.">
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -448,7 +448,7 @@ function StepWaba({ form, set }: { form: FormData; set: (k: keyof FormData, v: a
   return (
     <div>
       <h2 className="text-lg font-semibold text-white mb-4">WhatsApp Business API</h2>
-      <p className="text-sm text-gray-500 mb-6">Optional — configure WABA integration for this tenant.</p>
+      <p className="text-sm text-gray-500 mb-6">Optional: configure WABA integration for this tenant.</p>
 
       <div className="mb-6">
         <Toggle checked={form.enableWaba} onChange={v => set('enableWaba', v)} label="Enable WABA integration" />
@@ -480,7 +480,7 @@ function StepWaba({ form, set }: { form: FormData; set: (k: keyof FormData, v: a
             </FieldRow>
           </div>
           <div className="col-span-2">
-            <FieldRow label="App Secret" required hint="Facebook App Secret — used to verify webhook HMAC signatures (Meta App Dashboard → Settings → Basic)">
+            <FieldRow label="App Secret" required hint="Facebook App Secret, used to verify webhook HMAC signatures (Meta App Dashboard → Settings → Basic)">
               <TextInput value={form.wabaAppSecret} onChange={v => set('wabaAppSecret', v)} placeholder="32-character hex string" type="password" />
             </FieldRow>
           </div>
@@ -493,7 +493,7 @@ function StepWaba({ form, set }: { form: FormData; set: (k: keyof FormData, v: a
 function StepFeatures({ form, set, meta }: {
   form: FormData;
   set: (k: keyof FormData, v: any) => void;
-  /** Live form metadata from /api/tenant/manage/meta — null until fetched (falls back to DEFAULT_*). */
+  /** Live form metadata from /api/tenant/manage/meta - null until fetched (falls back to DEFAULT_*). */
   meta: TenantFormMeta | null;
 }) {
   // Live lists if meta loaded, hardcoded fallbacks otherwise
@@ -502,14 +502,14 @@ function StepFeatures({ form, set, meta }: {
   const capItems       = meta?.capabilities          ?? DEFAULT_CAPABILITIES;
   const essentialFeatures      = meta?.essential_features      ?? FALLBACK_ESSENTIAL_FEATURES;
   const essentialCapabilities  = meta?.essential_capabilities  ?? FALLBACK_ESSENTIAL_CAPABILITIES;
-  // Feature flags have no essentials concept on the backend yet — pass [].
+  // Feature flags have no essentials concept on the backend yet - pass [].
 
   const allFeaturesOn = () => {
     set('features', [...new Set([...featureItems, ...essentialFeatures])]);
     set('featureFlags', [...flagItems]);
     set('capabilities', [...new Set([...capItems, ...essentialCapabilities])]);
   };
-  // "Clear All" still preserves essentials — they can never be off.
+  // "Clear All" still preserves essentials - they can never be off.
   const allFeaturesOff = () => {
     set('features', [...essentialFeatures]);
     set('featureFlags', []);
@@ -645,7 +645,7 @@ function ReviewRow({ label, value, mono }: { label: string; value: string; mono?
   return (
     <div className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
       <span className="text-xs text-gray-500 w-44 shrink-0">{label}</span>
-      <span className={`text-sm text-gray-200 text-right ${mono ? 'font-mono text-xs' : ''}`}>{value || '—'}</span>
+      <span className={`text-sm text-gray-200 text-right ${mono ? 'font-mono text-xs' : ''}`}>{value || '-'}</span>
     </div>
   );
 }
@@ -679,7 +679,7 @@ function StepReview({ form }: { form: FormData }) {
 
         <div className="bg-[#1a1f2e] rounded-lg border border-gray-800 p-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Database</p>
-          <ReviewRow label="Auto-create" value={form.createDatabase ? 'Yes — run full DDL' : 'No — custom URL'} />
+          <ReviewRow label="Auto-create" value={form.createDatabase ? 'Yes: run full DDL' : 'No: custom URL'} />
           {!form.createDatabase && <ReviewRow label="Custom URL" value={form.customDbUrl} mono />}
         </div>
 
@@ -735,7 +735,7 @@ function ProvisionLog({ logs, done, result, onReset }: {
               'text-gray-600'
             }>
               {l.step}
-              {l.detail && <span className="text-gray-600 ml-2">— {l.detail}</span>}
+              {l.detail && <span className="text-gray-600 ml-2">- {l.detail}</span>}
             </span>
           </div>
         ))}
@@ -867,7 +867,7 @@ export default function TenantOnboardPage() {
   const [errors, setErrors] = useState<string[]>([]);
 
   // ── Live form metadata from /api/tenant/manage/meta ──────────────────────
-  // Single source of truth — provision.js (DEFAULT_*/ESSENTIAL_*). The
+  // Single source of truth - provision.js (DEFAULT_*/ESSENTIAL_*). The
   // hardcoded DEFAULT_* lists above are fallbacks for when this fetch fails.
   const [meta, setMeta] = useState<TenantFormMeta | null>(null);
   useEffect(() => {
@@ -893,7 +893,7 @@ export default function TenantOnboardPage() {
           capabilities: [...new Set([...prev.capabilities, ...next.essential_capabilities])],
         }));
       })
-      .catch(() => { /* silent — UI falls back to hardcoded DEFAULT_* lists */ });
+      .catch(() => { /* silent - UI falls back to hardcoded DEFAULT_* lists */ });
     return () => { cancelled = true; };
   }, [authState]);
 
@@ -975,7 +975,7 @@ export default function TenantOnboardPage() {
           waba_display_name:       form.enableWaba ? form.wabaDisplayName : undefined,
           waba_verify_token:       form.enableWaba ? form.wabaVerifyToken : undefined,
           waba_app_secret:         form.enableWaba ? form.wabaAppSecret : undefined,
-          // Features — explicit arrays override defaults in backend
+          // Features - explicit arrays override defaults in backend
           features:      form.features,
           feature_flags: form.featureFlags,
           capabilities:  form.capabilities,

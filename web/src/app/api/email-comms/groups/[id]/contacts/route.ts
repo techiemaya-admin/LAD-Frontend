@@ -2,7 +2,7 @@
  * /api/email-comms/groups/[id]/contacts
  *   POST → LAD-Email-Comms POST /api/email-broadcast/groups/{id}/contacts
  *
- * Body: { contact_ids: string[] } — up to 2000 per call, server dedups.
+ * Body: { contact_ids: string[] } - up to 2000 per call, server dedups.
  */
 import { NextRequest } from 'next/server';
 import { proxyToEmailComms } from '../../../utils/email-proxy';

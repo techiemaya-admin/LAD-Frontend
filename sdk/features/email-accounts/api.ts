@@ -1,12 +1,12 @@
 /**
- * Email Accounts Feature — API Functions
+ * Email Accounts Feature - API Functions
  *
  * All HTTP calls for Gmail + Microsoft/Outlook OAuth account management.
  * Uses the shared apiClient. No direct fetch/axios calls.
  * Enhanced with TanStack Query v5 queryOptions for caching.
  *
  * Path convention: paths include /api/ prefix (matching all other SDK features).
- * apiClient baseURL = ${origin}/api — leading-slash paths resolve correctly via new URL().
+ * apiClient baseURL = ${origin}/api - leading-slash paths resolve correctly via new URL().
  */
 
 import { queryOptions } from '@tanstack/react-query';
@@ -36,7 +36,7 @@ export const emailAccountKeys = {
 
 // ── Google OAuth ───────────────────────────────────────────────────────────────
 
-/** Start Google OAuth flow — returns the consent URL */
+/** Start Google OAuth flow - returns the consent URL */
 export async function startGoogleOAuth(frontendId = 'settings'): Promise<OAuthStartResponse> {
   const res = await apiClient.post<OAuthStartResponse>(
     '/api/social-integration/email/google/start',
@@ -73,7 +73,7 @@ export function getGoogleStatusOptions() {
 
 // ── Microsoft OAuth ────────────────────────────────────────────────────────────
 
-/** Start Microsoft OAuth flow — returns the consent URL */
+/** Start Microsoft OAuth flow - returns the consent URL */
 export async function startMicrosoftOAuth(frontendId = 'settings'): Promise<OAuthStartResponse> {
   const res = await apiClient.post<OAuthStartResponse>(
     '/api/social-integration/email/microsoft/start',

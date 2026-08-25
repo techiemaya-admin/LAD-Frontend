@@ -45,6 +45,7 @@ const getRequiredFields = (stepType: StepType): string[] => {
   const required: Record<StepType, string[]> = {
     linkedin_connect: [], // Message is optional due to LinkedIn's 4-5 connection messages/month limit
     linkedin_message: ['message'],
+    linkedin_inmail: ['message'],
     email_send: ['subject', 'body'],
     email_followup: ['subject', 'body'],
     whatsapp_send: ['whatsappAccountId', 'whatsappMessage'],
@@ -67,12 +68,34 @@ const getRequiredFields = (stepType: StepType): string[] => {
     linkedin_follow: [],
     start: [],
     end: [],
-    // Custom Workflow Builder macro nodes — expanded/stripped before execution.
+    // Custom Workflow Builder macro nodes - expanded/stripped before execution.
     media_generation: [],
     followup_sequence: [],
     analytics_report: [],
+    export_results: [],
+    linkedin_post: [],
+    instagram_post: [],
+    human_task: [],
+    lead_report: [],
+    landing_page: [],
+    linkedin_content: [],
+    post_approval: [],
+    web_scrape: [],
+    web_research: [],
+    lead_score: [],
+    split_test: [],
+    set_field: [],
+    http_request: ['url'],
     zoho_update: [],
     switch: [],
+    ai_parse: [],
+    // Mirrors the backend StepValidators. A broadcast is business-initiated,
+    // so WhatsApp free text is undeliverable and a template is mandatory.
+    whatsapp_broadcast: ['template_name'],
+    email_broadcast: ['subject', 'body'],
+    // action defaults to book_trial; the account falls back to the tenant's.
+    mindbody_action: [],
+    data_enrich: [],
   };
   return required[stepType] || [];
 };
@@ -227,7 +250,7 @@ export default function StepSettings({
         
         <Separator className="my-4" />
       {/* LinkedIn Steps */}
-      {(resolvedStepTypeSafe === 'linkedin_connect' || resolvedStepTypeSafe === 'linkedin_message') && (
+      {(resolvedStepTypeSafe === 'linkedin_connect' || resolvedStepTypeSafe === 'linkedin_message' || resolvedStepTypeSafe === 'linkedin_inmail') && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -250,7 +273,7 @@ export default function StepSettings({
                 }
                 className={requiredFields.includes('message') && !isFieldValid('message', data.message) ? 'border-red-500' : ''}
               />
-              {resolvedStepTypeSafe === 'linkedin_message' && renderRequiredIndicator('message')}
+              {(resolvedStepTypeSafe === 'linkedin_message' || resolvedStepTypeSafe === 'linkedin_inmail') && renderRequiredIndicator('message')}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {requiredFields.includes('message') && !isFieldValid('message', data.message)
@@ -447,7 +470,7 @@ export default function StepSettings({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Define a condition to check before proceeding. The workflow will check if the previous step met this condition. If true, continue to next step; if false, the workflow may skip or take alternative path.</p>
+                  <p>Define a condition to check before proceeding. The Accelerator will check if the previous step met this condition. If true, continue to next step; if false, the workflow may skip or take alternative path.</p>
                 </TooltipContent>
               </Tooltip>
             </h4>
@@ -506,18 +529,18 @@ export default function StepSettings({
               📋 How Conditions Work:
             </span>
             <span className="text-[11px] text-blue-900 block mb-1">
-              1. The system checks the status of the <strong>previous step</strong> in the workflow
+              1. The system checks the status of the <strong>previous step</strong> in the Accelerator
             </span>
             <span className="text-[11px] text-blue-900 block mb-1">
-              2. If the condition is <strong>met</strong> (e.g., &quot;If Connected on LinkedIn&quot; = true), the workflow continues to the next step
+              2. If the condition is <strong>met</strong> (e.g., &quot;If Connected on LinkedIn&quot; = true), the Accelerator continues to the next step
             </span>
             <span className="text-[11px] text-blue-900 block">
-              3. If the condition is <strong>not met</strong>, the workflow may skip steps or take an alternative path
+              3. If the condition is <strong>not met</strong>, the Accelerator may skip steps or take an alternative path
             </span>
           </div>
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 mt-2">
             <span className="text-[11px] text-amber-900">
-              <strong>⚠️ Important:</strong> Make sure the previous step in your workflow can produce the result you&apos;re checking for. For example, if checking &quot;If Connected on LinkedIn&quot;, ensure there&apos;s a LinkedIn connection step before this condition.
+              <strong>⚠️ Important:</strong> Make sure the previous step in your Accelerator can produce the result you&apos;re checking for. For example, if checking &quot;If Connected on LinkedIn&quot;, ensure there&apos;s a LinkedIn connection step before this condition.
             </span>
           </div>
         </>
@@ -611,10 +634,10 @@ export default function StepSettings({
               }}
             >
               <SelectTrigger id="whatsapp-template-select" className="mt-1">
-                <SelectValue placeholder="None — write custom message below" />
+                <SelectValue placeholder="None: write custom message below" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None — custom message</SelectItem>
+                <SelectItem value="">None: custom message</SelectItem>
                 {whatsappTemplates.length === 0 && !loadingWa && (
                   <SelectItem value="__no_templates__" disabled>
                     No saved templates yet

@@ -86,7 +86,7 @@ interface EmailMessage {
   sent_at: string;
 }
 
-// Defined at module level — not inside the component — to avoid redefining on
+// Defined at module level - not inside the component - to avoid redefining on
 // every render and to allow usage in ComposeWindow props.
 type ComposeInstance = {
   id: string;
@@ -172,7 +172,7 @@ function sanitizeHtml(html: string): string {
 const SMART_REPLIES: Record<string, string[]> = {
   default: ['Looking forward to it!', 'We will be there!', 'Thanks for the update!'],
   inquiry: ['Thanks for reaching out!', "I'll review and get back to you", 'Can we schedule a call?'],
-  approval: ['Sounds great!', 'Approved — please proceed', 'Let me check with the team'],
+  approval: ['Sounds great!', 'Approved - please proceed', 'Let me check with the team'],
   meeting: ['Works for me!', 'Can we reschedule?', "I'll send a calendar invite"],
   proposal: ['Looks good to me!', 'I have a few questions', "Let's discuss further"],
 };
@@ -202,7 +202,7 @@ const MOCK_EMAIL_DETAILS: Record<string, {
 }> = {};
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Emoji categories (module-level constant – created once, never re-allocated)
+// Emoji categories (module-level constant-created once, never re-allocated)
 // ─────────────────────────────────────────────────────────────────────────────
 const EMOJI_CATS = [
   { id: 'smileys', icon: '😊', label: 'Smileys', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
@@ -316,7 +316,7 @@ function Avatar({ name, id, size = 'md' }: { name?: string | null; id: string; s
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TBtn — reusable icon toolbar button
+// TBtn - reusable icon toolbar button
 // ─────────────────────────────────────────────────────────────────────────────
 
 function TBtn({ icon: Icon, label, onClick, active }: { icon: React.ElementType; label: string; onClick: () => void; active?: boolean }) {
@@ -339,7 +339,7 @@ function TBtn({ icon: Icon, label, onClick, active }: { icon: React.ElementType;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ComposeWindow — floating Gmail-style compose
+// ComposeWindow - floating Gmail-style compose
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ComposeWindowProps {
@@ -496,7 +496,7 @@ function ComposeWindow({
   const handleBulletList = () => bodyRef.current && insertAtCursor(bodyRef.current, body, setBody, '\n• ');
   const handleNumberedList = () => bodyRef.current && insertAtCursor(bodyRef.current, body, setBody, '\n1. ');
 
-  // Minimized — just the header tab
+  // Minimized - just the header tab
   if (minimized) {
     return (
       <div
@@ -551,7 +551,7 @@ function ComposeWindow({
         <div className="flex items-center gap-0.5">
           <button title="Minimize" aria-label="Minimize compose window" onClick={onMinimize}
             className="h-7 w-7 flex items-center justify-center hover:bg-white/20 rounded transition-colors">
-            <span className="text-white text-base leading-none pb-1" aria-hidden="true">—</span>
+            <span className="text-white text-base leading-none pb-1" aria-hidden="true">-</span>
           </button>
           <button title={maximized ? 'Restore' : 'Maximize'} aria-label={maximized ? 'Restore compose window' : 'Maximize compose window'} onClick={onMaximize}
             className="h-7 w-7 flex items-center justify-center hover:bg-white/20 rounded transition-colors">
@@ -792,12 +792,12 @@ function ComposeWindow({
             </button>
           </div>
 
-          {/* Agent Toggle — mirrors WABAChatWindow composer */}
+          {/* Agent Toggle - mirrors WABAChatWindow composer */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title={agentType === 'human' ? 'Human agent — tap to hand back to Mr LAD' : 'Mr LAD is replying — tap to take over'}
+                title={agentType === 'human' ? 'Human agent - tap to hand back to Mr LAD' : 'Mr LAD is replying - tap to take over'}
                 className={cn(
                   'h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] flex-shrink-0',
                   agentType === 'human' && 'text-orange-500'
@@ -883,7 +883,7 @@ function ComposeWindow({
                     </div>
                   </div>
 
-                  {/* Category tabs — auto-highlights on scroll */}
+                  {/* Category tabs - auto-highlights on scroll */}
                   <div className="flex items-center gap-0 px-2 pb-1.5 border-b border-[#f1f3f4] dark:border-[#3c4043] flex-shrink-0 overflow-x-auto no-scrollbar">
                     {EMOJI_CATS.map(cat => (
                       <button
@@ -906,7 +906,7 @@ function ComposeWindow({
                     ))}
                   </div>
 
-                  {/* Emoji grid — scrollable, updates category tabs */}
+                  {/* Emoji grid - scrollable, updates category tabs */}
                   <div
                     ref={emojiScrollRef}
                     onScroll={handleEmojiScroll}
@@ -1046,7 +1046,7 @@ function InlineTemplatePicker({ onSelect, onClose, anchorRef }: { onSelect: (tpl
   return (
     <div
       ref={ref}
-      className="w-80 bg-white dark:bg-[#2d2d2d] border border-[#dadce0] dark:border-[#3c4043] rounded-xl shadow-xl overflow-hidden"
+      className="w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#2d2d2d] border border-[#dadce0] dark:border-[#3c4043] rounded-xl shadow-xl overflow-hidden max-sm:!fixed max-sm:!left-1/2 max-sm:!-translate-x-1/2"
       style={
         pos
           ? { position: 'fixed', bottom: pos.bottom, left: pos.left, zIndex: 9999 }
@@ -1255,7 +1255,7 @@ function ContactDetailsPanel({ contact, provider, groups, onClose, onAddToGroup 
 
       <div className="px-4 py-4 space-y-3 border-b border-[#dadce0] dark:border-[#3c4043]">
         {[
-          { icon: AtSign, label: 'Email', value: contact.email ?? '—' },
+          { icon: AtSign, label: 'Email', value: contact.email ?? '-' },
           ...(contact.company ? [{ icon: Building2, label: 'Company', value: contact.company }] : []),
           ...(contact.created_at ? [{ icon: Clock, label: 'Added', value: formatDate(contact.created_at) }] : []),
           { icon: Hash, label: 'Channel', value: providerLabel },
@@ -1309,7 +1309,7 @@ function ContactDetailsPanel({ contact, provider, groups, onClose, onAddToGroup 
       <div className="px-4 py-4">
         <span className="text-[11px] font-semibold text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">Metadata</span>
         <div className="mt-2 space-y-1.5">
-          {[['Status', 'Active'], ['Channel', providerLabel], ['Owner', '—']].map(([label, value]) => (
+          {[['Status', 'Active'], ['Channel', providerLabel], ['Owner', '-']].map(([label, value]) => (
             <div key={label} className="flex items-center justify-between">
               <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6]">{label}</span>
               <span className="text-xs font-medium text-[#202124] dark:text-[#e8eaed]">{value}</span>
@@ -1322,7 +1322,7 @@ function ContactDetailsPanel({ contact, provider, groups, onClose, onAddToGroup 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EmailComposePanel — email thread + reply box
+// EmailComposePanel - email thread + reply box
 // ─────────────────────────────────────────────────────────────────────────────
 
 function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBack, onSentSuccess, onForward }: {
@@ -1650,7 +1650,7 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
                       {msg.body_html
                         ? <div
                           className="prose prose-sm max-w-none text-sm dark:prose-invert"
-                          // sanitizeHtml strips dangerous content — replace with DOMPurify.sanitize() in production
+                          // sanitizeHtml strips dangerous content - replace with DOMPurify.sanitize() in production
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(msg.body_html) }}
                         />
                         : <p className="text-sm text-[#5f6368] dark:text-[#9aa0a6] italic">No content</p>}
@@ -1762,11 +1762,12 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
 // EmailGroupWindow
 // ─────────────────────────────────────────────────────────────────────────────
 
-const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBack, onGroupDeleted }: {
+const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBack, onGroupDeleted, onGroupUpdated }: {
   group: EmailGroup;
   provider: EmailProvider;
   onBack: () => void;
   onGroupDeleted: () => void;
+  onGroupUpdated?: () => void;
 }) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<EmailGroupDetail | null>(null);
@@ -1776,7 +1777,6 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
   const [showSend, setShowSend] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const providerColor = PROVIDER_COLOR[provider];
@@ -1785,63 +1785,59 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
   // custom SMTP still uses the legacy WABA-Comms email surface.
   const isHosted = provider === 'gmail' || provider === 'outlook';
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadGroupDetails = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
-    (async () => {
-      try {
-        const url = isHosted
-          ? `/api/email-comms/groups/${group.id}`
-          : `${API}/groups/${group.id}`;
-        const res = await fetch(url, { headers: authHeaders() });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!cancelled) {
-          if (isHosted) {
-            // LAD-Email-Comms returns the group with `members: [{contact_id,
-            // email, contact_name, company, ...}]`. Map to the local
-            // EmailContact shape (which uses `id` for the contact PK).
-            const mapped: EmailGroupDetail = {
-              ...(data as EmailGroup),
-              members: (data.members ?? []).map((m: {
-                contact_id: string;
-                email: string;
-                contact_name: string | null;
-                company: string | null;
-              }) => ({
-                id: m.contact_id,
-                email: m.email,
-                contact_name: m.contact_name,
-                company: m.company,
-                channel: group.channel,
-              })),
-            };
-            setDetail(mapped);
-          } else if (data.success) {
-            setDetail(data.data);
-          } else {
-            throw new Error(data.error ?? 'Unknown error');
-          }
-        }
-      } catch (_err) {
-        console.error('Failed to load group details:', _err);
-        if (!cancelled) {
-          setLoadError(true);
-          // Legacy fallback keeps the mock member preview so the UI doesn't
-          // look broken even when the backend is unreachable.
-          if (!isHosted) {
-            setDetail({ ...group, members: MOCK_CONTACTS.slice(0, Math.min(group.member_count || 3, 5)) });
-          } else {
-            setDetail({ ...group, members: [] });
-          }
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+    try {
+      const url = isHosted
+        ? `/api/email-comms/groups/${group.id}`
+        : `${API}/groups/${group.id}`;
+      const res = await fetch(url, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (isHosted) {
+        // LAD-Email-Comms returns the group with `members: [{contact_id,
+        // email, contact_name, company, ...}]`. Map to the local
+        // EmailContact shape (which uses `id` for the contact PK).
+        const mapped: EmailGroupDetail = {
+          ...(data as EmailGroup),
+          members: (data.members ?? []).map((m: {
+            contact_id: string;
+            email: string;
+            contact_name: string | null;
+            company: string | null;
+          }) => ({
+            id: m.contact_id,
+            email: m.email,
+            contact_name: m.contact_name,
+            company: m.company,
+            channel: group.channel,
+          })),
+        };
+        setDetail(mapped);
+      } else if (data.success) {
+        setDetail(data.data);
+      } else {
+        throw new Error(data.error ?? 'Unknown error');
       }
-    })();
-    return () => { cancelled = true; };
+    } catch (_err) {
+      console.error('Failed to load group details:', _err);
+      setLoadError(true);
+      // Legacy fallback keeps the mock member preview so the UI doesn't
+      // look broken even when the backend is unreachable.
+      if (!isHosted) {
+        setDetail({ ...group, members: MOCK_CONTACTS.slice(0, Math.min(group.member_count || 3, 5)) });
+      } else {
+        setDetail({ ...group, members: [] });
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [group.id, group, isHosted]);
+
+  useEffect(() => {
+    loadGroupDetails();
+  }, [loadGroupDetails]);
 
   const handleRemoveMember = async (contactId: string) => {
     setRemovingId(contactId);
@@ -1851,14 +1847,17 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
         : `${API}/groups/${group.id}/contacts/${contactId}`;
       const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
       // LAD-Email-Comms returns 204 on success; legacy returns 200 + body.
-      if (!res.ok && res.status !== 204) throw new Error(`HTTP error ${res.status}`);
-      setRemovedIds(p => new Set([...p, contactId]));
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
       toast({
         title: 'Success',
         description: 'Member removed from group.',
       });
-    } catch (_err) {
-      console.error('Failed to remove group member:', _err);
+      await loadGroupDetails();
+      onGroupUpdated?.();
+    } catch (err) {
+      console.error('Failed to remove group member:', err);
       toast({
         title: 'Error',
         description: 'Failed to remove member from group.',
@@ -1876,15 +1875,17 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
         ? `/api/email-comms/groups/${group.id}`
         : `${API}/groups/${group.id}`;
       const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
-      if (!res.ok && res.status !== 204) throw new Error(`HTTP error ${res.status}`);
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
       toast({
         title: 'Success',
         description: 'Group deleted successfully.',
       });
       setShowDeleteConfirm(false);
       onGroupDeleted();
-    } catch (_err) {
-      console.error('Failed to delete group:', _err);
+    } catch (err) {
+      console.error('Failed to delete group:', err);
       toast({
         title: 'Error',
         description: 'Failed to delete group.',
@@ -1896,8 +1897,7 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
   };
 
   const visibleMembers = (detail?.members ?? []).filter(m =>
-    !removedIds.has(m.id) &&
-    (!search || (m.contact_name ?? '').toLowerCase().includes(search.toLowerCase()) || (m.email ?? '').toLowerCase().includes(search.toLowerCase())),
+    !search || (m.contact_name ?? '').toLowerCase().includes(search.toLowerCase()) || (m.email ?? '').toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -1926,6 +1926,13 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
         <button onClick={() => setShowImport(true)} title="Add members" aria-label="Add members"
           className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-full border border-[#dadce0] dark:border-[#3c4043] text-sm text-[#444746] dark:text-[#9aa0a6] hover:bg-[#f6f8fc] dark:hover:bg-[#3c4043]">
           <UserPlus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Add Members</span>
+        </button>
+        <button
+          onClick={() => loadGroupDetails()}
+          title="Refresh group members"
+          aria-label="Refresh group members"
+          className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]">
+          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </button>
       </div>
 
@@ -2014,7 +2021,18 @@ const EmailGroupWindow = memo(function EmailGroupWindow({ group, provider, onBac
         </div>
       )}
 
-      {showImport && <ImportLeadsDialog open={showImport} onOpenChange={setShowImport} onImportComplete={() => { }} channel={provider} emailGroupId={group.id} />}
+      {showImport && (
+        <ImportLeadsDialog
+          open={showImport}
+          onOpenChange={setShowImport}
+          onImportComplete={() => {
+            loadGroupDetails();
+            onGroupUpdated?.();
+          }}
+          channel={provider}
+          emailGroupId={group.id}
+        />
+      )}
       {showSend && detail && <EmailTemplatePicker open={showSend} onOpenChange={setShowSend} group={detail} provider={provider} />}
     </div>
   );
@@ -2095,7 +2113,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   //
   // Gmail / Outlook short-circuit:
   // The legacy /api/email-conversations/{contacts,groups,labels} endpoints
-  // proxy to LAD-WABA-Comms — those email surfaces don't exist there yet
+  // proxy to LAD-WABA-Comms - those email surfaces don't exist there yet
   // and the calls 502 in the network panel. The Sent folder is now powered
   // by LAD-Email-Comms (EmailBroadcastsSentList), so the legacy fetches buy
   // us nothing for those providers. Skip them and set empty state.
@@ -2321,7 +2339,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
     setCreatingGroup(true);
 
     // Hosted providers (Gmail / Outlook) → LAD-Email-Comms POST /groups.
-    // Response is the created group as { id, name, color, ... } — no
+    // Response is the created group as { id, name, color, ... } - no
     // { success, data } envelope. Insert it directly into state.
     if (isHostedProvider) {
       try {
@@ -2397,7 +2415,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   const handleCreateLabel = async () => {
     const name = newLabelName.trim();
     if (!name) return;
-    // Same Phase-2 gate as handleCreateGroup — see the comment there.
+    // Same Phase-2 gate as handleCreateGroup - see the comment there.
     if (isHostedProvider) {
       setCreatingLabel(false);
       setCreateLabelError('');
@@ -2468,7 +2486,8 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
           group={activeGroup}
           provider={provider}
           onBack={() => setActiveGroup(null)}
-          onGroupDeleted={() => { setActiveGroup(null); setGroupRefreshKey(k => k + 1); }}
+          onGroupDeleted={() => { setActiveGroup(null); setGroupRefreshKey(k => k + 1); loadGroups(); }}
+          onGroupUpdated={() => loadGroups()}
         />
       </div>
     );
@@ -2480,16 +2499,16 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
       {/* ── Top Bar ── */}
       <header className="h-[64px] flex-shrink-0 flex items-center px-3 gap-2 bg-[#F6F8FC] dark:bg-[#1f1f1f]">
         {/* Left: fixed width matching sidebar so search aligns with email list */}
-        <div className="flex items-center gap-1 flex-shrink-0 w-[240px]">
+        <div className="flex items-center gap-1 flex-shrink-0 w-auto md:w-[240px]">
           <button
             onClick={() => setSidebarOpen(v => !v)}
             title="Main menu"
             aria-label="Toggle main menu"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]"
           >
-            <Menu className="h-5 w-5 text-[#444746] dark:text-[#9aa0a6]" />
+            <Menu className="h-4 w-4 md:h-5 md:w-5 text-[#444746] dark:text-[#9aa0a6]" />
           </button>
-          <div className="flex items-center gap-2 ml-1">
+          <div className="hidden md:flex items-center gap-2 ml-1">
             {provider === 'gmail' ? (
               <>
                 <svg viewBox="0 0 24 24" className="h-7 w-auto flex-shrink-0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -2516,23 +2535,23 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
         </div>
         {/* Search: flex-1 so it starts right after logo, matching Gmail */}
         <div className="flex-1 min-w-0 max-w-[720px]">
-          <div className="relative h-[46px] flex items-center bg-[#EAF1FB] dark:bg-[#2d2d2d] hover:bg-[#E0EBF5] focus-within:bg-white dark:focus-within:bg-[#2d2d2d] focus-within:shadow-[0_1px_3px_rgba(60,64,67,.3)] rounded-full transition-all">
-            <Search className="absolute left-4 h-5 w-5 text-[#444746] dark:text-[#9aa0a6] pointer-events-none" aria-hidden="true" />
+          <div className="relative h-10 md:h-[46px] flex items-center bg-[#EAF1FB] dark:bg-[#2d2d2d] hover:bg-[#E0EBF5] focus-within:bg-white dark:focus-within:bg-[#2d2d2d] focus-within:shadow-[0_1px_3px_rgba(60,64,67,.3)] rounded-full transition-all">
+            <Search className="absolute left-3 md:left-4 h-4 w-4 md:h-5 md:w-5 text-[#444746] dark:text-[#9aa0a6] pointer-events-none" aria-hidden="true" />
             <input
               type="search"
               placeholder="Search in mail"
               value={contactSearch}
               onChange={e => setContactSearch(e.target.value)}
               aria-label="Search in mail"
-              className="w-full h-full bg-transparent pl-12 pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none"
+              className="w-full h-full bg-transparent pl-9 pr-9 md:pl-12 md:pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none"
             />
             <button
               title="Search options"
               aria-label="Search options"
               onClick={() => setShowSearchFilter(v => !v)}
-              className="absolute right-3 h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+              className="absolute right-2 md:right-3 h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
             >
-              <SlidersHorizontal className="h-4 w-4" />
+              <SlidersHorizontal className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </button>
           </div>
         </div>
@@ -2658,40 +2677,40 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
             </div>
           </div>
         )}
-        {/* Right: icons — Gmail order: Help → Settings → Apps → Avatar */}
-        <div className="flex items-center gap-0.5 flex-shrink-0 pl-2 ml-auto">
+        {/* Right: icons - Gmail order: Help → Settings → Apps → Avatar */}
+        <div className="flex items-center gap-0.5 flex-shrink-0 pl-1 md:pl-2 ml-auto">
           <button
             onClick={() => setShowImport(true)}
             title="Import leads"
             aria-label="Import leads"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Help"
             aria-label="Help"
-            className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="hidden sm:flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <HelpCircle className="h-5 w-5" />
+            <HelpCircle className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Settings"
             aria-label="Settings"
-            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
+            className="h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]"
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             title="Profile"
             aria-label="View profile"
             onClick={() => setShowProfileModal(v => !v)}
-            className="ml-1 h-8 w-8 flex-shrink-0 rounded-full overflow-hidden hover:ring-2 hover:ring-[#dadce0] dark:hover:ring-[#3c4043] transition-all"
+            className="ml-1 h-7 w-7 md:h-8 md:w-8 flex-shrink-0 rounded-full overflow-hidden hover:ring-2 hover:ring-[#dadce0] dark:hover:ring-[#3c4043] transition-all"
           >
             {userImage
               ? <Image src={userImage} alt={connectedEmail?.charAt(0) ?? 'User'} width={32} height={32} className="h-full w-full object-cover" />
               : (
-                <div className="h-full w-full flex items-center justify-center bg-[#1a73e8] text-white text-sm font-medium uppercase select-none">
+                <div className="h-full w-full flex items-center justify-center bg-[#1a73e8] text-white text-xs md:text-sm font-medium uppercase select-none">
                   {connectedEmail?.charAt(0) ?? '?'}
                 </div>
               )}
@@ -2722,7 +2741,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
           {/* Compose Button */}
           <div className={cn('pb-4 flex flex-shrink-0', sidebarOpen ? 'px-3 justify-start' : 'px-0 justify-center')}>
             <button
-              onClick={() => openCompose()}
+              onClick={() => { openCompose(); if (window.innerWidth < 768) setSidebarOpen(false); }}
               title="Compose new email"
               aria-label="Compose new email"
               className={cn(
@@ -2748,7 +2767,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                       setActiveFolder(f.id);
                       setActiveContact(null);
                       setPage(0);
-
+                      if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
                     aria-label={`${f.label}${f.count > 0 ? `, ${f.count} unread` : ''}`}
                     aria-current={isActive ? 'page' : undefined}
@@ -2822,9 +2841,9 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                   )}
                   <div className="max-h-44 overflow-y-auto">
                     {labels.length === 0
-                      ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No labels — create one above</p>
+                      ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No labels yet. Create one above.</p>
                       : labels.map(g => (
-                        <button key={g.id} onClick={() => setActiveGroup(g as unknown as EmailGroup)}
+                        <button key={g.id} onClick={() => { setActiveGroup(g as unknown as EmailGroup); if (window.innerWidth < 768) setSidebarOpen(false); }}
                           aria-label={`Open label: ${g.name}`}
                           className="w-full flex items-center gap-3 pl-6 pr-4 py-1.5 hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] transition-colors text-left rounded-r-full">
                           <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2836,7 +2855,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
                   {labels.map(g => (
-                    <button key={g.id} onClick={() => setActiveGroup(g as unknown as EmailGroup)}
+                    <button key={g.id} onClick={() => { setActiveGroup(g as unknown as EmailGroup); if (window.innerWidth < 768) setSidebarOpen(false); }}
                       title={g.name} aria-label={`Open label: ${g.name}`}
                       className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]">
                       <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2888,9 +2907,9 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                   )}
                   <div className="max-h-44 overflow-y-auto">
                     {groups.length === 0
-                      ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No groups — create one above</p>
+                      ? <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] text-center py-4 px-6">No groups yet. Create one above.</p>
                       : groups.map(g => (
-                        <button key={g.id} onClick={() => setActiveGroup(g)}
+                        <button key={g.id} onClick={() => { setActiveGroup(g); if (window.innerWidth < 768) setSidebarOpen(false); }}
                           aria-label={`Open group: ${g.name}, ${g.member_count} members`}
                           className="w-full flex items-center gap-3 pl-6 pr-4 py-1.5 hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] transition-colors text-left rounded-r-full">
                           <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2903,7 +2922,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
                   {groups.map(g => (
-                    <button key={g.id} onClick={() => setActiveGroup(g)}
+                    <button key={g.id} onClick={() => { setActiveGroup(g); if (window.innerWidth < 768) setSidebarOpen(false); }}
                       title={g.name} aria-label={`Open group: ${g.name}`}
                       className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043]">
                       <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} aria-hidden="true" />
@@ -2914,7 +2933,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
             </div>
           </div>{/* end scrollable area */}
 
-          {/* Meet — pinned to bottom */}
+          {/* Meet - pinned to bottom */}
           <div className="mt-auto pt-2 border-t border-[#e0e0e0] dark:border-[#3c4043] flex-shrink-0">
             {sidebarOpen ? (
               <>
@@ -2991,7 +3010,8 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               {/* Toolbar */}
               <div className="h-12 px-3 flex items-center justify-between border-b border-[#e0e0e0] dark:border-[#3c4043] flex-shrink-0" role="toolbar" aria-label="Email list toolbar">
                 <div className="flex items-center gap-1">
-                  <input
+                  {/* Removed checkbox but can be put if needed */}
+                  {/* <input
                     type="checkbox"
                     checked={paginatedContacts.length > 0 && paginatedContacts.every(c => selectedIds.has(c.id))}
                     onChange={() => {
@@ -3003,8 +3023,8 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                       });
                     }}
                     aria-label="Select all emails on this page"
-                    className="rounded border-[#dadce0] dark:border-[#3c4043] text-[#0b57d0] h-4 w-4 cursor-pointer ml-1"
-                  />
+                    className="appearance-none h-4 w-4 rounded border border-[#747775] dark:border-[#3b82f6] dark:bg-transparent checked:bg-[#0b57d0] dark:checked:bg-[#3b82f6] checked:border-[#0b57d0] dark:checked:border-[#3b82f6] cursor-pointer ml-1 relative transition-colors bg-no-repeat bg-center bg-[length:10px_10px] checked:bg-[url('data:image/svg+xml;utf8,<svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%20%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22><polyline%20points=%2220%206%209%2017%204%2012%22/></svg>')]"
+                  /> */}
                   <button onClick={() => { loadContacts(contactSearch); loadGroups(); }}
                     title="Refresh" aria-label="Refresh email list"
                     className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-[#e8eaed] dark:hover:bg-[#3c4043] text-[#444746] dark:text-[#9aa0a6]">
@@ -3085,7 +3105,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                 {filteredContacts.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-[#5f6368] dark:text-[#9aa0a6] pr-1">
                     <span className="hidden sm:inline" aria-live="polite">
-                      {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filteredContacts.length)} of {filteredContacts.length}
+                      {page * pageSize + 1}-{Math.min((page + 1) * pageSize, filteredContacts.length)} of {filteredContacts.length}
                     </span>
                     <div className="flex">
                       <button disabled={page === 0} onClick={() => setPage(p => p - 1)} title="Previous page" aria-label="Previous page"
@@ -3110,7 +3130,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                   The contacts list above is a legacy WhatsApp-derived view; for these
                   providers we swap in the broadcast panel so users see their actual
                   sent emails (subject, status, sent_count/recipient_count, live polling).
-                  Compose lives inside the panel — uses useSendBroadcast hook.
+                  Compose lives inside the panel - uses useSendBroadcast hook.
                   For 'custom' provider or other folders, fall through to the existing
                   contacts-list path.
                 */}
@@ -3171,7 +3191,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                               checked={isSelected}
                               onChange={() => handleToggleSelect(c.id)}
                               aria-label={`Select email from ${c.contact_name ?? c.email}`}
-                              className="rounded border-[#dadce0] dark:border-[#3c4043] text-[#0b57d0] h-3.5 w-3.5 cursor-pointer"
+                              className="appearance-none h-3.5 w-3.5 rounded border border-[#747775] dark:border-[#3b82f6] dark:bg-transparent checked:bg-[#0b57d0] dark:checked:bg-[#3b82f6] checked:border-[#0b57d0] dark:checked:border-[#3b82f6] cursor-pointer relative transition-colors bg-no-repeat bg-center bg-[length:9px_9px] checked:bg-[url('data:image/svg+xml;utf8,<svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%20%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22><polyline%20points=%2220%206%209%2017%204%2012%22/></svg>')]"
                             />
                             <button onClick={e => toggleStar(c.id, e)}
                               title={isStarred ? 'Unstar' : 'Star'}
@@ -3206,7 +3226,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                               {details.subject}
                             </span>
                             <span className="text-[#5f6368] dark:text-[#9aa0a6] font-normal truncate max-w-xl hidden md:inline">
-                              — {details.snippet.split('\n')[0]}
+                              - {details.snippet.split('\n')[0]}
                             </span>
                           </div>
 
@@ -3305,10 +3325,10 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
           )}
         </main>
 
-        {/* Right sidebar — Google apps + sliding panels */}
+        {/* Right sidebar - Google apps + sliding panels */}
         <div className="hidden md:flex flex-shrink-0 flex-row">
 
-          {/* Panel content — slides in when an icon is active */}
+          {/* Panel content - slides in when an icon is active */}
           {activeRightPanel && (
             <div className="w-[300px] border-l border-[#dadce0] dark:border-[#3c4043] bg-white dark:bg-[#2d2d2d] flex flex-col overflow-hidden mb-2 rounded-2xl mr-1 shadow-sm">
 

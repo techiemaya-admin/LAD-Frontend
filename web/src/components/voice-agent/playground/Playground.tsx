@@ -32,7 +32,7 @@ interface PlaygroundProps {
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   MAIN COMPONENT — View Router
+   MAIN COMPONENT - View Router
    ────────────────────────────────────────────────────────────────── */
 
 export default function Playground({

@@ -190,26 +190,26 @@ export const useDashboardStore = create<DashboardState>()(
       // (who have a persisted layout in localStorage) to pick it up.
       //
       // v1: introduced the `broadcast-performance` widget (appended missing
-      //     widget types to the end of user layouts — non-destructive).
+      //     widget types to the end of user layouts - non-destructive).
       // v2: hard-reset to DEFAULT_LAYOUT so existing users get the new
       //     Broadcast Performance widget at its intended slot (y=2, under
       //     the stat cards) rather than buried at the bottom from the v1
-      //     append. Custom widget reorderings are lost — acceptable trade
+      //     append. Custom widget reorderings are lost - acceptable trade
       //     while the dashboard layout is still settling.
       // v3: hard-reset to DEFAULT_LAYOUT so existing users get the new
       //     conversation-analytics widgets (Enquiries & Bookings funnel +
       //     Re-engage by Topic) at their intended slot under the stat cards.
       // v4: hard-reset to DEFAULT_LAYOUT so existing users get the new
       //     Lead Journey widget (accepted / responded / SAH) under the stats.
-      // v5: hard-reset to DEFAULT_LAYOUT for the channel-aware redesign — adds
+      // v5: hard-reset to DEFAULT_LAYOUT for the channel-aware redesign - adds
       //     the LinkedIn Funnel widget; widgets are now hidden when their
       //     channel isn't connected (DashboardGrid gating).
-      // v6: hard-reset to DEFAULT_LAYOUT — adds the Email Activity and
+      // v6: hard-reset to DEFAULT_LAYOUT - adds the Email Activity and
       //     Instagram Activity widgets (channel-gated like the rest).
-      // v7: hard-reset to DEFAULT_LAYOUT — adds the combined Sales Funnel
+      // v7: hard-reset to DEFAULT_LAYOUT - adds the combined Sales Funnel
       //     widget (cross-channel: new leads → accepted → responded → SAH).
       // v8: Sales Funnel is now interactive (click a stage → drill into its
-      //     leads), which supersedes the separate Lead Journey widget — removed
+      //     leads), which supersedes the separate Lead Journey widget - removed
       //     from the default layout (still available in the widget library).
       version: 8,
       migrate: (persistedState: Record<string, unknown>) => {

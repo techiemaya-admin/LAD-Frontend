@@ -122,7 +122,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Fetch wrapper with automatic retry on transient network/5xx errors.
- * Does NOT retry 4xx (client errors) — those should surface immediately.
+ * Does NOT retry 4xx (client errors) - those should surface immediately.
  */
 async function fetchWithRetry(
   url: string,
@@ -252,7 +252,7 @@ export function AssignmentPanel({
 }: AssignmentPanelProps) {
   // ── State ────────────────────────────────────────────────────────────────
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  // Mirror of teamMembers readable inside callbacks without re-creating them —
+  // Mirror of teamMembers readable inside callbacks without re-creating them  - 
   // used to resolve assignee display names when normalising assignment data.
   const teamMembersRef = useRef<TeamMember[]>([]);
   useEffect(() => {
@@ -278,7 +278,7 @@ export function AssignmentPanel({
 
   /**
    * Loads the current assignment + history for this conversation.
-   * Errors are surfaced in `assignmentError` — the panel stays mounted
+   * Errors are surfaced in `assignmentError` - the panel stays mounted
    * and usable even when this call fails.
    */
   const loadAssignment = useCallback(async () => {
@@ -293,7 +293,7 @@ export function AssignmentPanel({
       );
 
       if (res.status === 404) {
-        // Conversation has no assignment yet — treat as empty, not an error
+        // Conversation has no assignment yet - treat as empty, not an error
         setAssignment({ current: null, history: [] });
         return;
       }
@@ -306,14 +306,14 @@ export function AssignmentPanel({
       }
 
       // Python returns flat { current, history } rows keyed by user ID rather
-      // than nested TeamMember objects — map them into the UI's shape.
+      // than nested TeamMember objects - map them into the UI's shape.
       const raw = await res.json();
       setAssignment(normalizeAssignmentHistory(raw, teamMembersRef.current));
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to load assignment";
 
-      // Don't surface network errors as blocking — the panel is still usable
+      // Don't surface network errors as blocking - the panel is still usable
       // for assigning even if history can't be fetched.
       setAssignmentError(msg);
 
@@ -554,11 +554,11 @@ export function AssignmentPanel({
                     ? "Reassign conversation"
                     : "Assign conversation"
                 }
-                className="h-8 text-xs gap-1.5 shrink-0"
+                className="h-8 text-xs gap-1.5 shrink-0 border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/50 dark:bg-zinc-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-zinc-700 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
                 disabled={assigning}
               >
                 {assigning ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                 ) : (
                   <>
                     {currentAssignee ? "Reassign" : "Assign"}
@@ -570,13 +570,13 @@ export function AssignmentPanel({
 
             <DropdownMenuContent
               align="end"
-              className="w-64 max-h-80 overflow-y-auto"
+              className="w-64 max-h-80 overflow-y-auto bg-white dark:bg-[#161717] border border-zinc-200 dark:border-zinc-800/80 shadow-lg text-zinc-900 dark:text-[#d1d7db] rounded-xl p-1.5 [&_[role=menuitem]]:transition-colors"
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuLabel className="flex items-center justify-between text-xs">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium px-2 py-1.5">
                 <span>Assign to</span>
                 {loadingMembers && (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-3 w-3 animate-spin text-emerald-600 dark:text-emerald-400" />
                 )}
                 {!loadingMembers && teamMembers.length > 0 && (
                   <Tooltip>
@@ -589,7 +589,7 @@ export function AssignmentPanel({
                           e.stopPropagation();
                           loadTeamMembers();
                         }}
-                        className="rounded p-0.5 hover:bg-muted transition-colors text-muted-foreground"
+                        className="rounded p-1 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                       >
                         <RefreshCw className="h-3 w-3" aria-hidden="true" />
                       </button>
@@ -601,10 +601,10 @@ export function AssignmentPanel({
                 )}
               </DropdownMenuLabel>
 
-              {/* Members error — non-blocking */}
+              {/* Members error - non-blocking */}
               {membersError && (
-                <div className="px-2 pb-1">
-                  <div className="flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/20 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300">
+                <div className="px-1 py-1">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-200/80 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/30 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300">
                     <AlertCircle className="h-3 w-3 shrink-0" />
                     <span className="flex-1">
                       Couldn&apos;t load workload data
@@ -623,36 +623,36 @@ export function AssignmentPanel({
                 </div>
               )}
 
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800/60 my-1" />
 
               {/* Unassign option */}
               {currentAssignee && (
                 <>
                   <DropdownMenuItem
                     onClick={() => handleAssign(null)}
-                    className="gap-2.5 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                    className="gap-2.5 cursor-pointer rounded-lg px-2 py-1.5 text-rose-600 dark:text-rose-400 focus:bg-rose-50 dark:focus:bg-rose-950/30 focus:text-rose-700 dark:focus:text-rose-300"
                   >
-                    <div className="w-7 h-7 rounded-full border-2 border-dashed border-red-300 flex items-center justify-center shrink-0">
-                      <X className="h-3.5 w-3.5" />
+                    <div className="w-6 h-6 rounded-full border border-dashed border-rose-300 dark:border-rose-700/60 flex items-center justify-center shrink-0 bg-rose-50/50 dark:bg-rose-950/20">
+                      <X className="h-3 w-3" />
                     </div>
                     <span className="text-xs font-medium">Unassign</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800/60 my-1" />
                 </>
               )}
 
               {/* Loading skeleton */}
               {loadingMembers && teamMembers.length === 0 && (
-                <div className="flex flex-col gap-1 px-2 py-1">
+                <div className="flex flex-col gap-1 px-1 py-1">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-2.5 px-1 py-1.5 animate-pulse"
+                      className="flex items-center gap-2.5 px-2 py-1.5 animate-pulse"
                     >
-                      <div className="w-7 h-7 rounded-full bg-muted shrink-0" />
+                      <div className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
                       <div className="flex-1 space-y-1">
-                        <div className="h-2.5 bg-muted rounded w-3/4" />
-                        <div className="h-2 bg-muted rounded w-1/2" />
+                        <div className="h-2.5 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4" />
+                        <div className="h-2 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2" />
                       </div>
                     </div>
                   ))}
@@ -661,8 +661,8 @@ export function AssignmentPanel({
 
               {/* Empty state */}
               {!loadingMembers && teamMembers.length === 0 && !membersError && (
-                <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-                  <Users className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                <div className="px-4 py-6 text-center text-xs text-zinc-400 dark:text-zinc-500">
+                  <Users className="h-6 w-6 mx-auto mb-2 opacity-40 text-zinc-400" />
                   No team members available
                 </div>
               )}
@@ -675,9 +675,10 @@ export function AssignmentPanel({
                     key={member.id}
                     onClick={() => !isCurrent && handleAssign(member)}
                     className={cn(
-                      "gap-2.5 cursor-pointer",
+                      "gap-2.5 cursor-pointer rounded-lg px-2 py-1.5 transition-colors",
+                      "focus:bg-zinc-100 dark:focus:bg-zinc-800/80 focus:text-zinc-900 dark:focus:text-zinc-100",
                       isCurrent &&
-                        "bg-emerald-50 dark:bg-emerald-950/20 cursor-default"
+                        "bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-medium cursor-default focus:bg-emerald-50/80 dark:focus:bg-emerald-950/40"
                     )}
                     disabled={isCurrent}
                   >
@@ -688,11 +689,18 @@ export function AssignmentPanel({
                           {member.name}
                         </span>
                         {isCurrent && (
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         )}
                       </div>
                       {member.workload !== undefined && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            isCurrent
+                              ? "text-emerald-700/80 dark:text-emerald-400/80"
+                              : "text-zinc-400 dark:text-zinc-500"
+                          )}
+                        >
                           {member.workload} open
                           {member.workload !== 1 ? " chats" : " chat"}
                         </span>

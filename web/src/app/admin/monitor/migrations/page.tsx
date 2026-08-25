@@ -83,14 +83,14 @@ export default function MonitorMigrationsPage() {
                 <tr className="border-b border-gray-100 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-800/30">
                   <td className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200">{data.core.name}</td>
                   <td className="px-4 py-2"><StatusBadge status={data.core.status} /></td>
-                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.missing.join(', ') || '—'}</td>
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.missing.join(', ') || '-'}</td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.ledgerPresent ? `${data.core.ledgerVersions.length} recorded` : 'no ledger'}</td>
                 </tr>
                 {[...data.tenants].sort((a, b) => (a.status === b.status ? 0 : a.status === 'behind' ? -1 : 1)).map((t) => (
                   <tr key={t.target} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
                     <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{t.name}</td>
                     <td className="px-4 py-2"><StatusBadge status={t.status} /></td>
-                    <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{t.missing.length ? t.missing.join(', ') : <span className="text-emerald-500">—</span>}</td>
+                    <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{t.missing.length ? t.missing.join(', ') : <span className="text-emerald-500">-</span>}</td>
                     <td className="px-4 py-2 text-xs">{t.ledgerPresent ? <span className="text-gray-500 dark:text-gray-400">{t.ledgerVersions.length} recorded</span> : <span className="text-amber-500">no ledger</span>}</td>
                   </tr>
                 ))}

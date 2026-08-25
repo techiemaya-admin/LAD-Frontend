@@ -37,6 +37,13 @@ interface PersonalWaTemplate {
   media_type?: 'image' | 'video' | 'document' | null;
   media_url?: string | null;
   media_filename?: string | null;
+  // Attached contact — sent as a follow-up vCard message when the template is
+  // used. Personal WA can't render WABA-style interactive buttons, so this is
+  // the equivalent UX (recipient gets tappable Message/Save actions).
+  attached_contact_name?: string | null;
+  attached_contact_phone?: string | null;
+  attached_contact_email?: string | null;
+  attached_contact_company?: string | null;
 }
 
 type MediaType = 'none' | 'image' | 'video' | 'document';
@@ -51,6 +58,10 @@ interface TemplateFormData {
   media_type: MediaType;
   media_url: string;
   media_filename: string;
+  attached_contact_name: string;
+  attached_contact_phone: string;
+  attached_contact_email: string;
+  attached_contact_company: string;
 }
 
 const EMPTY_FORM: TemplateFormData = {
@@ -63,6 +74,10 @@ const EMPTY_FORM: TemplateFormData = {
   media_type: 'none',
   media_url: '',
   media_filename: '',
+  attached_contact_name: '',
+  attached_contact_phone: '',
+  attached_contact_email: '',
+  attached_contact_company: '',
 };
 
 const API = '/api/whatsapp-conversations/conversations/templates';
@@ -148,7 +163,7 @@ function TemplateFormDialog({
         body: formData,
         credentials: 'include',
         headers: {
-          // Don't set Content-Type — browser sets multipart boundary automatically
+          // Don't set Content-Type - browser sets multipart boundary automatically
           ...(typeof window !== 'undefined' ? {
             Authorization: `Bearer ${document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')?.[1] || ''}`,
           } : {}),
@@ -288,7 +303,7 @@ function TemplateFormDialog({
               ))}
             </div>
 
-            {/* Upload area — shown when type is not none */}
+            {/* Upload area - shown when type is not none */}
             {form.media_type !== 'none' && (
               <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                 {hasMedia ? (
@@ -376,6 +391,52 @@ function TemplateFormDialog({
                 )}
               </div>
             )}
+          </div>
+
+          {/* ── Attached Contact ────────────────────────────────────── */}
+          {/*
+            Personal WA can't render WABA-style interactive buttons, so we
+            offer an attached contact card instead: at send time WAPA fires
+            the template body first, then a native vCard message immediately
+            after. The recipient sees tappable Message/Save actions on the
+            card — closest to a "contact button" the Web protocol allows.
+            All four fields optional; leave phone empty to disable.
+          */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                Attached Contact (optional)
+              </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Sent as a follow-up contact card right after the template — recipient can tap Message / Save.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                placeholder="Contact name"
+                value={form.attached_contact_name}
+                onChange={(e) => set('attached_contact_name', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Phone e.g. +971501234567"
+                value={form.attached_contact_phone}
+                onChange={(e) => set('attached_contact_phone', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Email (optional)"
+                value={form.attached_contact_email}
+                onChange={(e) => set('attached_contact_email', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Company (optional)"
+                value={form.attached_contact_company}
+                onChange={(e) => set('attached_contact_company', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+            </div>
           </div>
 
           {/* Description */}
@@ -485,6 +546,10 @@ export function PersonalWaTemplateManager() {
       media_type: (t.media_type as MediaType) || 'none',
       media_url: t.media_url || '',
       media_filename: t.media_filename || '',
+      attached_contact_name:    t.attached_contact_name    || '',
+      attached_contact_phone:   t.attached_contact_phone   || '',
+      attached_contact_email:   t.attached_contact_email   || '',
+      attached_contact_company: t.attached_contact_company || '',
     });
     setFormOpen(true);
   }
@@ -507,6 +572,11 @@ export function PersonalWaTemplateManager() {
         media_type: data.media_type !== 'none' ? data.media_type : null,
         media_url: (data.media_url ?? '').trim() || null,
         media_filename: (data.media_filename ?? '').trim() || null,
+        // Attached contact — sent as follow-up vCard at template-send time
+        attached_contact_name:    (data.attached_contact_name    ?? '').trim() || null,
+        attached_contact_phone:   (data.attached_contact_phone   ?? '').trim() || null,
+        attached_contact_email:   (data.attached_contact_email   ?? '').trim() || null,
+        attached_contact_company: (data.attached_contact_company ?? '').trim() || null,
       };
 
       if (editingId) {
@@ -553,21 +623,30 @@ export function PersonalWaTemplateManager() {
 
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#00051d] rounded-2xl border border-slate-200 dark:border-slate-800/80 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none">
+    <div className="flex flex-col h-full bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
-        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
-          Saved messages — no Meta approval required
-        </p>
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-blue-950/40 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+            <FileText className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
+              Saved messages — no Meta approval required
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search & Action Row */}
-      <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800/60 shrink-0 flex items-center gap-3 bg-slate-50/50 dark:bg-[#000724]/40">
+      <div className="px-5 py-3 border-b border-slate-100 dark:border-blue-950/40 shrink-0 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/50">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-400/80" />
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full">
+            <Search className="h-4 w-4 text-slate-400 dark:text-slate-400/80" />
+          </div>
           <Input
-            className="pl-9 h-10 text-sm bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 rounded-xl text-white focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
+            className="pl-11 h-10 text-sm bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 rounded-xl text-slate-900 dark:text-white focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
             placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -576,7 +655,7 @@ export function PersonalWaTemplateManager() {
         <Button size="sm" className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
                 onClick={openCreate}>
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span className="hidden sm:inline">New Template</span>
+          <span className="inline">New Template</span>
         </Button>
       </div>
 

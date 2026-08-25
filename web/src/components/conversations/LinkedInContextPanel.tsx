@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LinkedIn Context Panel — right-rail companion to the LinkedIn chat view.
+ * LinkedIn Context Panel - right-rail companion to the LinkedIn chat view.
  *
  * Mirrors the WhatsApp ConversationContextPanel but is scoped to what the
  * LinkedIn backend currently supports:
@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   X, Linkedin, ExternalLink, Tag, Plus, Trash2, Check, Loader2,
-  StickyNote, UserCheck, Sparkles, AlertCircle,
+  StickyNote, UserCheck, Sparkles, AlertCircle, ChevronLeft, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,6 +104,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
   const [labelLoading, setLabelLoading] = useState(false);
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
+  /** Set when a label edit was rejected, so the UI stops implying it applied. */
+  const [labelError, setLabelError] = useState<string | null>(null);
 
   const loadLabels = useCallback(async () => {
     try {
@@ -121,30 +123,51 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
   useEffect(() => { loadLabels(); }, [loadLabels]);
 
-  const addLabel = async (labelId: string) => {
+  // These three mutated LOCAL state whether or not the server accepted the
+  // change, and none checked `resp.ok` — which `fetch` never signals by
+  // throwing. So a failed label edit looked exactly like a successful one until
+  // the panel was reopened and the change had silently reverted.
+  const addLabel = async (labelId: string): Promise<boolean> => {
+    setLabelError(null);
     try {
-      await fetch(`${API_BASE}/conversations/${conversation.id}/labels`, {
+      const resp = await fetch(`${API_BASE}/conversations/${conversation.id}/labels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label_id: labelId }),
       });
+      if (!resp.ok) {
+        setLabelError(`Couldn't apply that label (${resp.status}).`);
+        return false;
+      }
       const matched = allLabels.find(l => l.id === labelId);
       if (matched) setLabels(prev => [...prev, matched]);
-    } catch { /* non-fatal */ }
+      return true;
+    } catch {
+      setLabelError("Couldn't apply that label — check your connection.");
+      return false;
+    }
   };
 
   const removeLabel = async (labelId: string) => {
+    setLabelError(null);
     try {
-      await fetch(`${API_BASE}/conversations/${conversation.id}/labels/${labelId}`, {
+      const resp = await fetch(`${API_BASE}/conversations/${conversation.id}/labels/${labelId}`, {
         method: 'DELETE',
       });
+      if (!resp.ok) {
+        setLabelError(`Couldn't remove that label (${resp.status}).`);
+        return;
+      }
       setLabels(prev => prev.filter(l => l.id !== labelId));
-    } catch { /* non-fatal */ }
+    } catch {
+      setLabelError("Couldn't remove that label — check your connection.");
+    }
   };
 
   const createLabel = async () => {
     const name = newLabelName.trim();
     if (!name) return;
+    setLabelError(null);
     try {
       const resp = await fetch(`${API_BASE}/labels`, {
         method: 'POST',
@@ -152,11 +175,18 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         body: JSON.stringify({ name }),
       });
       const data = await resp.json().catch(() => ({}));
-      if (data?.success && data?.data) {
-        setAllLabels(prev => [...prev, data.data]);
-        addLabel(data.data.id);
+      if (!resp.ok || !data?.success || !data?.data) {
+        // Keep the typed name and the open input: clearing them on failure
+        // discarded what the user wrote and looked like the label was created.
+        setLabelError(data?.error || `Couldn't create that label (${resp.status}).`);
+        return;
       }
-    } catch { /* non-fatal */ }
+      setAllLabels(prev => [...prev, data.data]);
+      await addLabel(data.data.id);
+    } catch {
+      setLabelError("Couldn't create that label — check your connection.");
+      return;
+    }
     setNewLabelName('');
     setShowLabelInput(false);
   };
@@ -165,6 +195,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
   const [notes, setNotes] = useState<LinkedInNote[]>([]);
   const [noteText, setNoteText] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  /** Set when a save failed, so the note is kept in the box rather than dropped. */
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const loadNotes = useCallback(async () => {
     try {
@@ -180,6 +212,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
     const content = noteText.trim();
     if (!content) return;
     setSavingNote(true);
+    setNoteError(null);
     try {
       const resp = await fetch(`${API_BASE}/conversations/${conversation.id}/notes`, {
         method: 'POST',
@@ -187,11 +220,20 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         body: JSON.stringify({ content }),
       });
       const data = await resp.json().catch(() => ({}));
-      if (data?.success && data?.data) {
-        setNotes(prev => [data.data, ...prev]);
+      // `fetch` does not throw on 4xx/5xx, so a server error landed here rather
+      // than in the catch — and `setNoteText('')` used to run REGARDLESS of the
+      // outcome. The note was never saved, never added to the list, and the box
+      // emptied anyway, which reads as success. The user's typed note was gone
+      // with nothing to retype from. Only clear on a CONFIRMED save.
+      if (!resp.ok || !data?.success || !data?.data) {
+        setNoteError(data?.error || `Couldn't save the note (${resp.status}).`);
+        return;
       }
+      setNotes(prev => [data.data, ...prev]);
       setNoteText('');
-    } catch { /* non-fatal */ } finally { setSavingNote(false); }
+    } catch {
+      setNoteError("Couldn't save the note — check your connection.");
+    } finally { setSavingNote(false); }
   };
 
   // ── AI Chat Agent toggle (tenant-wide automation flag) ──────────────────
@@ -211,7 +253,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
     setAgentSaving(true);
     setAgentEnabled(next);   // optimistic
     try {
-      // Read CURRENT values then PUT — backend expects every field we want to
+      // Read CURRENT values then PUT - backend expects every field we want to
       // keep. If we omit a field here, the backend's clamp logic resets it
       // (e.g. ai_agent_reply_delay_seconds would silently flip back to 0
       // every time the user toggles the agent on/off from this panel).
@@ -265,6 +307,57 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
       .catch(() => setFollowupPaused(false));
   }, [conversation.id, conversation.campaign_id, conversation.lead_id, followupSupported]);
 
+  // ── Per-lead post-monitoring toggle ─────────────────────────────────────
+  // Reads/writes campaign_leads.lead_data.post_monitoring_paused. The tenant-wide
+  // setting (Settings → Chat → LinkedIn → Monitor Prospect Posts) is the master
+  // switch; `pmTenantEnabled` reflects it so the row can say why it is inert.
+  const [pmPaused, setPmPaused] = useState<boolean | null>(null);
+  const [pmTenantEnabled, setPmTenantEnabled] = useState(false);
+  const [pmSaving, setPmSaving] = useState(false);
+
+  useEffect(() => {
+    if (!followupSupported) { setPmPaused(false); return; }
+    const q = new URLSearchParams({
+      campaign_id: String(conversation.campaign_id),
+      lead_id:     String(conversation.lead_id),
+    });
+    fetch(`${API_BASE}/conversations/${encodeURIComponent(conversation.id)}/post-monitoring?${q.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success) {
+          setPmPaused(d.data?.paused === true);
+          setPmTenantEnabled(d.data?.tenantEnabled === true);
+        } else {
+          setPmPaused(false);
+        }
+      })
+      .catch(() => setPmPaused(false));
+  }, [conversation.id, conversation.campaign_id, conversation.lead_id, followupSupported]);
+
+  const togglePostMonitoring = async () => {
+    if (pmPaused === null || !followupSupported) return;
+    const next = !pmPaused;
+    setPmSaving(true);
+    setPmPaused(next); // optimistic
+    try {
+      const r = await fetch(`${API_BASE}/conversations/${encodeURIComponent(conversation.id)}/post-monitoring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paused:      next,
+          campaign_id: conversation.campaign_id,
+          lead_id:     conversation.lead_id,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!d?.success) setPmPaused(!next); // revert on backend error
+    } catch {
+      setPmPaused(!next);
+    } finally {
+      setPmSaving(false);
+    }
+  };
+
   const toggleFollowupPause = async () => {
     if (followupPaused === null || !followupSupported) return;
     const next = !followupPaused;
@@ -301,41 +394,58 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-white border-l border-border w-full sm:w-[340px] flex-shrink-0",
-      "fixed inset-y-0 right-0 z-50 lg:static lg:z-0 lg:flex"
+      "flex flex-col h-full bg-card dark:bg-[#101C36] border-l border-border dark:border-slate-800 w-full sm:w-[340px] flex-shrink-0",
+      "fixed top-14 bottom-0 right-0 z-50 lg:static lg:z-0 lg:flex"
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-        <h3 className="text-sm font-semibold text-slate-800">Contact Details</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-slate-800 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 -ml-1 lg:hidden text-slate-500"
+            onClick={onClose}
+            aria-label="Back to chat"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Contact Details</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 hidden lg:inline-flex text-slate-500"
+          onClick={onClose}
+          aria-label="Close contact details"
+        >
           <X className="w-4 h-4" />
         </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Profile */}
-        <div className="flex flex-col items-center px-4 pt-6 pb-4 border-b border-border">
+        <div className="flex flex-col items-center px-4 pt-6 pb-4 border-b border-border dark:border-slate-800">
           <div className="relative">
             {proxied ? (
               <img
                 src={proxied}
                 alt={contact.name}
-                className="w-20 h-20 rounded-full object-cover bg-blue-100"
+                className="w-20 h-20 rounded-full object-cover bg-blue-100 dark:bg-blue-900/50"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xl">
+              <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center font-semibold text-xl">
                 {contact.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?'}
               </div>
             )}
             {/* LinkedIn ring */}
-            <span className="absolute -bottom-1 -right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0A66C2] ring-2 ring-white">
+            <span className="absolute -bottom-1 -right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0A66C2] ring-2 ring-white dark:ring-slate-950">
               <Linkedin className="w-3.5 h-3.5 text-white" />
             </span>
           </div>
-          <p className="mt-3 text-base font-semibold text-slate-900 text-center">{contact.name}</p>
+          <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100 text-center">{contact.name}</p>
           {headlineDisplay && (
-            <p className="mt-0.5 text-xs text-slate-500 text-center line-clamp-2 max-w-[260px]">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 text-center line-clamp-2 max-w-[260px]">
               {headlineDisplay}
             </p>
           )}
@@ -344,7 +454,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               href={lead_linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[260px]"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate max-w-[260px]"
             >
               <ExternalLink className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">View LinkedIn profile</span>
@@ -353,9 +463,9 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* Labels */}
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Labels</p>
+            <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">Labels</p>
             <Button
               variant="ghost" size="icon" className="h-6 w-6"
               onClick={() => setShowLabelInput(s => !s)}
@@ -365,7 +475,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
           </div>
 
           {labels.length === 0 && !labelLoading && (
-            <p className="text-xs text-slate-400">No labels assigned</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">No labels assigned</p>
           )}
 
           {labelLoading && (
@@ -396,6 +506,13 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             ))}
           </div>
 
+          {labelError && (
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+              <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+              <span>{labelError}</span>
+            </p>
+          )}
+
           {showLabelInput && (
             <div className="mt-3 space-y-2">
               {/* Existing labels not yet assigned */}
@@ -407,7 +524,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                       <button
                         key={l.id}
                         onClick={() => addLabel(l.id)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
                       >
                         <Plus className="w-3 h-3" />
                         {l.name}
@@ -433,14 +550,14 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* Metadata */}
-        <div className="px-4 py-4 border-b border-border space-y-2">
-          <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase mb-2">Metadata</p>
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800 space-y-2">
+          <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase mb-2">Metadata</p>
           <Row label="Status" value={
             <span className={cn(
               'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium',
-              connection_status === 'active'   ? 'bg-emerald-50 text-emerald-700' :
-              connection_status === 'accepted' ? 'bg-amber-50 text-amber-700' :
-                                                  'bg-slate-100 text-slate-600'
+              connection_status === 'active'   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+              connection_status === 'accepted' ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
+                                                  'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
             )}>
               {connection_status === 'accepted' ? 'Connected' : connection_status === 'active' ? 'Active' : 'Pending'}
             </span>
@@ -450,7 +567,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             <Row label="Campaign" value={
               <a
                 href={`/campaigns/${campaign_id}/analytics/leads`}
-                className="text-blue-600 hover:underline truncate max-w-[160px] inline-block"
+                className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[160px] inline-block"
                 title={campaign_id}
               >
                 {campaign_id.slice(0, 8)}…
@@ -465,13 +582,13 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         </div>
 
         {/* AI Chat Agent toggle */}
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4 border-b border-border dark:border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800">AI Chat Agent</p>
-                <p className="text-[10px] text-slate-500 truncate">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">AI Chat Agent</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                   Auto-replies to inbound LinkedIn DMs
                 </p>
               </div>
@@ -484,7 +601,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               disabled={agentEnabled === null || agentSaving}
               className={cn(
                 'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
-                agentEnabled ? 'bg-blue-600' : 'bg-slate-300',
+                agentEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700',
                 agentSaving && 'opacity-60'
               )}
             >
@@ -496,25 +613,25 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               />
             </button>
           </div>
-          <p className="mt-1.5 text-[10px] text-slate-400">
+          <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
             Tenant-wide setting (Settings → Chat → LinkedIn).
           </p>
         </div>
 
         {/* Per-lead follow-up pause toggle */}
         {followupSupported && (
-          <div className="px-4 py-4 border-b border-border">
+          <div className="px-4 py-4 border-b border-border dark:border-slate-800">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-800">Auto Follow-ups</p>
-                  <p className="text-[10px] text-slate-500 truncate">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Auto Follow-ups</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                     {followupPaused
                       ? 'Paused for this lead'
                       : followupPendingCount > 0
                         ? `${followupPendingCount} queued · sends via agent prompt`
-                        : 'On — sends via agent prompt'}
+                        : 'On - sends via agent prompt'}
                   </p>
                 </div>
               </div>
@@ -526,7 +643,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                 disabled={followupPaused === null || followupSaving}
                 className={cn(
                   'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
-                  !followupPaused ? 'bg-amber-500' : 'bg-slate-300',
+                  !followupPaused ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700',
                   followupSaving && 'opacity-60'
                 )}
               >
@@ -538,38 +655,95 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                 />
               </button>
             </div>
-            <p className="mt-1.5 text-[10px] text-slate-400">
+            <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
               Pause to stop the scheduled 4-touch sequence for this lead only. The live AI agent still replies to inbound messages.
             </p>
           </div>
         )}
 
+          {/* Per-lead post-monitoring toggle */}
+        {followupSupported && (
+          <div className="px-4 py-4 border-b border-border dark:border-slate-800">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Monitor Their Posts</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    {!pmTenantEnabled
+                      ? 'Off tenant-wide - enable in Settings → Chat → LinkedIn'
+                      : pmPaused
+                        ? 'Paused for this lead'
+                        : 'On - engages new posts'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!pmPaused}
+                onClick={togglePostMonitoring}
+                disabled={pmPaused === null || pmSaving}
+                className={cn(
+                  'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
+                  !pmPaused ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700',
+                  pmSaving && 'opacity-60'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-4 w-4 mt-0.5 ml-0.5 rounded-full bg-white transition-transform',
+                    !pmPaused && 'translate-x-4'
+                  )}
+                />
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+              Pause to stop auto like/comment on this lead&apos;s new posts. Follow-ups and replies are unaffected.
+            </p>
+          </div>
+        )}
+
         {/* Tabs: Assignment | Notes | Internal */}
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="px-4 py-4">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="assignment" className="text-xs">
-              <UserCheck className="w-3 h-3 mr-1" />
-              Assignment
+        <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="px-2 py-3">
+          <TabsList className="flex items-center justify-between w-full h-11 p-1 rounded-full bg-slate-100 dark:bg-[#162238] border border-slate-200/80 dark:border-slate-800/80 gap-1">
+            <TabsTrigger
+              value="assignment"
+              className="h-full rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#24344d] dark:data-[state=active]:text-white transition-all border border-transparent px-3 py-1 flex items-center justify-center gap-1.5 flex-auto"
+            >
+              <UserCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>Assignment</span>
             </TabsTrigger>
-            <TabsTrigger value="notes" className="text-xs">
-              <StickyNote className="w-3 h-3 mr-1" />
-              Notes
+            <TabsTrigger
+              value="notes"
+              className="h-full rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#24344d] dark:data-[state=active]:text-white transition-all border border-transparent px-3 py-1 flex items-center justify-center gap-1.5 flex-auto"
+            >
+              <Tag className="w-3.5 h-3.5 shrink-0" />
+              <span>Notes</span>
             </TabsTrigger>
-            <TabsTrigger value="internal" className="text-xs">
-              Internal
+            <TabsTrigger
+              value="internal"
+              className="h-full rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#24344d] dark:data-[state=active]:text-white transition-all border border-transparent px-3 py-1 flex items-center justify-center gap-1.5 flex-auto"
+            >
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              <span>Internal</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Assignment */}
           <TabsContent value="assignment" className="pt-3">
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-[11px] text-amber-800">
-                  <p className="font-semibold mb-0.5">Assignment for LinkedIn — coming soon</p>
-                  <p className="text-amber-700">
+            <div className="rounded-xl border border-amber-500/20 dark:border-amber-500/20 bg-amber-500/[0.06] dark:bg-amber-500/10 p-3.5 backdrop-blur-sm transition-colors">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-500/90 dark:text-amber-400/90 flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    Assignment for LinkedIn - coming soon
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-400">
                     Per-conversation assignment for LinkedIn requires the
-                    <code className="mx-1 px-1 rounded bg-amber-100">/api/threads/…?channel=linkedin</code>
+                    <code className="mx-1 px-1.5 py-0.5 rounded bg-amber-300/[0.08] dark:bg-amber-950/[0.12] text-amber-800/80 dark:text-amber-300/80 font-mono text-[10px]">
+                      /api/threads/…?channel=linkedin
+                    </code>
                     endpoint. Available now for WhatsApp; LinkedIn parity is queued.
                   </p>
                 </div>
@@ -587,6 +761,12 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
                 rows={3}
                 className="text-xs resize-none"
               />
+              {noteError && (
+                <p className="flex items-start gap-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                  <span>{noteError} Your note is still here — try again.</span>
+                </p>
+              )}
               <div className="flex justify-end">
                 <Button
                   size="sm"
@@ -601,12 +781,12 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             </div>
             <div className="space-y-2">
               {notes.length === 0 && (
-                <p className="text-[11px] text-slate-400 text-center py-2">No notes yet.</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">No notes yet.</p>
               )}
               {notes.map(n => (
-                <div key={n.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-700 whitespace-pre-wrap">{n.content}</p>
-                  <p className="mt-1 text-[10px] text-slate-400">
+                <div key={n.id} className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{n.content}</p>
+                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
                     {n.author_name ? `${n.author_name} · ` : ''}
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                   </p>
@@ -615,9 +795,9 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
             </div>
           </TabsContent>
 
-          {/* Internal comments — placeholder */}
+          {/* Internal comments - placeholder */}
           <TabsContent value="internal" className="pt-3">
-            <p className="text-[11px] text-slate-400 text-center py-3">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-3">
               Internal comments coming soon.
             </p>
           </TabsContent>
@@ -632,8 +812,8 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2 text-xs">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-slate-700 text-right">{value}</span>
+      <span className="text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-slate-700 dark:text-slate-300 text-right">{value}</span>
     </div>
   );
 }

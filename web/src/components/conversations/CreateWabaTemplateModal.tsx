@@ -8,6 +8,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
@@ -145,7 +148,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     setHeaderMediaHandle('');
     setMediaFileName(file.name);
     try {
-      // Read file as base64 and send as JSON — avoids multipart proxy issues
+      // Read file as base64 and send as JSON - avoids multipart proxy issues
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -323,19 +326,19 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-col items-start gap-1">
           <DialogTitle className="flex items-center gap-2">
             Create WhatsApp Template
-            <Badge variant="outline" className="text-[10px]">WABA</Badge>
+            <Badge variant="outline" className="hidden sm:inline-flex text-[10px] border-zinc-200 dark:border-zinc-800 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">WABA</Badge>
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Templates must be approved by Meta before use. Approval usually takes a few minutes.
           </p>
         </DialogHeader>
 
         {/* Tab bar */}
-        <div className="flex border-b px-6">
+        <div className="flex border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6">
           {(['build', 'preview'] as const).map(tab => (
             <button
               key={tab}
@@ -343,8 +346,8 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
               className={cn(
                 'py-2.5 px-4 text-sm font-medium border-b-2 transition-colors capitalize',
                 activeTab === tab
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-zinc-800 dark:border-zinc-200 text-zinc-900 dark:text-zinc-100 font-semibold'
+                  : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
               )}
             >
               {tab === 'preview' ? <><Eye className="w-3.5 h-3.5 inline mr-1.5" />Preview</> : 'Builder'}
@@ -352,17 +355,19 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 bg-white dark:bg-zinc-900">
 
           {/* ── Result banner ── */}
           {result && (
             <div className={cn(
               'flex items-start gap-3 p-3 rounded-lg border text-sm',
-              result.success ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'
+              result.success
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+                : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
             )}>
               {result.success
-                ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-green-600" />
-                : <AlertCircle  className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />}
+                ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                : <AlertCircle  className="w-4 h-4 mt-0.5 shrink-0 text-red-600 dark:text-red-400" />}
               <p>{result.message}</p>
               {result.success && (
                 <button onClick={handleClose} className="ml-auto shrink-0"><X className="w-4 h-4" /></button>
@@ -374,7 +379,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
             <>
               {/* ── Basic info ── */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basic Info</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Basic Info</h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -383,21 +388,30 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                       placeholder="my_template_name"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                     />
                     {name && safeName !== name && (
-                      <p className="text-[10px] text-amber-600">Will be saved as: <strong>{safeName}</strong></p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400">Will be saved as: <strong>{safeName}</strong></p>
                     )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Language <span className="text-red-500">*</span></label>
-                    <select
-                      value={language}
-                      onChange={e => setLanguage(e.target.value)}
-                      className="w-full h-8 px-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                    >
-                      {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-                    </select>
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger className="w-full h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100">
+                        {LANGUAGES.map(l => (
+                          <SelectItem
+                            key={l.code}
+                            value={l.code}
+                            className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-700 dark:focus:text-zinc-100 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-emerald-600 dark:data-[state=checked]:text-zinc-950 data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:text-zinc-950 transition-colors"
+                          >
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -412,12 +426,12 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         className={cn(
                           'p-2.5 rounded-lg border text-left transition-colors',
                           category === c.value
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                            ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 font-medium'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                         )}
                       >
                         <p className="text-xs font-semibold">{c.label}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{c.desc}</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">{c.desc}</p>
                       </button>
                     ))}
                   </div>
@@ -426,7 +440,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
 
               {/* ── Header ── */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Header <span className="text-muted-foreground font-normal">(optional)</span></h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Header <span className="text-zinc-400 dark:text-zinc-500 font-normal">(optional)</span></h3>
 
                 <div className="flex gap-1.5 flex-wrap">
                   {HEADER_FORMATS.map(f => (
@@ -437,8 +451,8 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                       className={cn(
                         'px-3 py-1.5 rounded-full border text-xs font-medium transition-colors',
                         headerFmt === f.value
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border text-muted-foreground hover:border-primary/50'
+                          ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 font-semibold'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200'
                       )}
                     >
                       {f.label}
@@ -452,16 +466,16 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                       placeholder="Header text (use {{1}} for a variable)"
                       value={headerText}
                       onChange={e => setHeaderText(e.target.value)}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                     />
                     {headerTextVars.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground">Example value for <strong>{'{{1}}'}</strong> (required by Meta)</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Example value for <strong>{'{{1}}'}</strong> (required by Meta)</p>
                         <Input
                           placeholder="e.g. John"
                           value={headerVarExample}
                           onChange={e => setHeaderVarExample(e.target.value)}
-                          className="h-8 text-sm"
+                          className="h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                         />
                       </div>
                     )}
@@ -492,8 +506,8 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         className={cn(
                           'flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors',
                           uploadStatus === 'uploading'
-                            ? 'border-border text-muted-foreground cursor-not-allowed'
-                            : 'border-primary text-primary hover:bg-primary/5'
+                            ? 'border-zinc-200 dark:border-zinc-800 text-zinc-400 cursor-not-allowed'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                         )}
                       >
                         {uploadStatus === 'uploading'
@@ -503,7 +517,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                       </button>
 
                       {uploadStatus === 'done' && mediaFileName && (
-                        <div className="flex items-center gap-1.5 text-xs text-green-700">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
                           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                           <FileIcon className="w-3 h-3 shrink-0" />
                           <span className="truncate max-w-[180px]">{mediaFileName}</span>
@@ -512,13 +526,13 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                     </div>
 
                     {uploadStatus === 'error' && (
-                      <div className="flex items-center gap-1.5 p-2 rounded bg-red-50 border border-red-200 text-xs text-red-700">
+                      <div className="flex items-center gap-1.5 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         {uploadError}
                       </div>
                     )}
 
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
                       File is uploaded to Meta and used as the sample during approval.
                       {headerFmt === 'IMAGE' && ' Accepted: JPG, PNG, WebP.'}
                       {headerFmt === 'VIDEO' && ' Accepted: MP4, 3GP.'}
@@ -531,13 +545,13 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
               {/* ── Body ── */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                     Body <span className="text-red-500">*</span>
                   </h3>
                   <button
                     type="button"
                     onClick={e => insertBodyVar((e.currentTarget.closest('section')?.querySelector('textarea') as HTMLTextAreaElement) ?? null)}
-                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                    className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline font-medium"
                   >
                     <Plus className="w-3 h-3" /> Add variable
                   </button>
@@ -548,13 +562,13 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                   placeholder="Hi {{1}}, your appointment on {{2}} is confirmed."
                   value={bodyText}
                   onChange={e => setBodyText(e.target.value)}
-                  className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                  className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 resize-none"
                 />
 
                 {/* Variable density warning */}
                 {varDensityWarning && (
-                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                     {varDensityWarning}
                   </div>
                 )}
@@ -562,18 +576,18 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                 {/* Example values for each variable */}
                 {bodyVars.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[10px] text-muted-foreground font-medium">
-                      Example values <span className="text-red-500">*</span> — required by Meta for approval
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                      Example values <span className="text-red-500">*</span> - required by Meta for approval
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {bodyVars.map(v => (
                         <div key={v} className="space-y-0.5">
-                          <label className="text-[10px] font-mono text-muted-foreground">{`{{${v}}}`}</label>
+                          <label className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">{`{{${v}}}`}</label>
                           <Input
                             placeholder={`Example for {{${v}}}`}
                             value={bodyExamples[v] || ''}
                             onChange={e => setBodyExamples(prev => ({ ...prev, [v]: e.target.value }))}
-                            className="h-7 text-xs"
+                            className="h-7 text-xs bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                           />
                         </div>
                       ))}
@@ -584,26 +598,26 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
 
               {/* ── Footer ── */}
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Footer <span className="text-muted-foreground font-normal">(optional)</span></h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Footer <span className="text-zinc-400 dark:text-zinc-500 font-normal">(optional)</span></h3>
                 <Input
                   placeholder="e.g. Reply STOP to unsubscribe"
                   value={footerText}
                   onChange={e => setFooterText(e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                 />
               </section>
 
               {/* ── Buttons ── */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Buttons <span className="text-muted-foreground font-normal">(optional, max 3)</span>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Buttons <span className="text-zinc-400 dark:text-zinc-500 font-normal">(optional, max 3)</span>
                   </h3>
                   {buttons.length < 3 && (
                     <button
                       type="button"
                       onClick={addButton}
-                      className="flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline font-medium"
                     >
                       <Plus className="w-3 h-3" /> Add button
                     </button>
@@ -611,24 +625,43 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                 </div>
 
                 {buttons.map((btn) => (
-                  <div key={btn.id} className="p-3 border border-border rounded-lg space-y-2">
+                  <div key={btn.id} className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 rounded-lg space-y-2">
                     <div className="flex items-center gap-2">
-                      <select
+                      <Select
                         value={btn.type}
-                        onChange={e => updateButton(btn.id, { type: e.target.value as ButtonType })}
-                        className="h-7 px-2 border border-input rounded text-xs bg-background focus:outline-none"
+                        onValueChange={val => updateButton(btn.id, { type: val as ButtonType })}
                       >
-                        <option value="QUICK_REPLY">Quick Reply</option>
-                        <option value="URL">URL</option>
-                        <option value="PHONE_NUMBER">Phone Number</option>
-                      </select>
+                        <SelectTrigger className="h-7 text-xs w-[130px] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100">
+                          <SelectItem
+                            value="QUICK_REPLY"
+                            className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-700 dark:focus:text-zinc-100 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-emerald-600 dark:data-[state=checked]:text-zinc-950 data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:text-zinc-950 transition-colors"
+                          >
+                            Quick Reply
+                          </SelectItem>
+                          <SelectItem
+                            value="URL"
+                            className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-700 dark:focus:text-zinc-100 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-emerald-600 dark:data-[state=checked]:text-zinc-950 data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:text-zinc-950 transition-colors"
+                          >
+                            URL
+                          </SelectItem>
+                          <SelectItem
+                            value="PHONE_NUMBER"
+                            className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-700 dark:focus:text-zinc-100 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-emerald-600 dark:data-[state=checked]:text-zinc-950 data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:bg-emerald-600 dark:data-[state=checked]:focus:text-zinc-950 transition-colors"
+                          >
+                            Phone Number
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Input
                         placeholder="Button label"
                         value={btn.text}
                         onChange={e => updateButton(btn.id, { text: e.target.value })}
-                        className="flex-1 h-7 text-xs"
+                        className="flex-1 h-7 text-xs bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                       />
-                      <button type="button" onClick={() => removeButton(btn.id)} className="text-muted-foreground hover:text-destructive">
+                      <button type="button" onClick={() => removeButton(btn.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -638,7 +671,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         placeholder="https://example.com/{{1}}"
                         value={btn.url}
                         onChange={e => updateButton(btn.id, { url: e.target.value })}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                       />
                     )}
                     {btn.type === 'PHONE_NUMBER' && (
@@ -646,7 +679,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         placeholder="+971501234567"
                         value={btn.phone}
                         onChange={e => updateButton(btn.id, { phone: e.target.value })}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                       />
                     )}
                   </div>
@@ -658,19 +691,19 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
             <div className="space-y-4">
               <div className="max-w-xs mx-auto">
                 {/* Phone mock */}
-                <div className="bg-[#e5ddd5] dark:bg-[#1a202c] rounded-2xl p-4 min-h-[200px]">
-                  <div className="bg-white dark:bg-[#0b142e] rounded-xl shadow-sm overflow-hidden max-w-[280px] mx-auto border dark:border-[#262831]">
+                <div className="bg-zinc-200/60 dark:bg-zinc-900/60 rounded-2xl p-4 min-h-[200px]">
+                  <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm overflow-hidden max-w-[280px] mx-auto border border-zinc-200/80 dark:border-zinc-800">
                     {/* Header */}
                     {headerFmt !== 'NONE' && (
-                      <div className="bg-slate-100 dark:bg-[#151f38] px-3 py-2 border-b border-slate-200 dark:border-[#262831]">
+                      <div className="bg-zinc-50 dark:bg-zinc-800 px-3 py-2 border-b border-zinc-200/60 dark:border-zinc-800">
                         {headerFmt === 'TEXT' ? (
-                          <p className="text-sm font-semibold text-slate-800 dark:text-white">{previewHeader}</p>
+                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{previewHeader}</p>
                         ) : (
-                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-300 text-xs">
+                          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs">
                             <span className="uppercase font-mono">{headerFmt}</span>
                             {uploadStatus === 'done' && mediaFileName
-                              ? <span className="text-green-600 dark:text-green-400 truncate max-w-[160px]">{mediaFileName}</span>
-                              : <span className="text-amber-500 dark:text-amber-400">Upload required</span>}
+                              ? <span className="text-emerald-600 dark:text-emerald-400 truncate max-w-[160px]">{mediaFileName}</span>
+                              : <span className="text-amber-600 dark:text-amber-400">Upload required</span>}
                           </div>
                         )}
                       </div>
@@ -678,23 +711,23 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
 
                     {/* Body */}
                     <div className="px-3 py-3">
-                      <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                        {previewBody || <span className="text-slate-400 dark:text-slate-300 italic">Body text appears here...</span>}
+                      <p className="text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
+                        {previewBody || <span className="text-zinc-400 dark:text-zinc-400 italic">Body text appears here...</span>}
                       </p>
                     </div>
 
                     {/* Footer */}
                     {footerText && (
                       <div className="px-3 pb-2">
-                        <p className="text-xs text-slate-400 dark:text-slate-300/70">{footerText}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{footerText}</p>
                       </div>
                     )}
 
                     {/* Buttons */}
                     {buttons.filter(b => b.text).length > 0 && (
-                      <div className="border-t border-slate-100 dark:border-[#262831]">
+                      <div className="border-t border-zinc-100 dark:border-zinc-800">
                         {buttons.filter(b => b.text).map(b => (
-                          <div key={b.id} className="px-3 py-2 text-center text-xs text-blue-600 dark:text-blue-400 font-medium border-b border-slate-100 dark:border-[#262831] last:border-0">
+                          <div key={b.id} className="px-3 py-2 text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium border-b border-zinc-100 dark:border-zinc-800 last:border-0">
                             {b.text}
                           </div>
                         ))}
@@ -704,27 +737,31 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                 </div>
 
                 {/* Meta submission summary */}
-                <div className="mt-4 p-3 bg-slate-50 dark:bg-[#1a2a43] rounded-lg border border-slate-200 dark:border-[#262831] space-y-1 text-xs">
-                  <p><span className="text-slate-500 dark:text-slate-300">Name:</span> <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{safeName || '—'}</span></p>
-                  <p><span className="text-slate-500 dark:text-slate-300">Language:</span> <span className="text-slate-800 dark:text-slate-200">{LANGUAGES.find(l => l.code === language)?.label}</span></p>
-                  <p><span className="text-slate-500 dark:text-slate-300">Category:</span> <span className="text-slate-800 dark:text-slate-200">{category}</span></p>
-                  <p><span className="text-slate-500 dark:text-slate-300">Components:</span> <span className="text-slate-800 dark:text-slate-200">{buildComponents().map((c: any) => c.type).join(', ') || '—'}</span></p>
+                <div className="mt-4 p-3 bg-zinc-50 dark:bg-zinc-900/40 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
+                  <p><span className="text-zinc-500 dark:text-zinc-400">Name:</span> <span className="font-mono font-semibold text-zinc-800 dark:text-zinc-100">{safeName || '-'}</span></p>
+                  <p><span className="text-zinc-500 dark:text-zinc-400">Language:</span> <span className="text-zinc-800 dark:text-zinc-100">{LANGUAGES.find(l => l.code === language)?.label}</span></p>
+                  <p><span className="text-zinc-500 dark:text-zinc-400">Category:</span> <span className="text-zinc-800 dark:text-zinc-100">{category}</span></p>
+                  <p><span className="text-zinc-500 dark:text-zinc-400">Components:</span> <span className="text-zinc-800 dark:text-zinc-100">{buildComponents().map((c: any) => c.type).join(', ') || '-'}</span></p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t">
+        <DialogFooter className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           {!result?.success && (
-            <Button onClick={handleSubmit} disabled={!canSubmit || submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit || submitting}
+              className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-medium shadow-sm transition-colors"
+            >
               {submitting
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
                 : <><Send className="w-4 h-4 mr-2" /> Submit to Meta</>}
             </Button>
           )}
           {result?.success && (
-            <Button variant="outline" onClick={handleClose}>Close</Button>
+            <Button variant="outline" onClick={handleClose} className="border-zinc-200 dark:border-zinc-800">Close</Button>
           )}
         </DialogFooter>
       </DialogContent>

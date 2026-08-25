@@ -14,11 +14,11 @@ export interface LadsBarState {
   h: number;   // height in SVG units
   dy: number;   // vertical offset (negative = up)
   dx: number;   // horizontal offset
-  opacity: number;   // 0–1
+  opacity: number;   // 0-1
 }
 
 export interface LadsLiquidState {
-  level: number;   // 0–1 fill fraction
+  level: number;   // 0-1 fill fraction
   amp: number;   // wave amplitude in SVG units
   t: number;   // elapsed time (drives wave phase)
 }
@@ -26,10 +26,10 @@ export interface LadsLiquidState {
 export interface UseAgentAudioVisualizerLadsResult {
   /** Animated state for each of the three dots/bars. Index 0 = left, 2 = right. */
   bars: [LadsBarState, LadsBarState, LadsBarState];
-  /** Liquid fill animation values — only meaningful during connecting/initializing. */
+  /** Liquid fill animation values - only meaningful during connecting/initializing. */
   liquid: LadsLiquidState;
   /**
-   * Cross-fade value (0–1).
+   * Cross-fade value (0-1).
    * 0 = dot/bar layer fully visible.
    * 1 = liquid layer fully visible.
    * Smoothly interpolates between the two modes.
@@ -78,12 +78,12 @@ function isLiquidState(s: AgentState | undefined) {
  *
  * | State               | Animation                                             |
  * |---------------------|-------------------------------------------------------|
- * | idle                | Dots sway gently left/right — calm float              |
+ * | idle                | Dots sway gently left/right - calm float              |
  * | disconnected        | Slow glitch: drift + occasional snap + opacity flicker|
  * | connecting          | Liquid fills logo vessel, moderate churn              |
  * | initializing        | Liquid fills logo vessel, slightly more turbulent     |
  * | listening           | Sequential left→right vertical bounce                 |
- * | thinking            | Newton's cradle — outer dots alternate, middle rests  |
+ * | thinking            | Newton's cradle - outer dots alternate, middle rests  |
  * | speaking            | Three bars driven by low/mid/high audio frequency bands |
  */
 export function useAgentAudioVisualizerLads(
@@ -114,7 +114,7 @@ export function useAgentAudioVisualizerLads(
   stRef.current = state;
 
   // ── 3-band audio volume from the agent's audio track ────────────────────────
-  // Bands map to: [0] low 20–300 Hz, [1] mid 300–3 kHz, [2] high 3–16 kHz
+  // Bands map to: [0] low 20-300 Hz, [1] mid 300-3 kHz, [2] high 3-16 kHz
   const bandVolumes = useMultibandTrackVolume(
     audioTrack as LocalAudioTrack | RemoteAudioTrack | undefined,
     { bands: 3 },
@@ -167,7 +167,7 @@ export function useAgentAudioVisualizerLads(
 
           case 'connecting':
           case 'initializing':
-            // Static — liquid layer handles the visual
+            // Static - liquid layer handles the visual
             break;
 
           case 'disconnected':
@@ -209,7 +209,7 @@ export function useAgentAudioVisualizerLads(
             break;
 
           case 'speaking': {
-            // Bar height driven by frequency band volume (0–1)
+            // Bar height driven by frequency band volume (0-1)
             // Left dot (0) uses band 0 (low)
             // Middle dot (1) uses band 2 (high) - originally 1
             // Right dot (2) uses band 1 (mid) - originally 2
@@ -229,7 +229,7 @@ export function useAgentAudioVisualizerLads(
             break;
         }
 
-        // Apply lerp — disconnected uses no lerp on dx for instant jitter feel;
+        // Apply lerp - disconnected uses no lerp on dx for instant jitter feel;
         // thinking uses faster tracking so the cradle snap feels physical.
         if (st === 'disconnected') {
           dxRef.current[i] = tgtDx;

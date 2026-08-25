@@ -360,7 +360,7 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
             <span className="text-xs font-medium text-slate-500 capitalize">{meeting.meeting_type.replace('_', ' ')}</span>
             <span className="text-slate-300">·</span>
             <span className="text-xs font-medium text-slate-500">
-              {meeting.start_time} – {meeting.end_time}
+              {meeting.start_time} - {meeting.end_time}
             </span>
           </div>
           <Badge className={`text-[10px] font-semibold border shrink-0 ${cfg.color}`}>
@@ -830,7 +830,7 @@ export default function CommunityCalendar({ tenantId, onBack }: CommunityCalenda
                   <span className="text-slate-400">Min notice</span>
                   <span className="font-medium">{settings.min_notice_hours}h before</span>
                   <span className="text-slate-400">Working hours</span>
-                  <span className="font-medium">{settings.working_hours_start} – {settings.working_hours_end}</span>
+                  <span className="font-medium">{settings.working_hours_start} - {settings.working_hours_end}</span>
                   <span className="text-slate-400">Timezone</span>
                   <span className="font-medium">{settings.timezone}</span>
                 </div>

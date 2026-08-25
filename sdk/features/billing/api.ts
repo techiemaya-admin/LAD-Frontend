@@ -158,7 +158,7 @@ export async function rechargeWallet(params: {
   return response.data;
 }
 /**
- * Recurring billing — monthly subscription + low-balance auto-recharge
+ * Recurring billing - monthly subscription + low-balance auto-recharge
  */
 export interface RecurringPlan {
   kind: 'monthly' | 'auto_recharge';
@@ -226,7 +226,7 @@ export async function listTransactions(params?: {
   limit?: number;
   offset?: number;
 }): Promise<any> {
-  // The backend reads `fromDate`/`toDate` query params (not `from`/`to`), so map them —
+  // The backend reads `fromDate`/`toDate` query params (not `from`/`to`), so map them  - 
   // otherwise the date-range filter is silently ignored.
   const { from, to, ...rest } = params || {};
   const query: Record<string, any> = { ...rest };
@@ -254,7 +254,7 @@ export async function listTransactions(params?: {
       balanceBefore: balanceBeforeUsd,
       balanceAfter: balanceAfterUsd,
       // Credits equivalents (converted using plan rate)
-      // Ledger amounts are already CREDIT-denominated — do NOT multiply by creditsPerDollar.
+      // Ledger amounts are already CREDIT-denominated - do NOT multiply by creditsPerDollar.
       credits_amount: Math.round(Math.abs(amountUsd) * 100) / 100,
       credits_balance_after: balanceAfterUsd != null ? Math.round(balanceAfterUsd * 100) / 100 : null,
       credits_balance_before: balanceBeforeUsd != null ? Math.round(balanceBeforeUsd * 100) / 100 : null,

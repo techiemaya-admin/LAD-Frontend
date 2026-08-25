@@ -6,7 +6,7 @@ import { useTaskHealth } from '@lad/frontend-features/lad-monitor';
 import { StatCard } from '../components/StatCard';
 
 function relativeTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (secs < 0) return 'in future';
   if (secs < 60) return `${secs}s ago`;
@@ -42,7 +42,7 @@ export default function MonitorTasksPage() {
       {stuckAlert ? (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
           <XCircle className="h-4 w-4" />
-          {s!.stuck} stuck task(s) — overdue past {data!.graceMinutes}m and never executed. The Cloud Tasks worker may be stalled.
+          {s!.stuck} stuck task(s) - overdue past {data!.graceMinutes}m and never executed. The Cloud Tasks worker may be stalled.
         </div>
       ) : null}
 
@@ -93,7 +93,7 @@ export default function MonitorTasksPage() {
                 </div>
               ) : null}
               <p className="mt-2 text-xs text-gray-400">
-                Conversational follow-ups (per-tenant <code className="font-mono">followup_schedule</code>). Failed counts need the tenant&apos;s table to have <code className="font-mono">last_error</code> — older tenants may report 0.
+                Conversational follow-ups (per-tenant <code className="font-mono">followup_schedule</code>). Failed counts need the tenant&apos;s table to have <code className="font-mono">last_error</code> - older tenants may report 0.
               </p>
             </div>
           ) : null}
@@ -118,7 +118,7 @@ export default function MonitorTasksPage() {
                   data.problems.map((p) => (
                     <tr key={p.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-800/40">
                       <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{p.tenantName || p.tenantId}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{p.bookingType || '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{p.bookingType || '-'}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                           p.problem === 'dead_letter'
@@ -132,7 +132,7 @@ export default function MonitorTasksPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{p.executionAttempts}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-500">{relativeTime(p.taskScheduledAt)}</td>
-                      <td className="px-4 py-3 max-w-xs truncate text-gray-500" title={p.lastError || ''}>{p.lastError || '—'}</td>
+                      <td className="px-4 py-3 max-w-xs truncate text-gray-500" title={p.lastError || ''}>{p.lastError || '-'}</td>
                     </tr>
                   ))
                 ) : (

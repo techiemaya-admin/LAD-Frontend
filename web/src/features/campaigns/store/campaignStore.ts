@@ -24,6 +24,7 @@ const defaultStepData: Record<StepType, Partial<StepData>> = {
   linkedin_follow: { title: 'LinkedIn Follow' },
   linkedin_connect: { title: 'LinkedIn Connection Request', message: 'Hi {{first_name}}, I\'d like to connect with you.' },
   linkedin_message: { title: 'LinkedIn Message', message: 'Hi {{first_name}}, I noticed...' },
+  linkedin_inmail: { title: 'LinkedIn InMail', message: 'Hi {{first_name}}, I came across your profile...' },
   linkedin_scrape_profile: { title: 'Scrape LinkedIn Profile', linkedinScrapeFields: ['name', 'title', 'company', 'location'] },
   linkedin_company_search: { title: 'LinkedIn Company Search', linkedinCompanyName: '{{company_name}}' },
   linkedin_employee_list: { title: 'Get Employee List', linkedinCompanyUrl: '' },
@@ -48,8 +49,27 @@ const defaultStepData: Record<StepType, Partial<StepData>> = {
   media_generation: { title: 'Media generation' },
   followup_sequence: { title: 'Follow-up sequence' },
   analytics_report: { title: 'Analytics report' },
+  export_results: { title: 'Export results' },
+  linkedin_post: { title: 'LinkedIn auto-post' },
+  instagram_post: { title: 'Instagram auto-post' },
+  human_task: { title: 'Human task' },
+  lead_report: { title: 'Audit report' },
+  landing_page: { title: 'Landing page' },
+  linkedin_content: { title: 'LinkedIn content' },
+  post_approval: { title: 'Approval' },
+  web_scrape: { title: 'Webpage scraper' },
+  web_research: { title: 'Web research' },
+  lead_score: { title: 'Lead scoring' },
+  split_test: { title: 'A/B split test' },
+  set_field: { title: 'Set field' },
+  http_request: { title: 'HTTP request' },
   zoho_update: { title: 'Update Zoho record' },
   switch: { title: 'Multi-condition' },
+  ai_parse: { title: 'AI Agent' },
+  whatsapp_broadcast: { title: 'WhatsApp broadcast' },
+  email_broadcast: { title: 'Email broadcast' },
+  mindbody_action: { title: 'MindBody' },
+  data_enrich: { title: 'Enrich contact' },
 };
 export const useCampaignStore = create<CampaignState>((set, get) => ({
   name: '',
@@ -318,4 +338,4 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       selectedNodeId: null,
     });
   },
-}));
+}));

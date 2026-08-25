@@ -12,7 +12,7 @@ export default function OnboardingPage() {
   // the saved chat + checkpoint selections from ?campaignId and updates the same
   // campaign on save. This legacy workflow editor kept receiving stale
   // "Edit Campaign" links/bookmarks and opened a disconnected 4-step editor
-  // instead — redirect any campaignId deep-link to the real edit experience.
+  // instead - redirect any campaignId deep-link to the real edit experience.
   useEffect(() => {
     if (campaignId) {
       router.replace(`/onboarding/advanced-search-ai?campaignId=${campaignId}`);

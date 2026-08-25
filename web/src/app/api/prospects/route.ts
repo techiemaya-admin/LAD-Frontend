@@ -1,5 +1,5 @@
 /**
- * GET /api/prospects — list prospects for the current tenant.
+ * GET /api/prospects - list prospects for the current tenant.
  */
 import { NextRequest } from 'next/server';
 

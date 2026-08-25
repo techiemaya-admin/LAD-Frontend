@@ -104,7 +104,7 @@ class CommunityROIApiClient {
         credentials: 'include',
       });
     } catch (networkError) {
-      // True network failure (offline, DNS, CORS, etc.) — always log
+      // True network failure (offline, DNS, CORS, etc.) - always log
       console.error('[CommunityROI API] Network error:', networkError);
       throw networkError;
     }

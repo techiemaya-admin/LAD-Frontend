@@ -9,7 +9,7 @@
  * but a server-side fetch works fine because LinkedIn doesn't gate image
  * downloads at the source.
  *
- * Security: only allowlisted hosts may be proxied to prevent SSRF — external
+ * Security: only allowlisted hosts may be proxied to prevent SSRF - external
  * users could otherwise feed arbitrary internal URLs through our server.
  */
 
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const upstream = await fetch(parsed.toString(), {
-      // Some CDNs gate on a User-Agent — send a normal one
+      // Some CDNs gate on a User-Agent - send a normal one
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; LAD-Avatar-Proxy/1.0)',
         Accept: 'image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8',
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         // 1-day browser cache + 1-week CDN cache, with stale-while-revalidate
         // so subsequent loads of the same conversation list are instant.
         'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
-        // Avatars are immutable to a given URL — let the browser keep them
+        // Avatars are immutable to a given URL - let the browser keep them
         // even across reloads as long as the URL hasn't changed.
         'X-Content-Type-Options': 'nosniff',
       },

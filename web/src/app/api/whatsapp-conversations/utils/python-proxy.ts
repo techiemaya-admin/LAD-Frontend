@@ -9,10 +9,11 @@
  * The channel is determined by the `channel` query param or `X-WhatsApp-Channel` header.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveAuthorizedTenantId } from '../../utils/tenant-scope';
 
 // ── Service URL resolvers ───────────────────────────────────────────
 
-/** LAD_backend (Node.js) – everything except personal WhatsApp post-Phase 5 */
+/** LAD_backend (Node.js) - everything except personal WhatsApp post-Phase 5 */
 export function getBackendUrl(): string {
   return (
     process.env.BACKEND_INTERNAL_URL ||
@@ -21,7 +22,7 @@ export function getBackendUrl(): string {
   );
 }
 
-/** LAD-WAPA-Comms (Node.js) – personal WhatsApp via Baileys (Phase 5+) */
+/** LAD-WAPA-Comms (Node.js) - personal WhatsApp via Baileys (Phase 5+) */
 export function getWAPAServiceUrl(): string {
   return (
     process.env.NEXT_PUBLIC_WAPA_SERVICE_URL ||
@@ -31,7 +32,7 @@ export function getWAPAServiceUrl(): string {
   );
 }
 
-/** LAD-WABA-Comms (Python FastAPI) – WhatsApp Business API */
+/** LAD-WABA-Comms (Python FastAPI) - WhatsApp Business API */
 export function getWABAServiceUrl(): string {
   return (
     process.env.NEXT_PUBLIC_WHATSAPP_API_URL ||
@@ -42,25 +43,11 @@ export function getWABAServiceUrl(): string {
   );
 }
 
-/** @deprecated – use channel-based routing; kept for backwards compat */
+/** @deprecated-use channel-based routing; kept for backwards compat */
 export function getWhatsAppServiceUrl(): string {
   return getWABAServiceUrl();
 }
 
-/**
- * Extract tenantId from a JWT token (base64 decode payload, no verification needed
- * since the Python service doesn't verify — it just needs the tenant routing hint).
- */
-function extractTenantIdFromJwt(token: string): string | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return payload.tenantId || payload.tenant_id || payload.organizationId || payload.orgId || null;
-  } catch {
-    return null;
-  }
-}
 
 export async function proxyToPythonService(
   req: NextRequest,
@@ -68,7 +55,7 @@ export async function proxyToPythonService(
   path: string,
 ): Promise<Response> {
   // ── Channel-based routing ──────────────────────────────────────
-  // Read from req.url (raw URL) — nextUrl may cache the original URL even after
+  // Read from req.url (raw URL) - nextUrl may cache the original URL even after
   // a route rewrites it via new NextRequest(modifiedUrl, req).
   const rawUrl = new URL(req.url);
   const channel =
@@ -95,7 +82,7 @@ export async function proxyToPythonService(
     resolvedBaseUrl = getBackendUrl();
     resolvedPath = '/api/linkedin-conversations' + path.replace(/^\/api/, '');
   } else if (channel === 'backend') {
-    // Direct route — no path transformation. Path-aware destination:
+    // Direct route - no path transformation. Path-aware destination:
     //   /api/personal-whatsapp/*  → LAD-WAPA-Comms  (Phase 5+)
     //   anything else             → LAD_backend     (LinkedIn, billing, etc.)
     resolvedBaseUrl = path.startsWith('/api/personal-whatsapp/')
@@ -110,7 +97,7 @@ export async function proxyToPythonService(
 
   const url = new URL(resolvedPath, resolvedBaseUrl);
 
-  // Forward query parameters (except `channel` — consumed by proxy)
+  // Forward query parameters (except `channel` - consumed by proxy)
   req.nextUrl.searchParams.forEach((value, key) => {
     if (key !== 'channel') {
       url.searchParams.set(key, value);
@@ -126,52 +113,40 @@ export async function proxyToPythonService(
   if (debugTraceId) headers['X-Debug-Trace-Id'] = debugTraceId;
   if (debugClientTenant) headers['X-Debug-Client-Tenant'] = debugClientTenant;
 
-  // Forward authorization header if present
+  // Forward the Authorization header, lifting a cookie token into it when the
+  // browser only sent a cookie. Phase 5: WAPA (Node.js) actually verifies the
+  // JWT, so its middleware needs a Bearer token even when auth arrived via cookie.
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
     headers['Authorization'] = authHeader;
-
-    // Extract tenant ID from JWT and forward as X-Tenant-ID header
-    // so the Python service routes to the correct per-tenant database
-    const token = authHeader.replace('Bearer ', '');
-    const tenantId = extractTenantIdFromJwt(token);
-    if (tenantId) {
-      headers['X-Tenant-ID'] = tenantId;
-    }
   } else {
-    // Phase 5: WAPA (Node.js) actually verifies the JWT, unlike the Python WABA
-    // service which trusts X-Tenant-ID. If the browser only sent a cookie, lift
-    // it into the Authorization header so WAPA's JWT middleware accepts it.
     const cookieToken =
       req.cookies.get('access_token')?.value ||
       req.cookies.get('token')?.value;
     if (cookieToken) {
       headers['Authorization'] = `Bearer ${cookieToken}`;
-      const tenantId = extractTenantIdFromJwt(cookieToken);
-      if (tenantId) {
-        headers['X-Tenant-ID'] = tenantId;
-      }
     }
   }
 
-  // Explicit X-Tenant-ID from client takes priority (supports tenant switching)
-  const directTenantId = req.headers.get('x-tenant-id');
-  if (directTenantId) {
-    headers['X-Tenant-ID'] = directTenantId;
-  }
-
-  // Fallback: check cookie token aliases
-  if (!headers['X-Tenant-ID']) {
-    const cookieToken = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
-    if (cookieToken) {
-      const tenantId = extractTenantIdFromJwt(cookieToken);
-      console.warn(`[python-proxy] Extracted tenantId from cookie: ${tenantId}`);
-      if (tenantId) {
-        headers['X-Tenant-ID'] = tenantId;
-      }
-    } else {
-      console.warn('[python-proxy] No access_token/token cookie found');
+  // Tenant scoping. Downstream services scope by X-Tenant-ID (and a few, e.g. the
+  // account DELETE endpoint, read a tenant_id query param), and the Python WABA
+  // service in particular TRUSTS whatever X-Tenant-ID it receives. So this proxy
+  // must never let a caller name a tenant they aren't entitled to: an x-tenant-id
+  // — or tenant_id query param — that differs from the caller's token tenant is
+  // honoured only for the super admin (see utils/tenant-scope). This used to
+  // forward the client header verbatim, letting any authenticated user read any
+  // other tenant's conversations by setting one header.
+  const authorizedTenant = resolveAuthorizedTenantId(req, { logLabel: 'python-proxy' });
+  if (authorizedTenant) {
+    headers['X-Tenant-ID'] = authorizedTenant;
+    // Keep any tenant_id query param in lockstep with the header so it can't be
+    // used as a second override channel for the endpoints that read it.
+    if (url.searchParams.has('tenant_id')) {
+      url.searchParams.set('tenant_id', authorizedTenant);
     }
+  } else {
+    // No resolvable tenant — strip any client-supplied tenant_id so nothing leaks.
+    url.searchParams.delete('tenant_id');
   }
 
   console.warn(`[python-proxy] channel=${channel}, baseUrl=${resolvedBaseUrl}, path=${resolvedPath}, tenant=${headers['X-Tenant-ID'] || 'NONE'}, trace=${debugTraceId || 'none'}`);
@@ -184,7 +159,7 @@ export async function proxyToPythonService(
   // Forward body for POST/PUT/PATCH.
   // Use req.text() rather than req.json()+JSON.stringify() to:
   //   1. Avoid double parse/reserialise overhead (important for large base64 payloads like PDFs)
-  //   2. Prevent silent body loss — req.json() throws on any read error and the old catch
+  //   2. Prevent silent body loss - req.json() throws on any read error and the old catch
   //      block silently forwarded a body-less POST, causing FastAPI 422 on dict params.
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     try {
@@ -194,7 +169,7 @@ export async function proxyToPythonService(
       }
     } catch (bodyErr) {
       console.error(`[python-proxy] Failed to read request body for ${req.method} ${path}:`, bodyErr);
-      // Body could not be read — proceed without it (FastAPI will return its own validation error)
+      // Body could not be read - proceed without it (FastAPI will return its own validation error)
     }
   }
 

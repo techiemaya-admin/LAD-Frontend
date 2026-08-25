@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * EmailBroadcastsSentList — Gmail-styled Sent folder powered by LAD-Email-Comms.
+ * EmailBroadcastsSentList - Gmail-styled Sent folder powered by LAD-Email-Comms.
  *
  * Replaces the side-by-side compose+list panel with a single-column list of
  * rows that match the existing EmailChannelView's Gmail aesthetic:
@@ -13,7 +13,7 @@
  *
  * Compose lives in a dialog triggered from the header button. The send path is
  * the same `useSendBroadcast` mutation used by the (now deprecated) inline
- * EmailBroadcastPanel — once this view ships, the broadcast-test debug route
+ * EmailBroadcastPanel - once this view ships, the broadcast-test debug route
  * and the panel can be removed.
  */
 import { useMemo, useState, useEffect } from 'react';
@@ -70,7 +70,7 @@ function avatarInitials(email: string): string {
   return left.slice(0, 2).toUpperCase();
 }
 
-// Deterministic gradient per sender — matches the rest of EmailChannelView's vibe.
+// Deterministic gradient per sender - matches the rest of EmailChannelView's vibe.
 const AVATAR_GRADIENTS = [
   'from-rose-500 to-pink-600',
   'from-amber-500 to-orange-600',
@@ -136,6 +136,17 @@ function statusBadgeVariant(
   }
 }
 
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case 'running':
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800';
+    case 'queued':
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900/50';
+    default:
+      return '';
+  }
+}
+
 function statusLabel(status: string): string {
   return (
     {
@@ -159,7 +170,7 @@ function RecipientsPill({ run }: { run: BroadcastRunSummary }) {
 
   // Inline label: keep it scannable. Single recipient → just the email.
   // Multiple → "(N recipients)" so the row doesn't get overwhelmed by a long
-  // comma-separated list. Real groups land in Phase 2 — synthesize a name
+  // comma-separated list. Real groups land in Phase 2 - synthesize a name
   // here using metadata.group_name if/when callers start sending it.
   const inlineLabel = useMemo(() => {
     if (run.recipient_count === 1) {
@@ -246,52 +257,113 @@ function BroadcastRow({
         }
       }}
       aria-label={`Open broadcast: ${run.subject || '(no subject)'}`}
-      className="group flex items-center gap-3 px-4 py-2 border-b border-[#f0f0f0] dark:border-white/5 text-sm hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] dark:hover:shadow-[inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(255,255,255,0.06),0_1px_2px_0_rgba(0,0,0,.4)] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group border-b border-[#f0f0f0] dark:border-white/5 text-sm hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] dark:hover:shadow-[inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(255,255,255,0.06),0_1px_2px_0_rgba(0,0,0,.4)] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
-      {/* Avatar — sender initials */}
-      <div
-        className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
-          run.from_email,
-        )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
-        aria-hidden
-      >
-        {avatarInitials(run.from_email)}
+      {/* ── Desktop view (>= sm) - Original untouched layout ── */}
+      <div className="hidden sm:flex items-center gap-3 px-4 py-2">
+        {/* Avatar - sender initials */}
+        <div
+          className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
+            run.from_email,
+          )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
+          aria-hidden
+        >
+          {avatarInitials(run.from_email)}
+        </div>
+
+        {/* Sender + recipients pill */}
+        <div className="min-w-0 w-44 flex flex-col">
+          <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed]">
+            {run.from_email}
+          </span>
+          <span className="mt-0.5">
+            <RecipientsPill run={run} />
+          </span>
+        </div>
+
+        {/* Subject + counts */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="truncate text-[#202124] dark:text-[#e8eaed]">
+            {run.subject || '(no subject)'}
+          </span>
+          <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0">
+            · {run.sent_count}/{run.recipient_count} sent
+            {run.failed_count > 0 && (
+              <span className="text-destructive ml-1">· {run.failed_count} failed</span>
+            )}
+            {run.unsubscribed_skipped_count > 0 && (
+              <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
+            )}
+          </span>
+        </div>
+
+        {/* Time + status */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge
+            variant={statusBadgeVariant(run.status)}
+            className={statusBadgeClass(run.status)}
+          >
+            {statusLabel(run.status)}
+          </Badge>
+          <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums w-16 text-right">
+            {relativeTime(run.created_at)}
+          </span>
+        </div>
       </div>
 
-      {/* Sender + recipients pill */}
-      <div className="min-w-0 w-44 flex flex-col">
-        <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed]">
-          {run.from_email}
-        </span>
-        <span className="mt-0.5">
-          <RecipientsPill run={run} />
-        </span>
-      </div>
+      {/* ── Mobile view (< sm) - 2-line compact responsive layout ── */}
+      <div className="flex sm:hidden items-start gap-3 px-3 py-2.5">
+        {/* Avatar */}
+        <div
+          className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(
+            run.from_email,
+          )} flex items-center justify-center text-white font-bold text-xs flex-shrink-0 mt-0.5`}
+          aria-hidden
+        >
+          {avatarInitials(run.from_email)}
+        </div>
 
-      {/* Subject + counts */}
-      <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="truncate text-[#202124] dark:text-[#e8eaed]">
-          {run.subject || '(no subject)'}
-        </span>
-        <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0">
-          · {run.sent_count}/{run.recipient_count} sent
-          {run.failed_count > 0 && (
-            <span className="text-destructive ml-1">· {run.failed_count} failed</span>
-          )}
-          {run.unsubscribed_skipped_count > 0 && (
-            <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
-          )}
-        </span>
-      </div>
+        {/* Content container */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          {/* Line 1: Sender (left) & Badge + Date (right) */}
+          <div className="flex items-center justify-between min-w-0">
+            <span className="truncate font-medium text-[#202124] dark:text-[#e8eaed] min-w-0 flex-1">
+              {run.from_email}
+            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+              <Badge
+                variant={statusBadgeVariant(run.status)}
+                className={statusBadgeClass(run.status)}
+              >
+                {statusLabel(run.status)}
+              </Badge>
+              <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums">
+                {relativeTime(run.created_at)}
+              </span>
+            </div>
+          </div>
 
-      {/* Time + status */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <Badge variant={statusBadgeVariant(run.status)}>
-          {statusLabel(run.status)}
-        </Badge>
-        <span className="text-xs text-[#5f6368] dark:text-[#9aa0a6] tabular-nums w-16 text-right">
-          {relativeTime(run.created_at)}
-        </span>
+          {/* Line 2: Subject (left) & Recipients pill + Sent counts (right) */}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="truncate text-[#202124] dark:text-[#e8eaed] min-w-0 flex-1">
+              {run.subject || '(no subject)'}
+            </span>
+            <div className="text-xs text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0 flex items-center gap-1.5 ml-auto">
+              <span className="flex-shrink-0">
+                <RecipientsPill run={run} />
+              </span>
+              <span className="flex-shrink-0 whitespace-nowrap">
+                · {run.sent_count}/{run.recipient_count} sent
+                {run.failed_count > 0 && (
+                  <span className="text-destructive ml-1">· {run.failed_count} failed</span>
+                )}
+                {run.unsubscribed_skipped_count > 0 && (
+                  <span className="ml-1">· {run.unsubscribed_skipped_count} opted out</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -332,7 +404,7 @@ function ComposeBroadcastDialog({
     [accounts],
   );
 
-  // Recipient source — 'manual' (paste-a-list) or 'group' (pick a saved group).
+  // Recipient source - 'manual' (paste-a-list) or 'group' (pick a saved group).
   // The backend enforces exactly-one; the UI mirrors that with a tab-style
   // toggle so it's clear which one will be sent.
   const [mode, setMode] = useState<'manual' | 'group'>('manual');
@@ -361,7 +433,7 @@ function ComposeBroadcastDialog({
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.templates ?? data.data ?? []);
         if (!cancelled) setTemplates(list);
-      } catch { /* non-fatal — picker just stays empty */ }
+      } catch { /* non-fatal - picker just stays empty */ }
     })();
     return () => { cancelled = true; };
   }, [open]);
@@ -453,25 +525,25 @@ function ComposeBroadcastDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-zinc-800 focus:outline-none focus-visible:ring-0 focus:ring-0">
+        <DialogHeader className="flex-col items-start lg:flex-row lg:items-center gap-1 lg:gap-4 mb-6 pr-10 lg:pr-0 pt-6">
           <DialogTitle>New broadcast</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-[13px] sm:text-sm">
             Send the same message to many recipients via a connected Gmail or Outlook account.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-6 px-4 sm:px-8 pb-6">
           <div>
-            <label className="text-sm font-medium">From</label>
+            <label className="text-sm font-medium block mb-1.5">From</label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
+              <SelectTrigger className="border-gray-200 dark:border-input">
                 <SelectValue placeholder="Pick a connected account" />
               </SelectTrigger>
               <SelectContent>
                 {activeAccounts.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    No active accounts — connect Gmail / Outlook in Settings.
+                    No active accounts - connect Gmail / Outlook in Settings.
                   </div>
                 ) : (
                   activeAccounts.map((a) => (
@@ -485,44 +557,44 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Subject</label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to Mr LAD" />
+            <label className="text-sm font-medium block mb-1.5">Subject</label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to Mr LAD" className="border-gray-200 dark:border-input" />
           </div>
 
-          {/* Recipients — tab toggle between manual list and saved group */}
+          {/* Recipients - tab toggle between manual list and saved group */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium">Recipients</label>
               <div
                 role="tablist"
                 aria-label="Recipient source"
-                className="inline-flex items-center rounded-md border border-input p-0.5 text-xs"
+                className="inline-flex items-center rounded-md border border-gray-200 dark:border-input p-0.5 text-xs"
               >
                 <button
                   type="button"
                   role="tab"
                   aria-selected={mode === 'manual'}
                   onClick={() => setMode('manual')}
-                  className={`px-2 py-1 rounded ${
+                  className={`px-2 py-1 rounded transition-colors ${
                     mode === 'manual'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
-                  Manual list
+                  Manual List
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={mode === 'group'}
                   onClick={() => setMode('group')}
-                  className={`px-2 py-1 rounded ${
+                  className={`px-2 py-1 rounded transition-colors ${
                     mode === 'group'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent'
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
-                  From group
+                  From Group
                 </button>
               </div>
             </div>
@@ -534,8 +606,9 @@ function ComposeBroadcastDialog({
                   onChange={(e) => setRecipientsRaw(e.target.value)}
                   rows={3}
                   placeholder={`alice@example.com, "Bob Smith" <bob@example.com>\nor one per line`}
+                  className="border-gray-200 dark:border-input"
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-3 text-xs text-muted-foreground">
                   {recipients.length} parsed. Names in{' '}
                   <code>{'"Name" <email>'}</code> format are picked up too.
                 </p>
@@ -543,7 +616,7 @@ function ComposeBroadcastDialog({
             ) : (
               <>
                 <Select value={groupId} onValueChange={setGroupId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-200 dark:border-input">
                     <SelectValue
                       placeholder={
                         !accountId
@@ -576,7 +649,7 @@ function ComposeBroadcastDialog({
                   </SelectContent>
                 </Select>
                 {selectedGroup && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-3 text-xs text-muted-foreground">
                     Sending to{' '}
                     <span className="font-medium">{selectedGroup.name}</span>{' '}
                     ({selectedGroup.member_count} recipient
@@ -588,11 +661,11 @@ function ComposeBroadcastDialog({
             )}
           </div>
 
-          {/* Start from a saved template — loads its HTML into the editor below */}
+          {/* Start from a saved template - loads its HTML into the editor below */}
           <div>
-            <label className="text-sm font-medium">Template</label>
+            <label className="text-sm font-medium block mb-1.5">Template</label>
             <Select value={templateId} onValueChange={applyTemplate}>
-              <SelectTrigger>
+              <SelectTrigger className="border-gray-200 dark:border-input">
                 <SelectValue placeholder={templates.length ? 'Start from a saved template (optional)' : 'No saved templates yet'} />
               </SelectTrigger>
               <SelectContent>
@@ -610,8 +683,8 @@ function ComposeBroadcastDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Body</label>
-            <div className="mt-1 rounded-lg border border-input bg-muted/20 p-3">
+            <label className="text-sm font-medium block mb-1.5">Body</label>
+            <div className="rounded-lg border border-gray-200 dark:border-input bg-zinc-100 dark:bg-black/20 p-3">
               <DragDropEmailEditor
                 key={editorKey}
                 htmlContent={body}
@@ -619,15 +692,15 @@ function ComposeBroadcastDialog({
                 onContentChange={setBody}
               />
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-3.5 text-xs text-muted-foreground">
               Build the email with blocks (header, image, button, signature…). Use{' '}
-              <code>{'{{first_name}}'}</code> or <code>{'{first_name}'}</code> to personalise —
+              <code>{'{{first_name}}'}</code> or <code>{'{first_name}'}</code> to personalise -
               unknown placeholders are removed before sending.
             </p>
           </div>
 
           {(() => {
-            // Mirrors LAD-Email-Comms quota defaults — warn before the
+            // Mirrors LAD-Email-Comms quota defaults - warn before the
             // orchestrator has to pace/pause a too-big send.
             const safeDaily: Record<string, number> = { google: 400, microsoft: 250, custom_smtp: 1000 };
             const cap = selectedAccount ? (safeDaily[selectedAccount.provider] ?? 1000) : null;
@@ -635,7 +708,7 @@ function ComposeBroadcastDialog({
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 {sendCount} recipients exceeds the safe daily volume for this account
                 (~{cap}/day). Sending is paced and may spread across days to protect your
-                sender reputation — for regular large sends, connect an email service
+                sender reputation - for regular large sends, connect an email service
                 (Brevo / Amazon SES) via Custom SMTP.
               </p>
             ) : null;
@@ -661,7 +734,7 @@ function ComposeBroadcastDialog({
 
 /** "2h 14m" / "34m" / "45s" from seconds. */
 function formatDuration(seconds: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '-';
   const s = Math.round(seconds);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
@@ -715,14 +788,14 @@ function BroadcastPerformancePanel({ stats }: { stats: BroadcastRunStats }) {
       {stats.proxy_opens > 0 && (
         <p className="text-[11px] text-[#5f6368] dark:text-[#9aa0a6] mb-3">
           {stats.proxy_opens} open{stats.proxy_opens === 1 ? '' : 's'} came from mail-client
-          privacy proxies (Apple/Gmail prefetch) — treat open counts as an upper bound.
+          privacy proxies (Apple/Gmail prefetch) - treat open counts as an upper bound.
         </p>
       )}
 
       {stats.repeat_openers.length > 0 && (
         <details className="mb-2 rounded-lg border border-[#e0e0e0] dark:border-[#3c4043]">
           <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-[#202124] dark:text-[#e8eaed]">
-            Repeat openers ({stats.repeat_openers_count}) — most engaged first
+            Repeat openers ({stats.repeat_openers_count}) - most engaged first
           </summary>
           <div className="px-3 pb-2 divide-y divide-[#f0f0f0] dark:divide-white/5">
             {stats.repeat_openers.map((o) => (
@@ -789,9 +862,9 @@ function BroadcastDetailDialog({
   // Detail hook auto-polls while non-terminal (queued/running/paused), so
   // the open dialog updates progress live without any extra wiring.
   const { data, isLoading, error } = useBroadcastRun(runId);
-  // Recipients fetched eagerly while the dialog is open — feeds the "To" list.
+  // Recipients fetched eagerly while the dialog is open - feeds the "To" list.
   const recipients = useBroadcastRecipients(runId, open);
-  // Engagement stats — refreshes every 30s while the dialog is open.
+  // Engagement stats - refreshes every 30s while the dialog is open.
   const stats = useBroadcastStats(runId, open);
 
   const sanitizedHtml = useMemo(() => {
@@ -805,7 +878,7 @@ function BroadcastDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
-        {/* Header — subject + status + close */}
+        {/* Header - subject + status + close */}
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#f0f0f0] dark:border-white/5 flex-row items-start justify-between space-y-0">
           <div className="min-w-0 pr-4">
             <DialogTitle className="text-base font-semibold truncate">
@@ -813,7 +886,10 @@ function BroadcastDetailDialog({
             </DialogTitle>
             {data && (
               <DialogDescription className="mt-1 flex items-center gap-2 text-xs">
-                <Badge variant={statusBadgeVariant(data.status)}>
+                <Badge
+                  variant={statusBadgeVariant(data.status)}
+                  className={statusBadgeClass(data.status)}
+                >
                   {statusLabel(data.status)}
                 </Badge>
                 <span>·</span>
@@ -833,13 +909,6 @@ function BroadcastDetailDialog({
               </DialogDescription>
             )}
           </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            aria-label="Close"
-            className="rounded-full p-1.5 hover:bg-[#f6f8fc] dark:hover:bg-[#3c4043] flex-shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </DialogHeader>
 
         {/* Sender + recipient strip */}
@@ -883,7 +952,7 @@ function BroadcastDetailDialog({
           </div>
         )}
 
-        {/* Body — sanitized HTML render */}
+        {/* Body - sanitized HTML render */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">

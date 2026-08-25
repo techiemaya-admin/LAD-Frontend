@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { apiErrorFromResponse } from '../../../shared/apiError';
 
 const API_BASE = (typeof window !== 'undefined' && window.location.origin) ||
   (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lad-backend-develop-160078175457.us-central1.run.app').replace(/\/+$/, '');
@@ -39,6 +40,18 @@ export interface CampaignCreationState {
   error: string | null;
 }
 
+/**
+ * What `createCampaign` resolves to when the request failed. `apiError` is the
+ * thrown ApiError (status + backend `code`), so a caller can branch on the kind
+ * of failure, e.g. a 409 CAMPAIGN_NAME_TAKEN sends the user back to the name
+ * step instead of showing a dead-end alert.
+ */
+export interface CampaignCreationFailure {
+  success: false;
+  error: string;
+  apiError: unknown;
+}
+
 const initialState: CampaignCreationState = {
   isLoading: false,
   error: null,
@@ -50,9 +63,14 @@ export function useCampaignCreation() {
   /**
    * Create a new campaign.
    * Returns the raw API response: { success, data, id, error, ... }
+   *
+   * On failure it resolves to a CampaignCreationFailure carrying the parsed
+   * ApiError rather than null: the old code threw `Campaign creation failed:
+   * ${statusText}`, which rendered a 409 as "Conflict" and discarded a body that
+   * said exactly which name was taken.
    */
   const createCampaign = useCallback(
-    async (payload: Record<string, any>): Promise<any | null> => {
+    async (payload: Record<string, any>): Promise<any | CampaignCreationFailure> => {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
@@ -66,7 +84,10 @@ export function useCampaignCreation() {
         );
 
         if (!response.ok) {
-          throw new Error(`Campaign creation failed: ${response.statusText}`);
+          throw await apiErrorFromResponse(
+            response,
+            `Campaign creation failed: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
@@ -75,7 +96,7 @@ export function useCampaignCreation() {
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Failed to create campaign';
         setState(prev => ({ ...prev, isLoading: false, error }));
-        return null;
+        return { success: false, error, apiError: err };
       }
     },
     []

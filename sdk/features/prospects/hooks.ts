@@ -1,5 +1,5 @@
 /**
- * Prospects feature — hook re-exports.
+ * Prospects feature - hook re-exports.
  */
 export { useProspect } from './hooks/useProspect';
 export { useProspects } from './hooks/useProspects';

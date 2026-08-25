@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useGoogleEmailStatus
+ * Email Accounts - useGoogleEmailStatus
  * Polls Google OAuth connection status for the current user.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';

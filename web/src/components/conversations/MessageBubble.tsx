@@ -2,10 +2,12 @@ import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
 import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download, MoreVertical, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MessageFeedback } from './MessageFeedback';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/contexts/ThemeContext';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Group sender colours (WhatsApp-style, deterministic per sender) ───────────
 const WA_SENDER_COLORS = ['#d9416a', '#0a7cff', '#e07b00', '#00a884', '#7b61ff', '#c0399f', '#0e8a8a', '#a8662a'];
@@ -258,6 +260,10 @@ interface MessageBubbleProps {
   onToggleStar?: (message: Message) => void;
   searchText?: string;
   isHighlighted?: boolean;
+  /** Enables the thumbs on AI replies. Omitted → feedback is not rendered. */
+  conversationId?: string;
+  /** Existing verdict, so a reload doesn't reset the thumbs. */
+  feedbackRating?: 'like' | 'dislike' | null;
 }
 
 const statusIcons = {
@@ -270,7 +276,7 @@ const statusIcons = {
 
 // ── Avatar components ────────────────────────────────────────────────────────
 
-/** Mr LAD logo — shown for AI-generated messages (theme-aware) */
+/** Mr LAD logo - shown for AI-generated messages (theme-aware) */
 function AiAvatar() {
   const { isDark } = useTheme();
   return (
@@ -282,7 +288,7 @@ function AiAvatar() {
   );
 }
 
-/** Lead avatar — WhatsApp profile pic or first letter of name */
+/** Lead avatar - WhatsApp profile pic or first letter of name */
 function LeadAvatar({ contact }: { contact?: Contact }) {
   const initial = contact?.name ? contact.name.charAt(0).toUpperCase() : 'L';
   return (
@@ -295,7 +301,7 @@ function LeadAvatar({ contact }: { contact?: Contact }) {
   );
 }
 
-/** Forwarded-message avatar — colored initial of the customer the message is from,
+/** Forwarded-message avatar - colored initial of the customer the message is from,
  *  using the same per-sender colour as the bubble's sender label (not the AI logo). */
 function ForwardAvatar({ name }: { name: string }) {
   const initial = name ? name.charAt(0).toUpperCase() : '?';
@@ -310,7 +316,7 @@ function ForwardAvatar({ name }: { name: string }) {
   );
 }
 
-/** Human agent avatar — first letter, clickable to open profile */
+/** Human agent avatar - first letter, clickable to open profile */
 function AgentAvatar({
   name,
   agentId,
@@ -325,7 +331,7 @@ function AgentAvatar({
     <button
       className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-semibold ring-1 ring-violet-200 hover:ring-violet-400 hover:bg-violet-200 transition-all cursor-pointer"
       onClick={() => onClick?.(agentId)}
-      title={`${name || 'Human Agent'} — click to view profile`}
+      title={`${name || 'Human Agent'} - click to view profile`}
       aria-label="Open agent profile"
     >
       {initial}
@@ -412,7 +418,14 @@ export const MessageBubble = memo(function MessageBubble({
   onToggleStar,
   searchText,
   isHighlighted = false,
+  conversationId,
+  feedbackRating = null,
 }: MessageBubbleProps) {
+  // senderName arrives already collapsed to "pushname, else raw number" by the
+  // message mapper, so it is masked here at the render site rather than in the
+  // mapper - keeping bullets out of the message model, where they could reach
+  // search or persistence.
+  const { displayPossiblePhone } = usePhoneMasking();
   const { content, timestamp, isOutgoing, status, sender, role } = message;
   const StatusIcon = statusIcons[status];
 
@@ -476,14 +489,14 @@ export const MessageBubble = memo(function MessageBubble({
           isHighlighted && 'ring-2 ring-amber-500 dark:ring-amber-400 bg-amber-100/40 dark:bg-amber-500/25 scale-[1.02]'
         )}
       >
-        {/* Sender label — group participant or the customer an agent-forward is from.
+        {/* Sender label - group participant or the customer an agent-forward is from.
             (human_agent uses senderName for its avatar instead, so it's excluded.) */}
         {message.senderName && role !== 'human_agent' && (
           <span
             className="text-[12.5px] font-semibold leading-tight mb-0.5 truncate max-w-full"
             style={{ color: senderColor(message.senderName) }}
           >
-            {message.senderName}
+            {displayPossiblePhone(message.senderName)}
           </span>
         )}
         {(onToggleStar || (isOutgoing && onDeleteMessage)) && (
@@ -541,7 +554,7 @@ export const MessageBubble = memo(function MessageBubble({
             </span>
           </div>
         )}
-        {/* Message content — template, media, location, or plain text */}
+        {/* Message content - template, media, location, or plain text */}
         {message.templateName ? (
           <TemplateMessageBubble content={content} templateName={message.templateName} />
         ) : message.mediaId ? (
@@ -601,6 +614,16 @@ export const MessageBubble = memo(function MessageBubble({
             />
           )}
         </div>
+        {/* Only on AI replies: a human agent's own message has nothing to
+            learn from, and the backend rejects rating anything else. */}
+        {isAI && conversationId && (
+          <MessageFeedback
+            conversationId={conversationId}
+            messageId={String(message.id)}
+            content={typeof content === 'string' ? content : ''}
+            initialRating={feedbackRating ?? null}
+          />
+        )}
       </div>
     </div>
   );

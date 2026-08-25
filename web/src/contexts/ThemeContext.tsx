@@ -17,13 +17,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    return savedTheme || 'light';
+    // No saved preference → follow the OS setting, matching the pre-paint
+    // script in layout.tsx so the theme never flips on first load.
+    return savedTheme || 'system';
   });
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === 'undefined') return false;
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = savedTheme || 'light';
+    const initialTheme = savedTheme || 'system';
     return (
       initialTheme === 'dark' ||
       (initialTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)

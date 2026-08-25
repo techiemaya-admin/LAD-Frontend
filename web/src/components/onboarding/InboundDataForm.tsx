@@ -700,7 +700,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                           )}
                           {lead.linkedinProfile && (
                             <span className="inline-flex items-center text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md">
-                              ðŸ”— LinkedIn
+                              ðŸ”- LinkedIn
                             </span>
                           )}
                           {lead.whatsapp && (
@@ -751,7 +751,7 @@ export default function InboundDataForm({ onSubmit, onCancel, isSubmitting = fal
                       <>
                         {counts.linkedin > 0 && (
                           <span className="text-xs bg-white text-blue-700 px-3 py-1.5 rounded-full border border-blue-200 font-medium">
-                            ðŸ”— LinkedIn ({counts.linkedin})
+                            ðŸ”- LinkedIn ({counts.linkedin})
                           </span>
                         )}
                         {counts.email > 0 && (

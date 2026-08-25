@@ -26,7 +26,9 @@ export const campaignKeys = {
   detail: (id: string) => [...campaignKeys.details(), id] as const,
   stats: () => [...campaignKeys.all, 'stats'] as const,
   analytics: (id: string) => [...campaignKeys.all, 'analytics', id] as const,
-  leads: (id: string, filters?: { search?: string }) => [...campaignKeys.all, 'leads', id, filters] as const,
+  // `filters` must include the engagement filter - it changes which rows the
+  // server returns, so it has to be part of the cache key.
+  leads: (id: string, filters?: CampaignLeadFilters) => [...campaignKeys.all, 'leads', id, filters] as const,
   leadSummary: (campaignId: string, leadId: string) => [...campaignKeys.all, 'leadSummary', campaignId, leadId] as const,
   activityFeed: (campaignId: string, filters?: { limit?: number; offset?: number; platform?: string; actionType?: string; status?: string }) =>
     [...campaignKeys.all, 'activityFeed', campaignId, filters] as const,
@@ -116,7 +118,7 @@ export async function updateCampaign(
   campaignId: string,
   data: UpdateCampaignRequest
 ): Promise<Campaign> {
-  // Backend registers PATCH /api/campaigns/:id (not PUT) — sending PUT 404s.
+  // Backend registers PATCH /api/campaigns/:id (not PUT) - sending PUT 404s.
   const response = await apiClient.patch<{ data: Campaign }>(`/api/campaigns/${campaignId}`, data);
   return response.data.data;
 }
@@ -125,7 +127,7 @@ export async function updateCampaign(
  * Replace a campaign's workflow steps (destructive replace on the backend:
  * deletes existing steps, then bulk-creates the provided ones).
  *
- * IMPORTANT: updateCampaign (PATCH /:id) only updates the campaign row — it does
+ * IMPORTANT: updateCampaign (PATCH /:id) only updates the campaign row - it does
  * NOT persist steps. Editing a campaign's workflow must call this separately, or
  * the steps silently don't save (the campaign shows "No actions").
  */
@@ -266,17 +268,39 @@ export const getCampaignActivityFeedOptions = (
 /**
  * Get campaign leads
  */
+export type CampaignLeadFilter = 'all' | 'sent' | 'connected' | 'replied';
+
+export interface CampaignLeadFilters {
+  search?: string;
+  /**
+   * Engagement stage. Resolved SERVER-SIDE from campaign_analytics using the
+   * same definitions as the analytics stat cards, so the list always agrees
+   * with the card it was reached from. Do not re-filter the result client-side.
+   */
+  filter?: CampaignLeadFilter;
+  limit?: number;
+}
+
+export interface CampaignLeadsResult {
+  leads: CampaignLead[];
+  /** Leads matching the filters, ignoring pagination. */
+  total: number;
+}
+
 export async function getCampaignLeads(
   campaignId: string,
-  filters?: { search?: string }
-): Promise<CampaignLead[]> {
+  filters?: CampaignLeadFilters
+): Promise<CampaignLeadsResult> {
   const params: Record<string, string> = {};
   if (filters?.search) params.search = filters.search;
-  const response = await apiClient.get<{ data: CampaignLead[] }>(
+  if (filters?.filter && filters.filter !== 'all') params.filter = filters.filter;
+  if (filters?.limit) params.limit = String(filters.limit);
+  const response = await apiClient.get<{ data: CampaignLead[]; total?: number }>(
     `/api/campaigns/${campaignId}/leads`,
     { params }
   );
-  return response.data.data || [];
+  const leads = response.data.data || [];
+  return { leads, total: response.data.total ?? leads.length };
 }
 
 /**
@@ -284,7 +308,7 @@ export async function getCampaignLeads(
  */
 export const getCampaignLeadsOptions = (
   campaignId: string,
-  filters?: { search?: string }
+  filters?: CampaignLeadFilters
 ) =>
   queryOptions({
     queryKey: campaignKeys.leads(campaignId, filters),
@@ -556,7 +580,7 @@ export async function retryConnection(
  * lead id from campaign_analytics.lead_id, which the backend also accepts as
  * campaign_leads.id). `campaignId` is passed through for precise scoping.
  *
- * Backend guarantees it only ever retracts a pending sent invite — an accepted
+ * Backend guarantees it only ever retracts a pending sent invite - an accepted
  * connection is never in the pending list, so it can't be touched. When nothing
  * is pending it returns `{ withdrawn: false, reason: 'no_pending_invite' }`
  * rather than erroring.

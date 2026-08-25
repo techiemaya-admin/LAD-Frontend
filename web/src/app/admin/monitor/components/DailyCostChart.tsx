@@ -13,8 +13,8 @@ import {
 } from 'recharts';
 import type { LlmCostDay } from '@lad/frontend-features/lad-monitor';
 
-const NORMAL = '#8b5cf6'; // violet — matches the LLM accent used elsewhere
-const SPIKE = '#ef4444'; // red — flagged anomaly
+const NORMAL = '#8b5cf6'; // violet - matches the LLM accent used elsewhere
+const SPIKE = '#ef4444'; // red - flagged anomaly
 
 const money = (n: number) => `$${(Number(n) || 0).toFixed(2)}`;
 

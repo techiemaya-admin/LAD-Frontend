@@ -36,10 +36,33 @@ type ExtendedConversation = Conversation & {
   labelIds?: Array<string | number>;
   owner?: string | null;
 };
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarColor } from '@/lib/utils';
+
+function formatWhatsAppSidebarTimestamp(rawTimestamp?: string | number | Date | null): string {
+  if (!rawTimestamp) return '';
+  const date = rawTimestamp instanceof Date ? rawTimestamp : new Date(rawTimestamp);
+  if (isNaN(date.getTime())) return '';
+
+  if (isToday(date)) {
+    return format(date, 'h:mm a').toLowerCase();
+  }
+
+  if (isYesterday(date)) {
+    return 'Yesterday';
+  }
+
+  const now = new Date();
+  const diffDays = differenceInCalendarDays(now, date);
+
+  if (diffDays > 0 && diffDays < 7) {
+    return format(date, 'EEEE');
+  }
+
+  return format(date, 'dd/MM/yyyy');
+}
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -100,6 +123,7 @@ import {
   // ── New icons for rich New Chat overlay ──
   Megaphone, Loader2, CheckCircle2, Play, Pause, StopCircle,
 } from 'lucide-react';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 
 // ── Shared type for context status chips ────────────────────────────────────
 interface ContextStatusOption {
@@ -114,7 +138,7 @@ function formatContextStatus(value: string): string {
 }
 
 /** Solid colour per WABA conversation stage, shown as a small WhatsApp-style
- *  label tag on each conversation row (colour only — the stage name shows on
+ *  label tag on each conversation row (colour only - the stage name shows on
  *  hover and in the filter, not repeated as text on every row). Keyed by the
  *  lowercased context_status. */
 const WABA_STAGE_TAG_HEX: Record<string, string> = {
@@ -138,7 +162,7 @@ const CONFIG = {
   LOAD_MORE_LIMIT: 100,
   MAX_OLDER_MESSAGES: 500,
   MAX_RECENT_EMOJIS: 20,
-  EMOJI_STORAGE_KEY: 'wa_emoji_recent_v1', // gitleaks:allow — localStorage key for recent emojis, not a secret
+  EMOJI_STORAGE_KEY: 'wa_emoji_recent_v1', // gitleaks:allow - localStorage key for recent emojis, not a secret
   VOICE_RECORDING_TIMEOUT: 10000, // 10 seconds
   SEARCH_DEBOUNCE_MS: 150,
   SIDEBAR_MIN_WIDTH: 260,
@@ -234,6 +258,7 @@ interface WABAChatWindowProps {
   onMuteChat?: ConversationActionHandler;
   onClearChat?: ConversationActionHandler;
   onCloseChat?: ConversationActionHandler;
+  onOpenImportLeads?: () => void;
   channel?: 'personal' | 'waba';
   conversationId?: string;
   owner?: string | null;
@@ -346,7 +371,7 @@ function MessageTicks({ status }: { status?: string }) {
     );
   }
 
-  // 'sent' or 'pending' — single tick
+  // 'sent' or 'pending' - single tick
   return (
     <svg width="12" height="11" viewBox="0 0 12 11" fill="none" className="inline-block shrink-0">
       <path d="M1 5.5L4.5 9L11 2" stroke="#8696a0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -571,7 +596,7 @@ function LocationModal({ onClose, onSend }: { onClose: () => void; onSend: (p: R
 const EMOJI_CATEGORIES = [
   {
   id: 'recent', label: 'Recently used', icon: '🕐',
-  emojis: [], // populated dynamically — see EmojiPicker state
+  emojis: [], // populated dynamically - see EmojiPicker state
 },
   {
     id: 'smileys', label: 'Smileys & People', icon: '😊',
@@ -1016,6 +1041,7 @@ function WABAChatWindow({
   onMuteChat,
   onClearChat,
   onCloseChat,
+  onOpenImportLeads,
   channel,
   conversationId,
   owner,
@@ -1063,7 +1089,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       const data = await res.json();
       // "Add to Group" targets broadcast groups: the manually-created chat groups
       // (collections of contacts) AND the saved broadcast sets (is_broadcast_list).
-      // Only native WhatsApp groups (wa_group_jid) are excluded — you can't add
+      // Only native WhatsApp groups (wa_group_jid) are excluded - you can't add
       // members to a synced WA group from here.
       const rows = (Array.isArray(data?.data) ? data.data : []).filter(
         (g: { metadata?: { wa_group_jid?: string } | null }) =>
@@ -1212,7 +1238,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
   // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
-    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 150)}px`; }
+    if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }
   }, [text]);
 
   // Close attach menu on outside click
@@ -1341,7 +1367,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           meta.sender_type === 'human_agent' && rawRole === 'assistant' ? 'human_agent' : rawRole;
         const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
         // Agent-forward: NEW forwards carry the customer name in metadata (clean body);
-        // OLD ones baked "📩 *New message from X*\n\nBody" into content — parse as fallback.
+        // OLD ones baked "📩 *New message from X*\n\nBody" into content - parse as fallback.
         let displayContent = (r.content as string) || '';
         let forwardSender: string | undefined =
           (meta.via === 'agent_forward' || meta.sender_type === 'forward')
@@ -1560,7 +1586,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       e.stopPropagation();
       handleSend();
     }
-    // Shift+Enter: do nothing — browser inserts \n naturally
+    // Shift+Enter: do nothing - browser inserts \n naturally
   }, [handleSend]);
 
   const handleAttachItem = useCallback((id: string) => {
@@ -1644,7 +1670,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
   ) => {
     const convId = conversationId || conversation?.id;
     if (!convId) {
-      // Never fail silently — otherwise the picker can appear to "succeed"
+      // Never fail silently - otherwise the picker can appear to "succeed"
       // while no request is ever sent.
       setTemplateSendResult({ success: false, message: 'Cannot send: this conversation has no ID. Reopen the chat and try again.' });
       return;
@@ -1676,7 +1702,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       setTemplateSendProgress({ sent, total: 1, running: false });
       // Gate success on ACTUAL delivery. A 2xx with sent:0 means WhatsApp/Meta
       // rejected the send (e.g. template not yet approved, or a parameter
-      // mismatch) — surface the real reason instead of a misleading "✓ sent".
+      // mismatch) - surface the real reason instead of a misleading "✓ sent".
       if (!res.ok || !data.success || sent < 1) {
         throw new Error(
           data.results?.[0]?.error || data.error ||
@@ -1851,50 +1877,24 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#222e35] border-l border-border dark:border-[#222d34]">
-        <div className="bg-white dark:bg-[#111b21] p-8 rounded-2xl max-w-sm w-full flex flex-col items-center text-center shadow-sm">
-          <div className="mb-6 relative">
-            <div className="w-32 h-24 relative flex items-center justify-center">
-              <svg viewBox="0 0 200 150" className="w-full h-full text-[#00a884]">
-                <path d="M40 120 L160 120 C165 120 170 115 170 110 L170 40 C170 35 165 30 160 30 L40 30 C35 30 30 35 30 40 L30 110 C30 115 35 120 40 120 Z" fill="#e9edef" />
-                <rect x="35" y="35" width="130" height="80" fill="#202c33" />
-                <path d="M20 125 L180 125 C185 125 185 130 180 130 L20 130 C15 130 15 125 20 125 Z" fill="#d1d7db" />
-                <rect x="40" y="40" width="120" height="70" fill="#00a884" />
-                <rect x="50" y="50" width="40" height="10" rx="2" fill="#fff" opacity="0.9" />
-                <rect x="110" y="70" width="40" height="10" rx="2" fill="#dcf8c6" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-[19px] font-normal text-foreground dark:text-[#e9edef] mb-2">Download WhatsApp for Mac</h2>
-          <p className="text-[13px] text-muted-foreground dark:text-[#8696a0] mb-8 leading-5">
-            Make calls and get a faster experience when you download the Mac app.
-          </p>
-          <button type="button" className="bg-[#00a884] hover:bg-[#008f6f] text-white dark:text-[#111b21] font-medium text-[13px] px-6 py-2.5 rounded-full transition-colors">
-            Get from App Store
-          </button>
-        </div>
-
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#161717]">
         <div className="flex gap-6 mt-8">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <FileText className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" />
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="w-[62px] h-12 bg-black/4 dark:bg-[#35373b] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#d8dadf] dark:hover:bg-[#323436] transition-colors">
+              <FileText className="w-6 h-6 text-[#111b21] dark:text-[#e9edef]" />
             </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Send document</span>
+            <span className="text-[13px] font-medium text-[#111b21] dark:text-[#e9edef]">Send Template</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <UserPlus className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" />
+          <button
+            type="button"
+            onClick={onOpenImportLeads}
+            className="flex flex-col items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer group focus:outline-none"
+          >
+            <div className="w-[62px] h-12 bg-black/4 dark:bg-[#35373b] rounded-full flex items-center justify-center group-hover:bg-[#d8dadf] dark:group-hover:bg-[#323436] transition-colors">
+              <UserPlus className="w-6 h-6 text-[#111b21] dark:text-[#e9edef]" />
             </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Add contact</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-white dark:bg-[#111b21] rounded-2xl flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted dark:hover:bg-[#202c33]">
-              <svg className="w-6 h-6 text-muted-foreground dark:text-[#8696a0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
-              </svg>
-            </div>
-            <span className="text-[13px] text-muted-foreground dark:text-[#8696a0]">Ask Meta AI</span>
-          </div>
+            <span className="text-[13px] font-medium text-[#111b21] dark:text-[#e9edef]">Import Leads</span>
+          </button>
         </div>
       </div>
     );
@@ -1902,7 +1902,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#efeae2] dark:bg-[#161717] border-l border-border dark:border-[#222d34] relative">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#efeae2] dark:bg-[#161717] relative">
       {/* Background */}
       <div
         className="absolute inset-0 pointer-events-none z-0 bg-repeat opacity-[0.4] dark:opacity-[0.06]"
@@ -1937,7 +1937,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
         ) : (
           <>
             <div className="flex items-center gap-3">
-              {/* Back button — visible only on mobile, matches LinkedIn style exactly */}
+              {/* Back button - visible only on mobile, matches LinkedIn style exactly */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -1948,9 +1948,19 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                 <ChevronLeft className="h-5 w-5" />
               </Button>
               <div className="flex items-center gap-3 cursor-pointer" onClick={onTogglePanel}>
-                <Avatar className="w-10 h-10">
+                <Avatar className="w-10 h-10 shrink-0">
                   <AvatarImage src={conversation.contact?.avatar} />
-                  <AvatarFallback>{conversation.contact?.name?.[0]}</AvatarFallback>
+                  <AvatarFallback 
+                    style={{
+                      '--av-bg-light': `color-mix(in srgb, ${getAvatarColor(conversation.contact?.phone || conversation.contact?.name || conversation.id)} 20%, white)`,
+                      '--av-text-light': `color-mix(in srgb, ${getAvatarColor(conversation.contact?.phone || conversation.contact?.name || conversation.id)} 70%, black)`,
+                      '--av-bg-dark': `color-mix(in srgb, ${getAvatarColor(conversation.contact?.phone || conversation.contact?.name || conversation.id)} 30%, black)`,
+                      '--av-text-dark': `color-mix(in srgb, ${getAvatarColor(conversation.contact?.phone || conversation.contact?.name || conversation.id)} 80%, white)`,
+                    } as React.CSSProperties}
+                    className="bg-[var(--av-bg-light)] text-[var(--av-text-light)] dark:bg-[var(--av-bg-dark)] dark:text-[var(--av-text-dark)]"
+                  >
+                    {conversation.contact?.name?.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-medium text-[16px] text-foreground dark:text-white">{conversation.contact?.name}</h3>
@@ -1963,26 +1973,27 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                 <DropdownMenuTrigger asChild>
                   <MoreVertical className="w-5 h-5 cursor-pointer hover:text-foreground transition-colors" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] py-2">
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={onTogglePanel}>
+                <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] py-2 [&_[role=menuitem]]:hover:bg-zinc-100 dark:[&_[role=menuitem]]:hover:bg-zinc-800 [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:hover:text-foreground dark:[&_[role=menuitem]]:hover:text-[#d1d7db] [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db] [&_[role=menuitem][data-state=open]]:bg-zinc-100 dark:[&_[role=menuitem][data-state=open]]:bg-zinc-800 [&_[role=menuitem][data-state=open]]:text-foreground dark:[&_[role=menuitem][data-state=open]]:text-[#d1d7db]">
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={onTogglePanel}>
                     <Info className="w-4 h-4" /> <span>Contact info</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4">
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4">
                     <CheckSquare className="w-4 h-4" /> <span>Select messages</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex justify-between group" onClick={() => onMuteChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex justify-between group" onClick={() => onMuteChat?.(conversation?.id)}>
                     <div className="flex items-center gap-4"><BellOff className="w-4 h-4" /> <span>Mute notifications</span></div>
                     <ChevronRight className="w-4 h-4" />
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onFavoriteChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onFavoriteChat?.(conversation?.id)}>
                     <Heart className={cn("w-4 h-4", isFav && "fill-current text-rose-500 dark:text-rose-400")} />
                     <span>{isFav ? 'Remove from favourites' : 'Add to favourites'}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSub onOpenChange={(o) => { if (o) loadAddGroups(); }}>
-                    <DropdownMenuSubTrigger className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4">
-                      <Users className="w-4 h-4" /> <span>Add to Group</span>
+                    <DropdownMenuSubTrigger className="cursor-pointer py-2.5 px-4 flex justify-between group">
+                      <div className="flex items-center gap-4"><Users className="w-4 h-4" /> <span>Add to Group</span></div>
+                      <ChevronRight className="w-4 h-4" />
                     </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db]">
+                    <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] [&_[role=menuitem]]:hover:bg-zinc-100 dark:[&_[role=menuitem]]:hover:bg-zinc-800 [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:hover:text-foreground dark:[&_[role=menuitem]]:hover:text-[#d1d7db] [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db]">
                       {addGroupsLoading ? (
                         <DropdownMenuItem disabled className="py-2.5 px-4 text-muted-foreground">Loading…</DropdownMenuItem>
                       ) : addGroups.length === 0 ? (
@@ -1993,7 +2004,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                             key={g.id}
                             disabled={addingGroupId !== null}
                             onSelect={(e) => { e.preventDefault(); handleAddToGroup(g.id, g.name); }}
-                            className="focus:bg-accent dark:focus:bg-[#182229] cursor-pointer py-2.5 px-4 flex items-center justify-between gap-4"
+                            className="cursor-pointer py-2.5 px-4 flex items-center justify-between gap-4"
                           >
                             <span className="truncate">{g.name}</span>
                             {addingGroupId === g.id
@@ -2004,19 +2015,19 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                       )}
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onCloseChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onCloseChat?.(conversation?.id)}>
                     <XCircle className="w-4 h-4" /> <span>Close chat</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4">
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4">
                     <Calendar className="w-4 h-4" /> <span>Schedule call</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onBlockChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onBlockChat?.(conversation?.id)}>
                     <Ban className="w-4 h-4" /> <span>Block</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onClearChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onClearChat?.(conversation?.id)}>
                     <MinusCircle className="w-4 h-4" /> <span>Clear chat</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-accent dark:focus:bg-[#182229] focus:text-white dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onDeleteChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onDeleteChat?.(conversation?.id)}>
                     <Trash2 className="w-4 h-4" /> <span>Delete chat</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -2028,7 +2039,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
       {/* Messages */}
       {/*
-        68 px = px-4 (16) + avatar w-10 (40) + gap-3 (12) — matches the
+        68 px = px-4 (16) + avatar w-10 (40) + gap-3 (12) - matches the
         header's contact-name start position exactly.
         We target both sides:
           • ml-[68px]  on the incoming bubble container
@@ -2040,10 +2051,10 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       */}
       <div className={cn(
         "flex-1 overflow-hidden flex flex-col min-h-0",
-        // incoming bubbles — left indent aligns with header name
+        // incoming bubbles - left indent aligns with header name
         "[&_[data-incoming='true']>*:first-child]:ml-[68px]",
         "[&_[data-role='user']>*:first-child]:ml-[68px]",
-        // outgoing bubbles — mirror indent from the right
+        // outgoing bubbles - mirror indent from the right
         "[&_[data-incoming='false']>*:first-child]:mr-[68px]",
         "[&_[data-role='assistant']>*:first-child]:mr-[68px]",
         "[&_[data-role='human_agent']>*:first-child]:mr-[68px]",
@@ -2094,7 +2105,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       <input ref={audioRef} type="file" multiple className="hidden" aria-label="Upload audio" onChange={handleFileChange} accept="audio/*" />
 
       {/* ── Template Picker ── */}
-      <div className="[&_.dark\:bg-\\[\\#111b21\\]]:dark:bg-[rgb(22,23,23)] [&_[class*='dark:bg-']>div]:dark:bg-[rgb(22,23,23)]">
+      <div className="[&_[class*='111b21']]:dark:bg-[rgb(22,23,23)] [&_[class*='dark:bg-']>div]:dark:bg-[rgb(22,23,23)]">
         <TemplatePicker
           open={isTemplatePickerOpen}
           onOpenChange={setIsTemplatePickerOpen}
@@ -2104,11 +2115,12 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           sendProgress={templateSendProgress}
           channel={backendChannel ?? 'waba'}
           isBulkSend={false}
+          variant="whatsapp"
         />
       </div>
 
       {/* Composer */}
-      <div className="mt-4 p-3 px-4 bg-white dark:bg-[#161717] shrink-0 z-10 relative">
+      <div className="mt-4 px-2 bg-white dark:bg-[#242626] rounded-[50px] mb-2 sm:mb-[1.5%] mx-2 sm:mx-[3%] shrink-0 z-10 relative">
 
         {/* ── Pending file previews ── */}
         {(pendingFiles.length > 0 || fileLoading) && (
@@ -2137,30 +2149,30 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           </div>
         )}
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
 
-          {/* ── Pill — attach + emoji + textarea all inside ── */}
-          <div className="flex-1 flex items-center bg-[#f0f2f5] dark:bg-[#171818] rounded-full px-2 h-[44px] gap-1">
+          {/* ── Pill - attach + emoji + textarea all inside ── */}
+          <div className="flex-1 flex items-center rounded-[24px] py-1 min-h-[44px] gap-1">
 
-            {/* Attach — inside pill */}
+            {/* Attach - inside pill */}
             <div ref={attachBtnRef} className="relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAttachMenu(v => !v)}
                 className={cn(
-                  'w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200',
+                  'w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 hover:bg-zinc-400/10',
                   showAttachMenu ? 'text-[#00a884] rotate-45' : 'text-muted-foreground dark:text-[#8696a0] hover:text-foreground'
                 )}
               >
                 <Plus className="w-5 h-5" />
               </button>
               {showAttachMenu && (
-                <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white dark:bg-[#233138] rounded-2xl shadow-2xl overflow-hidden z-40 py-1">
+                <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white dark:bg-zinc-900 border border-transparent dark:border-zinc-800/80 rounded-2xl shadow-2xl overflow-hidden z-40 py-1">
                   {ATTACH_ITEMS.map(item => (
                     <button
                       key={item.id}
                       onClick={() => handleAttachItem(item.id)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[#182229] transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-zinc-800/80 transition-colors text-left"
                     >
                       <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0', item.bg, item.color)}>
                         <span className="scale-75">{item.icon}</span>
@@ -2172,7 +2184,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
               )}
             </div>
 
-            {/* Emoji — inside pill */}
+            {/* Emoji - inside pill */}
             <div className="relative flex-shrink-0">
               <button
                 type="button"
@@ -2203,7 +2215,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
               onChange={e => setText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={pendingFiles.length > 0 ? 'Add a caption (optional)…' : 'Type a message'}
-              className="flex-1 bg-transparent border-0 text-foreground dark:text-[#e9edef] py-2.5 px-1 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] self-center"
+              className="flex-1 border-0 dark:bg-transparent text-foreground dark:text-[#e9edef] py-2 px-1 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] my-0.5 leading-normal shadow-none"
               rows={1}
             />
           </div>
@@ -2212,8 +2224,8 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={cn('h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-muted flex-shrink-0', agentType === 'human' && 'text-orange-500')}
-                title={agentType === 'human' ? 'Human agent — tap to hand back to Mr LAD' : 'Mr LAD is replying — tap to take over'}
+                className={cn('h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-[#00a884]/10 dark:hover:bg-[#00a884]/20 flex-shrink-0', agentType === 'human' && 'text-orange-500')}
+                title={agentType === 'human' ? 'Human agent - tap to hand back to Mr LAD' : 'Mr LAD is replying - tap to take over'}
               >
                 {agentType === 'human' ? <User className="h-5 w-5" /> : <img src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" className="h-7 w-7 object-contain" />}
               </button>
@@ -2230,28 +2242,30 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             </DropdownMenuContent>
           </DropdownMenu>
 
-         {/* Send / Mic */}
-{isSending ? (
-  <Loader2 className="w-6 h-6 text-[#00a884] animate-spin" />
-) : (text.trim() || pendingFiles.length > 0) ? (
-  <button
-    type="button"
-    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#00a884] hover:text-[#008f6f]"
-    onClick={handleSend}
-    aria-label="Send message"
-  >
-    <Send className="w-6 h-6" />
-  </button>
-) : (
-  <button
-    ref={micBtnRef}
-    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-muted-foreground dark:text-[#8696a0] hover:text-[#00a884] dark:hover:text-[#00a884]"
-    onClick={startVoiceRecording}
-    aria-label="Record voice message"
-  >
-    <Mic className="w-6 h-6" />
-  </button>
-)}
+          {/* Send / Mic */}
+          {isSending ? (
+            <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-[#00a884] animate-spin" />
+            </div>
+          ) : (text.trim() || pendingFiles.length > 0) ? (
+            <button
+              type="button"
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#00a884] hover:text-[#008f6f]"
+              onClick={handleSend}
+              aria-label="Send message"
+            >
+              <Send className="w-6 h-6" />
+            </button>
+          ) : (
+            <button
+              ref={micBtnRef}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-colors text-muted-foreground dark:text-[#8696a0] hover:text-[#00a884] dark:hover:text-[#00a884]"
+              onClick={startVoiceRecording}
+              aria-label="Record voice message"
+            >
+              <Mic className="w-6 h-6" />
+            </button>
+          )}
 
         </div>
 
@@ -2415,6 +2429,8 @@ interface WABASidebarProps {
   loadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  isImportDialogOpen?: boolean;
+  onImportDialogOpenChange?: (open: boolean) => void;
 }
 
 type FilterTab = 'all' | 'unread' | 'favourites';
@@ -2444,7 +2460,14 @@ function WABASidebar({
   loadMore,
   hasMore,
   isLoadingMore,
+  isImportDialogOpen: externalIsImportDialogOpen,
+  onImportDialogOpenChange,
 }: WABASidebarProps) {
+  // Per-viewer phone masking. The list renders a contact number twice - as the
+  // title when no name is known, and as the subtitle under every named contact
+  // - so without this the sidebar showed raw numbers for essentially every
+  // conversation regardless of the setting.
+  const { displayPhone, displayNameOrPhone } = usePhoneMasking();
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sidebarError, setSidebarError] = useState<SidebarErrorState | null>(null);
@@ -2505,7 +2528,9 @@ function WABASidebar({
   }, [conversations, normalizePhone]);
 
   // ── Import dialog ──────────────────────────────────────────────────────
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [internalIsImportDialogOpen, setInternalIsImportDialogOpen] = useState(false);
+  const isImportDialogOpen = externalIsImportDialogOpen ?? internalIsImportDialogOpen;
+  const setIsImportDialogOpen = onImportDialogOpenChange ?? setInternalIsImportDialogOpen;
 
   // ── Group manager dialog ───────────────────────────────────────────────
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
@@ -2525,7 +2550,7 @@ function WABASidebar({
   const [createGroupIds, setCreateGroupIds] = useState<string[]>([]);
 
   // ── Group-chat broadcast: post one message into each selected WhatsApp group
-  //    chat (not its members), throttled server-side (batch 5–10, 2min+, 250/day).
+  //    chat (not its members), throttled server-side (batch 5-10, 2min+, 250/day).
   const [groupBroadcastBatchSize, setGroupBroadcastBatchSize] = useState(5);
   const [groupBroadcastSending, setGroupBroadcastSending] = useState(false);
   const [groupBroadcastResult, setGroupBroadcastResult] = useState<string | null>(null);
@@ -2580,9 +2605,16 @@ function WABASidebar({
         return;
       }
       // Not in the loaded list. For a synced WA group, resolve-or-create its chat so
-      // a single click always opens it — even before any messages have arrived.
+      // a single click always opens it - even before any messages have arrived.
+      //
+      // A BROADCAST group has no chat to open, and never will: it is a saved
+      // audience that fans out to N separate 1:1 conversations. Telling the user
+      // "no chat to open" described our data model rather than answering what
+      // they clicked for, so a click now opens the group itself - members, who
+      // can be added, and what has been broadcast to them.
       if (!jid) {
-        setGroupBroadcastResult(`"${group.name}" isn't a synced WhatsApp group — no chat to open.`);
+        setInfoGroup(group);
+        setIsGroupsPanelOpen(false);
         return;
       }
       try {
@@ -2616,7 +2648,7 @@ function WABASidebar({
       const res = await fetchWithTenant('/api/whatsapp-conversations/wa-groups/sync', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false) {
-        setGroupBroadcastResult(data.error || 'Sync failed — is your Personal WhatsApp connected?');
+        setGroupBroadcastResult(data.error || 'Sync failed - is your Personal WhatsApp connected?');
       } else {
         setGroupBroadcastResult(data.message || `Synced ${data.synced ?? 0} WhatsApp group${data.synced === 1 ? '' : 's'}.`);
         // Refresh the panel list so the newly-synced groups appear.
@@ -2642,8 +2674,8 @@ function WABASidebar({
     setPanelSelectionMode(true); // show checkboxes so the loaded set is visible/editable
     setGroupBroadcastResult(
       present.length < ids.length
-        ? `${present.length}/${ids.length} groups from "${list.name}" available — re-sync if some are missing.`
-        : `Loaded "${list.name}" — ${present.length} group${present.length === 1 ? '' : 's'} selected. Compose a message to broadcast.`,
+        ? `${present.length}/${ids.length} groups from "${list.name}" available - re-sync if some are missing.`
+        : `Loaded "${list.name}" - ${present.length} group${present.length === 1 ? '' : 's'} selected. Compose a message to broadcast.`,
     );
   }, [newChatGroups]);
 
@@ -3088,6 +3120,11 @@ function WABASidebar({
     });
     return [...filtered].sort((a, b) => {
       if (sortBy === 'name') {
+        // Sorts on the RAW value deliberately - this comparator renders
+        // nothing, so it leaks nothing, and masked numbers all share the same
+        // leading bullets, which would collapse the ordering into "grouped by
+        // last 4 digits". Sorting stays stable and meaningful while the
+        // rendered labels above are masked.
         return (a.contact?.name || a.contact?.phone || '').localeCompare(b.contact?.name || b.contact?.phone || '');
       }
       if (sortBy === 'message_count') {
@@ -3139,7 +3176,7 @@ function WABASidebar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                   onClick={() => {
                     setIsGroupsPanelOpen(true);
                     setSelectedGroupsPanelIds(new Set());
@@ -3159,7 +3196,7 @@ function WABASidebar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   aria-label="Refresh conversations"
@@ -3176,7 +3213,7 @@ function WABASidebar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                   onClick={() => setIsNewChatOpen(true)}
                   aria-label="New Chat"
                 >
@@ -3194,7 +3231,7 @@ function WABASidebar({
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                      className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                       aria-label="More options"
                     >
                       <MoreVertical className="w-5 h-5" />
@@ -3207,32 +3244,32 @@ function WABASidebar({
               </Tooltip>
               <DropdownMenuContent
                 align="end"
-                className="w-52 bg-white dark:bg-[#161717] border border-border dark:border-0 text-foreground dark:text-[#d1d7db] py-2 shadow-lg"
+                className="w-52 bg-white dark:bg-[#161717] border border-border dark:border-zinc-800 text-foreground dark:text-[#d1d7db] py-2 shadow-lg"
               >
                 <DropdownMenuItem
-                  className="focus:bg-muted dark:focus:bg-muted hover:bg-muted dark:hover:bg-muted focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4"
+                  className="hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4 focus:outline-none"
                   onClick={() => setIsGroupManagerOpen(true)}
                 >
                   <Users className="w-4 h-4" /><span>Broadcast group</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="focus:bg-muted dark:focus:bg-muted hover:bg-muted dark:hover:bg-muted focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4"
+                  className="hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4 focus:outline-none"
                   onClick={() => onOpenStarred?.()}
                 >
                   <Star className="w-4 h-4" /><span>Starred messages</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="focus:bg-muted dark:focus:bg-muted hover:bg-muted dark:hover:bg-muted focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4"
+                  className="hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4 focus:outline-none"
                   onClick={() => setIsSelectMode(true)}
                 >
                   <CheckSquare className="w-4 h-4" /><span>Select chats</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="focus:bg-muted dark:focus:bg-muted hover:bg-muted dark:hover:bg-muted focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4">
+                <DropdownMenuItem className="hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4 focus:outline-none">
                   <ListChecks className="w-4 h-4" /><span>Mark all as read</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-1 bg-border dark:bg-[#222d34]" />
+                <DropdownMenuSeparator className="my-1 bg-border dark:bg-zinc-800" />
                 <DropdownMenuItem
-                  className="focus:bg-muted dark:focus:bg-muted hover:bg-muted dark:hover:bg-muted focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4"
+                  className="hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white cursor-pointer py-2.5 px-4 flex items-center gap-4 focus:outline-none"
                   onClick={() => setShowMessageSettings(true)}
                 >
                   <Clock className="w-4 h-4" /><span>Message settings</span>
@@ -3251,7 +3288,7 @@ function WABASidebar({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-[#a2a2a2]" />
             <Input
               placeholder="Search or start a new chat"
-              className="pl-10 bg-[#f0f2f5] dark:bg-[#2e2f2f] border-0 rounded-full h-9 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:text-[#a2a2a2] focus-visible:ring-1 focus-visible:ring-transparent"
+              className="pl-10 bg-[#f0f2f5] dark:bg-[#2e2f2f] border-0 rounded-full h-9 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-[#a2a2a2] focus-visible:ring-1 focus-visible:ring-transparent"
               value={searchQuery || ''}
               onChange={(e) => onSearchChange(e.target.value)}
             />
@@ -3272,15 +3309,15 @@ function WABASidebar({
             className={cn(
               'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border',
               filterTab === tab
-                ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
-                : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
+                ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
+                : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-zinc-800'
             )}
           >
             {tab === 'unread' ? `Unread${unreadCount > 0 ? ` ${unreadCount}` : ''}` : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
 
-        {/* ── Hide Empty button — same pill style ── */}
+        {/* ── Hide Empty button - same pill style ── */}
         {onHideEmptyChange && (
           <button
             type="button"
@@ -3288,8 +3325,8 @@ function WABASidebar({
             className={cn(
               'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
               hideEmpty
-                ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
-                : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
+                ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
+                : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-zinc-800'
             )}
           >
             {hideEmpty ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -3297,31 +3334,31 @@ function WABASidebar({
           </button>
         )}
 
-        {/* ── Labels filter — hidden for now (code kept, gated off for easy re-enable) ── */}
+        {/* ── Labels filter - hidden for now (code kept, gated off for easy re-enable) ── */}
         {false && onLabelFilterChange && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn(
                 'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
                 selectedLabelIds.length > 0
-                  ? 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884] border-transparent'
-                  : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
+                  ? 'bg-[#d9fdd3] text-[#008069] border-border dark:bg-[#1a342a] dark:text-[#00a884] dark:border-[#00a884]/40'
+                  : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-zinc-800'
               )}>
                 <Tag className="h-3.5 w-3.5" />
                 {selectedLabelIds.length > 0 ? `${selectedLabelIds.length} label${selectedLabelIds.length === 1 ? '' : 's'}` : 'Labels'}
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg">
-              <DropdownMenuLabel className="flex items-center justify-between text-xs">
+            <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-zinc-800 shadow-lg">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs text-muted-foreground dark:text-[#a2a2a2]">
                 <span>Filter by label</span>
                 {selectedLabelIds.length > 0 && onLabelFilterChange && (
                   <button onClick={() => onLabelFilterChange?.([])} className="text-[10px] text-muted-foreground hover:text-foreground">Clear</button>
                 )}
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border dark:bg-zinc-800" />
               {allLabels.length === 0 ? (
-                <DropdownMenuItem disabled className="text-xs text-muted-foreground">No labels yet</DropdownMenuItem>
+                <DropdownMenuItem disabled className="text-xs text-muted-foreground focus:outline-none">No labels yet</DropdownMenuItem>
               ) : (
                 allLabels.map((l) => (
                   <DropdownMenuCheckboxItem
@@ -3329,7 +3366,7 @@ function WABASidebar({
                     checked={selectedLabelIds.includes(l.id)}
                     onCheckedChange={() => toggleLabel(l.id)}
                     onSelect={(e) => e.preventDefault()}
-                    className="text-xs"
+                    className="text-xs hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:outline-none cursor-pointer"
                   >
                     <Tag className="h-3.5 w-3.5 mr-2 shrink-0" fill={l.color} style={{ color: l.color }} />
                     <span className="truncate">{l.name}</span>
@@ -3348,24 +3385,27 @@ function WABASidebar({
                 'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
                 contextStatusFilter && contextStatusFilter !== 'all'
                   ? 'bg-[#00a884] text-white border-transparent'
-                  : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
+                  : 'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-zinc-800'
               )}>
                 <Filter className="h-3.5 w-3.5" />
                 {contextStatusFilter && contextStatusFilter !== 'all' ? formatContextStatus(contextStatusFilter) : 'Stage'}
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg">
-              <DropdownMenuLabel className="flex items-center justify-between text-xs">
+            <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-zinc-800 shadow-lg text-foreground dark:text-[#d1d7db]">
+              <DropdownMenuLabel className="flex items-center justify-between text-xs text-muted-foreground dark:text-[#a2a2a2]">
                 <span>Filter by stage</span>
                 {contextStatusFilter && contextStatusFilter !== 'all' && (
                   <button onClick={() => onContextStatusFilterChange('all')} className="text-[10px] text-muted-foreground hover:text-foreground">Clear</button>
                 )}
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border dark:bg-zinc-800" />
               <DropdownMenuItem
                 onClick={() => onContextStatusFilterChange('all')}
-                className={cn('text-xs cursor-pointer', (!contextStatusFilter || contextStatusFilter === 'all') && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}
+                className={cn(
+                  'text-xs cursor-pointer py-2 px-3 focus:outline-none hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white transition-colors',
+                  (!contextStatusFilter || contextStatusFilter === 'all') && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884] font-medium'
+                )}
               >
                 All stages
               </DropdownMenuItem>
@@ -3375,11 +3415,14 @@ function WABASidebar({
                   <DropdownMenuItem
                     key={value}
                     onClick={() => onContextStatusFilterChange(value)}
-                    className={cn('text-xs cursor-pointer flex items-center gap-2', contextStatusFilter === value && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}
+                    className={cn(
+                      'text-xs cursor-pointer flex items-center gap-2 py-2 px-3 focus:outline-none hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white transition-colors',
+                      contextStatusFilter === value && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884] font-medium'
+                    )}
                   >
                     <Tag className="h-3.5 w-3.5 shrink-0" fill={tagColor} style={{ color: tagColor }} />
                     <span className="truncate flex-1">{label}</span>
-                    {count > 0 && <span className="text-[10px] text-muted-foreground">{count}</span>}
+                    {count > 0 && <span className="text-[10px] opacity-70">{count}</span>}
                   </DropdownMenuItem>
                 );
               })}
@@ -3387,29 +3430,47 @@ function WABASidebar({
           </DropdownMenu>
         )}
 
-        {/* ── Sort button — at the end ── */}
+        {/* ── Sort button - at the end ── */}
         {onSortByChange && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn(
                 'px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors border flex items-center gap-1',
-                'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-[#2a3942]'
+                'bg-muted/50 dark:bg-[#161717] dark:border-[#2e2f2f] text-muted-foreground dark:text-[#a2a2a2] hover:bg-muted dark:hover:bg-zinc-800'
               )}>
                 <ArrowDownUp className="h-3.5 w-3.5" />
                 {sortBy === 'message_count' ? 'Size' : sortBy === 'name' ? 'Name' : 'Date'}
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db]">
-              <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onSortByChange('date')} className={cn('text-xs cursor-pointer', sortBy === 'date' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+            <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#161717] border border-border dark:border-zinc-800 shadow-lg text-foreground dark:text-[#d1d7db]">
+              <DropdownMenuLabel className="text-xs text-muted-foreground dark:text-[#a2a2a2]">Sort by</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border dark:bg-zinc-800" />
+              <DropdownMenuItem
+                onClick={() => onSortByChange('date')}
+                className={cn(
+                  'text-xs cursor-pointer py-2 px-3 focus:outline-none hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white transition-colors',
+                  sortBy === 'date' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884] font-medium'
+                )}
+              >
                 <Calendar className="h-3.5 w-3.5 mr-2" /> Date (most recent)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSortByChange('message_count')} className={cn('text-xs cursor-pointer', sortBy === 'message_count' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+              <DropdownMenuItem
+                onClick={() => onSortByChange('message_count')}
+                className={cn(
+                  'text-xs cursor-pointer py-2 px-3 focus:outline-none hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white transition-colors',
+                  sortBy === 'message_count' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884] font-medium'
+                )}
+              >
                 <Hash className="h-3.5 w-3.5 mr-2" /> Size (most messages)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSortByChange('name')} className={cn('text-xs cursor-pointer', sortBy === 'name' && 'bg-[#0a332c] dark:bg-[#1a342a] text-[#00a884]')}>
+              <DropdownMenuItem
+                onClick={() => onSortByChange('name')}
+                className={cn(
+                  'text-xs cursor-pointer py-2 px-3 focus:outline-none hover:bg-zinc-100 focus:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus:bg-zinc-800 focus:text-foreground dark:focus:text-white transition-colors',
+                  sortBy === 'name' && 'bg-[#e7fce3] text-[#008069] dark:bg-[#1a342a] dark:text-[#00a884] font-medium'
+                )}
+              >
                 <ArrowDownUp className="h-3.5 w-3.5 mr-2" /> Name (A → Z)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -3420,7 +3481,7 @@ function WABASidebar({
         <TooltipProvider delayDuration={100}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="px-3 py-1.5 rounded-full bg-muted/50 dark:bg-[#202c33] text-muted-foreground dark:text-[#a2a2a2] text-[14px] font-normal flex items-center justify-center hover:bg-muted dark:hover:bg-zinc-800 shrink-0 border dark:border-[#2e2f2f]" aria-label="Create list">
+              <button className="px-3 py-1.5 rounded-full bg-muted/50 dark:bg-[#161717] text-muted-foreground dark:text-[#a2a2a2] text-[14px] font-normal flex items-center justify-center hover:bg-muted dark:hover:bg-zinc-800 shrink-0 border dark:border-[#2e2f2f]" aria-label="Create list">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
@@ -3513,6 +3574,7 @@ function WABASidebar({
               selectedIds={selectedChatIds}
               onDone={exitSelectMode}
               channel={backendChannel}
+              variant="whatsapp"
             />
 
             <Tooltip>
@@ -3650,9 +3712,10 @@ function WABASidebar({
             if (isSelected && activeLastMsg) {
               lastMsg = activeLastMsg;
             }
-            const time = lastMsg
-              ? formatDistanceToNow(new Date(lastMsg.timestamp || (lastMsg as Message & { created_at?: string }).created_at || new Date()), { addSuffix: false })
-              : '';
+            const rawTimestamp = lastMsg?.timestamp || (lastMsg as Message & { created_at?: string })?.created_at;
+            const time = formatWhatsAppSidebarTimestamp(rawTimestamp);
+
+            const avatarColor = getAvatarColor(conv.contact?.phone || conv.contact?.name || conv.id);
 
             return (
               <div
@@ -3662,7 +3725,7 @@ function WABASidebar({
                   'flex items-center gap-4 py-2 px-4 mx-2 cursor-pointer transition-colors rounded-xl',
                   isSelectMode && selectedChatIds.has(conv.id)
                     ? 'bg-emerald-50 dark:bg-emerald-950/20'
-                    : isSelected ? 'bg-[#d9fdd3] dark:bg-[#2e2f2f]' : 'hover:bg-muted/30 dark:hover:bg-[#2e2f2f]/50'
+                    : isSelected ? 'bg-[#d9fdd3] dark:bg-[#2e2f2f]' : 'hover:bg-zinc-100 dark:hover:bg-[#2e2f2f]/50'
                 )}
               >
                 {isSelectMode && (
@@ -3679,14 +3742,24 @@ function WABASidebar({
                 )}
                 <Avatar className="w-11 h-11 shrink-0">
                   <AvatarImage src={conv.contact?.avatar} />
-                  <AvatarFallback>{initials}</AvatarFallback>
+                  <AvatarFallback 
+                    style={{
+                      '--av-bg-light': `color-mix(in srgb, ${avatarColor} 20%, white)`,
+                      '--av-text-light': `color-mix(in srgb, ${avatarColor} 70%, black)`,
+                      '--av-bg-dark': `color-mix(in srgb, ${avatarColor} 30%, black)`,
+                      '--av-text-dark': `color-mix(in srgb, ${avatarColor} 80%, white)`,
+                    } as React.CSSProperties}
+                    className="bg-[var(--av-bg-light)] text-[var(--av-text-light)] dark:bg-[var(--av-bg-dark)] dark:text-[var(--av-text-dark)]"
+                  >
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0 py-1">
                   <div className="flex justify-between items-center mb-0.5 gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-medium text-[16px] truncate text-foreground dark:text-white">{conv.contact?.name}</span>
                       {/* Conversation stage (context_status) as a small WhatsApp-style colour
-                          tag — colour only; the stage name shows on hover, not as repeated text. */}
+                          tag - colour only; the stage name shows on hover, not as repeated text. */}
                       {(() => {
                         const stage = getConversationContextStatus(conv);
                         if (!stage) return null;
@@ -3725,7 +3798,7 @@ function WABASidebar({
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          Rich New Chat Overlay — mirrors ConversationSidebar's isNewChatOpen panel
+          Rich New Chat Overlay - mirrors ConversationSidebar's isNewChatOpen panel
           absolute inset-0 z-30 so it covers only this sidebar column
       ════════════════════════════════════════════════════════════════════ */}
       {isNewChatOpen && (
@@ -3981,22 +4054,34 @@ function WABASidebar({
                       </div>
 
                       {contactsSectionExpanded && filteredContacts.map((conv) => {
+                        const contactAvatarColor = getAvatarColor(conv.contact?.phone || conv.contact?.name || conv.id);
                         return (
                           <button
                             key={conv.id}
                             onClick={() => openChatFromNewContact(conv)}
                             className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted dark:hover:bg-[#202c33] transition-colors"
                           >
-                            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                              {(conv.contact?.name || '?')[0]?.toUpperCase()}
-                            </div>
+                            <Avatar className="h-10 w-10 shrink-0">
+                              <AvatarImage src={conv.contact?.avatar} />
+                              <AvatarFallback 
+                                style={{
+                                  '--av-bg-light': `color-mix(in srgb, ${contactAvatarColor} 20%, white)`,
+                                  '--av-text-light': `color-mix(in srgb, ${contactAvatarColor} 70%, black)`,
+                                  '--av-bg-dark': `color-mix(in srgb, ${contactAvatarColor} 30%, black)`,
+                                  '--av-text-dark': `color-mix(in srgb, ${contactAvatarColor} 80%, white)`,
+                                } as React.CSSProperties}
+                                className="bg-[var(--av-bg-light)] text-[var(--av-text-light)] dark:bg-[var(--av-bg-dark)] dark:text-[var(--av-text-dark)]"
+                              >
+                                {(conv.contact?.name || '?')[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex flex-col items-start overflow-hidden">
                               <span className="text-sm font-medium truncate w-full text-left">
-                                {conv.contact?.name || conv.contact?.phone || 'Unknown'}
+                                {displayNameOrPhone(conv.contact?.name, conv.contact?.phone)}
                               </span>
                               {conv.contact?.phone && conv.contact?.name && (
                                 <span className="text-xs text-muted-foreground truncate w-full text-left">
-                                  {conv.contact.phone}
+                                  {displayPhone(conv.contact.phone)}
                                 </span>
                               )}
                             </div>
@@ -4027,7 +4112,7 @@ function WABASidebar({
             })()}
           </div>
 
-          {/* Bottom action bar — visible when items are selected */}
+          {/* Bottom action bar - visible when items are selected */}
           {(selectedNewChatIds.size > 0 || selectedNewChatGroupIds.size > 0) && (
             <div className="px-4 py-3 border-t border-border dark:border-[#222d34] bg-card dark:bg-[#161717] flex items-center gap-2">
               <button
@@ -4083,14 +4168,14 @@ function WABASidebar({
           Same absolute overlay pattern as the New Chat panel.
       ════════════════════════════════════════════════════════════════════ */}
       {isGroupsPanelOpen && (
-        <div className="absolute inset-0 z-30 bg-card dark:bg-[#111b21] flex flex-col">
+        <div className="absolute inset-0 z-30 bg-white dark:bg-zinc-900 flex flex-col">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border dark:border-[#222d34] bg-card dark:bg-[#161717]">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <button
               type="button"
               aria-label="Back"
               title="Back"
-              className="h-8 w-8 rounded-full hover:bg-muted flex-shrink-0 flex items-center justify-center transition-colors"
+              className="h-8 w-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex-shrink-0 flex items-center justify-center transition-colors"
               onClick={() => {
                 setIsGroupsPanelOpen(false);
                 setSelectedGroupsPanelIds(new Set());
@@ -4098,13 +4183,13 @@ function WABASidebar({
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </button>
-            <span className="text-sm font-semibold flex-1">Broadcast Groups</span>
+            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex-1">Broadcast Groups</span>
             {backendChannel === 'personal' && (
               <button
                 type="button"
                 onClick={() => setIsScheduledListOpen(true)}
                 title="View scheduled broadcasts"
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
               >
                 <Clock className="h-3.5 w-3.5" />
                 Scheduled
@@ -4116,14 +4201,14 @@ function WABASidebar({
                 onClick={handleSyncWaGroups}
                 disabled={isSyncingWaGroups}
                 title="Import your WhatsApp groups from the connected number"
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 transition-colors"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isSyncingWaGroups && 'animate-spin')} />
                 {isSyncingWaGroups ? 'Syncing…' : 'Sync WA Groups'}
               </button>
             )}
             {selectedGroupsPanelIds.size > 0 && (
-              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 px-2 py-0.5 rounded-full">
                 {selectedGroupsPanelIds.size} selected
               </span>
             )}
@@ -4133,14 +4218,14 @@ function WABASidebar({
                 onClick={handleSaveBroadcastList}
                 disabled={savingBroadcastList}
                 title="Save the selected groups as a reusable broadcast group"
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 transition-colors"
               >
                 {savingBroadcastList ? 'Saving…' : 'Save as group'}
               </button>
             )}
           </div>
           {groupBroadcastResult && (
-            <p className="px-4 py-1.5 text-[11px] text-muted-foreground border-b border-border dark:border-[#222d34]">
+            <p className="px-4 py-1.5 text-[11px] text-zinc-600 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
               {groupBroadcastResult}
             </p>
           )}
@@ -4149,19 +4234,19 @@ function WABASidebar({
           <div className="flex-1 overflow-y-auto">
             {newChatGroupsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <Loader2 className="h-5 w-5 animate-spin text-zinc-400 dark:text-zinc-500" />
               </div>
             ) : newChatGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-12 text-zinc-400 dark:text-zinc-500">
                 <Users className="h-8 w-8 mb-2 opacity-40" />
-                <p className="text-sm">No broadcast groups yet</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">No broadcast groups yet</p>
                 <button
                   type="button"
                   onClick={() => {
                     setIsGroupsPanelOpen(false);
                     setIsGroupManagerOpen(true);
                   }}
-                  className="mt-3 text-xs text-emerald-600 font-medium hover:underline"
+                  className="mt-3 text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
                 >
                   Create a group
                 </button>
@@ -4169,30 +4254,30 @@ function WABASidebar({
             ) : (
               <>
                 {/* Search + type filter */}
-                <div className="px-4 py-2 border-b border-border dark:border-[#222d34] flex items-center gap-2">
+                <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                     <input
                       value={groupsPanelSearch}
                       onChange={(e) => setGroupsPanelSearch(e.target.value)}
                       placeholder="Search groups…"
-                      className="w-full pl-9 pr-3 py-1.5 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"
                     />
                   </div>
                   <select
                     value={groupTypeFilter}
                     onChange={(e) => setGroupTypeFilter(e.target.value as 'both' | 'whatsapp' | 'broadcast')}
                     title="Filter by group type"
-                    className="text-xs rounded-md border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                    className="text-xs rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50 cursor-pointer"
                   >
                     <option value="both">All groups</option>
                     <option value="whatsapp">Chat groups</option>
                     <option value="broadcast">Broadcast groups</option>
                   </select>
                 </div>
-                {/* Select-all row — operates on the currently-filtered groups */}
-                <div className="px-4 py-2 flex items-center justify-between border-b border-border dark:border-[#222d34]">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {/* Select-all row - operates on the currently-filtered groups */}
+                <div className="px-4 py-2 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                  <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Groups
                   </span>
                   <div className="flex items-center gap-2">
@@ -4210,17 +4295,17 @@ function WABASidebar({
                               return next;
                             });
                           }}
-                          className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                          className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors"
                         >
                           {filteredPanelGroups.length > 0 && filteredPanelGroups.every(g => selectedGroupsPanelIds.has(g.id)) ? 'Deselect all' : 'Select all'}
                         </button>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
                           {selectedGroupsPanelIds.size} selected
                         </span>
                         <button
                           type="button"
                           onClick={() => { setPanelSelectionMode(false); setSelectedGroupsPanelIds(new Set()); }}
-                          className="text-[10px] text-muted-foreground hover:text-foreground font-medium transition-colors"
+                          className="text-[10px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium transition-colors"
                         >
                           Done
                         </button>
@@ -4229,7 +4314,7 @@ function WABASidebar({
                       <button
                         type="button"
                         onClick={() => setPanelSelectionMode(true)}
-                        className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors"
                       >
                         Select
                       </button>
@@ -4275,12 +4360,12 @@ function WABASidebar({
                       title={
                         isBroadcastList
                           ? `Load ${memberGroupCount} group${memberGroupCount !== 1 ? 's' : ''} from "${group.name}"`
-                          : panelSelectionMode ? undefined : `Open ${group.name} — double-click to multi-select`
+                          : panelSelectionMode ? undefined : `Open ${group.name} - double-click to multi-select`
                       }
-                      className="group/item relative px-4 py-3 hover:bg-muted/60 dark:hover:bg-[#202c33]/60 transition-colors cursor-pointer select-none"
+                      className="group/item relative px-4 py-3 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer select-none border-b border-zinc-100 dark:border-zinc-800/40"
                     >
                       <div className="flex items-center gap-3 w-full">
-                        {/* Checkbox — only in multi-select mode, and not for saved sets */}
+                        {/* Checkbox - only in multi-select mode, and not for saved sets */}
                         {panelSelectionMode && !isBroadcastList && (
                         <button
                           type="button"
@@ -4299,7 +4384,7 @@ function WABASidebar({
                             'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
                             isChecked
                               ? 'bg-emerald-500 border-emerald-500'
-                              : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
+                              : 'border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500'
                           )}
                         >
                           {isChecked && (
@@ -4320,8 +4405,8 @@ function WABASidebar({
  
                         {/* Group info */}
                         <div className="flex flex-col items-start overflow-hidden flex-1 min-w-0">
-                          <span className="text-sm font-semibold truncate w-full">{group.name}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate w-full">{group.name}</span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
                             {isBroadcastList
                               ? `${memberGroupCount} group${memberGroupCount !== 1 ? 's' : ''}`
                               : `${memberCount} member${memberCount !== 1 ? 's' : ''}`}
@@ -4338,12 +4423,12 @@ function WABASidebar({
                                   aria-label={`Group info for ${group.name}`}
                                   title={`Group info for ${group.name}`}
                                   onClick={(e) => { e.stopPropagation(); setInfoGroup(group); }}
-                                  className="p-1.5 hover:bg-muted rounded-md transition-all hover:shadow-sm"
+                                  className="p-1.5 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 rounded-md transition-all hover:shadow-sm"
                                 >
-                                  <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                  <Info className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">Group info</TooltipContent>
+                              <TooltipContent side="bottom" className="text-xs bg-zinc-800 text-white border-0">Group info</TooltipContent>
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -4357,12 +4442,12 @@ function WABASidebar({
                                     setIsGroupsPanelOpen(false);
                                     setSelectedGroupsPanelIds(new Set());
                                   }}
-                                  className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-md transition-all hover:shadow-sm"
+                                  className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-all hover:shadow-sm"
                                 >
                                   <Send className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">Send template</TooltipContent>
+                              <TooltipContent side="bottom" className="text-xs bg-zinc-800 text-white border-0">Send template</TooltipContent>
                             </Tooltip>
  
                             <Tooltip>
@@ -4394,12 +4479,12 @@ function WABASidebar({
                                       setSidebarError({ message: getErrorMessage(err, 'Error deleting group') });
                                     }
                                   }}
-                                  className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-all hover:shadow-sm"
+                                  className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-all hover:shadow-sm"
                                 >
                                   <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">Delete group</TooltipContent>
+                              <TooltipContent side="bottom" className="text-xs bg-zinc-800 text-white border-0">Delete group</TooltipContent>
                             </Tooltip>
                           </div>
                         </TooltipProvider>
@@ -4411,14 +4496,14 @@ function WABASidebar({
             )}
           </div>
  
-          {/* Bottom action bar — compose a rich message + post into the selected group chats */}
+          {/* Bottom action bar - compose a rich message + post into the selected group chats */}
           {selectedGroupsPanelIds.size > 0 && (
-            <div className="border-t border-border dark:border-[#222d34] bg-card dark:bg-[#161717] flex flex-col">
+            <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col">
               <div className="px-4 pt-2 flex items-center gap-2">
-                <span className="text-[11px] font-medium text-emerald-600 flex-1">
+                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex-1">
                   {selectedGroupsPanelIds.size} group{selectedGroupsPanelIds.size === 1 ? '' : 's'} selected
                 </span>
-                <label className="text-[11px] text-muted-foreground flex items-center gap-1 shrink-0">
+                <label className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 shrink-0">
                   Batch
                   <input
                     type="number"
@@ -4426,12 +4511,12 @@ function WABASidebar({
                     max={10}
                     value={groupBroadcastBatchSize}
                     onChange={(e) => setGroupBroadcastBatchSize(Math.max(5, Math.min(10, parseInt(e.target.value) || 5)))}
-                    className="w-12 text-xs rounded border border-border bg-background px-1 py-0.5"
+                    className="w-12 text-xs rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"
                   />
                 </label>
                 <button
                   type="button"
-                  className="flex items-center gap-1 border border-emerald-500 text-emerald-600 text-[11px] h-7 px-2 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+                  className="flex items-center gap-1 border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 text-[11px] h-7 px-2 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
                   onClick={() => setScheduleGroupIds(Array.from(selectedGroupsPanelIds))}
                   title="Schedule this broadcast for a later time"
                 >
@@ -4439,21 +4524,21 @@ function WABASidebar({
                 </button>
                 <button
                   type="button"
-                  className="border border-border text-[11px] h-7 px-2 rounded-md hover:bg-muted transition-colors"
+                  className="border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] h-7 px-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   onClick={() => setSelectedGroupsPanelIds(new Set())}
                 >
                   Clear
                 </button>
               </div>
-              <p className="px-4 pt-1 text-[10px] text-muted-foreground">
+              <p className="px-4 pt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 {groupBroadcastSending
                   ? 'Sending…'
-                  : 'Compose below (text, photo, document, poll…) — posts into each selected group chat · throttled · max 250/day'}
+                  : 'Compose below (text, photo, document, poll…) - posts into each selected group chat · throttled · max 250/day'}
               </p>
               {groupBroadcastResult && (
-                <p className="px-4 pt-1 text-[11px] text-emerald-600">{groupBroadcastResult}</p>
+                <p className="px-4 pt-1 text-[11px] text-emerald-600 dark:text-emerald-400">{groupBroadcastResult}</p>
               )}
-              {/* Full rich composer — its attachment menu / modals produce a payload sent to every selected group */}
+              {/* Full rich composer - its attachment menu / modals produce a payload sent to every selected group */}
               <MessageComposer
                 channel={'whatsapp' as Channel}
                 backendChannel="personal"
@@ -4508,6 +4593,7 @@ function WABASidebar({
           handleGroupTemplateSend(group.id, group.conversation_count);
         }}
         channel={backendChannel}
+        variant="whatsapp"
       />
 
       {/* ── Message Settings Dialog (reply delay + inbound debounce) ─────── */}
@@ -4518,22 +4604,20 @@ function WABASidebar({
       />
 
      {/* ── Template Picker Dialog ──────────────────────────────────────── */}
-      <style>{`.dark .template-modal-override { background-color: rgb(22,23,23) !important; }`}</style>
-      <div className="template-modal-override-root [&_[role='dialog']]:dark:!bg-[rgb(22,23,23)]">
-        <TemplatePicker
-          open={isTemplatePickerOpen}
-          onOpenChange={(open) => {
-            setIsTemplatePickerOpen(open);
-            if (!open) setGroupTemplateSendTarget(null);
-          }}
-          selectedCount={templatePickerCount}
-          onSend={handleTemplateSend}
-          sending={templateSending}
-          sendProgress={templateSendProgress}
-          channel={backendChannel ?? 'waba'}
-          isBulkSend={!!groupTemplateSendTarget}
-        />
-      </div>
+      <TemplatePicker
+        open={isTemplatePickerOpen}
+        onOpenChange={(open) => {
+          setIsTemplatePickerOpen(open);
+          if (!open) setGroupTemplateSendTarget(null);
+        }}
+        selectedCount={templatePickerCount}
+        onSend={handleTemplateSend}
+        sending={templateSending}
+        sendProgress={templateSendProgress}
+        channel={backendChannel ?? 'waba'}
+        isBulkSend={!!groupTemplateSendTarget}
+        variant="whatsapp"
+      />
 
       {/* ── Import Leads Dialog ─────────────────────────────────────────── */}
       <ImportLeadsDialog
@@ -4544,6 +4628,7 @@ function WABASidebar({
           onRefresh?.();
           setImportRefreshTrigger((prev) => prev + 1);
         }}
+        variant="whatsapp"
       />
 
       <CreateBroadcastGroupModal
@@ -4566,7 +4651,7 @@ function WABASidebar({
             <p className="text-muted-foreground text-xs mt-0.5">
               Sent <strong>{sendSummary.sent}</strong> today.{' '}
               <strong>{sendSummary.queued}</strong> remaining scheduled across{' '}
-              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} — continues at 9:00 AM daily.
+              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} - continues at 9:00 AM daily.
             </p>
           </div>
           <button className="text-muted-foreground hover:text-foreground text-xs mt-0.5" onClick={() => setSendSummary(null)}>✕</button>
@@ -4606,7 +4691,7 @@ export function WABusinessView({
 }) {
   // Drive every request (conversation list, actions, and all children) through
   // the selected channel. 'waba' → LAD-WABA-Comms, 'personal' → LAD-WAPA-Comms.
-  // Do NOT hardcode this — doing so sends one tab's requests to the wrong service.
+  // Do NOT hardcode this - doing so sends one tab's requests to the wrong service.
   const channel = backendChannel;
   const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
@@ -4638,9 +4723,10 @@ export function WABusinessView({
   const [mockSelectedId, setMockSelectedId] = useState<string | null>(null);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [isStarredOpen, setIsStarredOpen] = useState(false);
-  // Groups currently multi-selected in the Broadcast Groups panel — when non-empty,
+  // Groups currently multi-selected in the Broadcast Groups panel - when non-empty,
   // the right pane shows broadcast-group actions instead of the chat splash.
   const [multiSelectGroupIds, setMultiSelectGroupIds] = useState<string[]>([]);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Lazily resolve WhatsApp DPs (avatars) for visible personal-WhatsApp conversations.
   // We POST the ids of any conversation still missing an avatar; the backend fetches
@@ -4827,7 +4913,7 @@ const handleFavorite = useCallback(
 
   // ── Sort / filter state ────────────────────────────────────────────────
   const [sortBy, setSortBy] = useState<'date' | 'message_count' | 'name'>('date');
-  // Personal WA has many empty campaign/greeting shells — default to hiding
+  // Personal WA has many empty campaign/greeting shells - default to hiding
   // empties so the inbox shows real chats first. WABA keeps showing everything.
   const [hideEmpty, setHideEmpty] = useState(channel === 'personal');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
@@ -4929,7 +5015,7 @@ const handleFavorite = useCallback(
           </div>
         </div>
       )}
-      {/* Sidebar — desktop: controlled by isSidebarCollapsed; mobile: shown when no chat is selected */}
+      {/* Sidebar - desktop: controlled by isSidebarCollapsed; mobile: shown when no chat is selected */}
       <AnimatePresence mode="wait">
         {(!isSidebarCollapsed || (isMobileViewport && !typedSelectedConversation)) && (
           <motion.div
@@ -4978,15 +5064,17 @@ const handleFavorite = useCallback(
               loadMore={loadMore}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
+              isImportDialogOpen={isImportDialogOpen}
+              onImportDialogOpenChange={setIsImportDialogOpen}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Draggable divider — desktop only, visible when sidebar is open */}
+      {/* Draggable divider - desktop only, visible when sidebar is open */}
       {!isMobileViewport && !isSidebarCollapsed && (
         <div
-          className="hidden lg:flex w-1 h-full shrink-0 cursor-col-resize z-20 group relative select-none items-center justify-center"
+          className="hidden lg:flex w-1 h-full shrink-0 cursor-col-resize z-20 group relative select-none items-center justify-center bg-background dark:bg-[#161717]"
           onMouseDown={(e) => {
             dividerDragRef.current = { isDragging: true, startX: e.clientX, startWidth: sidebarWidth };
             e.preventDefault();
@@ -4996,9 +5084,9 @@ const handleFavorite = useCallback(
         </div>
       )}
 
-      {/* Main Chat Area — hidden on mobile when no conversation selected */}
+      {/* Main Chat Area - hidden on mobile when no conversation selected */}
       <div className={cn(
-        "flex-1 overflow-hidden min-w-0",
+        "flex-1 overflow-hidden min-w-0 dark:bg-[#161717]",
         (!typedSelectedConversation && multiSelectGroupIds.length === 0) ? "hidden lg:flex" : "flex"
       )}>
         {multiSelectGroupIds.length > 0 ? (
@@ -5024,6 +5112,7 @@ const handleFavorite = useCallback(
           onMuteChat={muteConversation}
           onClearChat={(id) => handleClear(id)}
           onCloseChat={() => { selectConversation(''); }}
+          onOpenImportLeads={() => setIsImportDialogOpen(true)}
           channel={channel}
           conversationId={typedSelectedConversation?.id}
           owner={typedSelectedConversation?.owner}

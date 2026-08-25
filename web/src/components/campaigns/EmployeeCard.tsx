@@ -110,7 +110,7 @@ export default function EmployeeCard({
   const displayOfficialEmail = employee.enriched_official_email;
 
   // Detect free-mail (gmail/outlook/yahoo etc) to know whether the personal
-  // email is likely "personal-only" — in that case it makes sense to offer
+  // email is likely "personal-only" - in that case it makes sense to offer
   // an unlock for the official corporate address. Cheap client check; real
   // classification happens server-side via Fullenrich.
   const FREE_MAIL_DOMAINS = new Set([
@@ -141,7 +141,7 @@ export default function EmployeeCard({
   return (
     <Card
       className={`
-        flex-1 bg-white dark:sm:bg-[#1a2a43] dark:bg-[#0B0F19] rounded-xl border border-gray-200 dark:border-[#262831] shadow-sm
+        flex-1 bg-white dark:bg-[#071131] rounded-xl border border-gray-200 dark:border-blue-950/40 shadow-sm
         transition-all duration-300 ease-in-out relative
         hover:shadow-lg hover:border-[#0b1957] dark:hover:border-[#4a6cf7]
         ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
@@ -204,11 +204,11 @@ export default function EmployeeCard({
                   <Badge
                     variant="default"
                     className={`
-                      font-semibold text-xs h-auto py-0.5 max-w-full px-3 whitespace-normal line-clamp-2 dark:text-white
+                      font-semibold text-xs h-auto py-0.5 max-w-full px-3 whitespace-normal line-clamp-2
                       ${employeeViewMode === 'grid' ? 'self-center' : 'self-start'}
                     `}
                   >
-                    {employee.title.toUpperCase()}
+                    {employee.title}
                   </Badge>
                 )}
                 {/* Company shown on its own line, under the name/title chip */}
@@ -264,7 +264,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={phoneLoading || phoneRevealed}
-                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-[#262831] hover:bg-gray-100 dark:hover:bg-[#2b7cff]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0b1957] dark:text-white"
+                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-blue-950/40 hover:bg-gray-100 dark:hover:bg-[#2b7cff]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0b1957] dark:text-white"
                       >
                         {phoneLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -323,7 +323,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={emailLoading || emailRevealed}
-                        className="bg-gray-50 dark:bg-[#253456] border border-gray-200 dark:border-[#262831] hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
+                        className="bg-gray-50 dark:bg-[#253456] border border-gray-200 dark:border-blue-950/40 hover:bg-gray-50 hover:border-[#0b1957] p-1.5 h-7 w-7 flex-shrink-0"
                       >
                         {emailLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin text-muted-foreground" />
@@ -346,7 +346,7 @@ export default function EmployeeCard({
               )}
             </div>
 
-            {/* Official email — same visual language as the phone/email rows
+            {/* Official email - same visual language as the phone/email rows
                 above: dark-navy mail circle + a compact lock-icon button on
                 the right. Only the icon changes between locked / revealed
                 (lock → check), keeping the row vertically aligned with the
@@ -369,7 +369,7 @@ export default function EmployeeCard({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-[#262831] p-1.5 h-7 w-7 flex items-center justify-center rounded-md flex-shrink-0">
+                      <div className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-blue-950/40 p-1.5 h-7 w-7 flex items-center justify-center rounded-md flex-shrink-0">
                         <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                       </div>
                     </TooltipTrigger>
@@ -407,7 +407,7 @@ export default function EmployeeCard({
                           handleRevealOfficialEmail?.(employee);
                         }}
                         disabled={officialEmailLoading}
-                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-[#262831] hover:bg-gray-100 dark:hover:bg-[#2b7cff]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0b1957] dark:text-white"
+                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-blue-950/40 hover:bg-gray-100 dark:hover:bg-[#2b7cff]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0b1957] dark:text-white"
                       >
                         {officialEmailLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0b1957] animate-spin text-muted-foreground" />
@@ -474,7 +474,7 @@ export default function EmployeeCard({
                           }
                         }}
                         disabled={linkedinLoading || linkedinRevealed}
-                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-[#262831] hover:bg-gray-100 dark:hover:bg-[#0077b5]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0077b5] dark:text-white"
+                        className="bg-gray-50 dark:bg-[#1a2a43] border border-gray-200 dark:border-blue-950/40 hover:bg-gray-100 dark:hover:bg-[#0077b5]/20 p-1.5 h-7 w-7 flex-shrink-0 text-[#0077b5] dark:text-white"
                       >
                         {linkedinLoading ? (
                           <Loader2 className="h-5 w-5 text-[#0077b5] animate-spin text-muted-foreground" />
@@ -526,7 +526,7 @@ export default function EmployeeCard({
                   ${summaryExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}
                 `}
               >
-                <div className="p-4 bg-[#F8F9FE] dark:bg-[#0d1b3e] rounded-lg border border-[#E2E8F0] dark:border-[#262831]">
+                <div className="p-4 bg-[#F8F9FE] dark:bg-[#0d1b3e] rounded-lg border border-[#E2E8F0] dark:border-blue-950/40">
                   <p className="text-sm text-[#475569] dark:text-[#7a8ba3] leading-relaxed whitespace-pre-wrap">
                     {profileSummary}
                   </p>
@@ -543,7 +543,7 @@ export default function EmployeeCard({
                   e.stopPropagation();
                   onViewSummary(employee);
                 }}
-                className="w-full border-[#0b1957] dark:border-[#2b7cff] text-[#0b1957] dark:text-[#2b7cff] font-semibold text-sm py-2 hover:text-[#2140A5] hover:bg-[#0b1957]/5 dark:hover:bg-[#2b7cff]/10"
+                className="w-full border-[#0b1957] dark:border-[#2b7cff] text-[#0b1957] dark:text-[#2b7cff] font-semibold text-sm py-2 hover:bg-[#0b1957]/5 dark:hover:bg-[#2b7cff]/10"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Generate Summary

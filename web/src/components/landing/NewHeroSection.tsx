@@ -224,6 +224,9 @@ const InfoCard = ({
 const CharacterSection = () => {
   const { isDark } = useTheme();
   const videoSrc = isDark ? "/hero-character-dark.mp4" : "/hero-character.mp4";
+  const posterSrc = isDark
+    ? "/hero-character-dark-poster.jpg"
+    : "/hero-character-poster.jpg";
 
   // Track whether the current theme's video has loaded enough to render its
   // first frame. While false we render nothing in the video slot so the
@@ -244,16 +247,18 @@ const CharacterSection = () => {
       animate="visible"
       className="relative w-full h-full flex items-center justify-center"
     >
-      {/* Video slot — reserves the same space whether or not the video has
+      {/* Video slot - reserves the same space whether or not the video has
           loaded so layout doesn't jump. */}
       <div className="w-70 h-180 relative z-10">
         <video
           key={videoSrc}
           src={videoSrc}
+          poster={posterSrc}
           autoPlay
           loop
           muted
           playsInline
+          preload="metadata"
           onLoadedData={() => setLoaded(true)}
           className={`w-full h-full object-cover transition-opacity duration-200 ${
             loaded ? "opacity-100" : "opacity-0"
@@ -290,7 +295,7 @@ export default function NewHeroSection() {
         >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-4">
             Find Your Next Best{' '}
-            <span className="text-primary">Customer—Now</span>
+            <span className="text-primary">Customer, Now</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             AI prospecting that surfaces verified contacts and company insights in seconds.
@@ -340,7 +345,7 @@ export default function NewHeroSection() {
 
             {/* Description */}
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              One AI Sales Employee who finds your ideal customers, starts real conversations, follows up, and books meetings across LinkedIn, WhatsApp, Instagram, email, and voice — the output of an entire sales team, for the cost of a single hire.
+              One AI Sales Employee who finds your ideal customers, starts real conversations, follows up, and books meetings across LinkedIn, WhatsApp, Instagram, email, and voice. The output of an entire sales team, for the cost of a single hire.
             </p>
 
             {/* CTA Buttons */}
@@ -355,13 +360,15 @@ export default function NewHeroSection() {
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
               </Link>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 border border-border bg-background text-foreground rounded-lg font-semibold hover:bg-background/80 transition-colors"
-              >
-                See him in action
-              </motion.button>
+              <Link href="/contact">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 border border-border bg-background text-foreground rounded-lg font-semibold hover:bg-background/80 transition-colors"
+                >
+                  See him in action
+                </motion.button>
+              </Link>
             </div>
 
             {/* Stats */}

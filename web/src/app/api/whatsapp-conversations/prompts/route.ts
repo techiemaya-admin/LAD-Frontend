@@ -1,12 +1,12 @@
 /**
- * Prompts Proxy — the System Prompts store (channel-agnostic).
+ * Prompts Proxy - the System Prompts store (channel-agnostic).
  *
  * The System Prompts UI saves prompts for EVERY channel (WABA / LinkedIn /
- * Gmail / Instagram / personal-whatsapp) through this one endpoint — the
+ * Gmail / Instagram / personal-whatsapp) through this one endpoint - the
  * target channel is a field in the request body, not the URL.
  *
  * GET/POST /api/whatsapp-conversations/prompts → /api/personal-whatsapp/prompts,
- * which since the Phase-5 split is owned by LAD-WAPA-Comms (NOT LAD_backend —
+ * which since the Phase-5 split is owned by LAD-WAPA-Comms (NOT LAD_backend  - 
  * the backend's copy is the legacy, pre-split feature). WAPA writes to the
  * per-tenant `<TENANT_DB_SCHEMA>.prompts` table that every channel service
  * (WABA/LinkedIn/Instagram) reads its active prompt back from.

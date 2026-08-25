@@ -5,7 +5,7 @@
  * The Settings → Integrations → WhatsApp page (WhatsAppIntegration.tsx) and the
  * personal-WA settings calls (accounts/status, QR, auto-assign, contacts, logout,
  * team workload, bulk-assign) all hit /api/personal-whatsapp/*. Those endpoints
- * live on the WAPA service, which VERIFIES the JWT — so when the browser only
+ * live on the WAPA service, which VERIFIES the JWT - so when the browser only
  * sends a cookie we lift it into an Authorization header (same as the media proxy).
  *
  * Without this route the status fetch 404s and the UI shows "Disconnected" even
@@ -13,17 +13,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getWAPAServiceUrl } from '../../whatsapp-conversations/utils/python-proxy';
-
-function extractTenantIdFromJwt(token: string): string | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return payload.tenantId || payload.tenant_id || payload.organizationId || payload.orgId || null;
-  } catch {
-    return null;
-  }
-}
+import { resolveAuthorizedTenantId } from '../../utils/tenant-scope';
 
 async function proxy(req: NextRequest, pathParts: string[]): Promise<Response> {
   const base = getWAPAServiceUrl().replace(/\/+$/, '');
@@ -41,13 +31,13 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<Response> {
     req.cookies.get('access_token')?.value ||
     req.cookies.get('token')?.value ||
     null;
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-    const tenantId = extractTenantIdFromJwt(token);
-    if (tenantId) headers['X-Tenant-ID'] = tenantId;
-  }
-  const directTenant = req.headers.get('x-tenant-id');
-  if (directTenant) headers['X-Tenant-ID'] = directTenant;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  // Tenant scoping: an x-tenant-id naming a different tenant than the caller's
+  // token is honoured only for the super admin (see utils/tenant-scope). This
+  // used to blindly trust the client header, letting any user target any tenant.
+  const tenantId = resolveAuthorizedTenantId(req, { logLabel: 'personal-whatsapp' });
+  if (tenantId) headers['X-Tenant-ID'] = tenantId;
 
   const init: RequestInit = { method: req.method, headers };
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {

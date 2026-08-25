@@ -5,23 +5,12 @@
 ## 📁 Structure
 
 ```
-frontend/features/apollo-leads/
-├── index.ts                          # Central export point
-├── manifest.json                     # Feature metadata & configuration
-├── types/
-│   └── apollo.types.ts              # TypeScript definitions
-├── services/
-│   ├── apolloLeadsService.ts        # Main API service
-│   └── apolloPhoneService.ts        # Phone reveal service
-├── hooks/
-│   ├── useApolloLeads.ts            # Main feature hook
-│   ├── useApolloSearch.ts           # Search hook (TODO)
-│   └── useApolloCredits.ts          # Credits tracking hook (TODO)
-├── components/
-│   ├── ApolloLeadsSearch.tsx        # Main search component
-│   ├── ApolloCompanyCard.tsx        # Company display (TODO)
-│   └── ApolloEmployeeList.tsx       # Employee list (TODO)
-└── README.md                         # This file
+sdk/features/apollo-leads/
+├── index.ts     # Central export point (barrel)
+├── api.ts       # HTTP calls — searchCompanies, getCompanyDetails, revealEmail, …
+├── hooks.ts     # useApolloLeads
+├── types.ts     # TypeScript definitions
+└── README.md    # This file
 ```
 
 ## 🚀 Usage
@@ -29,54 +18,59 @@ frontend/features/apollo-leads/
 ### Basic Import
 
 ```typescript
-import { 
-  apolloLeadsService,
+import {
+  searchCompanies,
   useApolloLeads,
-  ApolloLeadsSearch,
   type ApolloCompany,
   type ApolloSearchParams
-} from '@/features/apollo-leads';
+} from '@lad/frontend-features/apollo-leads';
 ```
 
-### Using the Service
+### Using the API Functions
+
+There is no service object — every call is a named export.
 
 ```typescript
-import { apolloLeadsService } from '@/features/apollo-leads';
+import {
+  searchCompanies,
+  getCompanyDetails,
+  searchEmployees,
+  revealEmail,
+  revealPhone
+} from '@lad/frontend-features/apollo-leads';
 
 // Search for companies
-const results = await apolloLeadsService.searchCompanies({
+const results = await searchCompanies({
   query: 'healthcare technology',
   location: 'Dubai',
-  employee_count_min: 50,
   limit: 25
 });
 
 // Get company details
-const company = await apolloLeadsService.getCompanyDetails('comp_123');
+const company = await getCompanyDetails('comp_123');
 
 // Search employees
-const employees = await apolloLeadsService.searchEmployees({
+const employees = await searchEmployees({
   company_name: 'HealthTech Solutions',
   titles: ['CEO', 'CTO'],
   seniority: ['VP', 'C-Level']
 });
 
 // Reveal contact info (costs credits)
-const email = await apolloLeadsService.revealEmail('person_123'); // 1 credit
-const phone = await apolloLeadsService.revealPhone('person_123'); // 8 credits
+const email = await revealEmail('person_123'); // 1 credit
+const phone = await revealPhone('person_123'); // 8 credits
 ```
 
 ### Using the Hook
 
 ```typescript
-import { useApolloLeads } from '@/features/apollo-leads';
+import { useApolloLeads } from '@lad/frontend-features/apollo-leads';
 
 function MyComponent() {
-  const { 
-    searchCompanies, 
-    loading, 
-    error, 
-    credits 
+  const {
+    searchCompanies,
+    loading,
+    error
   } = useApolloLeads();
 
   const handleSearch = async () => {
@@ -89,33 +83,11 @@ function MyComponent() {
 
   return (
     <div>
-      <p>Credits: {credits?.available}</p>
       <button onClick={handleSearch} disabled={loading}>
         Search
       </button>
       {error && <p>Error: {error}</p>}
     </div>
-  );
-}
-```
-
-### Using the Component
-
-```typescript
-import { ApolloLeadsSearch } from '@/features/apollo-leads';
-
-function LeadsPage() {
-  const handleCompanySelect = (company) => {
-    console.log('Selected company:', company);
-  };
-
-  return (
-    <ApolloLeadsSearch
-      onCompanySelect={handleCompanySelect}
-      defaultParams={{ location: 'Dubai' }}
-      showFilters={true}
-      maxResults={50}
-    />
   );
 }
 ```
@@ -162,7 +134,7 @@ import type {
   ApolloSearchResponse,
   ApolloCredits,
   UseApolloLeadsReturn
-} from '@/features/apollo-leads';
+} from '@lad/frontend-features/apollo-leads';
 ```
 
 ## 🔒 Authentication
@@ -179,11 +151,11 @@ headers: {
 
 ## ⚠️ Error Handling
 
-The service handles various error scenarios:
+The API functions surface these error scenarios:
 
 ```typescript
 try {
-  await apolloLeadsService.searchCompanies(params);
+  await searchCompanies(params);
 } catch (error) {
   // 401: Authentication required
   // 402: Insufficient credits
@@ -196,37 +168,57 @@ try {
 
 ## 🔄 Migration from Old Structure
 
-### Old Import (lad_ui)
+The `apolloLeadsService` singleton that used to live at
+`web/src/services/apolloLeadsService.ts` was **deleted** during the SDK
+restructuring. There is no service object any more — import the named functions.
+
+### Old
 ```typescript
 import { apolloLeadsService } from '@/services/apolloLeadsService';
+
+const results = await apolloLeadsService.searchLeads(params);
 ```
 
-### New Import (frontend/features)
+### New
 ```typescript
-import { apolloLeadsService } from '@/features/apollo-leads';
+import { searchCompanies } from '@lad/frontend-features/apollo-leads';
+
+const results = await searchCompanies(params);
 ```
 
-The new service maintains backward compatibility while adding:
-- ✅ Full TypeScript support
-- ✅ Better error handling
-- ✅ Consistent API
-- ✅ Credit cost tracking
-- ✅ Feature flag integration
+Not every method survived the move under the same name:
+
+| Old method | Replacement |
+|---|---|
+| `searchLeads` | `searchCompanies` |
+| `searchEmployees` | `searchEmployees` |
+| `getCompanyDetails` | `getCompanyDetails` |
+| `checkHealth` | `checkHealth` |
+| `getCompanyEmployees` | `searchEmployees({ company_id })` |
+| `resolvePhones` | `getDecisionMakerPhones` — different request **and** response shape |
+| `revealContact(id, 'email' \| 'phone')` | split into `revealEmail` / `revealPhone` |
+| `enrichCompany` | none |
+| `getSearchHistory` | none |
+
+The barrel also adds `searchEmployeesFromDb`, `revealEmailPost`,
+`revealPhonePost` and `revealSinglePhone`, which had no pre-migration equivalent.
 
 ## 🧪 Testing
 
 ### Health Check
 ```typescript
-const health = await apolloLeadsService.checkHealth();
+import { checkHealth } from '@lad/frontend-features/apollo-leads';
+
+const health = await checkHealth();
 console.log('Status:', health.status); // 'healthy' | 'degraded' | 'down'
 ```
 
 ### Check Credits
-```typescript
-const { credits } = useApolloLeads();
-console.log('Available:', credits?.available);
-console.log('Used:', credits?.used);
-```
+
+Not exposed on the client yet. `useApolloLeads()` returns only `loading`,
+`error`, `clearError` and the API methods — there is no `credits` field and no
+`useApolloCredits` hook. Credit exhaustion surfaces as a `402` from the calls
+above; handle it there.
 
 ## 📚 Related Documentation
 
@@ -248,11 +240,13 @@ console.log('Used:', credits?.used);
 
 ## 💡 Best Practices
 
-1. **Always check credits before expensive operations**
+1. **Expect a 402 on expensive operations**
+   There is no client-side credit check today, so guard the call itself.
    ```typescript
-   const { canAfford } = useApolloCredits();
-   if (canAfford('phone_reveal')) {
-     await revealPhone(personId);
+   try {
+     await revealPhone(personId); // 8 credits
+   } catch (error) {
+     // 402 -> insufficient credits
    }
    ```
 
@@ -277,7 +271,7 @@ console.log('Used:', credits?.used);
 
 4. **Leverage the hook for state management**
    ```typescript
-   const { loading, error, credits } = useApolloLeads();
+   const { loading, error, clearError } = useApolloLeads();
    ```
 
 ---

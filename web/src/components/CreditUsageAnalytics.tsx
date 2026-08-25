@@ -89,7 +89,7 @@ export const CreditUsageAnalytics: React.FC<CreditUsageAnalyticsProps> = ({
     return null;
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-5 sm:px-0">
       {/* Header with Time Range Selector */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">

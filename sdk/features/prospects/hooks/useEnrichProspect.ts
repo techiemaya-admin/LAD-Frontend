@@ -1,5 +1,5 @@
 /**
- * Prospects feature — useEnrichProspect hook (Option C, on-open enrichment).
+ * Prospects feature - useEnrichProspect hook (Option C, on-open enrichment).
  *
  * Triggers a LinkedIn profile enrichment for one prospect. On success, refreshes
  * the single-prospect + list caches so the freshly-pulled company / warm-path

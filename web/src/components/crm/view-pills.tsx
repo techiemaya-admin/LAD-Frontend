@@ -1,5 +1,5 @@
 'use client';
-// View switcher pill — sits below the stats cards and lets the user jump
+// View switcher pill - sits below the stats cards and lets the user jump
 // directly between Board / All / Prospects / Leads / Clients without going
 // through the stat cards.
 

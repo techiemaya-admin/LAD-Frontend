@@ -189,13 +189,13 @@ export interface WorkflowPreviewStep {
   delayDays?: number;
   delayHours?: number;
   leadLimit?: number; // Number of leads to generate per day
-  // AI Media step (media_generation) — set when the user accepts a generated
+  // AI Media step (media_generation) - set when the user accepts a generated
   // asset in the StepEditor; consumed by downstream send steps at launch.
-  // Persisted workflowPreview may predate these fields — all optional.
+  // Persisted workflowPreview may predate these fields - all optional.
   mediaPrompt?: string;
   mediaUrl?: string;      // permanent GCS URL (post import-generated)
   mediaType?: string;     // 'image' | 'video' | 'document'
-  mediaFilename?: string; // real extension — MIME normalization depends on it
+  mediaFilename?: string; // real extension - MIME normalization depends on it
   mimeType?: string;
 }
 export interface AIMessage {
@@ -291,6 +291,13 @@ interface OnboardingState {
   setIsProcessingAI: (processing: boolean) => void;
   setWorkflowPreview: (steps: WorkflowPreviewStep[]) => void;
   addWorkflowStep: (step: WorkflowPreviewStep) => void;
+  /**
+   * Insert a step immediately before/after an existing one - what the node's
+   * hover "+" buttons use, so a step can land mid-sequence instead of only at
+   * the end. An unknown anchor (e.g. the canvas-only 'start'/'end' nodes, which
+   * are not store steps) falls back to appending, so the step is never lost.
+   */
+  insertWorkflowStep: (step: WorkflowPreviewStep, anchorId: string, position: 'before' | 'after') => void;
   removeWorkflowStep: (stepId: string) => void;
   updateWorkflowStep: (stepId: string, updates: Partial<WorkflowPreviewStep>) => void;
   moveWorkflowStep: (stepId: string, direction: 'up' | 'down') => void;
@@ -326,7 +333,7 @@ interface OnboardingState {
   setInboundAnalysis: (analysis: InboundAnalysisResult | null) => void;
   setIsInboundFormVisible: (visible: boolean) => void;
 }
-const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setMobileView' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'setWorkflowState' | 'addAIMessage' | 'clearAIMessages' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'removeWorkflowStep' | 'updateWorkflowStep' | 'moveWorkflowStep' | 'reorderPlatforms' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setPlatformsConfirmed' | 'setSelectedCategory' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setIsEditorPanelCollapsed' | 'setHasRequestedEditor' | 'pushToHistory' | 'undo' | 'redo' | 'canUndo' | 'canRedo' | 'setOnboardingMode' | 'completeOnboarding' | 'reset' | 'setIsICPFlowStarted' | 'setCampaignDataType' | 'setInboundLeadData' | 'setInboundAnalysis' | 'setIsInboundFormVisible'> = {
+const defaultState: Omit<OnboardingState, 'setCurrentScreen' | 'setIsEditMode' | 'setMobileView' | 'setSelectedPath' | 'setHasSelectedOption' | 'setIsAIChatActive' | 'setWorkflowState' | 'addAIMessage' | 'clearAIMessages' | 'setCurrentQuestionIndex' | 'setIsProcessingAI' | 'setWorkflowPreview' | 'addWorkflowStep' | 'insertWorkflowStep' | 'removeWorkflowStep' | 'updateWorkflowStep' | 'moveWorkflowStep' | 'reorderPlatforms' | 'updateAutomationConfig' | 'updateLeadConfig' | 'setChannelConnection' | 'setWorkflow' | 'setManualFlow' | 'setSelectedNodeId' | 'setSelectedPlatforms' | 'setPlatformsConfirmed' | 'setSelectedCategory' | 'setCurrentPlatformIndex' | 'setPlatformFeatures' | 'setCurrentFeatureIndex' | 'setFeatureUtilities' | 'setCurrentUtilityQuestion' | 'addWorkflowNode' | 'addWorkflowEdge' | 'setIsEditorPanelCollapsed' | 'setHasRequestedEditor' | 'pushToHistory' | 'undo' | 'redo' | 'canUndo' | 'canRedo' | 'setOnboardingMode' | 'completeOnboarding' | 'reset' | 'setIsICPFlowStarted' | 'setCampaignDataType' | 'setInboundLeadData' | 'setInboundAnalysis' | 'setIsInboundFormVisible'> = {
   currentScreen: 0,
   hasSelectedOption: false,
   selectedPath: null,
@@ -401,6 +408,17 @@ export const useOnboardingStore = create<OnboardingState>()(
         set((state) => ({
           workflowPreview: [...state.workflowPreview, step],
         })),
+      insertWorkflowStep: (step, anchorId, position) =>
+        set((state) => {
+          // Drop any existing row with the same id first - single-instance macro
+          // nodes (follow-ups, enrich…) then MOVE to the new slot rather than
+          // producing a duplicate the launcher would expand twice.
+          const steps = state.workflowPreview.filter((s) => s.id !== step.id);
+          const anchor = steps.findIndex((s) => s.id === anchorId);
+          if (anchor === -1) return { workflowPreview: [...steps, step] };
+          const at = position === 'before' ? anchor : anchor + 1;
+          return { workflowPreview: [...steps.slice(0, at), step, ...steps.slice(at)] };
+        }),
       removeWorkflowStep: (stepId) =>
         set((state) => ({
           workflowPreview: state.workflowPreview.filter((step) => step.id !== stepId),

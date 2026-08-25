@@ -322,7 +322,7 @@ export function DataImportModal() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500">
-                  Tag this upload with the month the meetings took place — used to populate the Network Growth Graph.
+                  Tag this upload with the month the meetings took place - used to populate the Network Growth Graph.
                 </p>
               </div>
 
@@ -337,7 +337,7 @@ export function DataImportModal() {
                     type="file"
                     accept=".xlsx"
                     multiple
-                    // @ts-expect-error — webkitdirectory is non-standard but widely supported
+                    // @ts-expect-error - webkitdirectory is non-standard but widely supported
                     webkitdirectory=""
                     onChange={handleFolderSelect}
                     className="hidden"
@@ -369,7 +369,7 @@ export function DataImportModal() {
                       <div className="text-center">
                         <p className="font-medium text-gray-900">Click to select folder</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Select the BNI_Rising_Phoenix folder — all .xlsx files will be read
+                          Select the BNI_Rising_Phoenix folder - all .xlsx files will be read
                         </p>
                       </div>
                     )}

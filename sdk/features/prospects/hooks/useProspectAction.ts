@@ -1,5 +1,5 @@
 /**
- * Prospects feature — useProspectAction hook.
+ * Prospects feature - useProspectAction hook.
  *
  * Applies a CRM "Take action" (do-not-contact / quiet) to a prospect, then
  * refreshes the single-prospect + list caches so the new state renders.

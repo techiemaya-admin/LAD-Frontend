@@ -1,8 +1,32 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export default function CloneYourselfSection() {
+  // The demo clip sits below the fold. Only start fetching/playing it once it
+  // scrolls into view (preload="none" + IntersectionObserver) so it never
+  // competes with the hero on initial load.
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            vid.play().catch(() => {});
+          } else {
+            vid.pause();
+          }
+        });
+      },
+      { threshold: 0.25 },
+    );
+    io.observe(vid);
+    return () => io.disconnect();
+  }, []);
   const steps = [
     {
       title: "Train Mr LAD in 3 simple steps",
@@ -12,7 +36,7 @@ export default function CloneYourselfSection() {
     {
       title: "He works every channel at once",
       description:
-        "LinkedIn, WhatsApp, Instagram, email, and voice — coordinated as one team.",
+        "LinkedIn, WhatsApp, Instagram, email, and voice. Coordinated as one team.",
     },
     {
       title: "On brand, every time",
@@ -59,10 +83,12 @@ export default function CloneYourselfSection() {
             {/* Monitor Frame */}
             <div className="rounded-3xl overflow-hidden shadow-2xl border-8 border-foreground/10 bg-foreground/5">
               <video
-                autoPlay
+                ref={videoRef}
                 loop
                 muted
                 playsInline
+                preload="none"
+                poster="/clone-yourself-poster.jpg"
                 className="w-full h-auto object-cover"
               >
                 <source src="/clone-yourself.mp4" type="video/mp4" />

@@ -1,11 +1,11 @@
 /**
  * React-query hooks for LAD-Email-Comms broadcast endpoints.
  *
- * Surface — what the EmailChannelView needs:
- *   useConnectedEmailAccounts()       — populates the "From" selector
- *   useBroadcastRuns(limit?, offset?) — Sent folder list
- *   useBroadcastRun(id)               — detail view; auto-polls if not-yet-terminal
- *   useSendBroadcast()                — Compose submit
+ * Surface - what the EmailChannelView needs:
+ *   useConnectedEmailAccounts()       - populates the "From" selector
+ *   useBroadcastRuns(limit?, offset?) - Sent folder list
+ *   useBroadcastRun(id)               - detail view; auto-polls if not-yet-terminal
+ *   useSendBroadcast()                - Compose submit
  *
  * All hooks rely on the global QueryClient configured in providers.tsx
  * (staleTime 60s, gcTime 5min, retry 1).
@@ -16,7 +16,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
-// ── Shared types — mirror LAD-Email-Comms api/schemas/* ─────────────────────
+// ── Shared types - mirror LAD-Email-Comms api/schemas/* ─────────────────────
 
 export type EmailProvider = 'google' | 'microsoft' | 'custom_smtp';
 export type AccountStatus = 'active' | 'inactive' | 'error' | 'expired';
@@ -201,7 +201,7 @@ export function useBroadcastStats(id: string | null, enabled: boolean) {
   });
 }
 
-/** Lazy-fetch recipients for one broadcast — used for the Sent-row hover
+/** Lazy-fetch recipients for one broadcast - used for the Sent-row hover
  *  tooltip. `enabled` is the gate (we pass true only when the tooltip opens).
  *  Returns the same shape as GET /runs/:id/recipients. */
 export function useBroadcastRecipients(id: string | null, enabled: boolean) {
@@ -241,7 +241,7 @@ export function useSendBroadcast() {
   });
 }
 
-// ── Phase 2 — Groups + contacts ──────────────────────────────────────────
+// ── Phase 2 - Groups + contacts ──────────────────────────────────────────
 
 export type EmailChannel = 'gmail' | 'outlook';
 
@@ -425,7 +425,7 @@ export function useRemoveContactFromGroup() {
   });
 }
 
-/** Search/list contacts with email addresses — feeds the group-add picker. */
+/** Search/list contacts with email addresses - feeds the group-add picker. */
 export function useEmailContacts(
   search: string = '',
   limit: number = 100,

@@ -69,17 +69,17 @@ const BACKFILL_API = '/api/instagram-conversations/conversations/backfill';
 
 // Two Instagram gradients, kept distinct on purpose:
 //
-//   INSTAGRAM_BRAND_GRADIENT — the iconic yellow→pink→purple rainbow used by
+//   INSTAGRAM_BRAND_GRADIENT - the iconic yellow→pink→purple rainbow used by
 //     the Instagram *logo*. Reserved for brand surfaces (avatar fallbacks,
 //     empty-state icon ring, unread badges, the AI toggle pill). Same value
 //     in both themes because the brand color doesn't dark-mode-swap.
 //
-//   INSTAGRAM_CHAT_BLUE_GRADIENT — the blue→indigo gradient real Instagram
+//   INSTAGRAM_CHAT_BLUE_GRADIENT - the blue→indigo gradient real Instagram
 //     uses on the *outgoing chat bubble* and the *send button* inside DMs.
 //     Same value in both themes for the same reason.
 //
 // We previously used the brand rainbow on chat bubbles, which made them
-// look orange/pink — nothing like the actual Instagram chat UI.
+// look orange/pink - nothing like the actual Instagram chat UI.
 const INSTAGRAM_BRAND_GRADIENT =
   'linear-gradient(135deg, #FEDA77 0%, #F58529 25%, #DD2A7B 50%, #8134AF 75%, #515BD4 100%)';
 const INSTAGRAM_CHAT_BLUE_GRADIENT =
@@ -93,8 +93,8 @@ interface Palette {
   muted: string;       // secondary text + icons
   incomingBg: string;  // incoming bubble + active list row + input fill
   hoverBg: string;     // hover background on icon buttons
-  outgoingGradient: string;  // brand rainbow — avatars, badges, brand-y CTAs
-  outgoingBubble: string;    // Instagram chat-blue — outgoing message + send btn
+  outgoingGradient: string;  // brand rainbow - avatars, badges, brand-y CTAs
+  outgoingBubble: string;    // Instagram chat-blue - outgoing message + send btn
 }
 
 const DARK_PALETTE: Palette = {
@@ -146,7 +146,7 @@ function InstagramConversationViewInner(): JSX.Element {
   const [listError, setListError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  // Backfill (sync history) state — surfaces a small status pill in the
+  // Backfill (sync history) state - surfaces a small status pill in the
   // header so the operator knows when historical Meta DMs are coming in.
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{
@@ -166,7 +166,7 @@ function InstagramConversationViewInner(): JSX.Element {
   // operator can pause it to take over manually, and re-enable it later.
   const [ownerUpdating, setOwnerUpdating] = useState(false);
   const [showTakeoverDialog, setShowTakeoverDialog] = useState(false);
-  // True when the operator has clicked Broadcast — opens the placeholder
+  // True when the operator has clicked Broadcast - opens the placeholder
   // group-creation modal. Real send-template implementation is Phase 3.
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
@@ -234,7 +234,7 @@ function InstagramConversationViewInner(): JSX.Element {
           return;
         }
       } catch {
-        // Transient — keep polling
+        // Transient - keep polling
       }
       setTimeout(tick, 3000);
     };
@@ -415,7 +415,7 @@ function InstagramConversationViewInner(): JSX.Element {
               {syncing && <RefreshCw className="h-3 w-3 animate-spin" />}
               {syncStatus?.status === 'failed'
                 ? `Sync failed: ${syncStatus.error || 'unknown error'}`
-                : `Syncing history — ${syncStatus?.threads_processed ?? 0} threads · ${syncStatus?.messages_inserted ?? 0} messages`}
+                : `Syncing history - ${syncStatus?.threads_processed ?? 0} threads · ${syncStatus?.messages_inserted ?? 0} messages`}
             </div>
           )}
           <div className="relative">
@@ -518,7 +518,7 @@ function InstagramConversationViewInner(): JSX.Element {
           <EmptyChatPanel />
         ) : (
           <>
-            {/* Header — contact + AI toggle + broadcast + AI settings links.
+            {/* Header - contact + AI toggle + broadcast + AI settings links.
                 Mirrors the WhatsApp ChannelConversationView control set so
                 operators get parity across channels. */}
             <div
@@ -574,7 +574,7 @@ function InstagramConversationViewInner(): JSX.Element {
 
               {/* ── AI Comments setting ─────────────────────────────── */}
               <HeaderIconButton
-                title="AI Comments — auto-reply to post comments"
+                title="AI Comments: auto-reply to post comments"
                 ariaLabel="Open AI Comments settings"
                 onClick={() => router.push('/instagram/settings?tab=comments')}
               >
@@ -583,7 +583,7 @@ function InstagramConversationViewInner(): JSX.Element {
 
               {/* ── AI Goals setting ────────────────────────────────── */}
               <HeaderIconButton
-                title="AI Goals — track conversions + CTAs"
+                title="AI Goals: track conversions and CTAs"
                 ariaLabel="Open AI Goals settings"
                 onClick={() => router.push('/instagram/settings?tab=goals')}
               >
@@ -616,7 +616,7 @@ function InstagramConversationViewInner(): JSX.Element {
                 </div>
               )}
               {!msgLoading && !msgError && (() => {
-                // Find index of the LAST outgoing message — only that one gets
+                // Find index of the LAST outgoing message - only that one gets
                 // the "Sent / Read / Failed" status line, matching Instagram's
                 // pattern of showing delivery state on the most recent send.
                 let lastOutgoingIdx = -1;
@@ -645,7 +645,7 @@ function InstagramConversationViewInner(): JSX.Element {
               })()}
             </div>
 
-            {/* Composer — send a free-form DM to the active thread. */}
+            {/* Composer - send a free-form DM to the active thread. */}
             <Composer
               conversationId={activeId}
               onSent={(saved) => {
@@ -667,7 +667,7 @@ function InstagramConversationViewInner(): JSX.Element {
             <>
               The AI will stop replying on this conversation until you re-enable it.
               You can keep responding manually in the meantime, and inbound DMs will
-              still arrive — they just won&apos;t trigger an automated reply.
+              still arrive - they just won&apos;t trigger an automated reply.
             </>
           }
           confirmLabel="Pause AI"
@@ -1217,7 +1217,7 @@ function MessageBubble({
   const hasAttachment = ['image', 'audio', 'video'].includes(attachmentType);
   const reaction = (meta.reaction || '') as string;
   const reactionBy = (meta.reaction_by || '') as string;
-  // Delivery status — only meaningful for outgoing messages.
+  // Delivery status - only meaningful for outgoing messages.
   //   • metadata.read_at        → 'read' (set by the messaging_read webhook)
   //   • metadata.last_error or  → 'failed'
   //     message_status='failed'
@@ -1300,7 +1300,7 @@ function MessageBubble({
           )}
         </div>
 
-        {/* Reaction overlay — small badge at the bottom-right of the bubble */}
+        {/* Reaction overlay - small badge at the bottom-right of the bubble */}
         {reactionEmoji && (
           <button
             type="button"
@@ -1324,7 +1324,7 @@ function MessageBubble({
           </button>
         )}
 
-        {/* Hover reaction picker — only for inbound messages with an external id */}
+        {/* Hover reaction picker - only for inbound messages with an external id */}
         {canReact && (
           <button
             type="button"
@@ -1375,7 +1375,7 @@ function formatBubbleTime(iso: string | null | undefined): string {
 // Bubble footer: timestamp + (optional) delivery status. Lives below the
 // rounded bubble, aligned to the bubble's side (right for outgoing, left for
 // incoming). The status text/icon is only rendered for the most recent
-// outgoing message — Instagram only "shows seen" once per conversation, not
+// outgoing message - Instagram only "shows seen" once per conversation, not
 // per bubble.
 function BubbleFooter({
   isOutgoing,
@@ -1403,7 +1403,7 @@ function BubbleFooter({
       case 'sending': return 'Sending…';
       case 'sent':    return 'Sent';
       case 'read':    return readAt ? `Seen ${formatBubbleTime(readAt)}` : 'Seen';
-      case 'failed':  return lastError ? `Failed — ${lastError}` : 'Failed';
+      case 'failed':  return lastError ? `Failed - ${lastError}` : 'Failed';
       default:        return '';
     }
   })();
@@ -1507,7 +1507,7 @@ function InlineMedia({ type, url, caption }: { type: string; url: string; captio
       <audio src={url} controls className="w-full" />
     );
   }
-  // Unknown type — show a link with the filename
+  // Unknown type - show a link with the filename
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="underline">
       {caption || 'Open attachment'}

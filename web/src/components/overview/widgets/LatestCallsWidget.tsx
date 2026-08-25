@@ -40,8 +40,8 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
       <div className="space-y-3">
         {visibleCalls.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm font-medium">No calls yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm font-medium text-white">No calls yet</p>
+            <p className="text-xs text-slate-400 mt-1">
               Your AI assistants haven&apos;t placed any calls.
             </p>
           </div>
@@ -50,7 +50,7 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
             {visibleCalls.map((call) => (
               <div
                 key={call.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3 transition-all hover:bg-secondary/30 hover:shadow-sm"
+                className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-white dark:border-[#262831] dark:bg-[#1a2a43] px-4 py-3 transition-all hover:bg-[#F8F9FE] dark:hover:bg-[#0b1941] hover:shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Badge
@@ -63,24 +63,24 @@ export const LatestCallsWidget: React.FC<LatestCallsWidgetProps> = ({
                     {call.status.replace('_', ' ')}
                   </Badge>
                   <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">
+                    <p className="font-medium text-sm truncate text-white">
                       {call.leadName || 'Unknown Lead'}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-slate-400 truncate">
                       {call.agentName}
                     </p>
                   </div>
                 </div>
                 <div className="text-right whitespace-nowrap ml-4">
-                  <p className="text-sm font-medium">{call.duration}</p>
-                  <p className="text-xs text-muted-foreground">{call.date}</p>
+                  <p className="text-sm font-medium text-white">{call.duration}</p>
+                  <p className="text-xs text-slate-400">{call.date}</p>
                 </div>
               </div>
             ))}
             {calls.length > ITEMS_PER_PAGE && (
               <div className="flex items-center justify-between pt-2">
                 <span className="text-xs text-muted-foreground">
-                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
                   {Math.min(currentPage * ITEMS_PER_PAGE, calls.length)} of {calls.length}
                 </span>
                 <div className="flex gap-2">

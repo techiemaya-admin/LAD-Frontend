@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useMicrosoftEmailStatus
+ * Email Accounts - useMicrosoftEmailStatus
  * Polls Microsoft/Outlook OAuth connection status + Bookings config.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';

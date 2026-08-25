@@ -62,6 +62,16 @@ export { useLeadProfileSummary, useGenerateLeadProfileSummary } from './hooks/us
 export { useRevealLeadEmail, useRevealLeadPhone, useRevealLeadLinkedIn } from './hooks/useLeadReveal';
 export { useSaveInboundLeads, useInboundLeads } from './hooks/useInboundLeads';
 export { useCampaignActivityFeed } from './hooks/useCampaignActivityFeed';
+
+// ============================================================================
+// ERROR HELPERS
+// ============================================================================
+export {
+  CAMPAIGN_NAME_TAKEN,
+  isCampaignNameTaken,
+  campaignNameTakenMessage,
+  campaignSaveErrorMessage,
+} from './nameConflict';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -162,4 +172,9 @@ export {
   updateMessageTemplate as updateInstagramMessageTemplate,
   deleteMessageTemplate as deleteInstagramMessageTemplate,
 } from './instagram-message-templates';
+
+// ── Strategies (saved + shareable workflow playbooks) ────────────────────────
+// Exported wholesale rather than aliased: unlike the two message-template
+// sub-features, these names ("Strategy") don't collide with anything else here.
+export * from './strategies';
 

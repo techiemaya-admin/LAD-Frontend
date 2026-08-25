@@ -12,7 +12,7 @@ export type Channel = 'whatsapp' | 'linkedin' | 'gmail' | 'outlook' | 'instagram
 export type ConversationStatus = 'open' | 'resolved' | 'muted';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 export type ConversationOwner = 'AI' | 'human_agent';
-/** Context status from bni_conversation_manager — dynamic per tenant */
+/** Context status from bni_conversation_manager - dynamic per tenant */
 export type ConversationState = string;
 
 // ============================
@@ -98,7 +98,7 @@ export type RichMessageType =
 export interface RichMessagePayload {
   type: RichMessageType;
 
-  /** Plain text content — required for 'text', optional caption for media */
+  /** Plain text content - required for 'text', optional caption for media */
   content?: string;
 
   // ── Media (image / video / document / audio) ────────────────────────────
@@ -150,7 +150,7 @@ export interface Conversation {
 
 /**
  * Sort modes accepted by the backend's GET /api/conversations endpoint.
- *  - 'date'           : Last activity, newest first (default — matches WhatsApp).
+ *  - 'date'           : Last activity, newest first (default - matches WhatsApp).
  *  - 'message_count'  : Most messages first.
  *  - 'name'           : Contact name A → Z, unnamed contacts last.
  */
@@ -186,7 +186,7 @@ export interface SendMessageRequest {
   channel?: 'personal' | 'waba';
   tenantId?: string;  // used for X-Tenant-ID header during multipart media pre-upload
 
-  // Rich payload — all fields from RichMessagePayload forwarded to backend
+  // Rich payload - all fields from RichMessagePayload forwarded to backend
   type?: RichMessageType;
   content?: string;
   fileBase64?: string;
@@ -230,7 +230,7 @@ export interface UseConversationsReturn {
   setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  /** Currently selected label UUIDs — server returns only matching conversations. */
+  /** Currently selected label UUIDs - server returns only matching conversations. */
   selectedLabelIds: string[];
   setSelectedLabelIds: (ids: string[]) => void;
   /** When true, conversations with no messages yet are hidden from the list. */

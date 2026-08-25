@@ -106,7 +106,7 @@ export default function HtmlEmailEditor({
           <div className="flex-1 min-w-[8px]" />
           <button
             onClick={() => setShowMediaModal(true)}
-            className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-xs bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-xs bg-primary dark:bg-blue-500 text-white rounded-lg hover:bg-primary/90 active:bg-primary/80 dark:hover:bg-blue-600 dark:active:bg-blue-700 font-semibold transition-all active:scale-95 cursor-pointer"
           >
             📸 Insert Media
           </button>

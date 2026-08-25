@@ -8,7 +8,7 @@ interface OnboardingLayoutProps {
   campaignId?: string | null;
 }
 export default function OnboardingLayout({ campaignId }: OnboardingLayoutProps) {
-  // R8 Phase 3 — when ?step=<id> is present, run the linear signup wizard
+  // R8 Phase 3 - when ?step=<id> is present, run the linear signup wizard
   // (Welcome → Company → ICP → Review → Integrations). When absent, keep the
   // existing 3-panel flow so direct entries to /onboarding don't regress.
   const searchParams = useSearchParams();

@@ -30,6 +30,7 @@ import {
 import { QuickReplyPicker } from './QuickReplyPicker';
 import { TemplatePicker } from './TemplatePicker';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { fetchJson } from '@/lib/fetch-json';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,14 +47,14 @@ interface PendingFile {
 
 export interface MessageComposerProps {
   channel:         Channel;
-  /** Explicit backend routing channel — 'personal' for Baileys, 'waba' for Meta Graph API.
+  /** Explicit backend routing channel - 'personal' for Baileys, 'waba' for Meta Graph API.
    *  When omitted, falls back to inferring from `channel` (always 'waba' for 'whatsapp'). */
   backendChannel?: 'personal' | 'waba';
   onSendMessage:   (payload: RichMessagePayload) => void;
   /** Broadcast-mode template send (no conversationId). When set, picking a
    *  template calls this instead of the per-conversation send endpoint. */
   onSendTemplate?: (templateName: string, languageCode: string, parameters: string[]) => void | Promise<void>;
-  /** Broadcast-mode target count (selected groups) — shown in the template dialog. */
+  /** Broadcast-mode target count (selected groups) - shown in the template dialog. */
   broadcastTargetCount?: number;
   disabled?:       boolean;
   contactName?:    string;
@@ -126,43 +127,43 @@ function PollModal({ onClose, onSend }: { onClose: () => void; onSend: (p: RichM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#0b1957] flex items-center justify-center"><BarChart2 className="w-4 h-4 text-white"/></div>
-            <h3 className="font-semibold text-[#1E293B]">Create Poll</h3>
+            <div className="w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center"><BarChart2 className="w-4 h-4 text-white"/></div>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Create Poll</h3>
           </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-gray-600"/></button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">Question</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Question</label>
             <input value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Ask a question..."
-              className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957]"/>
+              className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
           </div>
           <div>
-            <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">Options</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Options</label>
             <div className="mt-1 space-y-2">
               {options.map((opt,i)=>(
                 <div key={i} className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#0b1957]/10 text-[#0b1957] text-xs flex items-center justify-center font-bold shrink-0">{i+1}</span>
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-center font-bold shrink-0">{i+1}</span>
                   <input value={opt} onChange={e=>updateOption(i,e.target.value)} placeholder={`Option ${i+1}`}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957]"/>
-                  {options.length>2 && <button onClick={()=>removeOption(i)}><X className="w-4 h-4 text-gray-300 hover:text-red-400"/></button>}
+                    className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
+                  {options.length>2 && <button onClick={()=>removeOption(i)}><X className="w-4 h-4 text-zinc-400 hover:text-red-500"/></button>}
                 </div>
               ))}
             </div>
             {options.length<10 && (
-              <button onClick={addOption} className="mt-2 text-xs text-[#0b1957] font-medium hover:underline flex items-center gap-1">
+              <button onClick={addOption} className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1">
                 <Plus className="w-3 h-3"/> Add option
               </button>
             )}
           </div>
         </div>
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
+        <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2 justify-end">
           <button onClick={handleSend} disabled={!question.trim() || options.filter(o=>o.trim()).length<2}
-            className="px-4 py-2 text-sm font-semibold bg-[#0b1957] text-white rounded-xl hover:bg-[#0a1540] disabled:opacity-40">
+            className="px-4 py-2 text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-40 transition-colors">
             Send Poll
           </button>
         </div>
@@ -191,27 +192,27 @@ function ContactModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Ri
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center"><Phone className="w-4 h-4 text-white"/></div>
-            <h3 className="font-semibold text-[#1E293B]">Share Contact</h3>
+            <div className="w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center"><Phone className="w-4 h-4 text-white"/></div>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Share Contact</h3>
           </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-gray-600"/></button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 space-y-3">
           {fields.map(f=>(
             <div key={f.label}>
-              <label className="text-xs font-medium text-[#64748B]">{f.label}</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{f.label}</label>
               <input value={f.value} onChange={e=>f.set(e.target.value)} placeholder={f.ph}
-                className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"/>
+                className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
             </div>
           ))}
         </div>
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
+        <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2 justify-end">
           <button onClick={handleSend} disabled={!name.trim()||!phone.trim()}
-            className="px-4 py-2 text-sm font-semibold bg-teal-500 text-white rounded-xl hover:bg-teal-600 disabled:opacity-40">
+            className="px-4 py-2 text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-40 transition-colors">
             Share Contact
           </button>
         </div>
@@ -238,47 +239,47 @@ function EventModal({ onClose, onSend }: { onClose: () => void; onSend: (p: Rich
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center"><Calendar className="w-4 h-4 text-white"/></div>
-            <h3 className="font-semibold text-[#1E293B]">Share Event</h3>
+            <div className="w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center"><Calendar className="w-4 h-4 text-white"/></div>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Share Event</h3>
           </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-gray-600"/></button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <label className="text-xs font-medium text-[#64748B]">Event Title *</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Event Title *</label>
             <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Team Meeting"
-              className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
+              className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-[#64748B]">Date *</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Date *</label>
               <input type="date" value={date} onChange={e=>setDate(e.target.value)}
-                className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
+                className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#64748B]">Time</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Time</label>
               <input type="time" value={time} onChange={e=>setTime(e.target.value)}
-                className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
+                className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-[#64748B]">Location</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Location</label>
             <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Dubai, UAE"
-              className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
+              className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
           </div>
           <div>
-            <label className="text-xs font-medium text-[#64748B]">Note</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Note</label>
             <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Add a note…" rows={2}
-              className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"/>
+              className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
           </div>
         </div>
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
+        <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2 justify-end">
           <button onClick={handleSend} disabled={!title.trim()||!date}
-            className="px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 disabled:opacity-40">
+            className="px-4 py-2 text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-40 transition-colors">
             Share Event
           </button>
         </div>
@@ -314,43 +315,43 @@ function LocationModal({ onClose, onSend }: { onClose: () => void; onSend: (p: R
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center"><MapPin className="w-4 h-4 text-white"/></div>
-            <h3 className="font-semibold text-[#1E293B]">Share Location</h3>
+            <div className="w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center"><MapPin className="w-4 h-4 text-white"/></div>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Share Location</h3>
           </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-gray-600"/></button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 space-y-4">
           <button onClick={getLocation} disabled={gpsStatus==='loading'}
-            className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 transition-colors group">
-            <div className="w-10 h-10 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center shrink-0">
-              {gpsStatus==='loading' ? <Loader2 className="w-5 h-5 text-green-600 animate-spin"/> : <MapPin className="w-5 h-5 text-green-600"/>}
+            className="w-full flex items-center gap-3 p-3 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 hover:border-emerald-300 dark:hover:border-emerald-700/50 transition-colors group">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/40 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 flex items-center justify-center shrink-0">
+              {gpsStatus==='loading' ? <Loader2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-spin"/> : <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400"/>}
             </div>
             <div className="text-left">
-              <p className="text-sm font-semibold text-[#1E293B]">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 {gpsStatus==='loading' ? 'Getting location…' : gpsStatus==='done' ? '✓ Location found' : 'Send Current Location'}
               </p>
-              {coords     && <p className="text-xs text-[#64748B]">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>}
+              {coords     && <p className="text-xs text-zinc-500 dark:text-zinc-400">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>}
               {gpsStatus==='error' && <p className="text-xs text-red-500">Location access denied</p>}
-              {gpsStatus==='idle'  && <p className="text-xs text-[#94A3B8]">Uses your device GPS</p>}
+              {gpsStatus==='idle'  && <p className="text-xs text-zinc-400 dark:text-zinc-500">Uses your device GPS</p>}
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400 ml-auto"/>
+            <ChevronRight className="w-4 h-4 text-zinc-400 ml-auto"/>
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-200"/><span className="text-xs text-gray-400 font-medium">or</span><div className="flex-1 h-px bg-gray-200"/>
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800"/><span className="text-xs text-zinc-400 font-medium">or</span><div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800"/>
           </div>
           <div>
-            <label className="text-xs font-medium text-[#64748B]">Enter address or place</label>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Enter address or place</label>
             <input value={manual} onChange={e=>setManual(e.target.value)} placeholder="e.g. Dubai Mall, UAE"
-              className="mt-1 w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"/>
+              className="mt-1 w-full px-3 py-2.5 border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"/>
           </div>
         </div>
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
+        <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2 justify-end">
           <button onClick={handleSend} disabled={!coords && !manual.trim()}
-            className="px-4 py-2 text-sm font-semibold bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-40">
+            className="px-4 py-2 text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-40 transition-colors">
             Share Location
           </button>
         </div>
@@ -367,7 +368,7 @@ const STICKER_PACKS = {
   'gestures': { label: '👍 Gestures', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👍', '👎', '☝️', '👆', '👇', '☟', '👈', '👉', '👊', '👏', '🙌', '👐', '🤲', '🤝', '🤜', '🤛', '🦾', '🦿', '👅', '👂', '👃', '🧠', '🦷', '🦴', '👀', '👁️'] },
   'animals': { label: '🐶 Animals', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦉', '🦜', '🦢', '🦗', '🕷️'] },
   'food': { label: '🍕 Food', emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥑', '🍆', '🍅', '🌶️', '🌽', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🥓', '🥔', '🍗', '🍖', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🍰', '🎂', '🧁', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🍯', '🥛', '🍼', '☕', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃'] },
-  'activities': { label: '⚽ Activities', emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '⛸️', '🎣', '🎽', '🎿', '⛷️', '🏂', '🪂', '🛼', '🛹', '🛷', '🥌', '🎯', '🪀', '🪃', '🎪', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎭', '🎰', '🧩', '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🏎️', '🛵', '🦯', '🦽', '🦼', '🛺', '🚲', '🛴', '🛹', '🛼', '🚏', '⛽', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '�2', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛰️', '🚁', '🛶', '⛵', '🚤', '🛳️', '🛲', '🚧', '⛽'] },
+  'activities': { label: '⚽ Activities', emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '⛸️', '🎣', '🎽', '🎿', '⛷️', '🏂', '🪂', '🛼', '🛹', '🛷', '🥌', '🎯', '🪀', '🪃', '🎪', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎭', '🎰', '🧩', '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🏎️', '🛵', '🦯', '🦽', '🦼', '🛺', '🚲', '🛴', '🛹', '🛼', '🚏', '⛽', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚋', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛰️', '🚁', '🛶', '⛵', '🚤', '🛳️', '🛲', '🚧', '⛽'] },
 };
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -379,24 +380,24 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
   const currentPack = STICKER_PACKS[activePack as keyof typeof STICKER_PACKS];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden flex flex-col max-h-96">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 overflow-hidden flex flex-col max-h-96">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
-          <h3 className="font-semibold text-[#1E293B]">Stickers</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Stickers</h3>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search bar */}
-        <div className="px-4 py-2 border-b border-gray-100 shrink-0">
+        <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search via sticker store"
-            className="w-full px-3 py-2 bg-gray-100 rounded-full text-sm text-gray-700 placeholder-gray-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 rounded-full text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/50"
           />
         </div>
 
@@ -410,7 +411,7 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
                   onSelect(emoji);
                   onClose();
                 }}
-                className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                 title={emoji}
               >
                 {emoji}
@@ -420,15 +421,15 @@ function StickerPicker({ onSelect, onClose }: { onSelect: (s: string) => void; o
         </div>
 
         {/* Pack tabs at bottom */}
-        <div className="px-2 py-2 border-t border-gray-100 flex items-center gap-1 overflow-x-auto shrink-0">
+        <div className="px-2 py-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-1 overflow-x-auto shrink-0">
           {packs.map(([key, pack]) => (
             <button
               key={key}
               onClick={() => setActivePack(key)}
               className={`px-3 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 activePack === key
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'hover:bg-gray-100 text-gray-600'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+                  : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
               }`}
             >
               {pack.label.split(' ')[0]}
@@ -455,6 +456,8 @@ export const MessageComposer = memo(function MessageComposer({
   const [fileLoading,        setFileLoading]        = useState(false);
   const [agentType,          setAgentType]          = useState<AgentType>(owner === 'human_agent' ? 'human' : 'ai');
   const [showTakeoverDialog, setShowTakeoverDialog] = useState(false);
+  /** Set when an AI/human handover was rejected, so the UI stops implying it worked. */
+  const [ownershipError,     setOwnershipError]     = useState<string | null>(null);
   const [showAttachMenu,     setShowAttachMenu]     = useState(false);
   const [showStickers,       setShowStickers]       = useState(false);
   const [showPoll,           setShowPoll]           = useState(false);
@@ -495,23 +498,43 @@ export const MessageComposer = memo(function MessageComposer({
   }, [showAttachMenu]);
 
   // ── Ownership API ─────────────────────────────────────────────────────────
-  const updateOwnership = useCallback(async (newOwner: 'AI' | 'human_agent') => {
-    if (!conversationId) return;
+  // Reports whether the change actually landed. This used to swallow every
+  // failure into console.error while the caller had ALREADY flipped
+  // `agentType`, so a rejected PATCH left the composer showing "human agent"
+  // while the server still had the AI owning the thread — the AI kept replying
+  // to a conversation its operator believed they had taken over. `fetchWithTenant`
+  // does not throw on 4xx/5xx, so even an explicit reject arrived here as success.
+  const updateOwnership = useCallback(async (newOwner: 'AI' | 'human_agent'): Promise<boolean> => {
+    if (!conversationId) return true;
+    setOwnershipError(null);
     try {
-      await fetchWithTenant(`${CONV_API}/${conversationId}/ownership`, {
+      await fetchJson(`${CONV_API}/${conversationId}/ownership`, {
         method: 'PATCH',
         body: JSON.stringify({ owner: newOwner }),
       });
-    } catch (err) { console.error('Failed to update ownership:', err); }
+      return true;
+    } catch (err) {
+      setOwnershipError(
+        err instanceof Error ? err.message : 'Could not change who handles this conversation',
+      );
+      return false;
+    }
   }, [conversationId]);
 
   const handleAgentTypeChange = useCallback((type: AgentType) => {
     if (type === 'human' && agentType === 'ai') setShowTakeoverDialog(true);
-    else if (type === 'ai' && agentType === 'human') { setAgentType('ai'); updateOwnership('AI'); }
+    else if (type === 'ai' && agentType === 'human') {
+      setAgentType('ai');
+      // Put the toggle back if the server refused, so it never claims a
+      // handover that did not happen.
+      void updateOwnership('AI').then((ok) => { if (!ok) setAgentType('human'); });
+    }
   }, [agentType, updateOwnership]);
 
   const confirmTakeover = useCallback(() => {
-    setAgentType('human'); updateOwnership('human_agent'); setShowTakeoverDialog(false);
+    setAgentType('human');
+    void updateOwnership('human_agent').then((ok) => { if (!ok) setAgentType('ai'); });
+    setShowTakeoverDialog(false);
   }, [updateOwnership]);
 
   // ── File reading ──────────────────────────────────────────────────────────
@@ -701,20 +724,20 @@ export const MessageComposer = memo(function MessageComposer({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="border-t border-border bg-white p-3 whatsapp-chat-bg">
+    <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
 
       {/* ── Modals ── */}
       <AlertDialog open={showTakeoverDialog} onOpenChange={setShowTakeoverDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Take over from AI Agent?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-zinc-900 dark:text-zinc-100">Take over from AI Agent?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400">
               This will pause the AI agent and give you manual control. The AI will not respond until you switch back.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmTakeover}>Yes, take control</AlertDialogAction>
+            <AlertDialogCancel className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTakeover} className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white">Yes, take control</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -734,30 +757,30 @@ export const MessageComposer = memo(function MessageComposer({
       {(pendingFiles.length > 0 || fileLoading) && (
         <div className="flex flex-wrap gap-2 mb-3">
           {fileLoading && (
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 text-sm text-blue-700">
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-lg px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-400">
               <Loader2 className="h-3.5 w-3.5 animate-spin"/>
               <span>Reading file…</span>
             </div>
           )}
           {pendingFiles.map(pf => (
-            <div key={pf.id} className="flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-1.5 text-sm max-w-[200px]">
+            <div key={pf.id} className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm max-w-[200px]">
               {pf.mediaType === 'image' ? (
                 <img src={pf.previewUrl} alt={pf.file.name} className="h-7 w-7 rounded object-cover shrink-0"/>
               ) : pf.mediaType === 'video' ? (
-                <div className="h-7 w-7 rounded bg-purple-100 flex items-center justify-center shrink-0">
-                  <ImageIcon className="h-4 w-4 text-purple-600"/>
+                <div className="h-7 w-7 rounded bg-purple-100 dark:bg-purple-950/50 flex items-center justify-center shrink-0">
+                  <ImageIcon className="h-4 w-4 text-purple-600 dark:text-purple-400"/>
                 </div>
               ) : pf.mediaType === 'audio' ? (
-                <div className="h-7 w-7 rounded bg-orange-100 flex items-center justify-center shrink-0">
-                  <Music className="h-4 w-4 text-orange-600"/>
+                <div className="h-7 w-7 rounded bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center shrink-0">
+                  <Music className="h-4 w-4 text-amber-600 dark:text-amber-400"/>
                 </div>
               ) : (
-                <div className="h-7 w-7 rounded bg-blue-100 flex items-center justify-center shrink-0">
-                  <FileText className="h-4 w-4 text-blue-600"/>
+                <div className="h-7 w-7 rounded bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center shrink-0">
+                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400"/>
                 </div>
               )}
-              <span className="truncate text-xs">{pf.file.name}</span>
-              <button onClick={()=>removePendingFile(pf.id)} className="text-muted-foreground hover:text-foreground shrink-0">
+              <span className="truncate text-xs text-zinc-800 dark:text-zinc-200">{pf.file.name}</span>
+              <button onClick={()=>removePendingFile(pf.id)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0">
                 <X className="h-3.5 w-3.5"/>
               </button>
             </div>
@@ -767,34 +790,39 @@ export const MessageComposer = memo(function MessageComposer({
 
       <div className="flex items-end gap-2">
 
-        {/* ── Agent type toggle (chat only — hidden for group broadcast) ── */}
+        {/* ── Agent type toggle (chat only - hidden for group broadcast) ── */}
         {conversationId && (
         <div className="hidden lg:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon"
-                className={cn('h-9 w-9 flex-shrink-0',
-                  agentType === 'human' ? 'text-orange-500 hover:text-orange-600' : 'text-green-500 hover:text-green-600')}
+                className={cn('h-9 w-9 flex-shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors',
+                  agentType === 'human' ? 'text-amber-500 hover:text-amber-600' : 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300')}
                 disabled={disabled}
                 title={agentType === 'human' ? 'Human agent controls this chat' : 'AI agent controls this chat'}>
                 {agentType === 'human' ? <User className="h-5 w-5"/> : <Bot className="h-5 w-5"/>}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="bg-popover z-50">
-              <DropdownMenuItem onClick={()=>handleAgentTypeChange('human')} className={cn(agentType==='human'&&'bg-accent')}>
+            <DropdownMenuContent align="start" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg z-50">
+              <DropdownMenuItem onClick={()=>handleAgentTypeChange('human')} className={cn('hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 cursor-pointer', agentType==='human'&&'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400')}>
                 <User className="h-4 w-4 mr-2"/> Human Agent
-                {agentType==='human' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+                {agentType==='human' && <span className="ml-auto text-xs font-medium">Active</span>}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={()=>handleAgentTypeChange('ai')} className={cn(agentType==='ai'&&'bg-accent')}>
+              <DropdownMenuItem onClick={()=>handleAgentTypeChange('ai')} className={cn('hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 cursor-pointer', agentType==='ai'&&'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400')}>
                 <Bot className="h-4 w-4 mr-2"/> AI Agent
-                {agentType==='ai' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+                {agentType==='ai' && <span className="ml-auto text-xs font-medium">Active</span>}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {ownershipError && (
+            <p className="absolute top-full left-0 mt-1 whitespace-nowrap text-[11px] text-rose-600 dark:text-rose-400">
+              {ownershipError} — handover not applied.
+            </p>
+          )}
         </div>
         )}
 
-        {/* ── "+" Attachment menu (always visible — the only path to Send Template
+        {/* ── "+" Attachment menu (always visible - the only path to Send Template
               in broadcast mode, so it must work on mobile too) ── */}
         <div ref={attachBtnRef} className="relative flex-shrink-0">
           <button
@@ -803,31 +831,31 @@ export const MessageComposer = memo(function MessageComposer({
             className={cn(
               'h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200',
               showAttachMenu
-                ? 'bg-[#0b1957] text-white rotate-45'
-                : 'text-[#64748B] hover:bg-gray-100 hover:text-[#1E293B]'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white rotate-45'
+                : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
             )}>
             <Plus className="h-5 w-5"/>
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-3 z-40">
-              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide mb-2 px-1">Attach</p>
+            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-3 z-40">
+              <p className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2 px-1">Attach</p>
               <div className="grid grid-cols-3 gap-1">
                 {[
                   // Sticker is emoji-text (inserted into the message input), so it
-                  // broadcasts fine as text — keep it in every mode. Broadcast mode
+                  // broadcasts fine as text - keep it in every mode. Broadcast mode
                   // additionally offers Send Template.
                   ...ATTACH_ITEMS,
                   ...(onSendTemplate && !conversationId
-                    ? [{ id: 'template', label: 'Send Template', icon: <LayoutTemplate className="w-6 h-6 text-white" />, bg: 'bg-[#0b1957]' } as AttachItem]
+                    ? [{ id: 'template', label: 'Send Template', icon: <LayoutTemplate className="w-6 h-6 text-white" />, bg: 'bg-emerald-600' } as AttachItem]
                     : []),
                 ].map(item => (
                   <button key={item.id} onClick={()=>handleAttachItem(item.id)}
-                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group">
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
                     <div className={cn('w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-transform group-hover:scale-105', item.bg)}>
                       {item.icon}
                     </div>
-                    <span className="text-[10px] text-[#64748B] font-medium leading-tight text-center">{item.label}</span>
+                    <span className="text-[10px] text-zinc-700 dark:text-zinc-300 font-medium leading-tight text-center">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -841,7 +869,7 @@ export const MessageComposer = memo(function MessageComposer({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 flex-shrink-0 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             disabled={disabled || !conversationId}
             title="Send template message"
             onClick={() => setIsTemplatePickerOpen(true)}
@@ -859,6 +887,7 @@ export const MessageComposer = memo(function MessageComposer({
           sendProgress={templateSendProgress}
           channel={resolvedBackendChannel}
           isBulkSend={false}
+          variant="whatsapp"
         />
 
         {/* ── Text input ── */}
@@ -876,7 +905,7 @@ export const MessageComposer = memo(function MessageComposer({
             disabled={disabled}
             className={cn(
               'min-h-[40px] max-h-[150px] resize-none py-2.5 px-4 rounded-2xl',
-              'bg-white border border-gray-300 focus-visible:ring-1 focus-visible:ring-[#25D366]/30'
+              'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 border border-zinc-200 dark:border-zinc-700/80 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50 focus:outline-none'
             )}
             rows={1}
           />
@@ -885,7 +914,7 @@ export const MessageComposer = memo(function MessageComposer({
         {/* ── Sticker / Emoji button ── */}
         <div className="relative flex-shrink-0 hidden lg:block">
           <Button variant="ghost" size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             disabled={disabled}
             onClick={()=>setShowStickers(v=>!v)}>
             <Smile className="h-5 w-5"/>
@@ -903,7 +932,7 @@ export const MessageComposer = memo(function MessageComposer({
           onClick={handleSend}
           disabled={!canSend}
           size="icon"
-          className="h-9 w-9 flex-shrink-0 bg-[#25D366] hover:bg-[#22c55e] text-white disabled:opacity-40">
+          className="h-9 w-9 flex-shrink-0 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white disabled:opacity-40 transition-colors shadow-xs">
           <Send className="h-4 w-4"/>
         </Button>
       </div>
@@ -913,18 +942,18 @@ export const MessageComposer = memo(function MessageComposer({
         <div className={cn(
           'mt-1.5 px-3 py-1.5 rounded-md text-xs flex items-center gap-2',
           templateSendResult.success
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-red-50 text-red-700 border border-red-200'
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+            : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50'
         )}>
           {templateSendResult.success ? '✓' : '✕'} {templateSendResult.message}
         </div>
       )}
 
-      {/* ── Hint bar (chat only — hidden for group broadcast) ── */}
+      {/* ── Hint bar (chat only - hidden for group broadcast) ── */}
       {conversationId && (
-        <p className="text-[10px] text-muted-foreground mt-2 px-1 hidden lg:block">
+        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-2 px-1 hidden lg:block">
           Enter to send · Shift+Enter for new line
-          {agentType === 'human' && <span className="ml-2 text-orange-500 font-medium">· You have manual control</span>}
+          {agentType === 'human' && <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">· You have manual control</span>}
         </p>
       )}
     </div>

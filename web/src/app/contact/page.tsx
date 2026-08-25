@@ -66,7 +66,7 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:bg-none dark:bg-[#091338] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
@@ -82,7 +82,7 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:bg-none dark:bg-[#091338] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
@@ -98,7 +98,7 @@ const ContactPage = memo(function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-[#1a2f6b]/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow"
+            className="bg-gradient-to-br from-white to-gray-50 dark:bg-none dark:bg-[#091338] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-[#0b1957]/10 dark:bg-[#0b1957] rounded-lg">
@@ -118,7 +118,7 @@ const ContactPage = memo(function ContactPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="max-w-2xl mx-auto"
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-[#1a2f6b] dark:to-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:bg-none dark:bg-[#091338] rounded-2xl p-8 shadow-lg">
             <h2 className="text-3xl font-bold text-[#0b1957] dark:text-white mb-8">Send us a Message</h2>
 
             {submitSuccess && (
@@ -148,7 +148,7 @@ const ContactPage = memo(function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder="Your name"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-[#000724]/60 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
                   />
                 </div>
                 <div>
@@ -163,7 +163,7 @@ const ContactPage = memo(function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder="your@email.com"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-[#000724]/60 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
                   />
                 </div>
               </div>
@@ -180,7 +180,7 @@ const ContactPage = memo(function ContactPage() {
                   onChange={handleChange}
                   required
                   placeholder="What is this about?"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-[#000724]/60 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors"
                 />
               </div>
 
@@ -196,7 +196,7 @@ const ContactPage = memo(function ContactPage() {
                   required
                   placeholder="Tell us more..."
                   rows={6}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors resize-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-[#000724]/60 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:text-white transition-colors resize-none"
                 />
               </div>
 

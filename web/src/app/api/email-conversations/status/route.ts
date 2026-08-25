@@ -1,4 +1,4 @@
-/** GET /api/email-conversations/status — check Gmail + Outlook + Custom SMTP connection */
+/** GET /api/email-conversations/status - check Gmail + Outlook + Custom SMTP connection */
 import { NextRequest } from 'next/server';
 import { proxyToBackend } from '../utils/proxy';
 

@@ -25,7 +25,7 @@ import {
  */
 export interface AgentAudioVisualizerLadsProps {
   /**
-   * Current agent state — drives which animation mode is active.
+   * Current agent state - drives which animation mode is active.
    * @defaultValue 'connecting'
    */
   state?: AgentState;
@@ -40,7 +40,7 @@ export interface AgentAudioVisualizerLadsProps {
    */
   size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
   /**
-   * Primary color in hex — applied to the full logo and animated elements.
+   * Primary color in hex - applied to the full logo and animated elements.
    * @defaultValue '#0b1958'
    */
   color?: `#${string}`;
@@ -48,7 +48,7 @@ export interface AgentAudioVisualizerLadsProps {
   children?: ReactNode;
 }
 
-// ─── Size variants — identical to AgentAudioVisualizerBar ─────────────────────
+// ─── Size variants - identical to AgentAudioVisualizerBar ─────────────────────
 
 export const AgentAudioVisualizerLadsVariants = cva(['aspect-square'], {
   variants: {
@@ -67,7 +67,7 @@ export const AgentAudioVisualizerLadsVariants = cva(['aspect-square'], {
 
 /**
  * Logo body with the three dot sub-paths removed.
- * Renders as a fully solid shape — no holes.
+ * Renders as a fully solid shape - no holes.
  * The animated <rect> elements sit on top and cover where the dots were.
  */
 const LOGO_PATH_SOLID =
@@ -166,7 +166,7 @@ export const AgentAudioVisualizerLads = forwardRef<
 ) => {
   const { bars, liquid, crossfade } = useAgentAudioVisualizerLads(state, audioTrack);
 
-  // Stable clip-path ID — avoids collisions when multiple instances render
+  // Stable clip-path ID - avoids collisions when multiple instances render
   const uid    = useId();
   const clipId = `lads-clip-${uid.replace(/:/g, '')}`;
 
@@ -206,7 +206,7 @@ export const AgentAudioVisualizerLads = forwardRef<
 
         {/* ── Layer 1: Dot / bar mode ── */}
         <g opacity={1 - crossfade}>
-          {/* Solid logo body (no holes — dots animated separately on top) */}
+          {/* Solid logo body (no holes - dots animated separately on top) */}
           <path
             fill={fillColor}
             transform="translate(144.48,-148.655) scale(1.88)"

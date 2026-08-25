@@ -1,5 +1,5 @@
 'use client';
-// /crm/zoho — Browse Zoho CRM records (Contacts / Leads / Deals / Tasks) synced
+// /crm/zoho - Browse Zoho CRM records (Contacts / Leads / Deals / Tasks) synced
 // into this tenant. Connection setup lives in Settings → Integrations.
 
 import * as React from 'react';
@@ -19,7 +19,7 @@ export default function ZohoCrmPage() {
       <main className="max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
         <Link
           href="/crm"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white mb-4 transition-colors font-medium"
         >
           <ChevronLeft className="h-4 w-4" /> Back to CRM
         </Link>
@@ -38,9 +38,12 @@ export default function ZohoCrmPage() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowRecurring(true)}>
-            <Repeat className="h-4 w-4 mr-2" /> Recurring campaign
-          </Button>
+          <button
+            onClick={() => setShowRecurring(true)}
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-slate-200 dark:border-blue-950/40 text-[#172560] dark:text-white bg-white dark:bg-[#071131] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] transition-all shadow-xs"
+          >
+            <Repeat className="h-4 w-4 text-blue-500 dark:text-blue-400" /> Recurring campaign
+          </button>
         </div>
         <div className="space-y-4">
           <ZohoAutomationsPanel />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Users, MessageSquare, TrendingUp, CheckCircle2, Check, BarChart3, Mail, MessageCircle, Smartphone, Linkedin } from 'lucide-react';
 
@@ -162,7 +163,7 @@ export default function HowItWorksSection() {
       id: 0,
       step: '01',
       title: 'Hire Mr LAD',
-      description: 'Connect your channels in minutes — LinkedIn, WhatsApp, Instagram, email, and voice',
+      description: 'Connect your channels in minutes: LinkedIn, WhatsApp, Instagram, email, and voice',
       icon: <Zap className="w-6 h-6 text-white" />,
       duration: '2 mins',
       color: 'from-blue-500 to-cyan-500',
@@ -444,13 +445,15 @@ export default function HowItWorksSection() {
           <p className="text-muted-foreground mb-6 text-lg">
             Ready to put Mr LAD to work?
           </p>
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
-            whileTap={{ scale: 0.95 }}
-            className="px-10 py-4 bg-primary text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
-          >
-            Hire Mr LAD
-          </motion.button>
+          <Link href="/onboarding">
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
+              whileTap={{ scale: 0.95 }}
+              className="px-10 py-4 bg-primary text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+            >
+              Hire Mr LAD
+            </motion.button>
+          </Link>
         </motion.div>
       </div>
     </motion.section>

@@ -4,11 +4,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Send, Clock, Search, CheckCircle, AlertCircle, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { useScheduleMessages } from '@lad/frontend-features/community-roi';
-import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { fetchJson } from '@/lib/fetch-json';
 
 // Render the modal at <body> via a portal so its `position: fixed` actually
 // pins to the viewport. Without this, any ancestor with a CSS transform / filter
-// / will-change becomes the fixed-positioning containing block — which happens
+// / will-change becomes the fixed-positioning containing block - which happens
 // on the dashboard Overview because @dnd-kit applies a transform to widget
 // wrappers, clipping this modal inside the widget card (no visible footer,
 // broken scrolling). Falls through cleanly during SSR (document undefined).
@@ -75,6 +75,35 @@ const FIELD_OPTIONS = [
   { value: 'week_date_2',   label: 'Week 2 Date (Mon)', group: 'date' },
   { value: 'week_date_3',   label: 'Week 3 Date (Mon)', group: 'date' },
   { value: 'week_date_4',   label: 'Week 4 Date (Mon)', group: 'date' },
+  // Whole-week lists that fill ONE variable with all 3 picks. The "+ reasons"
+  // variants append each pick's generated "why meet them" line, e.g.
+  //   "Ali Murtaza (Advertising & Marketing - a natural fit with your Real Estate
+  //    clients), Reema Mahajan (...) and Sreekutty Sukumaran (...)"
+  // Empty slots are dropped, so a member with fewer than 3 picks never renders a
+  // dangling " - ". Use these with the 2-variable weekly template.
+  { value: 'rec_week1_all_reasons', label: 'Week 1 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week2_all_reasons', label: 'Week 2 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week3_all_reasons', label: 'Week 3 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week4_all_reasons', label: 'Week 4 · All 3 + reasons (one variable)', group: 'rec' },
+  { value: 'rec_week1_all',  label: 'Week 1 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week2_all',  label: 'Week 2 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week3_all',  label: 'Week 3 · All 3 names (one variable)', group: 'rec' },
+  { value: 'rec_week4_all',  label: 'Week 4 · All 3 names (one variable)', group: 'rec' },
+  // Per-line "Name - reason" values for a BULLETED template (one variable per
+  // bullet). Meta forbids newlines inside a variable, so the line breaks must
+  // live in the static template body:  "• {{2}}\n• {{3}}\n• {{4}}".
+  { value: 'rec_week1_line_1', label: 'Week 1 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_2', label: 'Week 1 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week1_line_3', label: 'Week 1 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_1', label: 'Week 2 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_2', label: 'Week 2 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week2_line_3', label: 'Week 2 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_1', label: 'Week 3 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_2', label: 'Week 3 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week3_line_3', label: 'Week 3 · Line 3 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_1', label: 'Week 4 · Line 1 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_2', label: 'Week 4 · Line 2 (name + reason)', group: 'rec' },
+  { value: 'rec_week4_line_3', label: 'Week 4 · Line 3 (name + reason)', group: 'rec' },
   { value: 'rec_week1_1',   label: 'Week 1 · Rec #1',   group: 'rec' },
   { value: 'rec_week1_2',   label: 'Week 1 · Rec #2',   group: 'rec' },
   { value: 'rec_week1_3',   label: 'Week 1 · Rec #3',   group: 'rec' },
@@ -92,7 +121,14 @@ const FIELD_OPTIONS = [
 ];
 
 type WeekKey = 'week1' | 'week2' | 'week3' | 'week4';
-type MemberRecData = Record<string, Partial<Record<WeekKey, string[]>> & { no_interaction_count?: number }>;
+type WeekReasonKey = `${WeekKey}_with_reasons`;
+type WeekLinesKey = `${WeekKey}_lines`;
+type MemberRecData = Record<
+  string,
+  Partial<Record<WeekKey, string[]>> &
+    Partial<Record<WeekReasonKey, string>> &
+    Partial<Record<WeekLinesKey, string[]>> & { no_interaction_count?: number }
+>;
 type WeekDateMap = Partial<Record<'week_1' | 'week_2' | 'week_3' | 'week_4', string>>;
 
 // Module-level mutable holder updated by useEffect when the API returns.
@@ -105,7 +141,7 @@ let _apiWeekDates: WeekDateMap = {};
  * Prefers the API-anchored `week_dates` map (so labels match what was on the
  * generation cycle, e.g. recs created on May 6 → Week 1 = May 11 forever).
  * Falls back to "next Monday from today + (N-1) weeks" only when no stored
- * date exists yet (rare — only before the first API call resolves).
+ * date exists yet (rare - only before the first API call resolves).
  */
 function getWeekMonday(weekNumber: number): string {
   const stored = _apiWeekDates[`week_${weekNumber}` as keyof WeekDateMap];
@@ -126,14 +162,14 @@ function getWeekMonday(weekNumber: number): string {
  * are auto-mapped; everything else falls back to body-context heuristics.
  */
 function suggestField(body: string, paramNumber: number, templateName?: string): string {
-  // bni_member_followup_1 — 4 params: name, week1 rec ×3
+  // bni_member_followup_1 - 4 params: name, week1 rec ×3
   if (templateName === 'bni_member_followup_1') {
     if (paramNumber === 1) return 'name';
     if (paramNumber === 2) return 'rec_week1_1';
     if (paramNumber === 3) return 'rec_week1_2';
     if (paramNumber === 4) return 'rec_week1_3';
   }
-  // member_friday_followup — 7 params: name, week1 rec ×3, week2 rec ×3
+  // member_friday_followup - 7 params: name, week1 rec ×3, week2 rec ×3
   if (templateName === 'member_friday_followup') {
     if (paramNumber === 1) return 'name';
     if (paramNumber === 2) return 'rec_week1_1';
@@ -143,7 +179,7 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
     if (paramNumber === 6) return 'rec_week2_2';
     if (paramNumber === 7) return 'rec_week2_3';
   }
-  // member_121_recommendations — 8 params: week1_date, week1 rec ×3, week2_date, week2 rec ×3
+  // member_121_recommendations - 8 params: week1_date, week1 rec ×3, week2_date, week2 rec ×3
   if (templateName === 'member_121_recommendations') {
     if (paramNumber === 1) return 'week_date_1';
     if (paramNumber === 2) return 'rec_week1_1';
@@ -154,7 +190,7 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
     if (paramNumber === 7) return 'rec_week2_2';
     if (paramNumber === 8) return 'rec_week2_3';
   }
-  // member_recommendations_4weeks — 16 params: 4 weeks × (1 date + 3 recs)
+  // member_recommendations_4weeks - 16 params: 4 weeks × (1 date + 3 recs)
   // Body shape: "Week of {{1}}: {{2}}, {{3}}, {{4}}; Week of {{5}}: {{6}}…{{16}}"
   if (templateName === 'member_recommendations_4weeks') {
     const weekIdx = Math.floor((paramNumber - 1) / 4) + 1;        // 1..4
@@ -162,11 +198,22 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
     if (slot === 0) return `week_date_${weekIdx}`;
     return `rec_week${weekIdx}_${slot}`;
   }
-  // cohesion_report_no_interaction — 2 params: name, count of un-met members
+  // cohesion_report_no_interaction - 2 params: name, count of un-met members
   // Body: "Hi {{1}}, … you have not done 1-2-1s with {{2}} members …"
   if (templateName === 'cohesion_report_no_interaction') {
     if (paramNumber === 1) return 'name';
     if (paramNumber === 2) return 'no_interaction_count';
+  }
+  // Weekly 1-2-1 recommendations - 2 params: first name + the whole week's picks
+  // with their reasons in ONE variable.
+  // Body: "Hi {{1}}, … please schedule 1-2-1s with {{2}}."
+  const tname = String(templateName || '');
+  const bodyParamCount = new Set((body || '').match(/\{\{\d+\}\}/g) || []).size;
+  if (/1(?:-|_)?2(?:-|_)?1|recommendation/i.test(tname) && bodyParamCount === 2) {
+    if (paramNumber === 1) return 'first_name';
+    if (paramNumber === 2) {
+      return /no[_-]?reasons?$/i.test(tname) ? 'rec_week1_all' : 'rec_week1_all_reasons';
+    }
   }
   // body-context heuristics for unknown templates
   const regex = new RegExp(`\\{\\{${paramNumber}\\}\\}`);
@@ -179,6 +226,14 @@ function suggestField(body: string, paramNumber: number, templateName?: string):
   return 'name';
 }
 
+/** "A, B and C" - drops empty/" - " slots so a short week never shows a dangling dash. */
+function joinNames(names: string[]): string {
+  const parts = (names || []).filter(n => n && n !== '-');
+  if (parts.length === 0) return '-';
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
 function resolveParam(
   member: any,
   field: string,
@@ -187,12 +242,39 @@ function resolveParam(
 ): string {
   if (field === 'custom') return customValue;
   if (field === 'first_name') return ((member?.name || '').split(' ')[0]) || '';
-  // Computed week dates — same for every member (supports up to 4 weeks)
+  // Computed week dates - same for every member (supports up to 4 weeks)
   const weekDateMatch = field.match(/^week_date_([1-4])$/);
   if (weekDateMatch) return getWeekMonday(parseInt(weekDateMatch[1], 10));
   if (field === 'no_interaction_count') {
     const memberRecs = recData?.[member?.id];
     return String(memberRecs?.no_interaction_count ?? 0);
+  }
+  // Whole-week list WITH each pick's reason, in one variable. Served ready-made
+  // by the backend (weekN_with_reasons); falls back to a plain name join if an
+  // older backend hasn't shipped that field yet.
+  const allReasonsMatch = field.match(/^rec_(week[1-4])_all_reasons$/);
+  if (allReasonsMatch) {
+    const weekKey = allReasonsMatch[1] as WeekKey;
+    const memberRecs = recData?.[member?.id];
+    const ready = memberRecs?.[`${weekKey}_with_reasons` as WeekReasonKey];
+    if (ready && ready !== '-') return ready;
+    return joinNames(memberRecs?.[weekKey] ?? []);
+  }
+  // One bullet line: "Name - reason". Served ready-made by the backend
+  // (weekN_lines); falls back to the bare name from weekN when unavailable.
+  const lineMatch = field.match(/^rec_(week[1-4])_line_([1-3])$/);
+  if (lineMatch) {
+    const weekKey = lineMatch[1] as WeekKey;
+    const idx = parseInt(lineMatch[2], 10) - 1;
+    const memberRecs = recData?.[member?.id];
+    const lines = memberRecs?.[`${weekKey}_lines` as WeekLinesKey];
+    return lines?.[idx] || memberRecs?.[weekKey]?.[idx] || '-';
+  }
+  // Whole-week list of names only, in one variable.
+  const allNamesMatch = field.match(/^rec_(week[1-4])_all$/);
+  if (allNamesMatch) {
+    const weekKey = allNamesMatch[1] as WeekKey;
+    return joinNames(recData?.[member?.id]?.[weekKey] ?? []);
   }
   if (field.startsWith('rec_')) {
     // field format: rec_week1_1, rec_week2_3, rec_week3_2, rec_week4_3 etc.
@@ -201,7 +283,7 @@ function resolveParam(
     const rankIdx = parseInt(parts[2]) - 1;
     const memberRecs = recData?.[member?.id];
     const weekRecs = memberRecs?.[weekKey] ?? [];
-    return weekRecs[rankIdx] || '—';
+    return weekRecs[rankIdx] || '-';
   }
   return String(member?.[field] ?? '');
 }
@@ -223,7 +305,7 @@ function FailedRecipientsButton({
   const [count, setCount] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  // Discover how many failed last time — small badge, no network on every render
+  // Discover how many failed last time - small badge, no network on every render
   React.useEffect(() => {
     if (!templateName) return;
     let cancelled = false;
@@ -234,7 +316,7 @@ function FailedRecipientsButton({
     )
       .then(r => r.json())
       .then(json => { if (!cancelled && json?.success) setCount(json.count); })
-      .catch(() => { /* silent — feature is optional */ });
+      .catch(() => { /* silent - feature is optional */ });
     return () => { cancelled = true; };
   }, [templateName]);
 
@@ -258,7 +340,7 @@ function FailedRecipientsButton({
       const matchingIds = allMembers
         .filter((m: any) => {
           const d = digitsOnly(m.whatsapp_phone || m.phone || '');
-          // suffix match — accommodates +971 vs 0... vs raw digits
+          // suffix match - accommodates +971 vs 0... vs raw digits
           return d && Array.from(failedDigits).some(fd =>
             (fd as string).endsWith(d.slice(-9)) || d.endsWith((fd as string).slice(-9))
           );
@@ -347,7 +429,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         if (json?.success && json.data) setMemberRecData(json.data);
         if (json?.week_dates) _apiWeekDates = json.week_dates;
       })
-      .catch(() => {}); // silent — recs just won't be available in preview
+      .catch(() => {}); // silent - recs just won't be available in preview
   }, []);
 
   // Fetch Meta-approved templates on mount
@@ -412,7 +494,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         );
         const data = await res.json();
         if (data.url) setHeaderMediaUrl(data.url);
-      } catch { /* silent — user can paste URL manually */ }
+      } catch { /* silent - user can paste URL manually */ }
       finally { setResolvingMedia(false); }
     } else {
       setHeaderMediaUrl('');
@@ -482,7 +564,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
             ? paramMapping.map(mp => resolveParam(m, mp.field, mp.customValue, memberRecData))
             : (m.name ? [m.name] : []),
         }))
-        .filter(m => m.phone); // skip members with no phone — WABA will reject them anyway
+        .filter(m => m.phone); // skip members with no phone - WABA will reject them anyway
 
       // Templates that attach each member's OWN cohesion-report PDF as the
       // document header (resolved per-recipient by the WABA service) instead
@@ -492,7 +574,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
         selectedTemplate.header_type === 'document' &&
         MEMBER_REPORT_TEMPLATES.has(selectedTemplate.name);
 
-      fetchWithTenant('/api/whatsapp-conversations/conversations/send-template-to-members', {
+      fetchJson<{ sent?: number; failed?: number }>('/api/whatsapp-conversations/conversations/send-template-to-members', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -506,18 +588,35 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
           attach_member_report: attachMemberReport,
         }),
       })
-        .then(r => r.json())
-        .then(data => {
-          if (data.failed > 0) {
-            console.warn(`[TemplateSend] ${data.sent} sent, ${data.failed} failed`, data.results);
-          } else {
-            console.warn(`[TemplateSend] Complete — ${data.sent} sent`);
-          }
+        // The banner above already told the user "Broadcasting to N…" and the
+        // modal has closed, so this response is the ONLY chance to correct it.
+        // It used to go to console.warn — for BOTH a total failure and a
+        // partial one — so "20 sent, 30 failed" was invisible and a request
+        // that never landed still read as a broadcast that went out.
+        // `fetchJson` turns the non-2xx case into a throw; the WABA endpoint
+        // gathers all sends and returns the real aggregate, so `failed` here is
+        // an outcome, not a guess.
+        .then((data: { sent?: number; failed?: number }) => {
+          onSuccess({
+            broadcastComplete: true,
+            sent: data?.sent ?? 0,
+            failed: data?.failed ?? 0,
+            total: memberCount,
+          });
         })
-        .catch(err => console.error('[TemplateSend] Error:', err));
+        .catch((err: unknown) => {
+          console.error('[TemplateSend] Error:', err);
+          onSuccess({
+            broadcastComplete: true,
+            sent: 0,
+            failed: memberCount,
+            total: memberCount,
+            error: err instanceof Error ? err.message : 'The broadcast could not be sent',
+          });
+        });
 
     } else {
-      // Schedule mode — uses hook (per-member mapping not yet supported)
+      // Schedule mode - uses hook (per-member mapping not yet supported)
       if (!scheduledTime) { alert('Please select a scheduled time'); return; }
       try {
         const result = await scheduleMessages({
@@ -594,7 +693,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     </div>
                     {t.quality_pending && (
                       <p className="text-[10px] text-amber-600 mt-1 mb-1">
-                        ⚠️ Meta is assessing quality — delivery may be limited until approved.
+                        ⚠️ Meta is assessing quality - delivery may be limited until approved.
                       </p>
                     )}
                     <p className="text-xs text-slate-500 font-mono leading-relaxed line-clamp-3">
@@ -719,7 +818,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
                     {headerMediaUrl
-                      ? `✓ ${selectedTemplate?.header_type} ready to attach — edit URL to change`
+                      ? `✓ ${selectedTemplate?.header_type} ready to attach - edit URL to change`
                       : `Paste a public URL for the ${selectedTemplate?.header_type} to attach to this template`}
                   </p>
                 </>
@@ -745,7 +844,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     <span className="text-sm font-medium text-slate-700">Parameter {paramNum}</span>
                     {resolved !== null && (
                       <span className="ml-auto text-xs text-slate-400">
-                        Preview: <span className="font-semibold text-slate-700">{resolved || '—'}</span>
+                        Preview: <span className="font-semibold text-slate-700">{resolved || '-'}</span>
                       </span>
                     )}
                   </div>
@@ -768,7 +867,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                       {FIELD_OPTIONS.filter(o => o.group === 'date').map(opt => {
                         const date = resolveParam(null, opt.value, '');
                         return (
-                          <option key={opt.value} value={opt.value}>{opt.label} — {date}</option>
+                          <option key={opt.value} value={opt.value}>{opt.label} - {date}</option>
                         );
                       })}
                     </optgroup>
@@ -778,7 +877,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                         const previewName = previewMember
                           ? resolveParam(previewMember, opt.value, '', memberRecData)
                           : null;
-                        const suffix = previewName && previewName !== '—' ? ` (${previewName})` : '';
+                        const suffix = previewName && previewName !== '-' ? ` (${previewName})` : '';
                         return (
                           <option key={opt.value} value={opt.value}>{opt.label}{suffix}</option>
                         );
@@ -874,7 +973,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
               <span className="font-medium text-slate-900">Send to all {allMembers.length} members</span>
             </label>
 
-            {/* Quick filters — preselect recipients by prior broadcast outcome */}
+            {/* Quick filters - preselect recipients by prior broadcast outcome */}
             <FailedRecipientsButton
               templateName={selectedTemplate?.name || ''}
               allMembers={allMembers}
@@ -910,7 +1009,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
                     {/* Show resolved param preview per member */}
                     {paramMapping.length > 0 && hasPhone && (
                       <p className="text-[10px] text-slate-400 ml-2 max-w-[120px] truncate">
-                        {paramMapping.map(m => resolveParam(member, m.field, m.customValue, memberRecData) || '—').join(' · ')}
+                        {paramMapping.map(m => resolveParam(member, m.field, m.customValue, memberRecData) || '-').join(' · ')}
                       </p>
                     )}
                   </label>
@@ -923,7 +1022,7 @@ const MessageTemplateSender: React.FC<MessageTemplateSenderProps> = ({
             📱 Will send to <strong>{recipientCount}</strong> {recipientCount === 1 ? 'member' : 'members'}
             {noPhoneCount > 0 && (
               <span className="block mt-1 text-xs text-amber-700">
-                ⚠ {noPhoneCount} member{noPhoneCount > 1 ? 's' : ''} skipped — no phone number on file
+                ⚠ {noPhoneCount} member{noPhoneCount > 1 ? 's' : ''} skipped - no phone number on file
               </span>
             )}
           </div>

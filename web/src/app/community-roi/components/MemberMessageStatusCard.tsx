@@ -81,7 +81,7 @@ export function MemberMessageStatusCard({ memberName, memberPhone }: Props) {
     return (
       <Card className="rounded-[1.5rem] border-slate-100 shadow-sm">
         <CardContent className="p-8 text-center text-sm text-slate-400">
-          No phone on file for <span className="font-semibold">{memberName}</span> — can&apos;t fetch
+          No phone on file for <span className="font-semibold">{memberName}</span> - can&apos;t fetch
           WhatsApp delivery status.
         </CardContent>
       </Card>
@@ -106,7 +106,7 @@ export function MemberMessageStatusCard({ memberName, memberPhone }: Props) {
 
         {data && !data.contact_found && (
           <div className="text-sm text-slate-500">
-            No WhatsApp contact found for this number — no templates have been delivered to this
+            No WhatsApp contact found for this number - no templates have been delivered to this
             member yet, or their phone hasn&apos;t been used in any broadcast.
           </div>
         )}

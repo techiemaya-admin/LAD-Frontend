@@ -63,7 +63,7 @@ const SettingsPage: React.FC = () => {
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
     const allowed: ActiveTab[] = ['businessprofile', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits'];
-    // The Company tab was merged into Business Profile — redirect old links/bookmarks.
+    // The Company tab was merged into Business Profile - redirect old links/bookmarks.
     if (tabParam === 'company') {
       const sp = new URLSearchParams(Array.from(searchParams.entries()));
       sp.set('tab', 'businessprofile');

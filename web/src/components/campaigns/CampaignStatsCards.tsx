@@ -30,7 +30,7 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // Skeleton loading component
 const SkeletonCard = () => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px]">
+    <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px]">
       <div className="flex-1 flex flex-col p-4">
         <div className="flex flex-col h-full">
           <div className="flex justify-end mb-2">
@@ -70,7 +70,7 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, bgColor, onClick }: StatCardProps) => (
   <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div
-      className={`bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+      className={`bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : ''}`}
       onClick={onClick}
     >
       <div className="flex-1 flex flex-col p-4">
@@ -115,12 +115,12 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
 
   return (
     <div className="flex gap-4 mb-6 flex-wrap items-stretch">
-      {/* Total Campaigns — click to go to campaigns list */}
+      {/* Total Campaigns - click to go to campaigns list */}
       <div
         className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
         onClick={() => router.push('/campaigns')}
       >
-        <div className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
+        <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
           <div className="flex-1 flex flex-col p-4">
             <div className="flex flex-col h-full">
               <div className="flex justify-end mb-2">
@@ -170,7 +170,7 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         onClick={() => router.push('/campaigns?status=running')}
       />
 
-      {/* LinkedIn Connections card — shows network size + daily accepted trend */}
+      {/* LinkedIn Connections card - shows network size + daily accepted trend */}
       {(() => {
         const networkSize = stats.linkedin_network_size ?? null;
         const today = stats.connections_today ?? 0;
@@ -184,7 +184,7 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         return (
           <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
             <div
-              className="bg-white dark:bg-[#000724] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
               onClick={() => router.push('/campaigns')}
             >
               <div className="flex-1 flex flex-col p-4">

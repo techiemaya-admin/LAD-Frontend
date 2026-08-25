@@ -30,12 +30,12 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>As a data controller</strong> — for the personal data of our account holders,
+          <strong>As a data controller:</strong> for the personal data of our account holders,
           their authorized users, and website visitors (for example, your name, email, billing
           details, and how you use the Services). This policy describes that processing.
         </li>
         <li>
-          <strong>As a data processor</strong> — for the personal data that our customers
+          <strong>As a data processor:</strong> for the personal data that our customers
           (&ldquo;Customers&rdquo;) upload to, generate within, or process through the Services about
           their own leads, prospects, and contacts (&ldquo;Customer Data&rdquo;). For Customer Data,
           the Customer is the controller and is responsible for having a lawful basis to process that
@@ -49,20 +49,20 @@ export default function PrivacyPolicyPage() {
       <h3>3.1 Information you provide to us</h3>
       <ul>
         <li>
-          <strong>Account &amp; profile data</strong> — name, business name, email address, phone
+          <strong>Account &amp; profile data:</strong> name, business name, email address, phone
           number, password, role, and time zone.
         </li>
         <li>
-          <strong>Billing &amp; transaction data</strong> — billing contact, plan, wallet/credit
+          <strong>Billing &amp; transaction data:</strong> billing contact, plan, wallet/credit
           balances, and payment records. Card details are handled by our payment processor and are
           not stored on our servers.
         </li>
         <li>
-          <strong>Communications</strong> — messages you send us via contact forms, email, or
+          <strong>Communications:</strong> messages you send us via contact forms, email, or
           support, and the content of your communications with us.
         </li>
         <li>
-          <strong>Content &amp; configuration</strong> — campaigns, message templates, prompts,
+          <strong>Content &amp; configuration:</strong> campaigns, message templates, prompts,
           agent settings, and other content you create within the Services.
         </li>
       </ul>
@@ -70,14 +70,14 @@ export default function PrivacyPolicyPage() {
       <h3>3.2 Information collected automatically</h3>
       <ul>
         <li>
-          <strong>Usage data</strong> — pages viewed, features used, actions taken, and timestamps.
+          <strong>Usage data:</strong> pages viewed, features used, actions taken, and timestamps.
         </li>
         <li>
-          <strong>Device &amp; technical data</strong> — IP address, browser type, operating system,
+          <strong>Device &amp; technical data:</strong> IP address, browser type, operating system,
           device identifiers, and referring URLs.
         </li>
         <li>
-          <strong>Cookies &amp; similar technologies</strong> — see our{' '}
+          <strong>Cookies &amp; similar technologies:</strong> see our{' '}
           <a href="/cookies-policy">Cookies Policy</a> for details on what we use and how to manage
           your preferences.
         </li>
@@ -86,13 +86,13 @@ export default function PrivacyPolicyPage() {
       <h3>3.3 Information from third parties</h3>
       <ul>
         <li>
-          <strong>Connected accounts &amp; integrations</strong> — when you connect channels such as
+          <strong>Connected accounts &amp; integrations:</strong> when you connect channels such as
           LinkedIn, WhatsApp, Instagram, email, Meta advertising accounts, or telephony, we receive
           data from those providers as needed to operate the integration (for example, account
           identifiers, message metadata, and conversation content).
         </li>
         <li>
-          <strong>Data enrichment providers</strong> — we may obtain or verify business contact
+          <strong>Data enrichment providers:</strong> we may obtain or verify business contact
           information from third-party enrichment and data sources to support outreach features.
         </li>
       </ul>
@@ -136,7 +136,7 @@ export default function PrivacyPolicyPage() {
       <p>We do not sell your personal data. We share information only as described below:</p>
       <ul>
         <li>
-          <strong>Service providers / sub-processors</strong> — vendors who process data on our
+          <strong>Service providers / sub-processors</strong> : vendors who process data on our
           behalf to deliver the Services, including cloud hosting, AI model providers, payment
           processing, communications and messaging platforms, data enrichment, and analytics. A
           representative list includes Google Cloud Platform (hosting), Anthropic and Google (AI
@@ -144,15 +144,15 @@ export default function PrivacyPolicyPage() {
           telephony/voice providers. A current list of sub-processors is available on request.
         </li>
         <li>
-          <strong>At your direction</strong> — with third-party platforms and recipients when you use
+          <strong>At your direction:</strong> with third-party platforms and recipients when you use
           integrations or send communications through the Services.
         </li>
         <li>
-          <strong>Legal &amp; safety</strong> — when required by law, regulation, legal process, or
+          <strong>Legal &amp; safety:</strong> when required by law, regulation, legal process, or
           to protect the rights, property, or safety of Mr LAD, our users, or others.
         </li>
         <li>
-          <strong>Business transfers</strong> — in connection with a merger, acquisition, financing,
+          <strong>Business transfers:</strong> in connection with a merger, acquisition, financing,
           or sale of assets, subject to this Privacy Policy.
         </li>
       </ul>
@@ -230,7 +230,10 @@ export default function PrivacyPolicyPage() {
           <strong>Email:</strong> <a href="mailto:support@techiemaya.com">support@techiemaya.com</a>
         </li>
         <li>
-          <strong>TechieMaya FZE</strong> — IDS Business Center, Al Karama, Dubai, United Arab Emirates
+          <strong>Company:</strong> TechieMaya FZE
+        </li>
+        <li>
+          <strong>Address:</strong> IDS Business Center, Al Karama, Dubai, United Arab Emirates
         </li>
       </ul>
     </LegalPageLayout>

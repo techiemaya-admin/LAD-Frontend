@@ -211,7 +211,7 @@ export function ScheduleBroadcastModal({ open, onClose, groupIds, channel, onSch
             </div>
           )}
 
-          {/* Repeat — template mode only (recurrence requires a template) */}
+          {/* Repeat - template mode only (recurrence requires a template) */}
           {mode === 'template' && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">Repeat</label>

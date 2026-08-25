@@ -71,7 +71,7 @@ export function NavbarDemo() {
                     href={item.link}
                     whileTap={{ scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    className="text-[12px] font-semibold text-[#0b1957] hover:opacity-80 transition-opacity select-none"
+                    className="text-[12px] font-semibold text-[#0b1957] dark:text-slate-200 hover:opacity-80 transition-opacity select-none"
                   >
                     {item.name}
                   </motion.a>

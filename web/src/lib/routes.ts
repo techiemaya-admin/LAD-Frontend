@@ -15,7 +15,11 @@ export const OPEN_ROUTES = {
   auth: ['/login', '/register', '/forgot-password', '/api/auth', '/api/webhooks'],
   
   // Public pages
-  public: ['/', '/pricing', '/favicon.ico', '/api/recording-proxy', '/landing', '/contact', '/privacy-policy', '/terms-of-service', '/cookies-policy', '/account-deletion-policy'],
+  public: ['/', '/pricing', '/favicon.ico', '/api/recording-proxy', '/landing', '/contact', '/privacy-policy', '/terms-of-service', '/cookies-policy', '/account-deletion-policy',
+    // Founding-group landing page, its short /apply entry point, and the route
+    // handler the form posts to. All must be open: the whole point is that a
+    // stranger clicking a link in an InMail can reach them.
+    '/community', '/apply', '/api/community-signup'],
   
   // Health checks & public APIs
   health: ['/api/health'],
@@ -36,13 +40,20 @@ export const AUTH_ROUTES = [
   '/wallet',
   '/make-call',
   '/pipeline',
+  // Curated vertical-snapshot pipelines. MUST be listed separately from
+  // '/pipeline' above: that entry is the deals pipeline, a different feature,
+  // and the auth matcher is exact-or-'/'-prefixed so it does not cover
+  // '/pipelines'. Without its own entry this falls through to the open-route
+  // check, where a bare startsWith against '/' matches everything and the page
+  // renders in the PUBLIC layout - marketing chrome, no sidebar, wrong ground.
+  '/pipelines',
   '/crm',
   '/prospects',
   '/onboarding',
   '/community-roi',
   '/follow-ups',
   '/instagram', // Instagram management (accounts, AI replies, comments, goals)
-  '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) — super-admin gated
+  '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) - super-admin gated
   '/api/protected', // Mark all protected API routes with /api/protected prefix
 ];
 

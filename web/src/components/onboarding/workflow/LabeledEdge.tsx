@@ -2,7 +2,7 @@ import React from 'react';
 import { EdgeProps, getBezierPath, EdgeLabelRenderer } from 'reactflow';
 
 /**
- * Custom edge with a floating label pill — n8n / Make.com style
+ * Custom edge with a floating label pill - node-graph style
  * Shows condition labels like "✓ Accepted", "⏳ No Reply 7d", "✗ Rejected"
  */
 export default function LabeledEdge({

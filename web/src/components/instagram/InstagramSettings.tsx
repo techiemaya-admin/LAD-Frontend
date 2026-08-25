@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { cn } from "@/lib/utils";
-// Same-origin fetcher — hits the Next.js proxy at /api/instagram-conversations/*
+// Same-origin fetcher - hits the Next.js proxy at /api/instagram-conversations/*
 // rather than lib/api (which prepends NEXT_PUBLIC_BACKEND_URL = LAD_backend :3004).
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -13,7 +13,8 @@ import { igGet as apiGet, igPost as apiPost, igPatch as apiPatch, igDelete as ap
 import { InstagramTenantOnboarding } from './InstagramTenantOnboarding';
 import {
   Target, Loader2, Plus, Trash2, CheckCircle2,
-  AlertCircle, Power, Link as LinkIcon, Building2, ArrowLeft, Check
+  AlertCircle, Power, Link as LinkIcon, Building2, ArrowLeft,
+  Instagram as InstagramIcon, Lock, BookOpen, MessageCircle, Edit3, Hash, List
 } from 'lucide-react';
 
 type Tab = 'accounts' | 'goals';
@@ -61,7 +62,7 @@ const GOAL_TYPES = [
 ];
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  // Accounts comes first — it's the fundamental setup; nothing else
+  // Accounts comes first - it's the fundamental setup; nothing else
   // works without at least one connected Instagram account.
   { id: 'accounts', label: 'Accounts', icon: Building2 },
   { id: 'goals',    label: 'AI Goals', icon: Target },
@@ -83,7 +84,7 @@ export const InstagramSettings: React.FC = () => {
   return (
     <div className="min-h-screen bg-white text-slate-800 dark:bg-[#00051d] dark:text-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
-        {/* Back link — operator opened this page from /settings?tab=integrations
+        {/* Back link - operator opened this page from /settings?tab=integrations
             (or the conversations chat-header AI Settings icons). Give them a
             one-click way home so they don't have to use the browser back button. */}
         <button
@@ -97,12 +98,12 @@ export const InstagramSettings: React.FC = () => {
 
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Instagram AI</h1>
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl">
+          <p className="mt-1.5 text-sm text-slate-600 leading-relaxed max-w-3xl dark:text-slate-300">
             Manage connected Instagram accounts and AI Goals. Toggle AI replies, comments, and likes per account from the Accounts tab.
           </p>
         </header>
 
-        <nav className="mb-8 flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800/80 dark:bg-[#000724]">
+        <nav className="mb-8 flex gap-1 rounded-xl border border-slate-200 bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/70 p-1">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
@@ -112,8 +113,8 @@ export const InstagramSettings: React.FC = () => {
                 onClick={() => setTab(t.id)}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold transition-all cursor-pointer ${
                   active
-                    ? 'bg-[#0b1957] text-white shadow-sm dark:bg-[#1d4ed8]'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/40'
+                    ? 'bg-[#0b1957] text-white shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-[#0c1b43]'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -169,7 +170,7 @@ const AIGoalsPanel: React.FC = () => {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Delete this goal? This action is reversible — the goal is soft-deleted.')) return;
+    if (!confirm('Delete this goal? This action is reversible - the goal is soft-deleted.')) return;
     await apiDelete(`/api/instagram-conversations/goals/${id}`);
     await load();
   };
@@ -177,6 +178,7 @@ const AIGoalsPanel: React.FC = () => {
   return (
     <Section
       title="AI Goals"
+      titleIcon={Target}
       blurb="Every AI reply (DM + comment) will be biased toward whichever active goal best matches the message."
     >
       <div className="mb-4 flex items-center justify-end">
@@ -199,20 +201,20 @@ const AIGoalsPanel: React.FC = () => {
         <EmptyState
           icon={Target}
           title="No goals yet"
-          blurb="Create your first AI Goal — bookings, sales, email captures — and AI will steer every reply toward it."
+          blurb="Create your first AI Goal: bookings, sales, or email captures. AI will steer every reply toward it."
         />
       )}
 
       <div className="mt-4 space-y-3">
         {goals.map((g) => (
-          <div key={g.id} className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724] p-4 shadow-sm">
+          <div key={g.id} className="rounded-xl border border-slate-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]/80 p-4 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
                   <h4 className="text-sm font-bold text-slate-800 dark:text-white">{g.name}</h4>
-                  <Badge className="rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-none px-2.5 text-[10px] font-bold uppercase">{g.goal_type.replace('_', ' ')}</Badge>
-                  {g.applies_to_dms && <Badge className="rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border-none px-2.5 text-[10px] font-bold">DMs</Badge>}
-                  {g.applies_to_comments && <Badge className="rounded-full bg-pink-50 text-pink-600 dark:bg-pink-950/40 dark:text-pink-400 border-none px-2.5 text-[10px] font-bold">Comments</Badge>}
+                  <Badge className="rounded-full bg-slate-800/70 text-slate-200 border border-slate-700/80 px-2.5 text-[10px] font-bold uppercase">{g.goal_type.replace('_', ' ')}</Badge>
+                  {g.applies_to_dms && <Badge className="rounded-full bg-indigo-900/60 text-indigo-200 border border-indigo-700/50 px-2.5 text-[10px] font-bold">DMs</Badge>}
+                  {g.applies_to_comments && <Badge className="rounded-full bg-pink-900/60 text-pink-200 border border-pink-700/50 px-2.5 text-[10px] font-bold">Comments</Badge>}
                 </div>
                 {g.description && <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-1">{g.description}</p>}
                 {g.call_to_action && (
@@ -224,11 +226,11 @@ const AIGoalsPanel: React.FC = () => {
                 {Array.isArray(g.keyword_triggers) && g.keyword_triggers.length > 0 && (
                   <div className="mt-2.5 flex flex-wrap gap-1">
                     {g.keyword_triggers.map((k) => (
-                      <span key={k} className="rounded-md bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300 px-2 py-0.5 text-[10px] font-bold font-mono">{k}</span>
+                      <span key={k} className="rounded-md bg-slate-900/50 text-slate-200 px-2 py-0.5 text-[10px] font-bold font-mono">{k}</span>
                     ))}
                   </div>
                 )}
-                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/40 flex gap-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                <div className="mt-3 pt-2 border-t border-blue-950/40 flex gap-4 text-[11px] font-semibold text-slate-300">
                   <span>Impressions: <span className="text-slate-700 dark:text-slate-300 font-bold">{g.impressions_count}</span></span>
                   <span>Conversions: <span className="text-slate-700 dark:text-slate-300 font-bold">{g.conversions_count}</span></span>
                 </div>
@@ -290,47 +292,47 @@ const GoalForm: React.FC<{ onCancel: () => void; onSubmit: (g: Partial<Goal>) =>
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-[#000724] p-5 sm:p-6 space-y-4 animate-in fade-in-50 duration-200 shadow-inner">
-      <h4 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">New Goal Configuration</h4>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 space-y-4 animate-in fade-in-50 duration-200 shadow-inner dark:border-blue-950/40 dark:bg-[#071131]/80">
+      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">New Goal Configuration</h4>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Goal Name *">
+        <Field label="Goal Name *" icon={BookOpen}>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Book a discovery call" />
         </Field>
-        <Field label="Type">
+        <Field label="Type" icon={List}>
           <Select
               value={type || undefined}
               onValueChange={(val: string) => setType(val)}
           >
-            <SelectTrigger className="w-full h-11 px-3 text-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] text-slate-800 dark:text-white rounded-xl focus:ring-0 focus-visible:ring-0 focus:border-slate-400 dark:focus:border-slate-600 font-semibold transition-all">
+            <SelectTrigger className="w-full h-11 px-3 text-sm border border-slate-200 bg-white text-slate-900 rounded-xl focus:ring-0 focus-visible:ring-0 focus:border-blue-700 focus:border dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:focus:border-blue-700 font-semibold transition-all">
               <SelectValue placeholder="Select type..." />
             </SelectTrigger>
 
-            <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+            <SelectContent className="bg-white border border-slate-200 dark:bg-[#071131] dark:border-blue-950/40">
               {GOAL_TYPES.map((t) => (
                   <SelectItem
                       key={t.value}
                       value={t.value}
                       /* FIXED: Passed only raw text to fix the blank dropdown bug, and used sub-selectors like [&>span]:!text-... to style the text layers safely from the outside */
-                      className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#22C55E] dark:focus:text-[#000724] dark:data-[state=checked]:focus:bg-[#22C55E] dark:data-[state=checked]:focus:text-[#000724]"
+                      className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white"
                   >
-                    {/* FIXED: No wrapping elements here — raw text makes Radix render your labels perfectly */}
+                    {/* FIXED: No wrapping elements here - raw text makes Radix render your labels perfectly */}
                     {t.label}
                   </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Call to action">
+        <Field label="Call to action" icon={MessageCircle}>
           <input value={cta} onChange={(e) => setCta(e.target.value)} className={inputClass} placeholder="Tap the link in bio to book" />
         </Field>
-        <Field label="Target URL">
+        <Field label="Target URL" icon={LinkIcon}>
           <input value={url} onChange={(e) => setUrl(e.target.value)} className={inputClass} placeholder="https://cal.com/your-link" />
         </Field>
-        <Field label="Description" className="sm:col-span-2">
+        <Field label="Description" className="sm:col-span-2" icon={Edit3}>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cn(inputClass, "resize-none")} placeholder="What's this goal for?" />
         </Field>
-        <Field label="Keyword triggers (comma-separated)" className="sm:col-span-2">
+        <Field label="Keyword triggers (comma-separated)" className="sm:col-span-2" icon={Hash}>
           <input value={keywords} onChange={(e) => setKeywords(e.target.value)} className={inputClass} placeholder="course, price, demo, book" />
         </Field>
         <div className="flex items-center gap-5 text-sm sm:col-span-2 pt-1">
@@ -345,9 +347,9 @@ const GoalForm: React.FC<{ onCancel: () => void; onSubmit: (g: Partial<Goal>) =>
         </div>
       </div>
       {err && <ErrorBanner message={err} />}
-      <div className="mt-4 flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
-        <button onClick={onCancel} className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 h-10 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">Cancel</button>
-        <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1957] dark:bg-[#1d4ed8] px-5 h-10 text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 transition-all shadow-md cursor-pointer">
+      <div className="mt-4 flex justify-end gap-2 pt-2 border-t border-blue-950/40">
+        <button onClick={onCancel} className="rounded-xl border border-slate-200 bg-slate-50 px-4 h-10 text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-200 dark:hover:bg-[#0c1b43]">Cancel</button>
+        <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1957] px-5 h-10 text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 transition-all shadow-md cursor-pointer">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Goal
         </button>
       </div>
@@ -358,20 +360,41 @@ const GoalForm: React.FC<{ onCancel: () => void; onSubmit: (g: Partial<Goal>) =>
 // ── shared bits ─────────────────────────────────────────────────────────────
 
 const inputClass =
-    'w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#00051d_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#00051d_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-blue-700 focus:ring-0 focus-visible:ring-0 transition-all dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400';
 
-const Field: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({ label, className, children }) => (
-  <label className={`block ${className || ''}`}>
-    <div className="mb-1.5 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{label}</div>
-    {children}
-  </label>
-);
+const Field: React.FC<{ label: string; className?: string; icon?: React.ElementType; children: React.ReactNode }> = ({ label, className, icon: Icon, children }) => {
+  const renderChild = () => {
+    if (!Icon) return children;
+    if (React.isValidElement(children)) {
+      const childProps = { ...(children.props as any) };
+      childProps.className = cn(childProps.className, 'pl-10');
+      return React.cloneElement(children, childProps);
+    }
+    return children;
+  };
 
-const Section: React.FC<{ title: string; blurb: string; children: React.ReactNode }> = ({ title, blurb, children }) => (
-  <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#000724] p-5 sm:p-6 shadow-sm">
+  return (
+    <label className={`block ${className || ''}`}>
+      <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+        {Icon ? <Icon className="h-3.5 w-3.5 text-slate-400" /> : null}
+        <span>{label}</span>
+      </div>
+      <div className={Icon ? 'relative' : ''}>
+        {Icon ? <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /> : null}
+        {renderChild()}
+      </div>
+    </label>
+  );
+};
+
+const Section: React.FC<{ title: string; titleIcon?: React.ElementType; blurb: string; children: React.ReactNode }> = ({ title, titleIcon: TitleIcon, blurb, children }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]/80">
     <div className="mb-6">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-white">{title}</h2>
-      <p className="mt-1 text-sm text-slate-400 dark:text-slate-300 leading-relaxed">{blurb}</p>
+      <div className="flex items-center gap-2 mb-2">
+        {TitleIcon ? <TitleIcon className="h-5 w-5 text-[#0b1957]" /> : null}
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+      </div>
+      <p className="mt-1 text-sm text-slate-600 leading-relaxed dark:text-slate-300">{blurb}</p>
     </div>
     {children}
   </div>
@@ -390,23 +413,23 @@ const ErrorBanner: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const EmptyState: React.FC<{ icon: React.ElementType; title: string; blurb: string; action?: React.ReactNode }> = ({ icon: Icon, title, blurb, action }) => (
-  <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-8 text-center bg-slate-50/50 dark:bg-[#00051d]/40">
-    <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+  <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center dark:border-blue-950/40 dark:bg-[#071131]/70">
+    <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
       <Icon className="h-5 w-5" />
     </div>
-    <h3 className="text-base font-bold text-slate-800 dark:text-white">{title}</h3>
-    <p className="mt-1 text-sm text-slate-400 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">{blurb}</p>
+    <h3 className="text-base font-bold text-slate-900 dark:text-white">{title}</h3>
+    <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed dark:text-slate-300">{blurb}</p>
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
 
 const ToggleSwitch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label?: string }> = ({ checked, onChange, label }) => (
   <label className="inline-flex cursor-pointer items-center gap-2.5 text-xs font-bold uppercase tracking-wider select-none">
-    {label && <span className="text-slate-500 dark:text-slate-400">{label}</span>}
+    {label && <span className="text-slate-300">{label}</span>}
     <span className="relative inline-flex h-5 w-9 items-center">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span className="absolute inset-0 rounded-full bg-slate-200 dark:bg-slate-800 transition peer-checked:bg-[#22c55e]" />
-      <span className="absolute left-0.5 h-4 w-4 transform rounded-full bg-white transition peer-checked:translate-x-4 shadow-sm" />
+      <span className="absolute inset-0 rounded-full bg-slate-800/60 transition peer-checked:bg-[#22c55e]" />
+      <span className="absolute left-0.5 h-4 w-4 transform rounded-full bg-slate-300 transition peer-checked:translate-x-4 shadow-sm" />
     </span>
   </label>
 );
@@ -415,18 +438,21 @@ const AddAccountInline: React.FC<{ onAdd: (payload: any) => Promise<void> }> = (
   const [providerType, setProviderType] = useState<'meta' | 'unipile'>('meta');
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#00051d]/60 p-4">
+    <div className="rounded-xl border border-blue-950/40 bg-[#071131]/70 p-4">
       <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="text-sm font-bold text-slate-800 dark:text-white">Connect an Instagram account</div>
-        <div className="inline-flex gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#000724] p-0.5 text-xs font-semibold">
+        <div className="text-sm font-bold text-white flex items-center gap-2">
+          <InstagramIcon className="h-4 w-4 text-slate-200" />
+          Connect an Instagram account
+        </div>
+        <div className="inline-flex gap-1 rounded-lg border border-blue-950/40 bg-[#071131]/70 p-0.5 text-xs font-semibold">
           <button
             onClick={() => setProviderType('meta')}
-            className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${providerType === 'meta' ? 'bg-[#0b1957] text-white dark:bg-[#1d4ed8] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'}`}
-          >Meta (official)</button>
+            className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${providerType === 'meta' ? 'bg-[#0b1957] text-white shadow-sm' : 'text-slate-300 hover:text-white'}`}
+          ><LinkIcon className="h-3.5 w-3.5" /> Meta (official)</button>
           <button
             onClick={() => setProviderType('unipile')}
-            className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${providerType === 'unipile' ? 'bg-[#0b1957] text-white dark:bg-[#1d4ed8] shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'}`}
-          >Direct sign-in</button>
+            className={`rounded-md px-2.5 py-1 transition-all cursor-pointer ${providerType === 'unipile' ? 'bg-[#0b1957] text-white shadow-sm' : 'text-slate-300 hover:text-white'}`}
+          ><Power className="h-3.5 w-3.5" /> Direct sign-in</button>
         </div>
       </div>
       {providerType === 'meta' ? <MetaConnectForm onAdd={onAdd} /> : <DirectConnectForm onAdd={onAdd} />}
@@ -462,8 +488,12 @@ const DirectConnectForm: React.FC<{ onAdd: (payload: any) => Promise<void> }> = 
         Direct sign-in is the only option that supports auto-liking comments.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <input value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass} placeholder="Connection ID" />
-        <input value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} placeholder="Instagram handle (optional)" />
+        <Field label="Connection ID" icon={Hash}>
+          <input value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass} placeholder="Connection ID" />
+        </Field>
+        <Field label="Instagram handle (optional)" icon={InstagramIcon}>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} placeholder="Instagram handle (optional)" />
+        </Field>
       </div>
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
       <div className="mt-3 flex justify-end">
@@ -547,40 +577,40 @@ const MetaConnectForm: React.FC<{ onAdd: (payload: any) => Promise<void> }> = ({
         Auto-liking comments is <span className="text-amber-500 dark:text-amber-400 font-bold">not supported</span> via Meta&apos;s official API.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Meta app ID">
+        <Field label="Meta app ID" icon={Building2}>
           <input value={appId} onChange={(e) => setAppId(e.target.value)} className={inputClass} placeholder="2020267418916137" />
         </Field>
-        <Field label="Meta app secret">
+        <Field label="Meta app secret" icon={Power}>
           <input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} className={inputClass} placeholder="●●●●●●●●" />
         </Field>
-        <Field label="Verify token (you make this up)">
+        <Field label="Verify token (you make this up)" icon={Lock}>
           <input value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} className={inputClass} placeholder="random-string-paste-into-meta-too" />
         </Field>
-        <Field label="Long-lived access token">
+        <Field label="Long-lived access token" icon={LinkIcon}>
           <div className="flex gap-2">
             <input type="password" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} className={`${inputClass} flex-1`} placeholder="EAAB…" />
-            <button onClick={verifyToken_} disabled={verifying} className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#00051d] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0">
+            <button onClick={verifyToken_} disabled={verifying} className="rounded-xl border border-blue-950/40 px-3 text-xs font-bold text-white bg-[#071131]/80 hover:bg-[#0c1b43] transition-colors cursor-pointer shrink-0">
               {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Verify'}
             </button>
           </div>
         </Field>
-        <Field label="Instagram user ID">
+        <Field label="Instagram user ID" icon={LinkIcon}>
           <input value={igUserId} onChange={(e) => setIgUserId(e.target.value)} className={inputClass} placeholder="17841401281270777" />
         </Field>
-        <Field label="Instagram handle (optional)">
+        <Field label="Instagram handle (optional)" icon={Target}>
           <input value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} placeholder="@naveenyeluru" />
         </Field>
       </div>
       {verified && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          Verified — ID <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">{verified.id}</code>
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2.5 text-xs text-emerald-200 font-medium">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          Verified - ID <code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-200">{verified.id}</code>
           {verified.username && <> · @{verified.username}</>}
         </div>
       )}
       {err && <div className="mt-2"><ErrorBanner message={err} /></div>}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-100/50 dark:bg-[#00051d]/40 p-3.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        <div className="mb-1 font-bold text-slate-700 dark:text-slate-300">Set up the webhook on Meta side:</div>
+      <div className="rounded-xl border border-blue-950/40 bg-[#071131]/70 p-3.5 text-xs text-slate-300 leading-relaxed">
+        <div className="mb-1 font-bold text-slate-200">Set up the webhook on Meta side:</div>
         <div>Callback URL: <code className="text-[#0b1957] dark:text-primary font-mono">{`${typeof window !== 'undefined' ? window.location.origin : 'https://your-host'}/api/instagram-conversations/webhook/meta`}</code></div>
         <div className="mt-0.5">Verify token: whatever you typed above (Meta will probe with it once).</div>
         <div className="mt-0.5">Subscribe to fields: <code className="font-mono text-slate-600 dark:text-slate-300">messages</code>, <code className="font-mono text-slate-600 dark:text-slate-300">comments</code>, <code className="font-mono text-slate-600 dark:text-slate-300">mentions</code>.</div>
