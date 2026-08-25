@@ -415,11 +415,11 @@ export default function CampaignAnalyticsPage() {
   return (
     <div className="p-3 bg-[#F8F9FE] dark:bg-[#000724] h-full overflow-auto">
       {/* Header */}
-      <div className="mb-5 mt-10">
+      <div className="mb-5 mt-4 sm:mt-10">
   {/* ================= MOBILE ================= */}
         <div className="block sm:hidden">
 
-          <div className="mb-4">
+          <div className="mb-3 px-1">
             <button
               onClick={() => router.push("/campaigns")}
               className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-[#6B7A99] cursor-pointer"
@@ -432,7 +432,7 @@ export default function CampaignAnalyticsPage() {
           </div>
 
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-[#2A3448] dark:bg-[#131B2E]">
+          <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
 
             <div className="flex items-start gap-3">
 
@@ -482,13 +482,13 @@ export default function CampaignAnalyticsPage() {
             </div>
 
 
-            <div className="mt-4 flex gap-2">
+            <div className="mt-3 flex items-center gap-2">
 
               <Button
                 onClick={() =>
                   router.push(`/campaigns/${campaignId}/analytics/leads`)
                 }
-                className="flex-1 h-9 rounded-md bg-[#0B1957] px-3 text-xs font-semibold text-white hover:bg-[#101F6B] dark:bg-[#2563EB] dark:hover:bg-[#1D4ED8]"
+                className="h-9 rounded-md bg-[#0B1957] px-3 text-xs font-semibold text-white hover:bg-[#101F6B] dark:bg-[#2563EB] dark:hover:bg-[#1D4ED8]"
               >
                 <Users className="mr-2 h-3.5 w-3.5" />
                 View Leads
@@ -499,7 +499,7 @@ export default function CampaignAnalyticsPage() {
                 onClick={() =>
                   router.push(`/onboarding?campaignId=${campaignId}`)
                 }
-                className="flex-1 h-9 rounded-md border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-900 hover:border-gray-400 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-white dark:hover:border-slate-400 dark:hover:bg-slate-800/30"
+                className="h-9 rounded-md border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-900 hover:border-gray-400 hover:bg-gray-50 dark:border-slate-600 dark:bg-transparent dark:text-white dark:hover:border-slate-400 dark:hover:bg-slate-800/30"
               >
                 <SquarePen className="mr-2 h-3.5 w-3.5" />
                 Edit Campaign
