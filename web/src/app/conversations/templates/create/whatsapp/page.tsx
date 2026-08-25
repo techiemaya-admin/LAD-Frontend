@@ -361,7 +361,14 @@ export default function WhatsAppTemplateCreatePage() {
       if (data.success) {
         setResult({ success: true, message: `"${safeName}" submitted - status: ${data.status ?? 'PENDING'}` });
       } else {
-        setResult({ success: false, message: data.error || 'Meta rejected the template.' });
+        // See CreateWabaTemplateModal: `data.error` absent means our own
+        // request failed, not that Meta rejected anything.
+        setResult({
+          success: false,
+          message: data.error
+            ? `Meta rejected the template: ${data.error}`
+            : "Couldn't submit the template - the request failed before Meta answered, so this isn't a rejection. Please try again.",
+        });
       }
     } catch (err: any) {
       setResult({ success: false, message: err?.message ?? 'Unexpected error.' });
