@@ -464,22 +464,31 @@ export default function CampaignLeadsPage() {
   }
   return (
     <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
-      <div className="p-6 pb-12">
+      <div className="p-4 pb-12 sm:p-6">
         {/* Header */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="mb-4 sm:mb-6">
+          <div className="mb-4 flex items-center text-xs sm:hidden">
+            <button
+              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+              className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to campaign leads</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-4 border-b border-slate-200 pb-3 dark:border-[#1e293b]/60 sm:border-0 sm:pb-0">
             <Button
               variant="outline"
               onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-              className="min-w-auto dark:bg-[#071131] dark:border-[#1e293b] dark:text-white"
+              className="hidden min-w-auto dark:bg-[#071131] dark:border-[#1e293b] dark:text-white sm:inline-flex"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
             </Button>
             <div>
-              <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+              <h4 className="mb-1 text-base font-bold text-slate-800 dark:text-white sm:text-2xl">
                 {campaign?.name || 'Campaign Leads'}
               </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <p className="text-xs text-slate-500 dark:text-slate-300 sm:text-sm">
                 {total} {filterParams !== 'all' ? FILTER_LABELS[filterParams] ?? filterParams : ''} leads
                 {total > filteredLeads.length && ` (showing ${filteredLeads.length})`}
               </p>
@@ -498,7 +507,7 @@ export default function CampaignLeadsPage() {
             <button
               key={tab.key}
               onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=${tab.key}`)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm ${
                 filterParams === tab.key
                   ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
                   : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
@@ -510,11 +519,11 @@ export default function CampaignLeadsPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
+        <div className="mb-3 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
             <Input
-              className="pl-10 bg-white dark:bg-[#071131] border-slate-200 dark:border-[#1e293b]/60 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
+              className="h-9 rounded-lg bg-white pl-10 text-xs placeholder:text-slate-400 dark:border-[#1e293b]/60 dark:bg-[#071131] dark:text-white dark:placeholder:text-slate-400 sm:h-10 sm:rounded-xl sm:text-sm"
               placeholder="Search leads by name, email, company, or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -567,6 +576,7 @@ export default function CampaignLeadsPage() {
                       onViewSummary={handleViewSummary}
                       profileSummary={summaries?.get(lead.id) || lead.profile_summary || null}
                       hideUnlockFeatures={isInboundCampaign}
+                      compactOnMobile
                     />
                     {/* Follow-up count pill */}
                     {(lead as any).manual_followup_count > 0 && (

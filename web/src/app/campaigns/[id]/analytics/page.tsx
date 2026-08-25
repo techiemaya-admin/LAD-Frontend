@@ -779,7 +779,7 @@ export default function CampaignAnalyticsPage() {
               setLeadProgress([]);
               setSelectedLeadIds(new Set());
             }}
-            className="relative flex items-center justify-between px-5 py-3 h-20 rounded-2xl bg-[#F8FAFC] dark:bg-[#000724] border border-[#E2E8F0] dark:border-[#2B3A52] shadow-sm hover:border-[#0B1957]/30 transition-all cursor-pointer rounded-lg"
+            className="relative flex items-center justify-between px-5 py-3 h-20 rounded-2xl bg-[#F8FAFC] dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm hover:border-[#0B1957]/30 transition-all cursor-pointer rounded-lg"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0B1957]/10 dark:bg-[#2563EB]/20">
