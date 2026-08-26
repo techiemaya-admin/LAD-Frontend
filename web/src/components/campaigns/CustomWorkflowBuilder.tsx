@@ -2539,11 +2539,47 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     [strategyTemplates, communityTemplates],
   );
 
+  /**
+   * What on this canvas actually CONSUMES leads — and therefore whether a
+   * contact source is required at all.
+   *
+   * Hoisted to component scope because BOTH launch and saveAsStrategy need it.
+   * It used to be a local inside the launch handler, so saving the very same
+   * canvas as a strategy still demanded a contact source: a publisher-only
+   * workflow could be launched but not saved, which reads as the builder
+   * contradicting itself. One definition, two callers, no drift.
+   *
+   * The auto-post genuinely does not iterate leads — campaign_linkedin_posts
+   * holds one row per campaign (UNIQUE on campaign_id) and a cron fires it on
+   * its own timer — so a publisher-only workflow has nobody to enrol.
+   */
+  const leadConsumption = useMemo(() => {
+    const outreachSteps = workflowPreview.filter(
+      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID
+    );
+    const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
+    const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
+    // Publisher-only is about what CONSUMES leads, not about which nodes are on
+    // the canvas. A contact source on its own consumes nothing: with no per-lead
+    // step the imported contacts have nowhere to go, so a workflow whose only
+    // real work is the scheduled post stays publisher-only even with a source
+    // attached. Defining it by node identity instead meant picking a source
+    // silently turned the exemption off.
+    const publisherOnly =
+      workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID) &&
+      !outreachSteps.length && !followupNode && !multiCondNode;
+    return { outreachSteps, multiCondNode, followupNode, publisherOnly };
+  }, [workflowPreview]);
+
   /** Snapshot the current canvas as a named, reusable strategy. */
   const saveAsStrategy = async () => {
     setStrategyMsg(null);
     if (!name.trim()) { setError('Name your workflow before saving it as a strategy.'); return; }
-    if (!source) { setError('Pick a contact source before saving.'); return; }
+    // The same exemption launch applies: a publisher-only workflow has nobody
+    // to enrol, so demanding a source here rejects a canvas Launch accepts.
+    if (!source && !leadConsumption.publisherOnly) {
+      setError('Pick a contact source before saving.'); return;
+    }
     if (!workflowPreview.length) { setError('Add at least one step before saving.'); return; }
 
     setStrategySaving(true);
@@ -3148,20 +3184,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     // is nobody to enrol, so demanding a contact source - or an outreach step  - 
     // would block a perfectly valid pipeline. Any other node present means the
     // workflow does operate on leads, and the normal guards apply again.
-    const outreachSteps = workflowPreview.filter(
-      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID
-    );
-    const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
-    const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
-    // Publisher-only is about what CONSUMES leads, not about which nodes are on
-    // the canvas. A contact source on its own consumes nothing: with no per-lead
-    // step the imported contacts have nowhere to go, so a workflow whose only
-    // real work is the scheduled post stays publisher-only even with a source
-    // attached. Defining it by node identity instead meant picking a source
-    // silently turned the exemption off.
-    const publisherOnly =
-      workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID) &&
-      !outreachSteps.length && !followupNode && !multiCondNode;
+    // One shared definition with saveAsStrategy — see leadConsumption above.
+    const { outreachSteps, multiCondNode, followupNode, publisherOnly } = leadConsumption;
     if (!source && !publisherOnly) { setError('Pick a contact source (first node).'); return; }
     // LinkedIn Search needs at least one criterion - templates seed these empty
     // on purpose, so catch it here with a pointer instead of a backend 400.
@@ -3239,7 +3263,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       const hasContent = ((configs[CONTENT_STEP_ID]?.content ?? configs[AUTOPOST_STEP_ID]?.content) || '').trim();
       if (!hasContent) {
-        setError('Add the LinkedIn content node and write what the post should say.');
+        // ABSENT and EMPTY are different problems with different fixes. Telling
+        // someone to "add" a node that is plainly on their canvas reads as the
+        // builder being broken, when the instruction is to open it and type.
+        const hasContentNode = workflowPreview.some((s) => s.id === CONTENT_STEP_ID);
+        setError(hasContentNode
+          ? 'Open the LinkedIn content node and write what the post should say.'
+          : 'Add a LinkedIn content node and write what the post should say.');
         setEditingId(workflowPreview.some((s) => s.id === CONTENT_STEP_ID) ? CONTENT_STEP_ID : AUTOPOST_STEP_ID);
         return;
       }

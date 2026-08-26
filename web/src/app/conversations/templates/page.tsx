@@ -344,6 +344,9 @@ export default function TemplatesPage() {
   const [igModalOpen, setIgModalOpen] = useState(false);
   const [igEditing, setIgEditing] = useState<InstagramMessageTemplate | null>(null);
   const [wapaModalOpen, setWapaModalOpen] = useState(false);
+  const [wabaEditing, setWabaEditing] = useState<WATemplate | null>(null);
+  const [wabaEditBody, setWabaEditBody] = useState('');
+  const [wabaEditSaving, setWabaEditSaving] = useState(false);
   const [wapaEditing, setWapaEditing] = useState<PersonalWaTemplate | null>(null);
 
   // ── Lazy-load WhatsApp lists when their view becomes active ─
@@ -383,6 +386,81 @@ export default function TemplatesPage() {
       loadWapaTemplates();
     } catch (e: any) {
       push({ variant: 'error', title: 'Delete Failed', description: e?.message || 'Could not delete template.' });
+    }
+  };
+
+  const handleDeleteWaba = async (t: WATemplate) => {
+    // Spelled out because this is NOT the soft delete the other channels do.
+    // The gallery is a live view of Meta's library, so there is no local row to
+    // hide: the template is gone at Meta, every language of that name goes with
+    // it, and getting it back means a fresh review.
+    if (!confirm(
+      `Delete "${t.name}" from Meta?\n\n`
+      + `This removes every language of this template from ${t.account_phone || 'this number'} `
+      + `and cannot be undone. Campaigns still using it will fail to send.`,
+    )) return;
+    try {
+      const qs = new URLSearchParams({ channel: 'waba' });
+      // A template belongs to ONE number. Without this the backend falls back to
+      // the tenant's oldest number and either 404s or deletes a different
+      // number's template of the same name.
+      if (t.account_id) qs.set('account_id', t.account_id);
+      const res = await fetchWithTenant(
+        `/api/whatsapp-conversations/conversations/templates/${encodeURIComponent(t.name)}?${qs.toString()}`,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.detail || body?.error || `HTTP ${res.status}`);
+      }
+      push({ variant: 'success', title: 'Template Deleted', description: `"${t.name}" was removed from Meta.` });
+      loadWaTemplates();
+    } catch (e: any) {
+      push({ variant: 'error', title: 'Delete Failed', description: e?.message || 'Could not delete template.' });
+    }
+  };
+
+  const handleEditWaba = (t: WATemplate) => {
+    setWabaEditing(t);
+    setWabaEditBody(getBodyText(t));
+  };
+
+  const submitWabaEdit = async () => {
+    if (!wabaEditing) return;
+    const next = wabaEditBody.trim();
+    if (!next) {
+      push({ variant: 'error', title: 'Body required', description: 'A template must have body text.' });
+      return;
+    }
+    setWabaEditSaving(true);
+    try {
+      // Send the FULL component list with only BODY replaced. Meta treats
+      // `components` as the complete set, so posting the body alone would drop
+      // the header, footer and buttons rather than leave them untouched.
+      const components = (wabaEditing.components || []).map(c => (
+        c.type === 'BODY' ? { ...c, text: next } : c
+      ));
+      const res = await fetchWithTenant(
+        `/api/whatsapp-conversations/conversations/templates/${encodeURIComponent(wabaEditing.id)}/edit?channel=waba`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ components, account_id: wabaEditing.account_id || '' }),
+        },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.detail || body?.error || `HTTP ${res.status}`);
+      push({
+        variant: 'success',
+        title: 'Edit submitted',
+        description: 'Meta must approve the change before this template can be sent again.',
+      });
+      setWabaEditing(null);
+      loadWaTemplates();
+    } catch (e: any) {
+      push({ variant: 'error', title: 'Edit Failed', description: e?.message || 'Could not edit template.' });
+    } finally {
+      setWabaEditSaving(false);
     }
   };
 
@@ -562,6 +640,8 @@ export default function TemplatesPage() {
                                 ? `${buttonCount} button${buttonCount > 1 ? 's' : ''}`
                                 : tpl.language
                             }
+                            onEdit={() => handleEditWaba(tpl)}
+                            onDelete={() => handleDeleteWaba(tpl)}
                           />
                         );
                       })}
@@ -708,6 +788,69 @@ export default function TemplatesPage() {
       <CreateLinkedInTemplateModal open={liModalOpen} editing={liEditing} onClose={() => setLiModalOpen(false)} />
       <CreateInstagramTemplateModal open={igModalOpen} editing={igEditing} onClose={() => setIgModalOpen(false)} />
       <CreatePersonalWaTemplateModal open={wapaModalOpen} editing={wapaEditing} onClose={() => setWapaModalOpen(false)} onSaved={loadWapaTemplates} />
+
+      {/*
+        WABA edit. Deliberately body-text only rather than the full create form.
+        Meta will not let a template's name or language change — those identify
+        it — and header media, buttons and footer each carry their own approval
+        rules. Body copy is the edit people actually want, and offering only what
+        Meta reliably accepts beats a form that looks complete and gets rejected.
+        The remaining components are sent back untouched so they survive.
+      */}
+      {wabaEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-[#0b1957] shadow-xl border border-[#E2E8F0] dark:border-blue-950/40">
+            <div className="px-5 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40">
+              <h3 className="font-bold text-[#1E293B] dark:text-white">Edit template</h3>
+              <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mt-0.5">
+                {wabaEditing.name} · {wabaEditing.language}
+                {wabaEditing.account_phone ? ` · ${wabaEditing.account_phone}` : ''}
+              </p>
+            </div>
+
+            <div className="px-5 py-4 space-y-3">
+              {/*
+                Stated before they commit, not after. An approved template that
+                is edited leaves APPROVED and cannot be sent until Meta approves
+                it again, so editing one mid-campaign stops that campaign's sends.
+              */}
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Editing sends this template back to Meta for review. It cannot be
+                sent until the change is approved.
+              </p>
+
+              <label className="block text-sm font-medium text-[#1E293B] dark:text-white">Body text</label>
+              <textarea
+                value={wabaEditBody}
+                onChange={e => setWabaEditBody(e.target.value)}
+                rows={6}
+                className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-blue-950/60 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20"
+              />
+              <p className="text-[11px] text-[#94A3B8] dark:text-gray-500">
+                Keep every {'{{n}}'} placeholder the original had — Meta rejects a
+                body whose variables do not match its examples.
+              </p>
+            </div>
+
+            <div className="px-5 py-3 border-t border-[#E2E8F0] dark:border-blue-950/40 flex justify-end gap-2">
+              <button
+                onClick={() => setWabaEditing(null)}
+                disabled={wabaEditSaving}
+                className="px-3 py-1.5 text-sm font-semibold text-[#64748B] dark:text-[#7a8ba3] hover:text-[#1E293B] dark:hover:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitWabaEdit}
+                disabled={wabaEditSaving}
+                className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-[#0b1957] text-white hover:bg-[#0a1540] transition-colors disabled:opacity-50"
+              >
+                {wabaEditSaving ? 'Submitting…' : 'Submit for review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
