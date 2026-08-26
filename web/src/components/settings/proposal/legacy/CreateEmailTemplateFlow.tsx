@@ -6,13 +6,13 @@ import {
   ArrowRight, 
   Brain, 
   X, 
-  ChevronRight,
-  CheckCircle2,
-  Plus
+  ChevronRight, 
+  CheckCircle2, 
+  Plus 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../../lib/utils';
-import { generateEmailTemplate } from '../../services/geminiService';
+import { cn } from '@/lib/utils';
+import { generateEmailTemplate } from '@/services/geminiService';
 import { toast } from 'sonner';
 
 interface CreateEmailTemplateFlowProps {

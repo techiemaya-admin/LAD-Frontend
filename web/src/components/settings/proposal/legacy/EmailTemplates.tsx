@@ -15,7 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 
