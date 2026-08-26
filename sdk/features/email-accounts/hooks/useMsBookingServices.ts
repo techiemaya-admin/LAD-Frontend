@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useMsBookingServices
+ * Email Accounts - useMsBookingServices
  * Lists services for a given Microsoft Bookings business.
  */
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import type { MsBookingService } from '../types';
 
 export interface UseMsBookingServicesReturn {
   services: MsBookingService[];
-  /** True until the query has data — covers loading, retrying, and offline-paused. */
+  /** True until the query has data - covers loading, retrying, and offline-paused. */
   isPending: boolean;
   isLoading: boolean;
   isError: boolean;

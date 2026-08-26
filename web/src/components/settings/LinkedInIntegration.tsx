@@ -75,7 +75,7 @@ interface LinkedInAutomationSettings {
   linkedin_ai_model?: string;
 }
 // Curated model menu for LinkedIn outbound message personalization. Must match
-// the backend registry (core/constants/aiMessageModels.js) — ids are validated
+// the backend registry (core/constants/aiMessageModels.js) - ids are validated
 // server-side on PUT, so an out-of-sync entry here is rejected rather than saved.
 type AuthMethod = 'credentials' | 'cookies';
 export const LinkedInIntegration: React.FC = () => {
@@ -110,7 +110,7 @@ export const LinkedInIntegration: React.FC = () => {
   // ── AI Replies (tenant-level LinkedIn AI agent) ────────────────────────────
   // ai_agent_enabled is stored once per tenant, so every connected account shares
   // the same flag. We hold the full settings object (not just the boolean) so a
-  // PUT can resend auto_like_posts / auto_comment_posts / reply-delay unchanged —
+  // PUT can resend auto_like_posts / auto_comment_posts / reply-delay unchanged  - 
   // the backend rebuilds all four keys, so omitting them would clobber them.
   const [automationSettings, setAutomationSettings] = useState<LinkedInAutomationSettings | null>(null);
   const [aiRepliesSaving, setAiRepliesSaving] = useState(false);
@@ -368,7 +368,7 @@ export const LinkedInIntegration: React.FC = () => {
         setAutomationSettings(res.data);
       }
     } catch (error) {
-      // Non-fatal — see note above.
+      // Non-fatal - see note above.
     }
   };
   // Flip the tenant-level AI agent on/off. Optimistic UI, then PUT the FULL set
@@ -379,7 +379,7 @@ export const LinkedInIntegration: React.FC = () => {
     if (!automationSettings || aiRepliesSaving) return;
     const previous = automationSettings;
     const next = !previous.ai_agent_enabled;
-    // Optimistic — all cards read this one flag, so they flip together.
+    // Optimistic - all cards read this one flag, so they flip together.
     setAutomationSettings({ ...previous, ai_agent_enabled: next });
     setAiRepliesSaving(true);
     try {
@@ -414,7 +414,7 @@ export const LinkedInIntegration: React.FC = () => {
     }
   };
   // Change the tenant's outbound-message model. Optimistic UI, then a PARTIAL PUT
-  // ({ linkedin_ai_model }) — the backend jsonb-merges it, so the other automation
+  // ({ linkedin_ai_model }) - the backend jsonb-merges it, so the other automation
   // settings are preserved. Reverts + toasts on failure (mirrors toggleAiReplies).
   const handleConnect = async () => {
     setConnecting(true);
@@ -1120,7 +1120,7 @@ export const LinkedInIntegration: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-      {/* Checkpoint Verification Modal (OTP or Yes/No) — LinkedIn-style UI */}
+      {/* Checkpoint Verification Modal (OTP or Yes/No) - LinkedIn-style UI */}
       <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
         <DialogContent className="max-w-sm p-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
           <DialogHeader className="text-center justify-center pt-8 px-6">

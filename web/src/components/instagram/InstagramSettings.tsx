@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { cn } from "@/lib/utils";
-// Same-origin fetcher — hits the Next.js proxy at /api/instagram-conversations/*
+// Same-origin fetcher - hits the Next.js proxy at /api/instagram-conversations/*
 // rather than lib/api (which prepends NEXT_PUBLIC_BACKEND_URL = LAD_backend :3004).
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -62,7 +62,7 @@ const GOAL_TYPES = [
 ];
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  // Accounts comes first — it's the fundamental setup; nothing else
+  // Accounts comes first - it's the fundamental setup; nothing else
   // works without at least one connected Instagram account.
   { id: 'accounts', label: 'Accounts', icon: Building2 },
   { id: 'goals',    label: 'AI Goals', icon: Target },
@@ -84,7 +84,7 @@ export const InstagramSettings: React.FC = () => {
   return (
     <div className="min-h-screen bg-white text-slate-800 dark:bg-[#00051d] dark:text-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
-        {/* Back link — operator opened this page from /settings?tab=integrations
+        {/* Back link - operator opened this page from /settings?tab=integrations
             (or the conversations chat-header AI Settings icons). Give them a
             one-click way home so they don't have to use the browser back button. */}
         <button
@@ -170,7 +170,7 @@ const AIGoalsPanel: React.FC = () => {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Delete this goal? This action is reversible — the goal is soft-deleted.')) return;
+    if (!confirm('Delete this goal? This action is reversible - the goal is soft-deleted.')) return;
     await apiDelete(`/api/instagram-conversations/goals/${id}`);
     await load();
   };
@@ -201,7 +201,7 @@ const AIGoalsPanel: React.FC = () => {
         <EmptyState
           icon={Target}
           title="No goals yet"
-          blurb="Create your first AI Goal — bookings, sales, email captures — and AI will steer every reply toward it."
+          blurb="Create your first AI Goal: bookings, sales, or email captures. AI will steer every reply toward it."
         />
       )}
 
@@ -316,7 +316,7 @@ const GoalForm: React.FC<{ onCancel: () => void; onSubmit: (g: Partial<Goal>) =>
                       /* FIXED: Passed only raw text to fix the blank dropdown bug, and used sub-selectors like [&>span]:!text-... to style the text layers safely from the outside */
                       className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white"
                   >
-                    {/* FIXED: No wrapping elements here — raw text makes Radix render your labels perfectly */}
+                    {/* FIXED: No wrapping elements here - raw text makes Radix render your labels perfectly */}
                     {t.label}
                   </SelectItem>
               ))}
@@ -604,7 +604,7 @@ const MetaConnectForm: React.FC<{ onAdd: (payload: any) => Promise<void> }> = ({
       {verified && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2.5 text-xs text-emerald-200 font-medium">
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          Verified — ID <code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-200">{verified.id}</code>
+          Verified - ID <code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-200">{verified.id}</code>
           {verified.username && <> · @{verified.username}</>}
         </div>
       )}

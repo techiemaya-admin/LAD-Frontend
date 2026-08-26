@@ -47,6 +47,7 @@
       "@lad/frontend-features/email-accounts": ["../sdk/features/email-accounts"],
       "@lad/frontend-features/meta-onboarding": ["../sdk/features/meta-onboarding"],
       "@lad/frontend-features/lad-monitor": ["../sdk/features/lad-monitor"],
+      "@lad/frontend-features/snapshots": ["../sdk/features/snapshots"],
       "@lad/shared/*": ["../sdk/shared/*"]
     }
   },

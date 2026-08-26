@@ -54,7 +54,7 @@ const toBackendProvider = (p: EmailProvider): string =>
   : p === 'custom' ? 'custom_smtp'
   : 'google';
 
-// Mirrors the LAD-Email-Comms quota defaults (services/quota_tracker.py) —
+// Mirrors the LAD-Email-Comms quota defaults (services/quota_tracker.py)  - 
 // past these, the orchestrator paces/pauses, so warn the user up front.
 const SAFE_DAILY_VOLUME: Record<EmailProvider, number> = {
   gmail: 400,
@@ -99,7 +99,7 @@ interface SendResult {
   failed: number;
   total: number;
   errors: { email: string; error: string }[];
-  /** True when the send was queued on the paced broadcast orchestrator —
+  /** True when the send was queued on the paced broadcast orchestrator  - 
    *  progress lives in the Sent folder rather than this dialog. */
   queued?: boolean;
 }
@@ -282,7 +282,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
       // No attachments → route through the LAD-Email-Comms broadcast
       // orchestrator: records a run in the Sent folder and paces sends
       // (human-like jitter + per-account daily/hourly quotas + sender
-      // warm-up) instead of blasting the provider in a tight loop — a
+      // warm-up) instead of blasting the provider in a tight loop - a
       // 344-recipient burst on the legacy path got a sender flagged as
       // spam. Attachment sends stay on the legacy direct path until the
       // orchestrator supports attachments.
@@ -319,10 +319,10 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
               setSending(false);
               return;
             }
-            console.warn('[EmailTemplatePicker] broadcast route failed — falling back to direct send', data);
+            console.warn('[EmailTemplatePicker] broadcast route failed - falling back to direct send', data);
           }
         } catch (err) {
-          console.warn('[EmailTemplatePicker] broadcast route unreachable — falling back to direct send', err);
+          console.warn('[EmailTemplatePicker] broadcast route unreachable - falling back to direct send', err);
         }
       }
 
@@ -365,7 +365,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
         });
         setView('done');
       } else {
-        setSendError(data.error || data.detail || 'Send failed — please try again.');
+        setSendError(data.error || data.detail || 'Send failed - please try again.');
         setView('preview');
       }
     } catch (err) {
@@ -775,7 +775,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {sendResult.queued
-                    ? `Sending to ${sendResult.total} recipient${sendResult.total === 1 ? '' : 's'} via ${providerLabel} — paced to protect your sender reputation. Track progress and opens in the Sent tab.`
+                    ? `Sending to ${sendResult.total} recipient${sendResult.total === 1 ? '' : 's'} via ${providerLabel} - paced to protect your sender reputation. Track progress and opens in the Sent tab.`
                     : `Campaign dispatched via ${providerLabel}`}
                 </p>
               </div>
@@ -799,7 +799,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                   <ul className="mt-2 space-y-1 max-h-24 overflow-y-auto">
                     {sendResult.errors.map((err, i) => (
                       <li key={i} className="text-muted-foreground">
-                        <span className="text-red-400">·</span> {err.email} — {err.error}
+                        <span className="text-red-400">·</span> {err.email}: {err.error}
                       </li>
                     ))}
                   </ul>
@@ -840,7 +840,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   {group.member_count} recipients exceeds the safe daily volume for a{' '}
                   {providerLabel} mailbox (~{SAFE_DAILY_VOLUME[provider]}/day). Sending is
-                  paced and may spread across days to protect your sender reputation — for
+                  paced and may spread across days to protect your sender reputation - for
                   regular large sends, connect an email service (Brevo / Amazon SES) via
                   Custom SMTP in Settings.
                 </p>
@@ -896,11 +896,11 @@ function PersonalizationHints({ onInsert }: { onInsert: (v: string) => void }) {
             key={label}
             type="button"
             onClick={() => onInsert(label)}
-            title={`Insert ${label} — ${desc}`}
+            title={`Insert ${label} - ${desc}`}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-background border border-border text-xs font-mono hover:border-primary/50 hover:bg-primary/5 transition-colors"
           >
             <span className="text-primary">{label}</span>
-            <span className="text-muted-foreground hidden sm:inline">— {desc}</span>
+            <span className="text-muted-foreground hidden sm:inline">: {desc}</span>
           </button>
         ))}
       </div>

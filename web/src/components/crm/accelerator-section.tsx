@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Accelerator Sequence — where this lead is in its campaign cadence.
+ * Accelerator Sequence - where this lead is in its campaign cadence.
  *
  * Position is DERIVED on the backend from campaign_analytics using the same
  * function the scheduler advances leads with, so this card shows where the
@@ -9,7 +9,7 @@
  *
  * The consequence worth knowing: a step that fails writes no success row, so the
  * lead stays parked on it and re-shows it every tick. That is a real stall, not
- * a display artefact — it surfaces here as a "stuck" note on the current step
+ * a display artefact - it surfaces here as a "stuck" note on the current step
  * instead of N identical rows.
  */
 
@@ -198,12 +198,12 @@ function StepRow({ step, isLast }: { step: SequenceStep; isLast: boolean }) {
             </p>
           )}
 
-          {/* Attempted, never succeeded — the lead is parked here. */}
+          {/* Attempted, never succeeded - the lead is parked here. */}
           {step.stuck && (
             <p className="mt-1.5 inline-flex items-start gap-1.5 text-[11.5px] text-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
               <span>
-                Stuck — {step.stuck_attempts} failed attempt
+                Stuck - {step.stuck_attempts} failed attempt
                 {step.stuck_attempts === 1 ? '' : 's'}
                 {step.stuck_last_attempt ? `, last ${rel(step.stuck_last_attempt)} ago` : ''}. The
                 sequence will keep retrying this step until it succeeds.

@@ -42,7 +42,7 @@ export default function CampaignsListPage() {
   const searchParams = useSearchParams();
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  // Read ?status= from URL — synced every time URL changes
+  // Read ?status= from URL - synced every time URL changes
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") || "all",
   );
@@ -279,7 +279,7 @@ export default function CampaignsListPage() {
             onClick={handleRefreshConnections}
             disabled={syncing}
             variant="outline"
-            className="bg-[#0b1957] text-white dark:hover:text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+            className="bg-[#0b1957] dark:bg-[#2563eb] text-white dark:hover:text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Refresh Connections"}
@@ -289,7 +289,7 @@ export default function CampaignsListPage() {
             <Button
               onClick={() => navigateTo("/conversations/templates/create")}
               disabled={isNavigating}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/conversations/templates/create" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
@@ -302,7 +302,7 @@ export default function CampaignsListPage() {
             <Button
               onClick={() => navigateTo("/onboarding/advanced-search-ai")}
               disabled={isNavigating}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/onboarding/advanced-search-ai" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
@@ -317,7 +317,7 @@ export default function CampaignsListPage() {
               onClick={() => navigateTo("/campaigns/workflow")}
               disabled={isNavigating}
               variant="outline"
-              className="rounded-xl font-semibold px-3 py-1.5 flex-1 sm:w-auto border-[#0b1957] text-[#0b1957] hover:bg-[#0b1957]/10 hover:cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/campaigns/workflow" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />

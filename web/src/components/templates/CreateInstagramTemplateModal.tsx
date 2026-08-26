@@ -112,7 +112,7 @@ export default function CreateInstagramTemplateModal({
                 {editing ? 'Edit Instagram Template' : 'Create Instagram Template'}
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm text-gray-500 dark:text-slate-300 mt-0.5">
-                Reusable Instagram DM — no Meta approval required
+                Reusable Instagram DM - no Meta approval required
               </DialogDescription>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function CreateInstagramTemplateModal({
             </div>
             <Textarea
               id="ig-content"
-              placeholder={'Hey {{first_name}}! 👋 Saw you follow {{company}} — wanted to reach out…'}
+              placeholder={'Hey {{first_name}}! 👋 Saw you follow {{company}} - wanted to reach out…'}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}

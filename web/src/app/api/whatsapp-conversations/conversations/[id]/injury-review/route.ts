@@ -11,7 +11,7 @@
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/python-proxy';
 
-/** Force WABA channel routing — this endpoint only exists on LAD-WABA-Comms. */
+/** Force WABA channel routing - this endpoint only exists on LAD-WABA-Comms. */
 function withWabaChannel(req: NextRequest): NextRequest {
   const url = new URL(req.url);
   if (!url.searchParams.get('channel')) url.searchParams.set('channel', 'waba');

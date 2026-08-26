@@ -118,7 +118,7 @@ export const UsageCalculator: React.FC = () => {
     const totalMinutes = voiceCalls * callLength;
     const voiceCredits = totalMinutes * (premiumVoice ? 4 : 3);
 
-    // Lead enrichment (2 credits per lead — email reveal)
+    // Lead enrichment (2 credits per lead - email reveal)
     const leadCredits = leads * 2;
 
     // Template messages (5 credits each)

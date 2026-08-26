@@ -36,7 +36,7 @@ export default function CloneYourselfSection() {
     {
       title: "He works every channel at once",
       description:
-        "LinkedIn, WhatsApp, Instagram, email, and voice — coordinated as one team.",
+        "LinkedIn, WhatsApp, Instagram, email, and voice. Coordinated as one team.",
     },
     {
       title: "On brand, every time",

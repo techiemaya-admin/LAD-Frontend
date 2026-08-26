@@ -1,5 +1,5 @@
 /**
- * Meta Onboarding Feature — API Functions
+ * Meta Onboarding Feature - API Functions
  *
  * All HTTP calls for Meta Embedded Signup. Uses the shared apiClient; no
  * direct fetch/axios. Enhanced with TanStack Query v5 queryOptions.
@@ -38,7 +38,7 @@ export async function getWhatsAppSignupConfig(): Promise<WhatsAppSignupConfig> {
     `${BASE}/whatsapp/config`
   );
   const { appId, configId, graphVersion, esVersion, configured } = res.data;
-  // Normalise a missing/blank featureType to null — the hook keys off null
+  // Normalise a missing/blank featureType to null - the hook keys off null
   // to omit `extras.featureType` entirely, which Meta treats differently
   // from an empty string.
   const featureType = res.data.featureType?.trim() || null;
@@ -52,7 +52,7 @@ export const getWhatsAppSignupConfigOptions = () =>
   queryOptions({
     queryKey: metaOnboardingKeys.whatsappConfig(),
     queryFn:  getWhatsAppSignupConfig,
-    // App/config IDs change only on a Meta App Dashboard edit — no reason to
+    // App/config IDs change only on a Meta App Dashboard edit - no reason to
     // refetch on every mount of the settings page.
     staleTime: 30 * 60 * 1000,
   });
@@ -84,7 +84,7 @@ export const getWhatsAppAccountsOptions = () =>
     queryFn:  getWhatsAppAccounts,
   });
 
-/** Disconnect an account — soft-deletes locally and unsubscribes from Meta. */
+/** Disconnect an account - soft-deletes locally and unsubscribes from Meta. */
 export async function disconnectWhatsAppAccount(accountId: string): Promise<DisconnectResponse> {
   const res = await apiClient.delete<DisconnectResponse>(
     `${BASE}/whatsapp/accounts/${accountId}`

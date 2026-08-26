@@ -1,5 +1,5 @@
 /**
- * Meta Onboarding — useWhatsAppSignupConfig
+ * Meta Onboarding - useWhatsAppSignupConfig
  * Fetches the app ID / config ID the browser needs to open Meta's dialog.
  */
 import { useQuery } from '@tanstack/react-query';

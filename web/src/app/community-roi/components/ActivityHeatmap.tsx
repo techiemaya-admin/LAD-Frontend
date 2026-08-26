@@ -166,7 +166,7 @@ export function ActivityHeatmap({ data, member, isCollapsed = false }: ActivityH
         </>
       )}
 
-      {/* ── Aggregate Metrics — always visible ── */}
+      {/* ── Aggregate Metrics - always visible ── */}
       <div className={cn(
         "grid grid-cols-2 md:grid-cols-4 gap-8",
         !isCollapsed && "pt-10 border-t border-slate-100"

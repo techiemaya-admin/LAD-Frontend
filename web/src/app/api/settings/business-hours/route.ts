@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 
 /**
- * /api/settings/business-hours — proxy to the backend's core settings routes.
+ * /api/settings/business-hours - proxy to the backend's core settings routes.
  *
  * apiClient always calls `${window.location.origin}/api/...` from the browser,
  * so every SDK path needs a matching Next route handler here. Without this file
@@ -10,18 +10,18 @@ import { logger } from '@/lib/logger';
  */
 
 // Confirmed live (QA loop, 2026-08-07): a cookied request to this route was
-// routed to the [feature]/[...path] catch-all instead of this file — 404
-// "Feature not found" — while an identical request WITHOUT cookies correctly
+// routed to the [feature]/[...path] catch-all instead of this file - 404
+// "Feature not found" - while an identical request WITHOUT cookies correctly
 // reached this handler (401 "Access token required"). Two other routes were
 // compared to isolate the cause: /api/auth/me (a static path, but reads
 // cookies DIRECTLY in the handler body) and personal-whatsapp/[...path] (a
 // dynamic path segment, cookies read via a helper like this file) both work
 // correctly. This route is the only one that is BOTH a fully static path AND
-// reads cookies only through an indirect helper (authHeaders below) — the one
+// reads cookies only through an indirect helper (authHeaders below) - the one
 // combination where Next's static/dynamic route analysis apparently fails to
 // detect the cookie dependency and the route can be resolved as if it were
 // static, misrouting cookie-bearing requests. force-dynamic is the framework's
-// own escape hatch for exactly this ambiguity — already used elsewhere in this
+// own escape hatch for exactly this ambiguity - already used elsewhere in this
 // codebase for the same reason.
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +31,7 @@ function getBackendBase() {
 }
 
 function authHeaders(req: NextRequest): Record<string, string> {
-  // Matches the convention in api/personal-whatsapp/[...path]/route.ts — the
+  // Matches the convention in api/personal-whatsapp/[...path]/route.ts - the
   // login flow sets 'token', not 'access_token'; checking only access_token
   // 401'd every request for a normal logged-in session (confirmed live: this
   // route deployed and immediately 401'd on a real session whose cookie is

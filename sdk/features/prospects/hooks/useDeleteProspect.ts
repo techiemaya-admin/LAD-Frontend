@@ -1,5 +1,5 @@
 /**
- * Prospects feature — useDeleteProspect hook (soft delete).
+ * Prospects feature - useDeleteProspect hook (soft delete).
  *
  * Soft-deletes a prospect ("not a fit"). On success, invalidates the prospects
  * list so the removed row disappears, and drops the single-prospect cache.

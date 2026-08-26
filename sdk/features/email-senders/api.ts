@@ -1,6 +1,6 @@
 /**
- * Email Senders — SDK API
- * LAD Architecture: SDK Layer — HTTP calls ONLY (no business logic)
+ * Email Senders - SDK API
+ * LAD Architecture: SDK Layer - HTTP calls ONLY (no business logic)
  */
 
 import { apiClient } from '../../shared/apiClient';

@@ -276,7 +276,7 @@ const statusIcons = {
 
 // ── Avatar components ────────────────────────────────────────────────────────
 
-/** Mr LAD logo — shown for AI-generated messages (theme-aware) */
+/** Mr LAD logo - shown for AI-generated messages (theme-aware) */
 function AiAvatar() {
   const { isDark } = useTheme();
   return (
@@ -288,7 +288,7 @@ function AiAvatar() {
   );
 }
 
-/** Lead avatar — WhatsApp profile pic or first letter of name */
+/** Lead avatar - WhatsApp profile pic or first letter of name */
 function LeadAvatar({ contact }: { contact?: Contact }) {
   const initial = contact?.name ? contact.name.charAt(0).toUpperCase() : 'L';
   return (
@@ -301,7 +301,7 @@ function LeadAvatar({ contact }: { contact?: Contact }) {
   );
 }
 
-/** Forwarded-message avatar — colored initial of the customer the message is from,
+/** Forwarded-message avatar - colored initial of the customer the message is from,
  *  using the same per-sender colour as the bubble's sender label (not the AI logo). */
 function ForwardAvatar({ name }: { name: string }) {
   const initial = name ? name.charAt(0).toUpperCase() : '?';
@@ -316,7 +316,7 @@ function ForwardAvatar({ name }: { name: string }) {
   );
 }
 
-/** Human agent avatar — first letter, clickable to open profile */
+/** Human agent avatar - first letter, clickable to open profile */
 function AgentAvatar({
   name,
   agentId,
@@ -331,7 +331,7 @@ function AgentAvatar({
     <button
       className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-semibold ring-1 ring-violet-200 hover:ring-violet-400 hover:bg-violet-200 transition-all cursor-pointer"
       onClick={() => onClick?.(agentId)}
-      title={`${name || 'Human Agent'} — click to view profile`}
+      title={`${name || 'Human Agent'} - click to view profile`}
       aria-label="Open agent profile"
     >
       {initial}
@@ -423,7 +423,7 @@ export const MessageBubble = memo(function MessageBubble({
 }: MessageBubbleProps) {
   // senderName arrives already collapsed to "pushname, else raw number" by the
   // message mapper, so it is masked here at the render site rather than in the
-  // mapper — keeping bullets out of the message model, where they could reach
+  // mapper - keeping bullets out of the message model, where they could reach
   // search or persistence.
   const { displayPossiblePhone } = usePhoneMasking();
   const { content, timestamp, isOutgoing, status, sender, role } = message;
@@ -489,7 +489,7 @@ export const MessageBubble = memo(function MessageBubble({
           isHighlighted && 'ring-2 ring-amber-500 dark:ring-amber-400 bg-amber-100/40 dark:bg-amber-500/25 scale-[1.02]'
         )}
       >
-        {/* Sender label — group participant or the customer an agent-forward is from.
+        {/* Sender label - group participant or the customer an agent-forward is from.
             (human_agent uses senderName for its avatar instead, so it's excluded.) */}
         {message.senderName && role !== 'human_agent' && (
           <span
@@ -554,7 +554,7 @@ export const MessageBubble = memo(function MessageBubble({
             </span>
           </div>
         )}
-        {/* Message content — template, media, location, or plain text */}
+        {/* Message content - template, media, location, or plain text */}
         {message.templateName ? (
           <TemplateMessageBubble content={content} templateName={message.templateName} />
         ) : message.mediaId ? (

@@ -101,7 +101,7 @@ interface ProfileSummaryDialogProps {
   error: string | null;
   /** How many days old the cached research data is. null = fresh research just ran. */
   dataAgeDays?: number | null;
-  /** Called when user clicks "Get Latest Data" — triggers a force-refresh. */
+  /** Called when user clicks "Get Latest Data" - triggers a force-refresh. */
   onRefresh?: () => void;
   /** True while the refresh request is in-flight. */
   refreshLoading?: boolean;
@@ -456,7 +456,7 @@ export default function ProfileSummaryDialog({
 
         {/* ── Footer ── */}
         <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 flex items-center gap-3">
-          {/* "Get Latest Data" — shown when cached data is being displayed */}
+          {/* "Get Latest Data" - shown when cached data is being displayed */}
           {!loading && dataAgeDays != null && dataAgeDays > 0 && onRefresh && (
             <Button
               onClick={onRefresh}

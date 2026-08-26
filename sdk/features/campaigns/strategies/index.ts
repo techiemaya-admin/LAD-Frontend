@@ -1,5 +1,5 @@
 /**
- * Strategies — saved + shareable workflow playbooks (SDK exports).
+ * Strategies - saved + shareable workflow playbooks (SDK exports).
  *
  * Phase 1: save the CustomWorkflowBuilder's current state as a named playbook
  * and re-apply it later. Phase 2 (backend flag STRATEGY_SHARING_ENABLED):

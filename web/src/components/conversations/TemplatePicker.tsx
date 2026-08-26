@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { fetchJson } from '@/lib/fetch-json';
 
 // Contact-field names that are auto-filled from the conversation's contact record
 const CONTACT_NAME_FIELDS = ['name', 'first_name', 'contact_name', 'customer_name', 'member_name', 'client_name'];
@@ -48,6 +49,11 @@ interface WhatsAppTemplate {
   header_type: string;        // "text" | "image" | "document" | "video" | ""
   header_param_count: number; // how many leading parameters belong to the header component
   header_url: string;         // media handle for image/document/video header templates
+  // Which connected number this template lives on. A template belongs to a WABA,
+  // not to a workspace, so a tenant with two numbers has two libraries and the
+  // same name can legitimately appear in both.
+  account_id?: string;
+  account_phone?: string;
 }
 
 type NameFormat = 'first' | 'full';
@@ -55,7 +61,7 @@ type NameFormat = 'first' | 'full';
 interface BatchOptions {
   batchSize: number;      // how many messages per batch
   delayMin: number;       // minimum delay between batches (seconds)
-  delayRandom: number;    // additional random 0–N seconds added to delay
+  delayRandom: number;    // additional random 0-N seconds added to delay
   dailyLimit: number;     // maximum messages to send in a single day
 }
 
@@ -63,7 +69,9 @@ export interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
+  /** accountId is the number the template LIVES on — a template exists on one
+   *  WABA, so the blast has to go out from that number or Meta cannot find it. */
+  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string, accountId: string) => void;
   sending?: boolean;
   /** Track progress: { sent: number; total: number; running: boolean } */
   sendProgress?: { sent: number; total: number; running: boolean } | null;
@@ -115,6 +123,8 @@ export function TemplatePicker({
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  /** Set when the template LOAD failed — distinct from "you have no templates". */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
   const [paramValues, setParamValues] = useState<string[]>([]);
@@ -124,7 +134,7 @@ export function TemplatePicker({
   const [refreshKey, setRefreshKey] = useState(0);
   const [nameFormat, setNameFormat] = useState<NameFormat>('first');
   const [batchSize, setBatchSize] = useState(5);
-  const [delayMin, setDelayMin] = useState(120);      // seconds — min 120 enforced
+  const [delayMin, setDelayMin] = useState(120);      // seconds - min 120 enforced
   const [delayRandom, setDelayRandom] = useState(30); // extra random seconds
   const [dailyLimit, setDailyLimit] = useState(250);  // max messages to send per day
 
@@ -139,10 +149,11 @@ export function TemplatePicker({
     setParamValues([]);
     setSearch('');
     const apiUrl = `${TEMPLATES_API}?channel=${channel}`;
-    fetchWithTenant(apiUrl)
-      .then((r) => r.json())
+    setLoadError(null);
+    // `raw: true` because this route replies in two shapes — WABA sends
+    // `data`, personal WA sends `templates` — so we need the whole envelope.
+    fetchJson<{ data?: unknown[]; templates?: unknown[] }>(apiUrl, { raw: true })
       .then((data) => {
-        if (data.success) {
           // Support both WABA format (data.data) and personal WA format (data.templates)
           const raw: any[] = data.data || data.templates || [];
           // Normalize to WhatsAppTemplate shape regardless of source
@@ -171,9 +182,13 @@ export function TemplatePicker({
               };
             });
           setTemplates(normalized);
-        }
       })
-      .catch(() => {})
+      // Was `.catch(() => {})`. A failed load left `templates` empty, which the
+      // list below renders as "No approved templates found" — telling the user
+      // their account has no templates when we simply could not fetch them.
+      .catch((e) => {
+        setLoadError(e instanceof Error ? e.message : 'Could not load templates');
+      })
       .finally(() => setLoading(false));
   }, [open, channel, refreshKey]);
 
@@ -195,7 +210,7 @@ export function TemplatePicker({
     const params = template.parameters || [];
     const defaults = params.map((p) => {
       const key = p.toLowerCase();
-      // Exact match against a FIELD_OPTIONS sentinel — e.g. param "member_first_name" → '{member_first_name}'
+      // Exact match against a FIELD_OPTIONS sentinel - e.g. param "member_first_name" → '{member_first_name}'
       const exactMatch = FIELD_OPTIONS.find(
         o => o.value !== '__custom__' && o.value.toLowerCase() === `{${key}}`
       );
@@ -232,7 +247,7 @@ export function TemplatePicker({
       return;
     }
     if (template.header_url) {
-      // handle is not a URL — ask the backend to resolve it via Meta Graph API
+      // handle is not a URL - ask the backend to resolve it via Meta Graph API
       setHeaderMediaUrl('');
       setResolvingMedia(true);
       try {
@@ -241,7 +256,7 @@ export function TemplatePicker({
         );
         const data = await res.json();
         if (data.url) setHeaderMediaUrl(data.url);
-      } catch { /* silent — user can paste manually */ }
+      } catch { /* silent - user can paste manually */ }
       finally { setResolvingMedia(false); }
     } else {
       setHeaderMediaUrl('');
@@ -258,7 +273,7 @@ export function TemplatePicker({
 
   const handleSend = useCallback(() => {
     if (!selectedTemplate) return;
-    // WABA handles rate-limiting server-side — pass zeroes so the backend sends
+    // WABA handles rate-limiting server-side - pass zeroes so the backend sends
     // without artificial throttling. Personal WA uses the user-configured schedule
     // to avoid account restrictions from rapid bulk sends.
     // Guard against NaN values (a cleared number input puts NaN into state).
@@ -280,6 +295,7 @@ export function TemplatePicker({
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
+      selectedTemplate.account_id ?? '',
     );
   }, [selectedTemplate, paramValues, nameFormat, channel, batchSize, delayMin, delayRandom, dailyLimit, onSend, headerMediaUrl]);
 
@@ -389,6 +405,22 @@ export function TemplatePicker({
                     <Loader2 className={cn("h-5 w-5 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
                     <span className={cn("ml-2 text-sm", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>Loading templates...</span>
                   </div>
+                ) : loadError ? (
+                  // Distinct from "No approved templates found": that claims the
+                  // account has none, which we have not established.
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-rose-600 dark:text-rose-400">
+                    <AlertCircle className="h-8 w-8 mb-2 opacity-60" />
+                    <p className="text-sm font-medium">Couldn&apos;t load your templates</p>
+                    <p className="text-xs opacity-80 max-w-[260px] mt-1">
+                      This isn&apos;t &quot;no templates&quot; — {loadError}
+                    </p>
+                    <button
+                      onClick={() => setRefreshKey((k) => k + 1)}
+                      className="mt-3 text-xs underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
                 ) : filtered.length === 0 ? (
                   <div className={cn("flex flex-col items-center justify-center py-12", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                     <AlertCircle className="h-8 w-8 mb-2 opacity-40" />
@@ -402,7 +434,10 @@ export function TemplatePicker({
                   <div className={cn(isWA ? "space-y-1.5" : "space-y-1")}>
                     {filtered.map((template) => (
                       <div
-                        key={`${template.name}-${template.language}`}
+                        // account_id is part of the identity, not decoration:
+                        // without it two numbers holding a same-named template
+                        // collide into one React key and the list mis-renders.
+                        key={`${template.account_id ?? ''}-${template.name}-${template.language}`}
                         className={cn(
                           "cursor-pointer transition-all group",
                           isWA

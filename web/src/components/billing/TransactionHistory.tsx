@@ -90,7 +90,7 @@ export const TransactionHistory: React.FC = () => {
     type === 'credit' ? 'bg-green-100 text-green-800 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400' : 'bg-red-100 text-red-800 dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-rose-400';
 
   const getTypeIcon = (type: string) =>
-    type === 'credit' ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />;
+    type === 'credit' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />;
 
   const isLLMUsage = (tx: any) => tx.source === 'llm_usage' || tx.reference_type === 'llm_usage';
 
@@ -125,7 +125,7 @@ export const TransactionHistory: React.FC = () => {
         <div className="bg-white dark:bg-[#030a21]/60 rounded-lg shadow-md p-6 border border-transparent dark:border-blue-950/40 border-l-4 border-l-green-600 dark:border-l-emerald-500">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Credits Added</span>
-            <ArrowDownLeft className="h-5 w-5 text-green-600 dark:text-emerald-400" />
+            <ArrowUpRight className="h-5 w-5 text-green-600 dark:text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{formatCredits(stats.credits)}</div>
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Credits added to account</p>
@@ -133,7 +133,7 @@ export const TransactionHistory: React.FC = () => {
         <div className="bg-white dark:bg-[#030a21]/60 rounded-lg shadow-md p-6 border border-transparent dark:border-blue-950/40 border-l-4 border-l-red-600 dark:border-l-rose-500">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Credits Used</span>
-            <ArrowUpRight className="h-5 w-5 text-red-600 dark:text-rose-400" />
+            <ArrowDownLeft className="h-5 w-5 text-red-600 dark:text-rose-400" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{formatCredits(stats.debits)}</div>
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Credits consumed</p>

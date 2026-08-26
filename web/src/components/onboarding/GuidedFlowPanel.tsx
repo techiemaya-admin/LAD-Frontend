@@ -186,8 +186,8 @@ const ROLE_CHIPS = [
 ];
 // Company sizes for ICP questions
 const COMPANY_SIZES = [
-  { label: '10–50', value: '10-50' },
-  { label: '50–200', value: '50-200' },
+  { label: '10-50', value: '10-50' },
+  { label: '50-200', value: '50-200' },
   { label: '200+', value: '200+' }
 ];
 // Decision maker titles for ICP questions
@@ -894,7 +894,7 @@ export default function GuidedFlowPanel() {
             }`}
           >
             <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
-              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2–3 best customers?')}
+              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2-3 best customers?')}
             </h3>
             {getQuestionByIntent('ideal_customer')?.helperText && (
               <p className="mb-4 text-[#64748B] block text-[13px] italic">
@@ -981,7 +981,7 @@ export default function GuidedFlowPanel() {
               5. What size was the company?
             </h3>
             <p className="mb-6 text-[#64748B] block text-[13px] italic">
-              Example: 10–50 employees, 50–200 employees
+              Example: 10-50 employees, 50-200 employees
             </p>
             <div className="flex flex-row gap-4">
               {COMPANY_SIZES.map((size) => {
@@ -1182,7 +1182,7 @@ export default function GuidedFlowPanel() {
               If you could clone this customer, would you?
             </h3>
             <p className="mb-6 text-[#64748B] block text-[13px] italic">
-              If yes — this is your ICP
+              If yes - this is your ICP
             </p>
             <div className="flex flex-row gap-4">
               <Button
@@ -2548,7 +2548,7 @@ export default function GuidedFlowPanel() {
     const getScheduleText = () => {
       if (workingDays.length === 7) return 'All days';
       if (workingDays.length === 5 && workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))) {
-        return 'Weekdays (Mon–Fri)';
+        return 'Weekdays (Mon-Fri)';
       }
       const dayLabels = workingDays.map(d => {
         const day = workingDaysOptions.find(opt => opt.value === d);
@@ -2760,7 +2760,7 @@ export default function GuidedFlowPanel() {
                     Weekdays
                   </p>
                   <p className="text-[#64748B] text-[12px]">
-                    Mon–Fri (Recommended)
+                    Mon-Fri (Recommended)
                   </p>
                 </div>
                 <div

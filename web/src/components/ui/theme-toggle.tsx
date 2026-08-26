@@ -11,11 +11,10 @@ export function ThemeToggle() {
   // Initialize theme on mount
   React.useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-    const initialTheme = savedTheme || systemTheme;
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | "system" | null;
+    const initialTheme = savedTheme === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : savedTheme || "light";
 
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");

@@ -49,7 +49,7 @@ interface SendResp {
 
 interface Props {
   campaignId: string;
-  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id — backend accepts either
+  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id - backend accepts either
   contactName?: string;
   /** Called after a successful send so the parent can refetch the conversation */
   onSent?: () => void;
@@ -93,7 +93,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
       setMessage(data.message || '');
       if (!data.message) {
         setInfo(m === 'ai'
-          ? 'AI returned an empty message — try regenerating.'
+          ? 'AI returned an empty message - try regenerating.'
           : 'Template is empty.');
       }
     } catch (e: any) {
@@ -118,7 +118,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
   // ── Template library picker ────────────────────────────────────────────────
   const handleTemplateSelect = (tpl: LinkedInMessageTemplate | null) => {
     if (!tpl) {
-      // "Custom Messages" — drop the template + media, keep the current text so
+      // "Custom Messages" - drop the template + media, keep the current text so
       // the user can type their own.
       setSelectedTemplateId(null);
       setSelectedMedia(null);
@@ -271,7 +271,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
               isPreviewing
                 ? mode === 'ai' ? 'Generating personalised follow-up…' : 'Loading template…'
                 : mode === 'template' && !hasTemplate
-                  ? 'No template configured for this campaign — switch to AI or add one in Edit Campaign.'
+                  ? 'No template configured for this campaign - switch to AI or add one in Edit Campaign.'
                   : 'Edit the follow-up message before sending…'
             }
             rows={5}

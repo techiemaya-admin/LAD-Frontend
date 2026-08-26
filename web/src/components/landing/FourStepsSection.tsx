@@ -282,7 +282,7 @@ export default function FourStepsSection() {
                               <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28c840' }} />
                             </div>
                             <div className="flex-1 mx-3 rounded" style={{ background: 'rgba(255,255,255,0.08)', height: '16px', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>LAD — AI Prospect Search</span>
+                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>LAD - AI Prospect Search</span>
                             </div>
                           </div>
 

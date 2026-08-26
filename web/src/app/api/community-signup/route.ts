@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const data = await upstream.json().catch(() => ({}));
     return NextResponse.json(data, { status: upstream.status });
   } catch (error) {
-    // A signup we cannot store must not look like a success — the visitor
+    // A signup we cannot store must not look like a success - the visitor
     // would walk away believing they applied.
     return NextResponse.json(
       { success: false, error: 'We could not reach the server. Please try again.' },

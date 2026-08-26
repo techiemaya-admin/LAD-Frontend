@@ -1,5 +1,5 @@
 /**
- * Lead Appreciation feature — React Query hooks.
+ * Lead Appreciation feature - React Query hooks.
  */
 'use client';
 

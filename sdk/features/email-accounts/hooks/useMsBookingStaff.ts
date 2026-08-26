@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useMsBookingStaff
+ * Email Accounts - useMsBookingStaff
  * Lists staff members for a given Microsoft Bookings business.
  */
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import type { MsBookingStaff } from '../types';
 
 export interface UseMsBookingStaffReturn {
   staff: MsBookingStaff[];
-  /** True until the query has data — covers loading, retrying, and offline-paused. */
+  /** True until the query has data - covers loading, retrying, and offline-paused. */
   isPending: boolean;
   isLoading: boolean;
   isError: boolean;

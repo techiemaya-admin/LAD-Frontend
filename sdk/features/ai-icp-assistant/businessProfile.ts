@@ -1,5 +1,5 @@
 /**
- * BusinessProfile — shared shape for the tenant's 14-field business profile.
+ * BusinessProfile - shared shape for the tenant's 14-field business profile.
  *
  * Persisted as a JSONB blob in `ai_icp_profiles.icp_data` via
  * GET/POST /api/ai-playground. Read by:
@@ -14,23 +14,23 @@
  * NOTE: the chat also writes a few non-canonical keys (`linkedinUrl`,
  * `blogUrls`, `linkedinAudit`) onto the same JSONB blob. The type uses a
  * permissive index signature so those keys are preserved on round-trip
- * through the form-based surfaces — the form just doesn't render them.
+ * through the form-based surfaces - the form just doesn't render them.
  */
 
 /** All fields the form surfaces edit. Additional keys may be present. */
 export interface BusinessProfile {
-  // Company half — collected by the wizard's Company step
+  // Company half - collected by the wizard's Company step
   companyName?: string;
   industry?: string;
   website?: string;
   valueProposition?: string;
   productsServices?: string;
   targetCustomers?: string;
-  // Tenant's own contact details — shared by the agent when a prospect asks
+  // Tenant's own contact details - shared by the agent when a prospect asks
   // how to reach them, and baked into the generated LinkedIn prompt. Optional.
   contactEmail?: string;
   contactPhone?: string;
-  // Agent identity + CTA link — the sender the LinkedIn agent speaks as, and the
+  // Agent identity + CTA link - the sender the LinkedIn agent speaks as, and the
   // booking link it offers. Feed the prompt generator directly (persona is
   // otherwise only collected in the mid-generation modal). Optional here so they
   // don't affect completeness; the generator still requires a persona at
@@ -39,7 +39,7 @@ export interface BusinessProfile {
   personaTitle?: string;
   bookingLink?: string;
 
-  // ICP half — collected by the wizard's ICP chat step
+  // ICP half - collected by the wizard's ICP chat step
   companyDescription?: string;
   icpJobTitles?: string;
   icpCompanySize?: string;
@@ -65,13 +65,13 @@ export interface BusinessProfile {
 
   // ── Offer ─────────────────────────────────────────────────────────────────
   // What a persuasive page needs and the 14 canonical fields cannot supply.
-  // The ICP half describes WHO the buyer is; these describe WHY they act — the
+  // The ICP half describes WHO the buyer is; these describe WHY they act - the
   // segments they fall into, what standing still costs them, the proof that the
   // claim is true, and who should walk away.
   //
   // Deliberately OUTSIDE the canonical arrays. Adding nine required fields would
   // drop every existing tenant from 14/14 to 14/23 with no change on their part,
-  // across all three surfaces. They get their own denominator instead — see
+  // across all three surfaces. They get their own denominator instead - see
   // BUSINESS_PROFILE_OFFER_HALF and computeOfferCompleteness().
   //
   // Consumed by LandingPageContentService (grounding for the generated page) and
@@ -86,7 +86,7 @@ export interface BusinessProfile {
   /** What actually happens after someone signs. Drives the how-it-works steps. */
   deliveryProcess?: string;
   /**
-   * Substantiable outcomes — the ONLY sanctioned source of a number on a page.
+   * Substantiable outcomes - the ONLY sanctioned source of a number on a page.
    * The generator is forbidden from inventing statistics, so with this empty a
    * page carries no figures at all. That is the intended failure mode.
    */
@@ -109,7 +109,7 @@ export interface BusinessProfile {
 }
 
 /**
- * Company-basics keys — persisted in the same `icp_data` blob but excluded
+ * Company-basics keys - persisted in the same `icp_data` blob but excluded
  * from the canonical field list (and therefore from completeness math).
  */
 export const BUSINESS_PROFILE_BASICS_FIELDS: ReadonlyArray<keyof BusinessProfile> = [
@@ -119,15 +119,15 @@ export const BUSINESS_PROFILE_BASICS_FIELDS: ReadonlyArray<keyof BusinessProfile
 
 /**
  * Optional fields excluded from the completeness denominator.
- * Match advanced-search-ai/page.tsx:4489 — these are supplementary, not
+ * Match advanced-search-ai/page.tsx:4489 - these are supplementary, not
  * required for the core conversation flow.
  */
 export const BUSINESS_PROFILE_OPTIONAL_FIELDS: ReadonlySet<keyof BusinessProfile> = new Set([
   'website',
   'sampleConversation',
   'competitors',
-  // Contact details are optional — the agent can hand off to the team when they
-  // are absent — so they don't count against the completeness denominator.
+  // Contact details are optional - the agent can hand off to the team when they
+  // are absent - so they don't count against the completeness denominator.
   'contactEmail',
   'contactPhone',
   // Persona + booking link feed the generator but are collected at generation
@@ -168,7 +168,7 @@ export const BUSINESS_PROFILE_ICP_HALF: ReadonlyArray<keyof BusinessProfile> = [
 ];
 
 /**
- * Offer fields — grounding for generated pages and reports.
+ * Offer fields - grounding for generated pages and reports.
  *
  * NOT part of BUSINESS_PROFILE_ALL_FIELDS, and therefore not part of the "X / 14"
  * math. They carry their own meter via computeOfferCompleteness() so a tenant who
@@ -213,7 +213,7 @@ export interface BusinessProfileCompleteness {
 /**
  * Compute completeness over the non-optional canonical fields.
  *
- * "Filled" matches the rule at advanced-search-ai/page.tsx:4495 —
+ * "Filled" matches the rule at advanced-search-ai/page.tsx:4495  - 
  * a truthy string value (so `''`, `undefined`, and `null` all count as empty).
  * Whitespace-only strings count as empty too, since the chat trims input.
  */
@@ -244,7 +244,7 @@ export function computeCompleteness(profile: BusinessProfile | null | undefined)
  * fields that only a generated page or report consumes. Surfaces that show this
  * should label it for what it is ("Offer 4/9"), never fold it into the 14.
  *
- * Every offer field counts — none is optional within its own group, since a page
+ * Every offer field counts - none is optional within its own group, since a page
  * section is simply omitted when its field is blank.
  */
 export function computeOfferCompleteness(

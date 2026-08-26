@@ -59,7 +59,7 @@ import { cn } from '@/lib/utils';
 // Which channel a widget's metrics belong to. Widgets NOT listed here are
 // channel-agnostic (credits, calendar, ai-insights, quick-actions, the
 // cross-channel funnel) and always show. A gated widget is hidden only when its
-// channel is positively disconnected — 'unknown'/loading stays visible
+// channel is positively disconnected - 'unknown'/loading stays visible
 // (fail-open), so a transient probe failure never blanks the dashboard.
 type ChannelGate = 'voice' | 'whatsapp' | 'linkedin' | 'email' | 'instagram';
 const WIDGET_CHANNEL: Partial<Record<WidgetType, ChannelGate>> = {
@@ -222,7 +222,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ className, onLoadi
   // Format call date
   const formatCallDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '—';
+    if (isNaN(date.getTime())) return '-';
     return (
       date.toLocaleDateString('en-US', {
         month: 'short',

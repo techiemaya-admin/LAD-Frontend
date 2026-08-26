@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useMsBookingBusinesses
+ * Email Accounts - useMsBookingBusinesses
  * Lists Microsoft Bookings businesses accessible to the connected account.
  */
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import type { MsBookingBusiness } from '../types';
 
 export interface UseMsBookingBusinessesReturn {
   businesses: MsBookingBusiness[];
-  /** True until the query has data — covers loading, retrying, and offline-paused. */
+  /** True until the query has data - covers loading, retrying, and offline-paused. */
   isPending: boolean;
   isLoading: boolean;
   isError: boolean;

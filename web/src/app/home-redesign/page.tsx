@@ -30,7 +30,7 @@ const grotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "LAD — Home (redesign)",
+  title: "LAD: Home (redesign)",
   description: "Redesigned LAD home: ask anything, find leads, book meetings, create.",
 };
 

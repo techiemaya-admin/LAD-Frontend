@@ -3,7 +3,7 @@
 /**
  * What has actually been broadcast to a group.
  *
- * A broadcast group has no chat of its own — it fans out to N separate 1:1
+ * A broadcast group has no chat of its own - it fans out to N separate 1:1
  * conversations. So the raw message list for a group is "everything said to
  * these people", which on a live tenant was 36% agent replies and inbound
  * traffic. The API filters that with ?broadcasts_only=true; this component's
@@ -12,7 +12,7 @@
  * rather than one send to N people.
  *
  * So rows are collapsed back into sends. Two messages belong to the same send
- * when they share a template AND landed close together in time — the fan-out is
+ * when they share a template AND landed close together in time - the fan-out is
  * a loop over recipients, so it spans seconds, while a genuine re-send of the
  * same template happens minutes or days later and should stay separate.
  */
@@ -77,7 +77,7 @@ export function groupIntoSends(messages: GroupMessage[]): BroadcastSend[] {
       preview: (m.content || '').trim(),
     });
   }
-  // Newest send first — the last thing sent is what people look for.
+  // Newest send first - the last thing sent is what people look for.
   return sends.reverse();
 }
 

@@ -61,7 +61,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
     delayDays: parsedDelay.days,
     delayHours: parsedDelay.hours,
     leadLimit: step.leadLimit || 10,
-    // AI Media step — permanent quadruple set after import-generated
+    // AI Media step - permanent quadruple set after import-generated
     mediaPrompt: step.mediaPrompt || '',
     mediaUrl: step.mediaUrl || '',
     mediaType: step.mediaType || '',
@@ -318,7 +318,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 placeholder="10"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Number of leads to generate per day {dailyLimit !== null ? `(1–${dailyLimit})` : '(minimum 1)'}
+                Number of leads to generate per day {dailyLimit !== null ? `(1-${dailyLimit})` : '(minimum 1)'}
               </p>
             </div>
           </div>
@@ -525,7 +525,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
               </div>
             ) : (
               <p className="text-sm text-gray-600">
-                Generate brand media in the AI Media Studio, then attach it here — it will be sent with this campaign&apos;s outreach messages.
+                Generate brand media in the AI Media Studio, then attach it here - it will be sent with this campaign&apos;s outreach messages.
               </p>
             )}
 
@@ -553,7 +553,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 ) : (
                   <>
                     {(mediaBuilder.galleryImages?.length || 0) + (mediaBuilder.galleryVideos?.length || 0) === 0 ? (
-                      <p className="py-4 text-center text-sm text-gray-500">No generated media yet — use the AI Media Studio first.</p>
+                      <p className="py-4 text-center text-sm text-gray-500">No generated media yet. Use the AI Media Studio first.</p>
                     ) : (
                       <div className="grid grid-cols-3 gap-2">
                         {(mediaBuilder.galleryImages || []).map((it: any, i: number) => {

@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — small chip input for industries / countries / titles. The
+// R8 Phase 5 - small chip input for industries / countries / titles. The
 // review screen wires the same component in three places so the look is
 // consistent. Add chips by typing + Enter or pasting comma-separated values.
 
@@ -12,7 +12,7 @@ interface IndustryChipInputProps {
   onChange: (next: string[]) => void;
   placeholder?: string;
   suggestions?: string[];
-  /** Color for chip background — defaults to LAD navy. */
+  /** Color for chip background - defaults to LAD navy. */
   tone?: string;
 }
 

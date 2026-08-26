@@ -58,7 +58,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [hideEmpty, setHideEmpty] = useState(false);
   const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
-  // Build filters from local state — include the channel override so both the
+  // Build filters from local state - include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   // hide_empty / sort_by are part of the queryKey via spread, so toggling either
   // triggers a fresh fetch from page 0 instead of mutating already-loaded pages.
@@ -80,7 +80,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     [conversationsQuery.data],
   );
 
-  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  // allConversations: same data (no separate unfiltered query needed - unread counts computed from loaded batch)
   const allConversations = conversations;
 
   // Selected conversation (with messages loaded separately)
@@ -113,7 +113,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
 
     // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
-      // Non-critical — the next poll will re-sync from DB
+      // Non-critical - the next poll will re-sync from DB
     });
   }, [hookOptions?.channel]);
 

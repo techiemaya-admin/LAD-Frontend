@@ -11,7 +11,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'Conversations Started/Month',
       description:
-        'Mr LAD opens 1,000+ personalized conversations with the right people every month — at a steady, human pace that keeps your accounts in good standing.',
+        'Mr LAD opens 1,000+ personalized conversations with the right people every month while maintaining a steady, human pace that keeps your accounts in good standing.',
       stat: '1,000+',
       icon: <Lock className="w-12 h-12 text-white" />,
       color: 'from-blue-500 to-cyan-500',
@@ -28,7 +28,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'Every Channel, One Employee',
       description:
-        'Mr LAD works LinkedIn, WhatsApp, Instagram, email, and voice at once, with personalized messages — coordinated across every channel so nothing slips through.',
+        'Mr LAD works across LinkedIn, WhatsApp, Instagram, email, and voice at once, delivering personalized messages across every channel so nothing slips through.',
       stat: '2,000+',
       icon: <Zap className="w-12 h-12 text-white" />,
       color: 'from-cyan-500 to-blue-500',
@@ -62,7 +62,7 @@ const StickyScrollFeatures = () => {
     {
       title: 'A Full Calendar, On Autopilot',
       description:
-        'Scale your pipeline without hiring more reps. Mr LAD follows up, qualifies, and books meetings straight onto your calendar — synced to your CRM in real time.',
+        'Scale your pipeline without hiring more reps. Mr LAD follows up, qualifies, and books meetings straight onto your calendar while keeping your CRM synced in real time.',
       stat: '5-7x',
       icon: <TrendingUp className="w-12 h-12 text-white" />,
       color: 'from-green-500 to-emerald-500',
@@ -98,7 +98,7 @@ const StickyScrollFeatures = () => {
             <span className="text-primary">Does Every Day</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Mr LAD is one AI Sales Employee who works every channel, around the clock — reaching thousands of qualified prospects every month so your calendar stays full.
+            Mr LAD is one AI Sales Employee who works across every channel around the clock, reaching thousands of qualified prospects every month so your calendar stays full.
           </p>
         </motion.div>
 

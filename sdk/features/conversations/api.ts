@@ -71,7 +71,7 @@ function mapMessageFromApi(raw: any): Message {
 
   // Agent-forward messages surface the customer as a sender label (like a group).
   // NEW forwards carry the name in metadata with a clean body; OLD ones baked
-  // "📩 *New message from X*\n\nBody" into the content — parse those as a fallback.
+  // "📩 *New message from X*\n\nBody" into the content - parse those as a fallback.
   let displayContent: string = raw.content || '';
   let forwardSender: string | undefined =
     (metadata.via === 'agent_forward' || metadata.sender_type === 'forward')
@@ -363,11 +363,11 @@ function deduplicateMessages(messages: Message[]): Message[] {
   const seen = new Map<string, number>(); // key → first-seen timestamp (ms)
   return messages.filter((msg) => {
     // Build a key that identifies "same content sent in roughly the same moment"
-    // 1-second bucket — tight enough to catch real DB duplicates without
+    // 1-second bucket - tight enough to catch real DB duplicates without
     // incorrectly merging legitimately different messages sent 1-2s apart
     const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 1000)}`;
     if (seen.has(bucketKey)) {
-      return false; // near-duplicate — skip
+      return false; // near-duplicate - skip
     }
     seen.set(bucketKey, msg.timestamp.getTime());
     return true;
@@ -394,7 +394,7 @@ export async function getConversationMessages(
   }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
 
   const rawMessages = (response.data.data || []).map(mapMessageFromApi);
-  // Backend returns oldest-first (ORDER BY created_at ASC) — no reverse needed.
+  // Backend returns oldest-first (ORDER BY created_at ASC) - no reverse needed.
   const messages = deduplicateMessages(rawMessages);
 
   return {
@@ -430,7 +430,7 @@ const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
 
 /**
  * Upload a media file (multipart) to get a media reference.
- * This bypasses JSON body size limits — suitable for large PDFs, videos, etc.
+ * This bypasses JSON body size limits - suitable for large PDFs, videos, etc.
  * - WABA channel: uploads to Meta via Python service, returns a numeric media_id
  * - Personal channel: uploads to LAD_backend local/GCP storage, returns a file URL
  */
@@ -539,20 +539,20 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
       }
     } catch (uploadErr) {
       console.error('[sendMessage] Media pre-upload failed, falling back to base64:', uploadErr);
-      // Fall through — will try sending with file_base64 (may fail for very large files)
+      // Fall through - will try sending with file_base64 (may fail for very large files)
     }
   }
 
   const response = await proxyClient.post<{ success: boolean; data: any }>(
     `/api/whatsapp-conversations/conversations/${data.conversationId}/messages`,
     {
-      // Core — always send `content` key so backend body.get("content") never returns None
+      // Core - always send `content` key so backend body.get("content") never returns None
       type:           data.type ?? 'text',
       content:        data.content ?? '',
       lead_id:        data.leadId,
       phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
-      // Media — for WABA: send media_id if pre-uploaded; for personal: send file_url
+      // Media - for WABA: send media_id if pre-uploaded; for personal: send file_url
       // Fall back to file_base64 if pre-upload failed (will fail for >10MB files)
       media_id:       mediaId,
       file_url:       fileUrl,
@@ -580,7 +580,7 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
 }
 
 /**
- * Mark a conversation as read — resets unread_count to 0 in the DB.
+ * Mark a conversation as read - resets unread_count to 0 in the DB.
  * The GET /conversations/:id endpoint resets unread_count as a side effect.
  */
 export async function markConversationRead(

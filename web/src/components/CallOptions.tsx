@@ -855,7 +855,7 @@ export function CallOptions(props: CallOptionsProps) {
                         type="button"
                         aria-label={`View summary for row ${idx}`}
                         onClick={() => selectedSummaryIndex === idx ? onRadioChange(null) : onRadioChange(idx)}
-                        className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50
+                        className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50 dark:hover:bg-[#0A123C]
                         ${selectedSummaryIndex === idx ? "bg-gray-100 border-gray-400" : ""}`}
                       >
                         {selectedSummaryIndex === idx ? (
@@ -868,7 +868,7 @@ export function CallOptions(props: CallOptionsProps) {
                         type="button"
                         aria-label={`Edit summary for row ${idx}`}
                         onClick={() => openEditorFor(idx)}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50 dark:hover:bg-[#0A123C]"
                       >
                         <SquarePen className="w-4 h-4" />
                       </button>
@@ -969,7 +969,7 @@ export function CallOptions(props: CallOptionsProps) {
           </Button>
         </div>
         {!useCsv ? (
-          // — Single Call UI with Country Selector —
+          // - Single Call UI with Country Selector  - 
           <div className="space-y-3">
             {/* Phone Number with Country Dropdown */}
             <div className="relative">
@@ -1023,8 +1023,8 @@ export function CallOptions(props: CallOptionsProps) {
                           dropdownList.innerHTML = '';
                           filtered.forEach((country) => {
                             const item = document.createElement('button');
-                            item.className = 'w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors text-left';
-                            item.innerHTML = `<img src="https://flagcdn.com/w40/${country.code.toLowerCase()}.png" alt="${country.name}" width="24" height="16"  /><span class="flex-1 text-sm text-gray-700">${country.name}</span><span class="text-sm font-medium text-gray-500">${country.dialCode}</span>`;
+                            item.className = 'w-full flex items-center gap-3 px-3 py-2 hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary dark:hover:text-primary-foreground transition-colors text-left group';
+                            item.innerHTML = `<img src="https://flagcdn.com/w40/${country.code.toLowerCase()}.png" alt="${country.name}" width="24" height="16"  /><span class="flex-1 text-sm text-gray-700 dark:text-white group-hover:text-primary-foreground">${country.name}</span><span class="text-sm font-medium text-slate-400 dark:text-slate-300 group-hover:text-primary-foreground/80">${country.dialCode}</span>`;
                             item.onclick = () => {
                               setSelectedCountry(country);
                               setShowCountryDropdown(false);
@@ -1036,29 +1036,37 @@ export function CallOptions(props: CallOptionsProps) {
                     />
                   </div>
                   <div id="country-dropdown-list" className="py-1">
-                    {COUNTRIES.map((country) => (
-                      <button
-                        key={country.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(country);
-                          setShowCountryDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#253456] transition-colors text-left ${selectedCountry.code === country.code ? 'bg-gray-50 dark:bg-[#253456]' : ''
+                    {COUNTRIES.map((country) => {
+                      const isSelected = selectedCountry.code === country.code;
+                      return (
+                        <button
+                          key={country.code}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCountry(country);
+                            setShowCountryDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left group hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary dark:hover:text-primary-foreground ${
+                            isSelected ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground' : ''
                           }`}
-                      >
-                        <Image
-                          src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
-                          alt={country.name}
-                          width={20}
-                          height={20}
-                          className=""
-                          unoptimized
-                        />
-                        <span className="flex-1 text-sm text-gray-700 dark:text-white">{country.name}</span>
-                        <span className="text-sm font-medium text-gray-500 dark:text-[#7a8ba3]">{country.dialCode}</span>
-                      </button>
-                    ))}
+                        >
+                          <Image
+                            src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
+                            alt={country.name}
+                            width={20}
+                            height={20}
+                            className=""
+                            unoptimized
+                          />
+                          <span className={`flex-1 text-sm ${isSelected ? 'text-primary-foreground' : 'text-gray-700 dark:text-white group-hover:text-primary-foreground'}`}>
+                            {country.name}
+                          </span>
+                          <span className={`text-sm font-medium ${isSelected ? 'text-primary-foreground/80' : 'text-slate-400 dark:text-slate-300 group-hover:text-primary-foreground/80'}`}>
+                            {country.dialCode}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1095,20 +1103,20 @@ export function CallOptions(props: CallOptionsProps) {
       </CardContent>
       {/* Summary editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="dark:bg-[#071131] dark:border-blue-950/40">
-          <DialogHeader className="dark:bg-[#071131] dark:border-blue-950/40">
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="dark:bg-[#000724] dark:border-blue-950/40">
+          <DialogHeader className="dark:bg-[#081331] dark:border-blue-950/40">
+            <DialogTitle className="flex items-center gap-2 dark:text-white text-[#0b1957]">
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
-              className="dark:bg-slate-800/50 dark:border-blue-950/40"
+              className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1121,7 +1129,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
@@ -1143,24 +1151,37 @@ export function CallOptions(props: CallOptionsProps) {
                         body: JSON.stringify({ context: text }),
                       }
                     );
-                    const data = await res.json();
-                    if (data.success) {
-                      const generated = data.generatedText as string;
-                      setEditorValues((v) => (
-                        dataType === 'employee'
-                          ? { ...v, company_sales_summary: generated, summary: generated }
-                          : { ...v, sales_summary: generated, summary: generated }
-                      ));
-                    } else {
-                      logger.error('Gemini API error', { error: data.error });
+                    const data = await res.json().catch(() => ({}));
+                    // `fetch` does not throw on 4xx/5xx, so a server error was
+                    // only logged: the spinner stopped, the summary was
+                    // unchanged, and nothing told the user it had failed.
+                    if (!res.ok || !data.success) {
+                      logger.error('Gemini API error', { error: data?.error, status: res.status });
+                      push({
+                        variant: 'error',
+                        title: 'Rephrase failed',
+                        description: data?.error || 'Your summary is unchanged. Please try again.',
+                      });
+                      return;
                     }
+                    const generated = data.generatedText as string;
+                    setEditorValues((v) => (
+                      dataType === 'employee'
+                        ? { ...v, company_sales_summary: generated, summary: generated }
+                        : { ...v, sales_summary: generated, summary: generated }
+                    ));
                   } catch (err) {
                     logger.error('Rephrase operation failed', { error: err });
+                    push({
+                      variant: 'error',
+                      title: 'Rephrase failed',
+                      description: 'Your summary is unchanged. Please check your connection.',
+                    });
                   } finally {
                     setIsRephrasing(false);
                   }
                 }}
-                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-slate-800/50 hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
+                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-[#071131] hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
               >
                 {isRephrasing ? (
                   <span className="animate-spin text-gray-600">⏳</span>
@@ -1170,7 +1191,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#071131] dark:border-blue-950/40">
+          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#081331] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 

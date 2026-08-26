@@ -1,5 +1,5 @@
 /**
- * useDispatchedSearches — list the tenant's recent search runs from the
+ * useDispatchedSearches - list the tenant's recent search runs from the
  * SearchDispatcher endpoint (`GET /api/ai-icp-assistant/searches`).
  *
  * Mirror of useIcpSearchHistory but goes through the D6 mount. Prefer this

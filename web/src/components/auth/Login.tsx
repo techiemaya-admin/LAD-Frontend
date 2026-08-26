@@ -22,14 +22,29 @@ const Login: React.FC = () => {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  // After a successful login, go to redirect_url if present, otherwise the default dashboard
-  const redirectUrl = searchParams.get('redirect_url') || '/onboarding/advanced-search-ai';
+  // Mobile entry points can arrive with the legacy `/onboarding` redirect.
+  // Keep genuine deep links intact, but route that legacy destination to the
+  // mobile-ready advanced search experience.
+  const requestedRedirectUrl = searchParams.get('redirect_url') || '/onboarding/advanced-search-ai';
+  const [isMobile, setIsMobile] = useState(false);
+  const isLegacyOnboardingRedirect = requestedRedirectUrl === '/onboarding' || requestedRedirectUrl.startsWith('/onboarding?');
+  const redirectUrl = isMobile && isLegacyOnboardingRedirect
+    ? '/onboarding/advanced-search-ai'
+    : requestedRedirectUrl;
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const auth = useSelector((state: RootState) => state.auth);
   const { loading, error } = auth || { loading: false, error: null };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const syncMobile = () => setIsMobile(mediaQuery.matches);
+    syncMobile();
+    mediaQuery.addEventListener('change', syncMobile);
+    return () => mediaQuery.removeEventListener('change', syncMobile);
+  }, []);
 
   useEffect(() => {
     // Load saved credentials
@@ -78,7 +93,7 @@ const Login: React.FC = () => {
     dispatch(loginStart());
     try {
       // The login response already carries the user (id/name/role/tenant/
-      // capabilities) — navigate on it immediately instead of blocking on a
+      // capabilities) - navigate on it immediately instead of blocking on a
       // second /api/auth/me round trip that re-fetches the same data.
       const loginResp = await authService.login(formData);
       const user = (loginResp?.user || {}) as any;
@@ -88,7 +103,12 @@ const Login: React.FC = () => {
       refreshUser(user);
       // Honour redirect_url param (e.g. /tenant/onboard/new for super-admin)
       // Fall back to default dashboard for all other users
-      router.push(redirectUrl);
+      // Read the viewport at submit time as well, so a very fast login cannot
+      // race the mobile media-query effect above.
+      const destination = window.matchMedia('(max-width: 768px)').matches && isLegacyOnboardingRedirect
+        ? '/onboarding/advanced-search-ai'
+        : requestedRedirectUrl;
+      router.push(destination);
       // Backfill the richer /me payload (tenants[] for the switcher,
       // tenantFeatures[] for feature gates) WITHOUT blocking navigation.
       authService.getCurrentUser()
@@ -104,8 +124,8 @@ const Login: React.FC = () => {
   };
 
   return (
-      <div className="w-full max-w-[440px] sm:max-w-[460px] p-6 sm:p-8 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-b from-white to-gray-50 dark:from-[#071131] dark:to-[#071131] border-gray-200 dark:border-gray-700 mx-auto">
-        {/* Logo — driven by the app theme (.dark class), not OS prefers-color-scheme */}
+      <div className="w-full max-w-[400px] sm:max-w-[420px] p-6 sm:p-7 rounded-2xl shadow-2xl border backdrop-blur-xl bg-gradient-to-b from-white to-gray-50 dark:from-[#071131] dark:to-[#071131] border-gray-200 dark:border-gray-700 mx-auto">
+        {/* Logo - driven by the app theme (.dark class), not OS prefers-color-scheme */}
         <img
           src="/MrLAD-logo.svg"
           className="w-20 sm:w-24 mx-auto mb-2 opacity-100 drop-shadow-md block dark:hidden"

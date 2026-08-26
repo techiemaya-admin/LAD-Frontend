@@ -1,5 +1,5 @@
 /**
- * GET /api/analytics/overview — tenant conversation analytics for the Overview page.
+ * GET /api/analytics/overview - tenant conversation analytics for the Overview page.
  *
  * Proxies to LAD-Master-Agent GET /analytics/overview (which derives the SAH
  * funnel, daily-volume spike, and unconverted-topic segments from the tenant's

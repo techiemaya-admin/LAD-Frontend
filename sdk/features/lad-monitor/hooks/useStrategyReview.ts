@@ -6,7 +6,7 @@ import type { StrategyForReview, StrategyReviewStatus } from '../types';
  * Review queue for tenant-published strategies.
  *
  * Approving one makes it visible in every tenant's Community gallery, so the
- * mutation refetches rather than optimistically updating — the queue should
+ * mutation refetches rather than optimistically updating - the queue should
  * reflect committed server state, not an assumed outcome.
  */
 export function useStrategyReview(status: StrategyReviewStatus = 'pending') {

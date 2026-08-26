@@ -33,7 +33,7 @@ export async function GET(
 /**
  * PUT /api/campaigns/[id]/followup-settings
  * Body: { touches: [...] } to override, or { inherit: true } to fall back to the
- * tenant cadence. Affects FUTURE acceptances only — already-pending rows keep the
+ * tenant cadence. Affects FUTURE acceptances only - already-pending rows keep the
  * template stamped when they were scheduled.
  */
 export async function PUT(

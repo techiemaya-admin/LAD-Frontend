@@ -7,7 +7,7 @@
  * cross this boundary and have no field here to land in.
  */
 
-/** The report catalogue — mirrors reportTypes.js on the backend. */
+/** The report catalogue - mirrors reportTypes.js on the backend. */
 export const REPORT_TYPES = [
   'growth_opportunity_audit',
   'competitor_analysis',
@@ -46,7 +46,7 @@ export interface ReportContent {
 /**
  * What grounded the report, read off the lead's own research artifacts.
  *
- * Not part of `content` — the generator logs its grounding but never writes it
+ * Not part of `content` - the generator logs its grounding but never writes it
  * into the document, so this is assembled server-side from
  * `lead_data.web_research` / `web_scrape`.
  */
@@ -100,7 +100,7 @@ export interface SequenceStep {
   day: number;
   status: SequenceStepStatus;
   /**
-   * An observed outcome beyond "the step ran" — currently only 'accepted', set
+   * An observed outcome beyond "the step ran" - currently only 'accepted', set
    * when a connect step's acceptance was actually recorded. Null means no such
    * fact was observed, NOT that the outcome was negative.
    */
@@ -110,7 +110,7 @@ export interface SequenceStep {
   uses_report_url: boolean;
   /** Only set on the lead_report step. */
   approval: ApprovalStatus | null;
-  /** Attempted and failed with no success row — the lead is parked here. */
+  /** Attempted and failed with no success row - the lead is parked here. */
   stuck: boolean;
   stuck_attempts: number | null;
   stuck_last_attempt: string | null;
@@ -140,7 +140,7 @@ export interface LeadReportBundle {
 /**
  * The report card's render state.
  *
- * `needs_research` and `running` are client-side only — they describe the
+ * `needs_research` and `running` are client-side only - they describe the
  * trigger's progress, not a column. Everything else is `approval_status`, with
  * `none` splitting on whether a row exists at all.
  */

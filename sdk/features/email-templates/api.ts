@@ -1,8 +1,8 @@
 /**
- * Email Templates — SDK API
- * LAD Architecture: SDK Layer — HTTP calls ONLY (no business logic)
+ * Email Templates - SDK API
+ * LAD Architecture: SDK Layer - HTTP calls ONLY (no business logic)
  *
- * web/ MUST NOT call fetch/axios directly — use these functions via hooks.ts
+ * web/ MUST NOT call fetch/axios directly - use these functions via hooks.ts
  */
 
 import { apiClient } from '../../shared/apiClient';

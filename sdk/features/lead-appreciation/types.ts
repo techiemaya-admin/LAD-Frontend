@@ -1,5 +1,5 @@
 /**
- * Lead Appreciation feature — TypeScript types.
+ * Lead Appreciation feature - TypeScript types.
  *
  * Mirrors LAD_backend/features/lead-appreciation (lead_appreciation_signals
  * rows joined with their watchlist identity). Keep in sync with the SQL in

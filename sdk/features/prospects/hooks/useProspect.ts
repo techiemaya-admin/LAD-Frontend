@@ -1,5 +1,5 @@
 /**
- * Prospects feature — useProspect hook.
+ * Prospects feature - useProspect hook.
  */
 import { useQuery } from '@tanstack/react-query';
 

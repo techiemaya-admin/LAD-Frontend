@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-// Same-origin fetcher — hits the Next.js proxy at /api/instagram-conversations/*
+// Same-origin fetcher - hits the Next.js proxy at /api/instagram-conversations/*
 // rather than lib/api (which prepends NEXT_PUBLIC_BACKEND_URL = LAD_backend :3004).
 import { igGet as apiGet, igPost as apiPost, igPatch as apiPatch, igDelete as apiDelete } from './instagram-api';
 import {
@@ -20,7 +20,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType; blurb: string }[]
   { id: 'faq',          label: 'FAQ',          icon: BookOpen,
     blurb: 'Keyword-keyed canned answers. Cheap fast-path before the LLM.' },
   { id: 'coupons',      label: 'Coupons',      icon: Ticket,
-    blurb: 'Giveaway batches & unique codes — one issued per claim.' },
+    blurb: 'Giveaway batches & unique codes - one issued per claim.' },
   { id: 'lead-magnets', label: 'Lead Magnets', icon: Download,
     blurb: 'Files / links delivered automatically when a keyword fires.' },
 ];
@@ -45,7 +45,7 @@ export const InstagramAutomations: React.FC = () => {
         <header className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Instagram Automations</h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">
-            ManyChat-parity automations — trigger rules, multi-step flows, FAQ answers, coupon distribution, lead magnet delivery.
+            ManyChat-parity automations - trigger rules, multi-step flows, FAQ answers, coupon distribution, lead magnet delivery.
           </p>
         </header>
 
@@ -303,7 +303,7 @@ const FlowsPanel: React.FC = () => {
                 <h4 className="text-base font-medium">{f.name}</h4>
                 {f.description && <p className="mt-1 text-sm text-neutral-600 dark:text-white/60">{f.description}</p>}
                 <div className="mt-1 text-xs text-neutral-500 dark:text-white/50">
-                  {(f.nodes || []).length} nodes · start: {f.start_node_id || '—'}
+                  {(f.nodes || []).length} nodes · start: {f.start_node_id || '-'}
                 </div>
                 <details className="mt-2 text-xs text-neutral-600 dark:text-white/60">
                   <summary className="cursor-pointer">nodes</summary>
@@ -336,7 +336,7 @@ const FlowForm: React.FC<{ onCancel: () => void; onSubmit: (p: any) => Promise<v
   const [nodes, setNodes] = useState<any[]>([
     { id: 'n1', type: 'message', text: 'Hey! Thanks for reaching out 👋' },
     { id: 'n2', type: 'capture_field', field: 'email', prompt: 'What email should I send the details to?' },
-    { id: 'n3', type: 'message', text: 'Got it — keep an eye on your inbox!' },
+    { id: 'n3', type: 'message', text: 'Got it - keep an eye on your inbox!' },
     { id: 'n4', type: 'end' },
   ]);
   const [edges, setEdges] = useState<any[]>([

@@ -3,7 +3,7 @@
  * GET /api/tenant/manage/meta  →  LAD_backend GET /api/admin/tenants/meta
  *
  * Returns the canonical lists of tenant features / feature flags / owner
- * capabilities — used by the onboard form so the available options stay in
+ * capabilities - used by the onboard form so the available options stay in
  * sync with provision.js as new keys are added there.
  */
 import { NextRequest, NextResponse } from 'next/server';

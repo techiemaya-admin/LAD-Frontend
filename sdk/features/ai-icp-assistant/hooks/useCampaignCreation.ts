@@ -43,7 +43,7 @@ export interface CampaignCreationState {
 /**
  * What `createCampaign` resolves to when the request failed. `apiError` is the
  * thrown ApiError (status + backend `code`), so a caller can branch on the kind
- * of failure — e.g. a 409 CAMPAIGN_NAME_TAKEN sends the user back to the name
+ * of failure, e.g. a 409 CAMPAIGN_NAME_TAKEN sends the user back to the name
  * step instead of showing a dead-end alert.
  */
 export interface CampaignCreationFailure {

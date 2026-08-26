@@ -13,10 +13,10 @@ export interface ThreadProps {
 }
 
 const REPLIES: Record<string, string> = {
-  find: "On it. I'm scanning multiple data sources for accounts that match — enriching firmographics, finding decision-makers, and verifying emails. I'll surface a ranked list you can push straight into a campaign.",
+  find: "On it. I'm scanning multiple data sources for accounts that match - enriching firmographics, finding decision-makers, and verifying emails. I'll surface a ranked list you can push straight into a campaign.",
   meet: "Got it. I'll identify warm contacts, draft personalized openers, and propose send times based on each contact's timezone and past engagement.",
   research:
-    "Researching now across the web and professional networks — mapping the buying committee, recent signals, and the best entry points. I'll cite every source.",
+    "Researching now across the web and professional networks - mapping the buying committee, recent signals, and the best entry points. I'll cite every source.",
   relationships:
     "Let me review account health and engagement. I'll flag who's gone quiet, surface a reason to reach out, and draft a tailored check-in for each.",
   media:

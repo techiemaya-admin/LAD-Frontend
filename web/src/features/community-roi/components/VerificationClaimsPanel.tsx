@@ -108,11 +108,11 @@ export function VerificationClaimsPanel() {
       if (action === 'approve') {
         const applied = res.overlayApplied ?? 0;
         setNote(
-          `Approved — ${claim.claimant_name} ↔ ${claim.claimed_name} folded into metrics` +
+          `Approved - ${claim.claimant_name} ↔ ${claim.claimed_name} folded into metrics` +
             (applied ? ` (${applied} claim${applied === 1 ? '' : 's'} applied)` : ''),
         );
       } else {
-        setNote(`Rejected — ${claim.claimant_name} ↔ ${claim.claimed_name}`);
+        setNote(`Rejected - ${claim.claimant_name} ↔ ${claim.claimed_name}`);
       }
     } catch (e: any) {
       setError(e?.message || `Failed to ${action} claim`);

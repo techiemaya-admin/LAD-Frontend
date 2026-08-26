@@ -163,7 +163,7 @@ function TemplateFormDialog({
         body: formData,
         credentials: 'include',
         headers: {
-          // Don't set Content-Type — browser sets multipart boundary automatically
+          // Don't set Content-Type - browser sets multipart boundary automatically
           ...(typeof window !== 'undefined' ? {
             Authorization: `Bearer ${document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')?.[1] || ''}`,
           } : {}),
@@ -303,7 +303,7 @@ function TemplateFormDialog({
               ))}
             </div>
 
-            {/* Upload area — shown when type is not none */}
+            {/* Upload area - shown when type is not none */}
             {form.media_type !== 'none' && (
               <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                 {hasMedia ? (

@@ -1,6 +1,6 @@
 /**
- * SearchStrategyEditor — pure controlled form for the SearchStrategy block of
- * an IcpDefinition. No data fetching, no persistence — the parent feeds in
+ * SearchStrategyEditor - pure controlled form for the SearchStrategy block of
+ * an IcpDefinition. No data fetching, no persistence - the parent feeds in
  * the current value, applies the user's edits via `onChange`, and chooses
  * when to save.
  *
@@ -49,7 +49,7 @@ const CROSS_BACKEND_MERGE_OPTIONS: Array<{
   {
     value: 'first_match',
     label: 'First match wins',
-    hint: 'Honour discovery order — keep whichever backend surfaced the candidate first.',
+    hint: 'Honour discovery order - keep whichever backend surfaced the candidate first.',
   },
   {
     value: 'merge_fields',

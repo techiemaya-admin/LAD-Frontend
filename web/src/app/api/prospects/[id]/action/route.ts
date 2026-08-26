@@ -1,5 +1,5 @@
 /**
- * POST /api/prospects/[id]/action — apply a CRM "Take action" to a prospect.
+ * POST /api/prospects/[id]/action - apply a CRM "Take action" to a prospect.
  *   Query: do_not_contact=true|false  and/or  quiet_days=N
  * Forwarded (with tenant_id + service token) to the Master Agent.
  */

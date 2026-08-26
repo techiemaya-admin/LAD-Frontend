@@ -85,12 +85,12 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
       // Update the count from the backend's returned group (authoritative) rather
-      // than a re-fetch that can race or be cached — this is what showed "same count".
+      // than a re-fetch that can race or be cached - this is what showed "same count".
       const updatedIds = Array.isArray(data?.group?.metadata?.member_group_ids)
         ? data.group.metadata.member_group_ids.map(String)
         : [...new Set([...list.member_group_ids, ...groupIds.map(String)])];
       setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, member_group_ids: updatedIds } : l)));
-      setNote({ ok: true, text: `Added to "${list.name}" — now ${updatedIds.length} group${updatedIds.length === 1 ? '' : 's'}.` });
+      setNote({ ok: true, text: `Added to "${list.name}" - now ${updatedIds.length} group${updatedIds.length === 1 ? '' : 's'}.` });
       loadLists();
     } catch (e) {
       setNote({ ok: false, text: e instanceof Error ? e.message : 'Failed to add' });
@@ -109,7 +109,7 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
           </h2>
         </div>
         <p className="text-sm text-muted-foreground dark:text-[#8696a0]">
-          Organize the selected groups into a broadcast group — or compose a message on the left to broadcast to them.
+          Organize the selected groups into a broadcast group - or compose a message on the left to broadcast to them.
         </p>
 
         <div className="space-y-2">
@@ -140,7 +140,7 @@ export function BroadcastGroupActionsPanel({ groupIds, channel }: BroadcastGroup
               <Loader2 className="h-4 w-4 animate-spin text-[#00a884]" /> Loading…
             </div>
           ) : lists.length === 0 ? (
-            <p className="text-sm text-muted-foreground dark:text-[#8696a0]">No broadcast groups yet — create one above.</p>
+            <p className="text-sm text-muted-foreground dark:text-[#8696a0]">No broadcast groups yet - create one above.</p>
           ) : (
             <div className="max-h-48 overflow-y-auto space-y-1.5 no-scrollbar">
               {lists.map((list) => (

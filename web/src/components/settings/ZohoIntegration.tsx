@@ -20,12 +20,16 @@ import {
   Briefcase,
   Contact,
   CheckSquare,
+  Clock,
+  Folder,
+  Filter,
+  Handshake,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 const ZOHO_API = '/api/social-integration/zoho';
@@ -137,7 +141,7 @@ export const ZohoIntegration: React.FC = () => {
         setError(data?.error || 'Failed to start Zoho connection');
         setConnecting(false);
       }
-    } catch (e) {
+    } catch {
       setError('Failed to start Zoho connection');
       setConnecting(false);
     }
@@ -214,13 +218,13 @@ export const ZohoIntegration: React.FC = () => {
           }
           return;
         }
-      } catch { /* transient — keep polling */ }
+      } catch { /* transient - keep polling */ }
       if (tries < 120) {
         setTimeout(tick, 3000); // poll up to ~6 min
       } else {
         pollingRef.current = false;
         setSyncing(false);
-        setError('Sync is taking longer than expected — check back shortly, then refresh.');
+        setError('Sync is taking longer than expected - check back shortly, then refresh.');
       }
     };
     setTimeout(tick, 3000);
@@ -254,7 +258,6 @@ export const ZohoIntegration: React.FC = () => {
       setError('Sync failed');
     }
   };
-
 
   const handlePush = async () => {
     if (!pushForm.email) {
@@ -306,10 +309,9 @@ export const ZohoIntegration: React.FC = () => {
     }
   };
 
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
+      <div className="flex items-center justify-center py-16 text-slate-500 dark:text-[#7a8ba3]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading Zoho status…
       </div>
     );
@@ -318,208 +320,249 @@ export const ZohoIntegration: React.FC = () => {
   // ── Not connected ──────────────────────────────────────────────────────────
   if (!account?.connected) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <span className="text-xl font-bold text-red-600 select-none">Z</span>
-            </div>
-            <div>
-              <CardTitle>Zoho CRM</CardTitle>
-              <CardDescription>
-                Connect your Zoho CRM to sync Contacts, Leads, and Deals — and push Mr LAD leads back into Zoho.
-              </CardDescription>
-            </div>
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+            <span className="text-xl font-bold text-red-600 select-none">Z</span>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {error}
-            </div>
-          )}
-          <div className="space-y-2 max-w-sm">
-            <label className="text-sm font-medium text-foreground">Zoho data center (region)</label>
-            <select
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              {ZOHO_REGIONS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">
-              Pick the region where your Zoho account is hosted (shown in your Zoho URL, e.g. crm.zoho.<b>eu</b>).
+          <div>
+            <h3 className="text-lg font-bold text-[#172560] dark:text-white">Zoho CRM</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Connect your Zoho CRM to sync Contacts, Leads, and Deals — and push Mr LAD leads back into Zoho.
             </p>
           </div>
-          <Button onClick={handleConnect} disabled={connecting}>
-            {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Connect with Zoho
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3 text-sm text-red-700 dark:text-red-300">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {error}
+          </div>
+        )}
+        <div className="space-y-2 max-w-sm">
+          <label className="text-sm font-medium text-[#172560] dark:text-white">Zoho data center (region)</label>
+          <Select value={region} onValueChange={(val) => setRegion(val)}>
+            <SelectTrigger className="w-full rounded-lg border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#040b25] text-sm text-[#172560] dark:text-white h-10">
+              <SelectValue placeholder="Select region" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40">
+              {ZOHO_REGIONS.map((r) => (
+                <SelectItem key={r.value} value={r.value} className="text-[#172560] dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white">
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Pick the region where your Zoho account is hosted (shown in your Zoho URL, e.g. crm.zoho.<b>eu</b>).
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleConnect}
+          disabled={connecting}
+          className="h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-[#2b7cff] dark:hover:bg-[#2b7cff]/90 inline-flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+        >
+          {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Connect with Zoho
+        </button>
+      </div>
     );
   }
 
   // ── Connected ──────────────────────────────────────────────────────────────
+  const moduleIcon = (k: string) => {
+    if (k === 'contacts') return <Users className="h-4 w-4" />;
+    if (k === 'leads') return <Filter className="h-4 w-4" />;
+    if (k === 'deals') return <Handshake className="h-4 w-4" />;
+    return <ClipboardCheck className="h-4 w-4" />;
+  };
+
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                <span className="text-xl font-bold text-red-600 select-none">Z</span>
-              </div>
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  Zoho CRM
-                  <Badge variant="secondary" className="bg-green-100 text-green-700">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Connected
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  {account.connected_user?.email
-                    ? `Connected as ${account.connected_user.email}`
-                    : 'Connected'}
-                  {account.region ? ` · ${account.region.toUpperCase()}` : ''}
-                </CardDescription>
-              </div>
+      {/* Main Status Container */}
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-6 mx-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+              <span className="text-xl font-bold text-red-600 select-none">Z</span>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {error}
-            </div>
-          )}
-          {success && (
-            <div className="flex items-start gap-2 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
-              <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> {success}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-border p-3 text-center">
-              <div className="text-2xl font-semibold text-foreground">{account.counts?.contacts ?? '—'}</div>
-              <div className="text-xs text-muted-foreground">Contacts</div>
-            </div>
-            <div className="rounded-lg border border-border p-3 text-center">
-              <div className="text-2xl font-semibold text-foreground">{account.counts?.leads ?? '—'}</div>
-              <div className="text-xs text-muted-foreground">Leads</div>
-            </div>
-            <div className="rounded-lg border border-border p-3 text-center">
-              <div className="text-2xl font-semibold text-foreground">{account.counts?.deals ?? '—'}</div>
-              <div className="text-xs text-muted-foreground">Deals</div>
-            </div>
-            <div className="rounded-lg border border-border p-3 text-center">
-              <div className="text-2xl font-semibold text-foreground">{account.counts?.tasks ?? '—'}</div>
-              <div className="text-xs text-muted-foreground">Tasks</div>
-            </div>
-          </div>
-
-          {account.last_synced && (
-            <p className="text-xs text-muted-foreground">
-              Last synced {new Date(account.last_synced).toLocaleString()}
-            </p>
-          )}
-
-          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={autoSync}
-              disabled={savingAutoSync}
-              onChange={handleToggleAutoSync}
-              className="h-4 w-4 rounded border-input accent-red-600"
-            />
-            Auto-sync from Zoho every 6 hours
-            {savingAutoSync && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-          </label>
-
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handleSync} disabled={syncing}>
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-              {syncing ? 'Syncing…' : 'Sync from Zoho'}
-            </Button>
-            <Button variant="outline" onClick={handleTest} disabled={testing}>
-              {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Test
-            </Button>
-            <Button variant="outline" onClick={() => setPushOpen((v) => !v)}>
-              <UploadCloud className="h-4 w-4 mr-2" /> Push to Zoho
-            </Button>
-            <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={handleDisconnect} disabled={disconnecting}>
-              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Disconnect
-            </Button>
-          </div>
-
-          {testResult && (
-            <p className={`text-sm ${testResult.success ? 'text-green-600' : 'text-red-600'}`}>
-              {testResult.success
-                ? `Connection OK — ${testResult.contacts ?? 0} contacts reachable.`
-                : 'Connection test failed.'}
-            </p>
-          )}
-
-          {/* Push-to-Zoho panel */}
-          {pushOpen && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <UploadCloud className="h-4 w-4" /> Push a lead into Zoho
-              </div>
+            <div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Module</label>
-                <select
-                  value={pushModule}
-                  onChange={(e) => setPushModule(e.target.value as 'Leads' | 'Contacts')}
-                  className="rounded-md border border-input bg-background px-2 py-1 text-sm"
-                >
-                  <option value="Leads">Leads</option>
-                  <option value="Contacts">Contacts</option>
-                </select>
+                <h3 className="text-lg font-bold text-[#172560] dark:text-white">Zoho CRM</h3>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                  <CheckCircle2 className="h-3 w-3" /> Connected
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Input placeholder="First name" value={pushForm.first_name} onChange={(e) => setPushForm({ ...pushForm, first_name: e.target.value })} />
-                <Input placeholder="Last name" value={pushForm.last_name} onChange={(e) => setPushForm({ ...pushForm, last_name: e.target.value })} />
-                <Input placeholder="Email (required)" value={pushForm.email} onChange={(e) => setPushForm({ ...pushForm, email: e.target.value })} />
-                <Input placeholder="Phone" value={pushForm.phone} onChange={(e) => setPushForm({ ...pushForm, phone: e.target.value })} />
-                <Input placeholder="Company" value={pushForm.company_name} onChange={(e) => setPushForm({ ...pushForm, company_name: e.target.value })} />
-                <Input placeholder="Title" value={pushForm.title} onChange={(e) => setPushForm({ ...pushForm, title: e.target.value })} />
-              </div>
-              <div className="flex items-center gap-3">
-                <Button size="sm" onClick={handlePush} disabled={pushing}>
-                  {pushing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                  Push
-                </Button>
-                {pushResult && <span className="text-sm text-muted-foreground">{pushResult}</span>}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Upserts on Email — re-pushing the same email updates the existing Zoho record. Use the <code>/zoho/push</code> API with <code>lead_ids[]</code> to push campaign leads in bulk.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {account.connected_user?.email
+                  ? `Connected as ${account.connected_user.email}`
+                  : 'Connected'}
+                {account.region ? ` · ${account.region.toUpperCase()}` : ''}
               </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
 
-      {/* Records live on the CRM page now */}
-      <Card>
-        <CardContent className="py-5 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <div className="text-sm font-medium text-foreground">Browse synced records</div>
-            <p className="text-sm text-muted-foreground">
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3 text-sm text-red-700 dark:text-red-300">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> {error}
+          </div>
+        )}
+        {success && (
+          <div className="flex items-start gap-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 p-3 text-sm text-green-700 dark:text-green-300">
+            <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> {success}
+          </div>
+        )}
+
+        {/* 4 Module Count Cards (Inner Containers) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(['contacts', 'leads', 'deals', 'tasks'] as const).map((k) => (
+            <div
+              key={k}
+              className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#040b25] p-3.5 flex items-center gap-3.5"
+            >
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#0e1d4d] text-blue-600 dark:text-blue-400 grid place-items-center shrink-0">
+                {moduleIcon(k)}
+              </div>
+              <div>
+                <div className="text-xl font-bold text-[#172560] dark:text-white tabular-nums leading-none">
+                  {account.counts?.[k] ?? '0'}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 capitalize mt-1 font-medium">{k}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {account.last_synced && (
+          <p className="text-xs text-slate-500 dark:text-[#7a8ba3] flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" /> Last synced {new Date(account.last_synced).toLocaleString()}
+          </p>
+        )}
+
+        <label className="flex items-center gap-2.5 text-sm text-[#172560] dark:text-white cursor-pointer select-none font-medium">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            disabled={savingAutoSync}
+            onChange={handleToggleAutoSync}
+            className="h-4 w-4 rounded border-slate-300 dark:border-blue-950/40 accent-[#2563eb] cursor-pointer"
+          />
+          Auto-sync from Zoho every 6 hours
+          {savingAutoSync && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+        </label>
+
+        <div className="flex flex-wrap gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncing}
+            className="h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-[#2b7cff] dark:hover:bg-[#2b7cff]/90 inline-flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {syncing ? 'Syncing…' : 'Sync from Zoho'}
+          </button>
+          <button
+            type="button"
+            onClick={handleTest}
+            disabled={testing}
+            className="h-9 px-4 rounded-lg text-sm font-medium text-[#172560] dark:text-white border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#040b25] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] inline-flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Test
+          </button>
+          <button
+            type="button"
+            onClick={() => setPushOpen((v) => !v)}
+            className="h-9 px-4 rounded-lg text-sm font-medium text-[#172560] dark:text-white border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#040b25] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] inline-flex items-center gap-2 transition-all"
+          >
+            <UploadCloud className="h-4 w-4" /> Push to Zoho
+          </button>
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="h-9 px-4 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/60 bg-white dark:bg-[#040b25] hover:bg-red-50 dark:hover:bg-red-950/40 inline-flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            Disconnect
+          </button>
+        </div>
+
+        {testResult && (
+          <p className={`text-sm ${testResult.success ? 'text-emerald-500' : 'text-red-500'}`}>
+            {testResult.success
+              ? `Connection OK — ${testResult.contacts ?? 0} contacts reachable.`
+              : 'Connection test failed.'}
+          </p>
+        )}
+
+        {/* Push-to-Zoho panel (Inner Container) */}
+        {pushOpen && (
+          <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#040b25] p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#172560] dark:text-white">
+              <UploadCloud className="h-4 w-4" /> Push a lead into Zoho
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-500 dark:text-slate-400">Module</label>
+              <Select value={pushModule} onValueChange={(val) => setPushModule(val as 'Leads' | 'Contacts')}>
+                <SelectTrigger className="w-32 rounded-lg border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] text-sm text-[#172560] dark:text-white h-9">
+                  <SelectValue placeholder="Select module" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40">
+                  <SelectItem value="Leads" className="text-[#172560] dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white">Leads</SelectItem>
+                  <SelectItem value="Contacts" className="text-[#172560] dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white">Contacts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="First name" value={pushForm.first_name} onChange={(e) => setPushForm({ ...pushForm, first_name: e.target.value })} />
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="Last name" value={pushForm.last_name} onChange={(e) => setPushForm({ ...pushForm, last_name: e.target.value })} />
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="Email (required)" value={pushForm.email} onChange={(e) => setPushForm({ ...pushForm, email: e.target.value })} />
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="Phone" value={pushForm.phone} onChange={(e) => setPushForm({ ...pushForm, phone: e.target.value })} />
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="Company" value={pushForm.company_name} onChange={(e) => setPushForm({ ...pushForm, company_name: e.target.value })} />
+              <Input className="dark:bg-[#071131] dark:border-blue-950/40" placeholder="Title" value={pushForm.title} onChange={(e) => setPushForm({ ...pushForm, title: e.target.value })} />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePush}
+                disabled={pushing}
+                className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {pushing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />}
+                Push
+              </button>
+              {pushResult && <span className="text-xs text-slate-500 dark:text-slate-400">{pushResult}</span>}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Upserts on Email — re-pushing the same email updates the existing Zoho record. Use the <code>/zoho/push</code> API with <code>lead_ids[]</code> to push campaign leads in bulk.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Container: Browse synced records */}
+      <div className="rounded-xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 flex items-center justify-between mx-4 gap-4 flex-wrap">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#0e1d4d] text-blue-600 dark:text-blue-400 grid place-items-center shrink-0">
+            <Folder className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-[#172560] dark:text-white">Browse synced records</div>
+            <p className="text-xs text-slate-500 dark:text-[#7a8ba3] truncate">
               Your Zoho Contacts, Leads, Deals, and Tasks are on the CRM page.
             </p>
           </div>
-          <Link href="/crm/zoho">
-            <Button variant="outline">
-              Open Zoho CRM <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
+        </div>
+        <Link href="/crm/zoho">
+          <button
+            type="button"
+            className="h-9 px-4 rounded-lg text-sm font-medium border border-slate-200 dark:border-blue-950/40 text-[#172560] dark:text-white bg-white dark:bg-[#040b25] hover:bg-slate-50 dark:hover:bg-[#0e1d4d] inline-flex items-center gap-2 transition-all"
+          >
+            Open Zoho CRM <ChevronRight className="h-4 w-4" />
+          </button>
+        </Link>
+      </div>
     </div>
   );
 };

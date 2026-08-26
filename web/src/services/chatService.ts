@@ -222,7 +222,7 @@ class ChatService {
         throw new Error('Failed to fetch conversations');
       }
       const result = await response.json();
-      // Python service returns {success, data, total} — unwrap the data array
+      // Python service returns {success, data, total} - unwrap the data array
       const conversations = result.data || result;
       logger.debug('Conversations fetched', { count: Array.isArray(conversations) ? conversations.length : 0 });
       return conversations as Conversation[];

@@ -1,5 +1,20 @@
 # Frontend Services - Update Documentation
 
+> [!WARNING]
+> **Superseded — kept as a historical record.**
+>
+> This note describes `web/src/services/` as it stood when it was written. Both
+> services it introduces have since been **deleted** in the SDK restructuring:
+>
+> - `mayaAIService.ts` → use `@lad/frontend-features/ai-icp-assistant`
+> - `apolloLeadsService.ts` → use `@lad/frontend-features/apollo-leads`, which
+>   exports **named functions** (`searchCompanies`, `getCompanyDetails`, …), not a
+>   service object
+>
+> Every code sample below therefore imports modules that no longer exist. For the
+> current layout see [`README.md`](./README.md) and
+> [`sdk/features/apollo-leads/README.md`](../../../sdk/features/apollo-leads/README.md).
+
 ## Overview
 
 Updated the frontend services to integrate with the enhanced ICP assistant and Apollo leads backend.

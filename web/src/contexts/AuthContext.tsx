@@ -22,6 +22,11 @@ interface User {
   tenants?: UserTenant[];
   capabilities?: string[];
   tenantFeatures?: string[];
+  /**
+   * Vertical snapshot this tenant is on (e.g. 'wellness'), or null/undefined
+   * for the general-purpose product. Served by /auth/me from tenants.vertical.
+   */
+  vertical?: string | null;
 }
 interface AuthContextType {
   user: User | null;
@@ -33,6 +38,19 @@ interface AuthContextType {
   getToken: () => Promise<string | null>;
   hasFeature: (featureKey: string) => boolean;
   refreshUser: (newUser: User) => void;
+  /** Vertical snapshot the tenant is on, or null for the general product. */
+  vertical: string | null;
+  /**
+   * True when the tenant runs a curated vertical snapshot rather than the
+   * general-purpose product. A curated workspace gets pipeline switches, not a
+   * node canvas - see docs/VERTICAL_SNAPSHOTS.md in LAD_backend.
+   *
+   * PRESENTATION ONLY. The enforcing gate is server-side in
+   * features/campaigns/services/snapshotStepGuard.js, which refuses
+   * non-permitted step types at campaign creation. Hiding a surface is not a
+   * security boundary - this only decides what a tenant is offered.
+   */
+  isCuratedWorkspace: boolean;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Always try to fetch current user — the httpOnly cookie is sent automatically.
+    // Always try to fetch current user - the httpOnly cookie is sent automatically.
     fetchCurrentUser();
   }, []);
   const fetchCurrentUser = async () => {
@@ -113,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(error.message || 'Login failed');
       }
       await response.json();
-      // Token is set as httpOnly cookie by the API route — fetch user data
+      // Token is set as httpOnly cookie by the API route - fetch user data
       await fetchCurrentUser();
       // Redirect to AI Assistant after login
       router.push('/onboarding/advanced-search-ai');
@@ -146,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     safeStorage.setItem('user', JSON.stringify(newUser));
   };
-  // Tenant feature check. tenant_features is the entitlement gate — a feature
+  // Tenant feature check. tenant_features is the entitlement gate - a feature
   // is available to a user only if it's enabled for their tenant, regardless
   // of role (owner/admin included). User-level capabilities are a separate
   // axis for within-tenant access and must not bypass the tenant gate here.
@@ -155,6 +173,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userTenantFeatures = user.tenantFeatures || [];
     return userTenantFeatures.includes(featureKey);
   };
+  // Vertical snapshot. Absent/null means the general-purpose product, which is
+  // every tenant that has not been explicitly assigned a vertical - so this
+  // defaults to "not curated" and changes nothing for them.
+  const vertical = user?.vertical ?? null;
+
+  // Today the rule is simply: a tenant on a vertical runs curated pipelines and
+  // does not get the workflow builder. If a future snapshot ever wants the
+  // builder, this should read a flag from that snapshot's manifest rather than
+  // being inferred here.
+  const isCuratedWorkspace = vertical !== null;
+
   const value = {
     user,
     token, // Token might be null if using cookie-only auth (OAuth)
@@ -165,6 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getToken,
     hasFeature,
     refreshUser,
+    vertical,
+    isCuratedWorkspace,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

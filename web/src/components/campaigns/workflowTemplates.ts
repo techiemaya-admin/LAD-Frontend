@@ -1,5 +1,5 @@
 /**
- * Workflow templates ("Accelerators") — one-click pipeline recipes shared by:
+ * Workflow templates ("Accelerators") - one-click pipeline recipes shared by:
  *   - CustomWorkflowBuilder's "Start from a template" gallery
  *   - the advanced-search chat panel's Accelerators dropdown (conversational wizard)
  *
@@ -8,13 +8,13 @@
  * and launch emit find its config). `cfg` seeds the node's drawer.
  *
  * `inputs` drives the chat wizard: each entry is asked as a question and the
- * answer is written onto the template's SOURCE config under `key` — the same
+ * answer is written onto the template's SOURCE config under `key` - the same
  * keys the builder's source drawer edits, so chat answers and drawer edits are
  * interchangeable.
  */
 import type { StepType } from '@/types/campaign';
 
-// Single-instance macro node ids. The builder imports these — keep the strings
+// Single-instance macro node ids. The builder imports these - keep the strings
 // stable, they key drawer configs and the launch emit.
 export const SOURCE_STEP_ID = 'src-node';
 export const FOLLOWUP_STEP_ID = 'followup-node';
@@ -59,7 +59,7 @@ export const HTTP_STEP_ID = 'http-request-node';
  * emit both look configs up by these exact strings, so a regenerated id would
  * silently drop that node's configuration.
  *
- * SOURCE_STEP_ID is deliberately excluded — the source is stored separately on
+ * SOURCE_STEP_ID is deliberately excluded - the source is stored separately on
  * a strategy, not as one of its nodes.
  */
 export const MACRO_STEP_IDS: readonly string[] = [
@@ -75,7 +75,7 @@ export const MACRO_STEP_IDS: readonly string[] = [
 /**
  * Router nodes are `type: 'condition'` distinguished ONLY by an `rt-` id
  * prefix (see CustomWorkflowBuilder's `addRouter` / `launch`). Their id is
- * therefore load-bearing too and must be preserved verbatim on restore —
+ * therefore load-bearing too and must be preserved verbatim on restore  - 
  * otherwise a router silently degrades into a plain wait-for-condition step.
  */
 export const ROUTER_ID_PREFIX = 'rt-';
@@ -87,7 +87,7 @@ export const EXPORT_DEFAULT_COLUMNS = [
   'full_name', 'title', 'company_name', 'email', 'phone', 'linkedin_url', 'status', 'last_action', 'last_action_at',
 ];
 
-export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import';
+export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract';
 
 export type TemplateNode = {
   type: StepType;
@@ -113,13 +113,13 @@ export type TemplateInput = {
    * 'gate' → written nowhere, it only decides whether the copy questions run.
    */
   target?: 'source' | 'node' | 'gate';
-  /** target:'node' — the receiving node, addressed by `macroId || type`. */
+  /** target:'node' - the receiving node, addressed by `macroId || type`. */
   nodeKey?: string;
-  /** target:'node' — dotted cfg path; numeric segments index arrays (e.g. `touches.0.message`). */
+  /** target:'node' - dotted cfg path; numeric segments index arrays (e.g. `touches.0.message`). */
   cfgPath?: string;
-  /** The copy the template ships with — shown as the value "skip" keeps. */
+  /** The copy the template ships with - shown as the value "skip" keeps. */
   suggestion?: string;
-  /** Long-form answer (message bodies) — cards truncate these. */
+  /** Long-form answer (message bodies) - cards truncate these. */
   multiline?: boolean;
 };
 
@@ -150,7 +150,7 @@ export type WorkflowTemplate = {
    * Gallery grouping. 'general' / 'industry' are the built-in recipes;
    * 'strategy' (the tenant's own saved playbooks) and 'community' (published by
    * another tenant, imported as a copy) are synthesized at runtime from stored
-   * Strategies — see strategyAdapter.definitionToTemplate.
+   * Strategies - see strategyAdapter.definitionToTemplate.
    */
   category: 'general' | 'industry' | 'strategy' | 'community';
 };
@@ -176,8 +176,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     },
     inputs: [
       { key: 'job_titles', question: 'Which **job titles** should I audit? e.g. "VP Sales, Head of Revenue, Founder".' },
-      { key: 'industries', question: 'Which **industries**? (e.g. "SaaS, Fintech" — or say **skip**)', optional: true },
-      { key: 'locations', question: 'Which **location**? (e.g. "Dubai, United Arab Emirates" — or say **skip**)', optional: true },
+      { key: 'industries', question: 'Which **industries**? (e.g. "SaaS, Fintech" - or say **skip**)', optional: true },
+      { key: 'locations', question: 'Which **location**? (e.g. "Dubai, United Arab Emirates" - or say **skip**)', optional: true },
     ],
     nodes: [
       // ── Research and qualify ───────────────────────────────────────────────
@@ -187,7 +187,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'web_research', macroId: RESEARCH_STEP_ID, title: 'Research the company', description: 'News, funding, hiring signals' },
       { type: 'lead_score', macroId: SCORE_STEP_ID, title: 'Score the fit', description: 'Hot / warm / cold from buying signals' },
 
-      // Competitor discovery is not automated — research can look up
+      // Competitor discovery is not automated - research can look up
       // competitors somebody names, but cannot find them. Assigned to a person
       // rather than skipped, so the audit is not quietly missing a section.
       {
@@ -195,7 +195,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         title: 'Identify their competitors', description: 'Human · pauses the lead',
         cfg: {
           title: 'Identify their top competitors',
-          instructions: 'Note this company\'s top 3 competitors and one line on what differentiates each. Paste it back when you confirm — the audit uses it.',
+          instructions: 'Note this company\'s top 3 competitors and one line on what differentiates each. Paste it back when you confirm - the audit uses it.',
           assignee_channel: 'email', assignee_to: '',
         },
       },
@@ -224,7 +224,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       },
 
       // ── Outreach ───────────────────────────────────────────────────────────
-      { type: 'linkedin_connect', title: 'Connection request', description: 'No pitch — just connect', cfg: { message: '' } },
+      { type: 'linkedin_connect', title: 'Connection request', description: 'No pitch - just connect', cfg: { message: '' } },
 
       // Email waits for ACCEPTANCE. Firing it on send would land a cold email
       // and a connection request the same day, which contradicts the no-pitch
@@ -239,11 +239,11 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       },
       {
         type: 'linkedin_message', title: 'LinkedIn follow-up', description: 'Reference one specific finding',
-        cfg: { message: 'Hi {{first_name}}, not sure you saw the analysis we put together for {{company_name}} — one thing that stood out was how quickly the team is scaling. Happy to talk through it.' },
+        cfg: { message: 'Hi {{first_name}}, not sure you saw the analysis we put together for {{company_name}} - one thing that stood out was how quickly the team is scaling. Happy to talk through it.' },
       },
 
       // Automatic touches if they go quiet. The second one attaches the audit
-      // itself — the node above it generated it, so the attachment resolves.
+      // itself - the node above it generated it, so the attachment resolves.
       {
         type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID,
         title: 'Follow-up sequence', description: '2 touches · LinkedIn',
@@ -260,7 +260,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'voice_agent_call', title: 'AI voice call', description: 'Once they reply or fill the form', cfg: {} },
       {
         type: 'whatsapp_send', title: 'WhatsApp', description: 'Last, never first',
-        cfg: { message: 'Hi {{first_name}}, thanks for taking a moment earlier. Here is the analysis again — happy to answer anything.' },
+        cfg: { message: 'Hi {{first_name}}, thanks for taking a moment earlier. Here is the analysis again - happy to answer anything.' },
       },
     ],
   },
@@ -268,7 +268,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     // A 21-day, signal-triggered sequence. Two engine facts shape its layout,
     // and changing the order will quietly break it:
     //
-    //  1. `wait_for_condition` is a HARD BLOCK with no timeout — a lead that
+    //  1. `wait_for_condition` is a HARD BLOCK with no timeout - a lead that
     //     never satisfies it is parked forever, and EVERY later step is
     //     starved. So there is exactly one gate here and it is the LAST thing
     //     in the pipeline: the cheap channel is the only thing behind it.
@@ -284,7 +284,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 21, channels: 4 },
     accent: '#4338CA',
     name: 'Signal-to-Audit Accelerator',
-    tagline: 'Catch a buying signal, research the account, earn the reply with an audit — 21 days across four channels',
+    tagline: 'Catch a buying signal, research the account, earn the reply with an audit - 21 days across four channels',
     chain: [
       'Signal Search', 'Scrape site', 'Research', 'Profile visit', 'Connect (no note)',
       'Email 1', 'LinkedIn DM', 'Audit report', 'Email the report', 'Trend touch',
@@ -306,11 +306,11 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'web_scrape', macroId: SCRAPE_STEP_ID, title: 'Scrape their site', description: 'Their positioning and stack' },
       { type: 'web_research', macroId: RESEARCH_STEP_ID, title: 'Research the company', description: 'Recent news, funding, hiring' },
 
-      // ── Day 1–2 · warm up, then ask ────────────────────────────────────────
+      // ── Day 1-2 · warm up, then ask ────────────────────────────────────────
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Day 1 · warms before the ask', cfg: { delayDays: 1 } },
       {
         // Deliberately note-less. The builder sets no AI-personalisation flag,
-        // so an empty message really does send a bare invite — do not "helpfully"
+        // so an empty message really does send a bare invite - do not "helpfully"
         // fill this in.
         type: 'linkedin_connect', title: 'Connection request', description: 'Day 2 · no note',
         cfg: { message: '', delayDays: 1 },
@@ -325,7 +325,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         type: 'email_send', title: 'Email 1', description: 'Day 4 · no attachment',
         cfg: {
           subject: 'Something I noticed about {{company_name}}',
-          body: 'Hi {{first_name}},\n\nOne thing that stood out from your site: {{web_insight}}.\n\nI came across {{company_name}} while looking at teams growing their revenue function this quarter — the hiring pattern usually means the pipeline is about to be asked for more than it can carry.\n\nIs that the shape of it on your side, or is the pressure somewhere else?\n\n',
+          body: 'Hi {{first_name}},\n\nOne thing that stood out from your site: {{web_insight}}.\n\nI came across {{company_name}} while looking at teams growing their revenue function this quarter - the hiring pattern usually means the pipeline is about to be asked for more than it can carry.\n\nIs that the shape of it on your side, or is the pressure somewhere else?\n\n',
           delayDays: 2,
         },
       },
@@ -334,7 +334,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       {
         type: 'linkedin_message', title: 'LinkedIn DM', description: 'Day 7 · under 400 characters',
         cfg: {
-          message: 'Hi {{first_name}}, thanks for connecting. Most {{title}}s I speak with are being asked to grow output without growing the team. Curious whether that is landing on you at {{company_name}} too — and what you have tried so far.',
+          message: 'Hi {{first_name}}, thanks for connecting. Most {{title}}s I speak with are being asked to grow output without growing the team. Curious whether that is landing on you at {{company_name}} too - and what you have tried so far.',
           delayDays: 3,
         },
       },
@@ -342,15 +342,15 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         // Guards the DM above: no acceptance → 2 failed sends → email fallback,
         // and the lead moves on instead of stalling here forever.
         type: 'condition', macroId: 'rt-dm-guard',
-        title: 'Router — fallback', description: '2 tries → Email',
+        title: 'Router - fallback', description: '2 tries → Email',
         cfg: {
           attempts: 2, fallback_channel: 'email',
-          subject: 'Following up — {{company_name}}',
-          message: 'Hi {{first_name}},\n\nI tried reaching you on LinkedIn — sending it here instead in case this is easier.\n\nMost teams in your position are being asked to grow output without growing headcount. Is that the trade-off you are working with?\n\n',
+          subject: 'Following up - {{company_name}}',
+          message: 'Hi {{first_name}},\n\nI tried reaching you on LinkedIn - sending it here instead in case this is easier.\n\nMost teams in your position are being asked to grow output without growing headcount. Is that the trade-off you are working with?\n\n',
         },
       },
 
-      // ── Day 9–10 · the give ────────────────────────────────────────────────
+      // ── Day 9-10 · the give ────────────────────────────────────────────────
       {
         type: 'lead_report', macroId: REPORT_STEP_ID,
         title: 'Audit report', description: 'Day 9 · per lead · reviewed',
@@ -364,12 +364,12 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       },
       {
         // The link is stamped on the lead only once the report is APPROVED, and
-        // this step is one day behind it — approve inside that window or the
+        // this step is one day behind it - approve inside that window or the
         // email goes out without a working link.
-        type: 'email_send', title: 'Email 2 — the give', description: 'Day 10 · attaches the report',
+        type: 'email_send', title: 'Email 2 - the give', description: 'Day 10 · attaches the report',
         cfg: {
           subject: 'A short analysis of {{company_name}}',
-          body: 'Hi {{first_name}},\n\nWe put together a short analysis of {{company_name}} from publicly available information — where the outbound motion could carry more without more headcount.\n\n{{report_url}}\n\nNo ask attached. If any of it is wrong, I would genuinely like to know.\n\n',
+          body: 'Hi {{first_name}},\n\nWe put together a short analysis of {{company_name}} from publicly available information - where the outbound motion could carry more without more headcount.\n\n{{report_url}}\n\nNo ask attached. If any of it is wrong, I would genuinely like to know.\n\n',
           delayDays: 1,
         },
       },
@@ -377,20 +377,20 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       // ── Day 14 · the trend touch ───────────────────────────────────────────
       // Written as a plain DM rather than a followup_sequence touch on purpose:
       // the follow-up macro always emits AFTER every outreach step, so a touch
-      // placed here would actually fire after the break-up email — the ordering,
+      // placed here would actually fire after the break-up email - the ordering,
       // not the touch_type, is why this stays a hand-written step. (Structured
-      // touch types on campaign follow-ups ARE honoured at launch now — see the
+      // touch types on campaign follow-ups ARE honoured at launch now - see the
       // followup_sequence expansion in CustomWorkflowBuilder.)
       {
         type: 'linkedin_message', title: 'Trend touch', description: 'Day 14 · industry, not product',
         cfg: {
-          message: 'Hi {{first_name}}, one pattern across {{industry}} this year: the teams holding conversion are the ones cutting sequence length, not adding channels. Thought of the analysis we sent — happy to talk through where {{company_name}} sits.',
+          message: 'Hi {{first_name}}, one pattern across {{industry}} this year: the teams holding conversion are the ones cutting sequence length, not adding channels. Thought of the analysis we sent - happy to talk through where {{company_name}} sits.',
           delayDays: 4,
         },
       },
       {
         type: 'condition', macroId: 'rt-trend-guard',
-        title: 'Router — fallback', description: '2 tries → Email',
+        title: 'Router - fallback', description: '2 tries → Email',
         cfg: {
           attempts: 2, fallback_channel: 'email',
           subject: 'One pattern worth a look',
@@ -429,7 +429,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 14, channels: 3 },
     accent: '#0A66C2',
     name: 'LinkedIn Accelerator',
-    tagline: 'Warm up, connect, message — while daily AI posts build your presence',
+    tagline: 'Warm up, connect, message - while daily AI posts build your presence',
     chain: ['LinkedIn Search', 'Profile visit', 'Connect', 'Wait: accepted', 'Message', 'AI Media', 'Daily auto-post'],
     source: {
       key: 'linkedin_search',
@@ -437,20 +437,20 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       cfg: { job_titles: '', industries: '', locations: '' },
     },
     inputs: [
-      { key: 'job_titles', question: 'Which **job titles** should I target? Comma-separate several — e.g. "VP Sales, Head of Revenue".' },
-      { key: 'industries', question: 'Which **industries**? (e.g. "SaaS, Fintech" — or say **skip**)', optional: true },
-      { key: 'locations', question: 'Which **location**? (e.g. "Dubai, United Arab Emirates" — or say **skip**)', optional: true },
+      { key: 'job_titles', question: 'Which **job titles** should I target? Comma-separate several - e.g. "VP Sales, Head of Revenue".' },
+      { key: 'industries', question: 'Which **industries**? (e.g. "SaaS, Fintech" - or say **skip**)', optional: true },
+      { key: 'locations', question: 'Which **location**? (e.g. "Dubai, United Arab Emirates" - or say **skip**)', optional: true },
     ],
     nodes: [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'First message after acceptance', cfg: { message: 'Hi {{first_name}}, thanks for connecting! I noticed you lead {{title}} at {{company_name}} — curious how you\'re approaching outbound this quarter?' } },
+      { type: 'linkedin_message', title: 'Message', description: 'First message after acceptance', cfg: { message: 'Hi {{first_name}}, thanks for connecting! I noticed you lead {{title}} at {{company_name}} - curious how you\'re approaching outbound this quarter?' } },
       { type: 'media_generation', macroId: MEDIA_STEP_ID, title: 'AI Media', description: 'Generate an image for your posts' },
       {
         type: 'linkedin_post', macroId: AUTOPOST_STEP_ID, title: 'LinkedIn auto-post', description: 'Daily · 09:00 · AI-written',
         cfg: {
-          content: 'Share one practical, non-salesy insight for leaders in the industry I target — what top performers do differently in outbound this year.',
+          content: 'Share one practical, non-salesy insight for leaders in the industry I target - what top performers do differently in outbound this year.',
           ai_generate: true, frequency: 'daily', days: [1, 2, 3, 4, 5], time: '09:00', post_as: 'personal',
         },
       },
@@ -496,7 +496,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     ],
     nodes: [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before the InMail' },
-      { type: 'linkedin_inmail', title: 'InMail (Premium)', description: 'Cold InMail to non-connections', cfg: { message: 'Hi {{first_name}}, I came across your profile — I work with {{title}}s on outbound and thought this was worth a short note. Open to a quick exchange?' } },
+      { type: 'linkedin_inmail', title: 'InMail (Premium)', description: 'Cold InMail to non-connections', cfg: { message: 'Hi {{first_name}}, I came across your profile - I work with {{title}}s on outbound and thought this was worth a short note. Open to a quick exchange?' } },
       { type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID, title: 'Follow-up sequence', description: '3 touches · LinkedIn', cfg: { channel: 'linkedin', touches: [{ hours: 48 }, { hours: 120 }, { hours: 240 }] } },
     ],
   },
@@ -522,7 +522,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Signal-aware first message', cfg: { message: 'Hi {{first_name}}, saw {{company_name}} is growing the team — usually a sign outbound is about to scale. Happy to share what\'s working for similar teams if useful.' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Signal-aware first message', cfg: { message: 'Hi {{first_name}}, saw {{company_name}} is growing the team - usually a sign outbound is about to scale. Happy to share what\'s working for similar teams if useful.' } },
     ],
   },
   {
@@ -535,7 +535,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     chain: ['Zoho daily', 'AI Agent', 'Connect', 'Wait: accepted', 'Message', 'Zoho write-back'],
     source: {
       key: 'zoho_recurring',
-      title: 'Zoho CRM — recurring', description: 'Import new contacts daily',
+      title: 'Zoho CRM (Recurring)', description: 'Import new contacts daily',
       cfg: { zoho_modules: 'contacts' },
     },
     inputs: [
@@ -545,7 +545,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'ai_parse', macroId: AI_STEP_ID, title: 'AI Agent', description: 'Clean & normalise lead data', cfg: { instruction: AI_DEFAULT_INSTRUCTION } },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'First message after acceptance', cfg: { message: 'Hi {{first_name}}, great to connect! We already have you in our network — wanted to reach out personally.' } },
+      { type: 'linkedin_message', title: 'Message', description: 'First message after acceptance', cfg: { message: 'Hi {{first_name}}, great to connect! We already have you in our network - wanted to reach out personally.' } },
       { type: 'zoho_update', macroId: ZOHO_UPDATE_STEP_ID, title: 'Update Zoho record', description: 'Write back to Contacts', cfg: { module: 'Contacts', map: {} } },
     ],
   },
@@ -578,7 +578,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Deal-flow opener', cfg: { message: 'Hi {{first_name}}, good to connect. I follow what {{company_name}} is building — always interested in how teams here are sourcing and evaluating deals right now. What\'s driving most of your pipeline lately?' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Deal-flow opener', cfg: { message: 'Hi {{first_name}}, good to connect. I follow what {{company_name}} is building - always interested in how teams here are sourcing and evaluating deals right now. What\'s driving most of your pipeline lately?' } },
       { type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID, title: 'Follow-up sequence', description: '3 touches · LinkedIn', cfg: { channel: 'linkedin', touches: [{ hours: 48 }, { hours: 120 }, { hours: 240 }] } },
     ],
   },
@@ -588,7 +588,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 16, channels: 2 },
     accent: '#6366F1',
     name: 'SaaS Pipeline Builder',
-    tagline: 'Revenue leaders at software companies — LinkedIn first, email as backup',
+    tagline: 'Revenue leaders at software companies - LinkedIn first, email as backup',
     chain: ['LinkedIn Search', 'Profile visit', 'Connect', 'Wait: accepted', 'Message', 'Enrich', 'Email'],
     source: {
       key: 'linkedin_search',
@@ -607,9 +607,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Revenue-team opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. Curious how the team at {{company_name}} is splitting effort between outbound and product-led right now — it\'s the trade-off I hear most from {{title}}s this year.' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Revenue-team opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. Curious how the team at {{company_name}} is splitting effort between outbound and product-led right now - it\'s the trade-off I hear most from {{title}}s this year.' } },
       { type: 'data_enrich', macroId: ENRICH_STEP_ID, title: 'Enrich contact', description: 'Official email', cfg: { enrich: ['official_email'] } },
-      { type: 'email_send', title: 'Email', description: 'Backup channel', cfg: { subject: 'Quick thought for {{company_name}}', body: 'Hi {{first_name}},\n\nWe connected on LinkedIn — following up here in case it is easier.\n\nHappy to share what is working for similar teams if useful.\n\nBest', delayDays: 3 } },
+      { type: 'email_send', title: 'Email', description: 'Backup channel', cfg: { subject: 'Quick thought for {{company_name}}', body: 'Hi {{first_name}},\n\nWe connected on LinkedIn - following up here in case it is easier.\n\nHappy to share what is working for similar teams if useful.\n\nBest', delayDays: 3 } },
     ],
   },
   {
@@ -637,7 +637,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Procurement opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I work with procurement teams in the {{company_name}} space — usually around lead times and supplier reliability on projects. Are those the pressures on your side too?' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Procurement opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I work with procurement teams in the {{company_name}} space - usually around lead times and supplier reliability on projects. Are those the pressures on your side too?' } },
       { type: 'data_enrich', macroId: ENRICH_STEP_ID, title: 'Enrich contact', description: 'Phone number', cfg: { enrich: ['phone'] } },
       { type: 'whatsapp_send', title: 'WhatsApp', description: 'Follow up on mobile', cfg: { message: 'Hi {{first_name}}, following up from LinkedIn about supply and lead times for your current projects. Happy to send details across if useful.', delayDays: 3 } },
     ],
@@ -667,7 +667,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Practice-focused opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I spend a lot of time with teams like {{company_name}} on patient flow and admin load — the two things that seem to eat clinical time everywhere. Is that the picture for you as well?' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Practice-focused opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I spend a lot of time with teams like {{company_name}} on patient flow and admin load - the two things that seem to eat clinical time everywhere. Is that the picture for you as well?' } },
       { type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID, title: 'Follow-up sequence', description: '2 touches · LinkedIn', cfg: { channel: 'linkedin', touches: [{ hours: 96 }, { hours: 240 }] } },
     ],
   },
@@ -677,7 +677,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 12, channels: 1 },
     accent: '#A855F7',
     name: 'Recruitment & Staffing',
-    tagline: 'Talent leaders via Premium InMail — no connection needed',
+    tagline: 'Talent leaders via Premium InMail - no connection needed',
     chain: ['LinkedIn Search', 'Profile visit', 'InMail', 'Follow-ups'],
     source: {
       key: 'linkedin_search',
@@ -694,7 +694,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     ],
     nodes: [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before the InMail' },
-      { type: 'linkedin_inmail', title: 'InMail (Premium)', description: 'Cold InMail to non-connections', cfg: { subject: 'Hiring capacity at {{company_name}}', message: 'Hi {{first_name}}, reaching out directly rather than adding to your connection queue. Most {{title}}s I speak with are balancing hiring speed against quality of shortlist — is that where the pressure sits for you this quarter?' } },
+      { type: 'linkedin_inmail', title: 'InMail (Premium)', description: 'Cold InMail to non-connections', cfg: { subject: 'Hiring capacity at {{company_name}}', message: 'Hi {{first_name}}, reaching out directly rather than adding to your connection queue. Most {{title}}s I speak with are balancing hiring speed against quality of shortlist - is that where the pressure sits for you this quarter?' } },
       { type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID, title: 'Follow-up sequence', description: '2 touches · LinkedIn', cfg: { channel: 'linkedin', touches: [{ hours: 72 }, { hours: 168 }] } },
     ],
   },
@@ -725,7 +725,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
       { type: 'linkedin_message', title: 'Message', description: 'Finance-led opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. Most {{title}}s I talk to are being asked to tighten reporting cycles without adding headcount. Curious whether that is landing on your desk at {{company_name}} too.' } },
       { type: 'data_enrich', macroId: ENRICH_STEP_ID, title: 'Enrich contact', description: 'Official email', cfg: { enrich: ['official_email'] } },
-      { type: 'email_send', title: 'Email', description: 'Second touch', cfg: { subject: 'Following up — {{company_name}}', body: 'Hi {{first_name}},\n\nWe connected on LinkedIn recently. Sending this here in case email suits you better.\n\nHappy to share how comparable finance teams are handling it.\n\nBest', delayDays: 4 } },
+      { type: 'email_send', title: 'Email', description: 'Second touch', cfg: { subject: 'Following up - {{company_name}}', body: 'Hi {{first_name}},\n\nWe connected on LinkedIn recently. Sending this here in case email suits you better.\n\nHappy to share how comparable finance teams are handling it.\n\nBest', delayDays: 4 } },
     ],
   },
   {
@@ -734,7 +734,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 14, channels: 2 },
     accent: '#EC4899',
     name: 'Agency New Business',
-    tagline: 'Marketing leaders — outreach plus daily posts that build credibility',
+    tagline: 'Marketing leaders - outreach plus daily posts that build credibility',
     chain: ['LinkedIn Search', 'Profile visit', 'Connect', 'Wait: accepted', 'Message', 'AI Media', 'Daily auto-post'],
     source: {
       key: 'linkedin_search',
@@ -753,12 +753,12 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
       { type: 'linkedin_connect', title: 'Connection request', description: 'AI-personalised note', cfg: { message: '' } },
       { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
-      { type: 'linkedin_message', title: 'Message', description: 'Brand-led opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I have been following what {{company_name}} is putting out. Always curious how {{title}}s are deciding where to spend attention this year — brand or performance?' } },
+      { type: 'linkedin_message', title: 'Message', description: 'Brand-led opener', cfg: { message: 'Hi {{first_name}}, thanks for connecting. I have been following what {{company_name}} is putting out. Always curious how {{title}}s are deciding where to spend attention this year - brand or performance?' } },
       { type: 'media_generation', macroId: MEDIA_STEP_ID, title: 'AI Media', description: 'Generate an image for your posts' },
       {
         type: 'linkedin_post', macroId: AUTOPOST_STEP_ID, title: 'LinkedIn auto-post', description: 'Daily · 09:00 · AI-written',
         cfg: {
-          content: 'Share one specific, useful marketing insight for the industry I target — something a CMO could act on this week, not a general platitude.',
+          content: 'Share one specific, useful marketing insight for the industry I target - something a CMO could act on this week, not a general platitude.',
           ai_generate: true, frequency: 'daily', days: [1, 2, 3, 4, 5], time: '09:00', post_as: 'personal',
         },
       },
@@ -809,7 +809,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     meta: { cycleDays: 30, channels: 1 },
     accent: '#7C3AED',
     name: 'AI Search Authority',
-    tagline: 'Get cited by ChatGPT and Google AI — structured posts, three times a week, from your own profile',
+    tagline: 'Get cited by ChatGPT and Google AI - structured posts, three times a week, from your own profile',
     chain: ['AI writes a listicle', 'You approve it', 'Posts Mon / Wed / Fri'],
     // No source: this pipeline publishes, it does not enrol anyone.
     inputs: [],
@@ -842,11 +842,117 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       },
     ],
   },
+  {
+    key: 'job_search',
+    category: 'industry',
+    badge: { label: 'New', tone: 'blue' },
+    meta: { cycleDays: 14, channels: 3 },
+    accent: '#B45309',
+    name: 'Job Search Accelerator',
+    tagline: 'Find the companies hiring for your role, then reach the person who actually decides',
+    chain: [
+      'Signal Search (jobs)', 'Enrich', 'Fit brief', 'Profile visit', 'Connect',
+      'Wait: accepted', 'Message', 'Apply (human)', 'Email + brief', 'Follow-ups', 'Auto-post',
+    ],
+    // The inversion this pipeline is built on: a job listing has no author, so
+    // JobSignalService turns each listing into the hiring COMPANY and then runs a
+    // second search for the decision-makers there. Those people are the leads —
+    // the posting itself is the signal, never the destination.
+    //
+    // decision_maker_titles is load-bearing here in a way it is not on the posts
+    // path: with no titles configured the jobs path has no author to fall back
+    // on, enrols nobody, and only logs `no_decision_maker_titles`. Hence the
+    // defaults below — a copy of this template must never start empty.
+    source: {
+      key: 'linkedin_signal',
+      title: 'LinkedIn Signal Search', description: 'Open roles · hiring companies',
+      cfg: {
+        signal_query: 'companies hiring for senior backend engineers in Dubai',
+        decision_maker_titles: 'Hiring Manager, Engineering Manager, Head of Engineering, VP Engineering, Talent Acquisition',
+      },
+    },
+    inputs: [
+      { key: 'signal_query', question: 'Which **role** are you targeting, and **where**? e.g. "companies hiring senior backend engineers in Dubai".' },
+      { key: 'decision_maker_titles', question: 'Which **titles** should I reach at those companies? (or say **skip** to keep hiring managers, engineering leads and talent acquisition)', optional: true },
+    ],
+    nodes: [
+      // Reaching a hiring manager by email later depends on having one now.
+      { type: 'data_enrich', macroId: ENRICH_STEP_ID, title: 'Enrich contact', description: 'Official email', cfg: { enrich: ['official_email'] } },
+
+      // The case for you at THIS company, written from the open role and the
+      // company context the signal already carried. Held for approval: it goes
+      // out under the candidate's own name, so nothing sends unread.
+      {
+        type: 'lead_report', macroId: REPORT_STEP_ID,
+        title: 'Fit brief', description: 'Per lead · PDF · you approve',
+        cfg: {
+          scope: 'lead',
+          report_type: 'company_fit',
+          context: 'Make the case for this candidate at this specific company, grounded in the open role and what the company is building. No generic strengths.',
+          email_now: false,
+          require_approval: true, approval_channel: 'email', approval_to: '',
+        },
+      },
+
+      // Visit first, connect a couple of days later: the profile view lands in
+      // "who viewed your profile" and the request stops being cold.
+      { type: 'linkedin_visit', title: 'Profile visit', description: 'Warm up before connecting' },
+      { type: 'linkedin_connect', title: 'Connection request', description: 'Grounded in the open role', cfg: { message: '', delayDays: 2 } },
+      { type: 'condition', title: 'Wait for condition', description: 'Connection accepted', cfg: { condition: 'connection_accepted' } },
+      {
+        type: 'linkedin_message', title: 'Message', description: 'Specific, not a pitch',
+        cfg: { message: 'Hi {{first_name}}, thanks for connecting. I saw {{company_name}} is hiring on your team — I have been working on exactly that problem and would be glad to share how I would approach it, whether or not it goes anywhere formal.' },
+      },
+
+      // Applications are submitted by a person, always. LinkedIn's terms put
+      // automated Easy Apply squarely off-limits, and a candidate's account is
+      // the one asset this pipeline cannot risk. Mr LAD assembles the package;
+      // the candidate reads it and presses send.
+      {
+        type: 'human_task', macroId: HUMAN_TASK_STEP_ID,
+        title: 'Submit the application', description: 'Human · pauses the lead',
+        cfg: {
+          title: 'Apply to the open role',
+          instructions: 'The job link, company and matched title are on this lead from the hiring signal. Tailor the resume to the role, answer the screening questions, submit, and confirm here so the email follow-up goes out.',
+          assignee_channel: 'email', assignee_to: '',
+        },
+      },
+
+      // Sent alongside the application so nothing depends on the ATS alone.
+      // attach_report puts the approved fit brief on the email; the resume is
+      // the candidate's own file and is attached in the step's media config,
+      // which is deliberately per-tenant and never travels with a shared copy.
+      {
+        type: 'email_send', title: 'Email the hiring manager', description: 'Fit brief attached',
+        cfg: {
+          subject: 'Applied for the {{title}} role at {{company_name}}',
+          body: 'Hi {{first_name}},\n\nI have just applied for the open role on your team. Rather than leave it in the queue, I have attached a short brief on where I think I would be useful at {{company_name}}.\n\nHappy to talk it through if it is worth a conversation.\n\nBest',
+          attach_report: true,
+          delayDays: 1,
+        },
+      },
+      {
+        type: 'followup_sequence', macroId: FOLLOWUP_STEP_ID,
+        title: 'Follow-up sequence', description: '2 touches · Email · stops on reply',
+        cfg: { channel: 'email', touches: [{ hours: 96 }, { hours: 240 }] },
+      },
+
+      // Runs once for the campaign, not per lead — the candidate has one feed.
+      // Credibility for when the decision-maker looks them up, which they will.
+      {
+        type: 'linkedin_post', macroId: AUTOPOST_STEP_ID, title: 'LinkedIn auto-post', description: '2x weekly · 09:00 · you approve',
+        cfg: {
+          content: 'Share one concrete thing I have learned doing the work I am targeting — a decision, a tradeoff, or a mistake worth avoiding. Not career advice, not looking-for-work posts.',
+          ai_generate: true, frequency: 'weekly', days: [2, 4], time: '09:00', post_as: 'personal',
+        },
+      },
+    ],
+  },
 ];
 
 // ── Wizard input derivation ────────────────────────────────────────────────
 // A template's declared `inputs` only cover targeting. The copy that actually
-// goes out — InMail subject/message and each follow-up touch — lives on the
+// goes out - InMail subject/message and each follow-up touch - lives on the
 // nodes, so the chat wizard derives a question per piece of copy rather than
 // every template repeating them. All derived questions are optional: skipping
 // one keeps the template's own suggestion (or leaves it blank for Mr LAD to
@@ -876,12 +982,12 @@ export function templateWizardInputs(t: WorkflowTemplate): TemplateInput[] {
       derived.push({
         key: `${nodeKey}__subject`, label: 'InMail subject', target: 'node', nodeKey, cfgPath: 'subject', optional: true,
         suggestion: n.cfg?.subject || '',
-        question: 'What **subject line** should the InMail use? (or say **skip** — LinkedIn allows a blank subject)',
+        question: 'What **subject line** should the InMail use? (or say **skip** - LinkedIn allows a blank subject)',
       });
       derived.push({
         key: `${nodeKey}__message`, label: 'InMail message', target: 'node', nodeKey, cfgPath: 'message', optional: true, multiline: true,
         suggestion: n.cfg?.message || '',
-        question: 'What should the **InMail message** say? You can use {{first_name}}, {{title}} and {{company_name}} — or say **skip** to keep the suggested copy.',
+        question: 'What should the **InMail message** say? You can use {{first_name}}, {{title}} and {{company_name}} - or say **skip** to keep the suggested copy.',
       });
     }
     if (n.type === 'followup_sequence') {
@@ -898,7 +1004,7 @@ export function templateWizardInputs(t: WorkflowTemplate): TemplateInput[] {
   if (!derived.length) return [...t.inputs];
   const gate: TemplateInput = {
     key: COPY_GATE_KEY, target: 'gate', optional: true, label: 'Message copy',
-    question: `Want to write the **${derived.length} message${derived.length === 1 ? '' : 's'}** this Accelerator sends? Say **yes** to go through them one by one — or **skip** to use the suggested copy, which Mr LAD adapts per lead.`,
+    question: `Want to write the **${derived.length} message${derived.length === 1 ? '' : 's'}** this Accelerator sends? Say **yes** to go through them one by one - or **skip** to use the suggested copy, which Mr LAD adapts per lead.`,
   };
   return [...t.inputs, gate, ...derived];
 }
@@ -907,7 +1013,7 @@ export function templateWizardInputs(t: WorkflowTemplate): TemplateInput[] {
  * Turn a template into the canvas steps plus their seeded config.
  *
  * Shared so the builder's gallery and the chat wizard's right-hand preview
- * expand a template identically — two implementations would drift, and the
+ * expand a template identically - two implementations would drift, and the
  * difference would only show as a preview that does not match what launches.
  *
  * Node ids are load-bearing: a macro keeps its fixed id so the builder's
@@ -978,7 +1084,7 @@ function setCfgPath(obj: any, path: string, value: any): void {
  * Split collected wizard answers into the two overrides the builder takes.
  *
  * `nodeCfg` values are COMPLETE cfg objects (the node's own cfg deep-cloned,
- * then patched) so the builder can shallow-merge them — patching `touches.0`
+ * then patched) so the builder can shallow-merge them - patching `touches.0`
  * into a shallow merge would otherwise drop the remaining touches.
  */
 export function splitWizardAnswers(
@@ -1004,7 +1110,7 @@ export function splitWizardAnswers(
 }
 
 /**
- * The LinkedIn search string a template's targeting describes — used to preview
+ * The LinkedIn search string a template's targeting describes - used to preview
  * the audience in the leads panel before the Accelerator is launched. Returns null for
  * sources that aren't a searchable query (file import, CRM pulls).
  */
@@ -1017,7 +1123,7 @@ export function templateSearchQuery(t: WorkflowTemplate, sourceCfg: Record<strin
     const titles = (cfg.decision_maker_titles || '').trim();
     const signal = (cfg.signal_query || '').trim();
     if (!signal && !titles) return null;
-    return [titles && `${titles} at companies`, signal].filter(Boolean).join(' — ');
+    return [titles && `${titles} at companies`, signal].filter(Boolean).join(' - ');
   }
   if (t.source.key !== 'linkedin_search') return null;
   const titles = (cfg.job_titles || '').trim();

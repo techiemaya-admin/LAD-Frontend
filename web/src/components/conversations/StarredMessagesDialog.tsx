@@ -27,7 +27,7 @@ interface StarredMessagesDialogProps {
 }
 
 /**
- * Global "Starred messages" viewer — lists starred messages across ALL
+ * Global "Starred messages" viewer - lists starred messages across ALL
  * conversations for the tenant (personal WhatsApp). Opened from the sidebar
  * kebab menu. Clicking a row jumps to that conversation; the star button unstars.
  */
@@ -76,7 +76,7 @@ export function StarredMessagesDialog({
           { method: 'PATCH', headers: { 'Content-Type': 'application/json' } }
         );
       } catch {
-        /* best-effort — already removed from the view */
+        /* best-effort - already removed from the view */
       }
     },
     [channel]

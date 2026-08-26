@@ -130,7 +130,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
   const [editorMode, setEditorMode]   = useState<EditorMode | null>(
     initialTemplate?.content_format === 'html' ? 'html' : null
   );
-  // Track which editors have ever been opened — once mounted they stay in DOM
+  // Track which editors have ever been opened - once mounted they stay in DOM
   // so internal state (e.g. DragDropEmailEditor blocks) is preserved across switches.
   const [mountedEditors, setMountedEditors] = useState<Set<EditorMode>>(
     () => new Set(initialTemplate?.content_format === 'html' ? (['html'] as EditorMode[]) : [])
@@ -298,7 +298,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
       const url    = mode === 'create' ? '/api/campaigns/email-templates' : `/api/campaigns/email-templates/${template.id}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
 
-      // Preserve rich HTML whenever it exists — do NOT null body_html just
+      // Preserve rich HTML whenever it exists - do NOT null body_html just
       // because the "Simple editor" tab happens to be active at save time.
       // Nulling it here silently destroyed the whole designed template
       // (header banner, uploaded images, signature), which is why images kept
@@ -385,7 +385,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
       if (data.success && (data.sent ?? 0) > 0) {
         setTestResult({ ok: true, message: `Test email sent to ${addr}` });
       } else {
-        const errMsg = data.errors?.[0]?.error || data.error || data.detail || 'Send failed — check your email account is connected in Settings → Integrations.';
+        const errMsg = data.errors?.[0]?.error || data.error || data.detail || 'Send failed - check your email account is connected in Settings → Integrations.';
         setTestResult({ ok: false, message: errMsg });
       }
     } catch (e) {
@@ -615,7 +615,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                   /* ── Editors: mount-once, toggle visibility to preserve state ── */
                   <div className="min-h-0">
 
-                    {/* Drag & Drop — stays mounted after first open */}
+                    {/* Drag & Drop - stays mounted after first open */}
                     {mountedEditors.has('dragdrop') && (
                       <div className={editorMode === 'dragdrop' ? '' : 'hidden'}>
                         <DragDropEmailEditor
@@ -626,7 +626,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                       </div>
                     )}
 
-                    {/* HTML custom code — stays mounted after first open */}
+                    {/* HTML custom code - stays mounted after first open */}
                     {mountedEditors.has('html') && (
                       <div className={editorMode === 'html' ? '' : 'hidden'}>
                         <HtmlEmailEditor
@@ -637,7 +637,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                       </div>
                     )}
 
-                    {/* Simple plain-text editor — stays mounted after first open */}
+                    {/* Simple plain-text editor - stays mounted after first open */}
                     {mountedEditors.has('simple') && (
                       <div className={editorMode === 'simple' ? 'space-y-4' : 'hidden'}>
                         {/* Personalisation toolbar */}
@@ -690,7 +690,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
               )}
             </div>
 
-            {/* Right: Settings panel — 50% */}
+            {/* Right: Settings panel - 50% */}
             <aside className={`w-full sm:w-1/2 flex-1 sm:flex-none bg-white dark:bg-[#000724] overflow-y-auto flex flex-col border-t sm:border-t-0 border-gray-150 dark:border-[#262831] ${mobileSubTab !== 'content' ? 'flex' : 'hidden sm:flex'}`}>
               <div className="p-6 space-y-5 flex-1 w-full">
               {/* Details subtab fields */}
@@ -707,7 +707,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                     placeholder="e.g. Quick question about {{company}}" className={inputCls} />
                   {template.subject.length > 0 && (
                     <p className={`text-[11px] ${template.subject.length > 50 ? 'text-amber-500 dark:text-amber-400' : 'text-gray-400 dark:text-[#7a8ba3]'}`}>
-                      {template.subject.length}/50 chars — {template.subject.length <= 50 ? 'good length ✓' : 'consider shortening'}
+                      {template.subject.length}/50 chars - {template.subject.length <= 50 ? 'good length ✓' : 'consider shortening'}
                     </p>
                   )}
                 </div>
@@ -793,7 +793,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                     </button>
                   </div>
 
-                  {/* Hidden file input — allows any doc type */}
+                  {/* Hidden file input - allows any doc type */}
                   <input
                     ref={attachmentInputRef}
                     type="file"

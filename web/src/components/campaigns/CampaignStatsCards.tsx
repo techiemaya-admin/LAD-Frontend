@@ -115,7 +115,7 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
 
   return (
     <div className="flex gap-4 mb-6 flex-wrap items-stretch">
-      {/* Total Campaigns — click to go to campaigns list */}
+      {/* Total Campaigns - click to go to campaigns list */}
       <div
         className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
         onClick={() => router.push('/campaigns')}
@@ -170,7 +170,7 @@ export default function CampaignStatsCards({ stats, loading = false }: CampaignS
         onClick={() => router.push('/campaigns?status=running')}
       />
 
-      {/* LinkedIn Connections card — shows network size + daily accepted trend */}
+      {/* LinkedIn Connections card - shows network size + daily accepted trend */}
       {(() => {
         const networkSize = stats.linkedin_network_size ?? null;
         const today = stats.connections_today ?? 0;

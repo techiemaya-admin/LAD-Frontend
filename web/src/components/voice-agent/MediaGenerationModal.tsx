@@ -15,7 +15,7 @@ interface MediaGenerationModalProps {
   /**
    * Raise the studio above a host overlay. The dialog portals to <body>, so a
    * caller rendered inside a high-z-index container (the Custom Workflow
-   * Builder sits at z-index 10000) would otherwise open it *behind* itself —
+   * Builder sits at z-index 10000) would otherwise open it *behind* itself  - 
    * invisible, and dismissed by the next stray click.
    */
   className?: string;

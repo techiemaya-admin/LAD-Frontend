@@ -1,9 +1,9 @@
 /**
- * Strategies — saved + shareable workflow playbooks.
+ * Strategies - saved + shareable workflow playbooks.
  *
  * A Strategy is a persisted `WorkflowTemplate`: the serialized state of the
  * CustomWorkflowBuilder (source + nodes + per-node configs). Storing the
- * builder's own shape — rather than the campaign payload `launch()` emits —
+ * builder's own shape - rather than the campaign payload `launch()` emits  - 
  * is what lets a saved strategy flow back through the existing
  * `applyTemplate()` path with no second apply implementation.
  *
@@ -30,7 +30,7 @@ export interface StrategyDefinition {
     cfg?: Record<string, any>;
   };
   nodes: StrategyNode[];
-  /** Set when the playbook's source is a file import — the importer supplies their own file. */
+  /** Set when the playbook's source is a file import - the importer supplies their own file. */
   requiresFile?: boolean;
   meta?: {
     cycleDays?: number;
@@ -68,7 +68,7 @@ export interface Strategy {
 
 /**
  * A strategy published by another tenant. Deliberately narrower than
- * `Strategy` — the API never returns the author's private definition,
+ * `Strategy` - the API never returns the author's private definition,
  * tenant, or reviewer for a shared row.
  */
 export interface SharedStrategy {
@@ -97,7 +97,7 @@ export interface StrategyWarning {
   reason: string;
 }
 
-/** Dry run of publish — what would leave the account, and what wouldn't. */
+/** Dry run of publish - what would leave the account, and what wouldn't. */
 export interface PublishPreview {
   shared_definition: StrategyDefinition;
   removed: StrategyRemoval[];

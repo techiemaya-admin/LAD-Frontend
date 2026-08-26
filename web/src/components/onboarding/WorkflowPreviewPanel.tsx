@@ -99,7 +99,7 @@ function FlowInner({
     return () => window.removeEventListener('openStepEditor', handle as EventListener);
   }, [workflowPreview]);
 
-  // Node input/output "+" (CustomWorkflowNode dispatches 'addWorkflowStepAt') —
+  // Node input/output "+" (CustomWorkflowNode dispatches 'addWorkflowStepAt')  - 
   // same catalog as the bottom "Add Step" bar, but dropped into the clicked slot.
   const insertWorkflowStep = useOnboardingStore((s) => s.insertWorkflowStep);
   const [insertAt, setInsertAt] = useState<{ anchorId: string; position: 'before' | 'after'; x: number; y: number } | null>(null);

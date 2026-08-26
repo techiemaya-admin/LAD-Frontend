@@ -1,5 +1,5 @@
 'use client';
-// Warm Path panel — privacy-preserving. The requester never sees who the matched
+// Warm Path panel - privacy-preserving. The requester never sees who the matched
 // members are: the graph shows the *number* of members who can introduce them and
 // the *route type* (strong / mutual / customer reference / shared employer) only.
 // Requesting a warm intro spends one bounty credit and broadcasts an anonymous
@@ -36,7 +36,7 @@ interface MatchDef {
   darkColor?: string; // dark-mode override token for node legibility on the deep navy canvas
   big?: boolean;
   confidence?: number;
-  /** Real identity — only surfaced to the UI once this member accepts. */
+  /** Real identity - only surfaced to the UI once this member accepts. */
   reveal?: { name: string; sub: string };
 }
 
@@ -71,7 +71,7 @@ const EMPLOYER_COLOR = '#0369a1';
 
 function bucketLabel(n: number): string {
   if (n <= 0) return '0';
-  if (n <= 2) return '1–2';
+  if (n <= 2) return '1-2';
   return '3+';
 }
 
@@ -79,7 +79,7 @@ export default function WarmPathPanel({
   wp, prospect, open, onToggle, bucketed = true, initialCredits = 5,
 }: WarmPathPanelProps) {
   // Anonymised match nodes derived from wp. We deliberately DO NOT pass names,
-  // headlines, titles or company through to the rendered graph — only route type
+  // headlines, titles or company through to the rendered graph - only route type
   // and confidence. The real identity is stashed in `reveal` and shown only after
   // that member accepts.
   const matchDefs = useMemo<MatchDef[]>(() => {
@@ -125,7 +125,7 @@ export default function WarmPathPanel({
   const [kidsExpanded, setKidsExpanded] = useState(true);
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  // Request lifecycle (local prototype state — see file header for live wiring).
+  // Request lifecycle (local prototype state - see file header for live wiring).
   const [phase, setPhase] = useState<Phase>('idle');
   const [credits, setCredits] = useState(initialCredits);
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
@@ -150,7 +150,7 @@ export default function WarmPathPanel({
   const withdraw = () => {
     if (phase !== 'requested') return;
     // Demo refunds the credit. Per the CRN rules a bounty is only refundable
-    // *before* broadcast; once broadcast the credit is consumed — enforce
+    // *before* broadcast; once broadcast the credit is consumed - enforce
     // server-side when wired.
     setCredits((c) => c + 1);
     setPhase('idle');
@@ -451,7 +451,7 @@ export default function WarmPathPanel({
                 >
                   <Undo2 className="w-3.5 h-3.5" /> Withdraw
                 </button>
-                {/* demo affordance — remove once live */}
+                {/* demo affordance - remove once live */}
                 <button
                   onClick={simulateAccept}
                   className="inline-flex items-center gap-1 h-9 px-3 rounded-[11px] text-[12.5px] font-medium text-slate-500 dark:text-[#7a8ba3] ring-1 ring-dashed ring-slate-300 dark:ring-[#324061] hover:bg-slate-50 dark:hover:bg-[#111a30]"
@@ -466,7 +466,7 @@ export default function WarmPathPanel({
               <div className="flex items-start gap-2 text-[12.5px] text-[#172560] dark:text-[#c9d4ee] bg-emerald-50 dark:bg-[#0d2a1e] ring-1 ring-emerald-200 dark:ring-[#1e4634] rounded-[11px] px-3 py-2 flex-1 min-w-[260px]">
                 <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" style={{ color: T.success }} />
                 <span>
-                  <b>1 member accepted.</b> They can now introduce you to {firstName} — the intro is drafted by
+                  <b>1 member accepted.</b> They can now introduce you to {firstName} - the intro is drafted by
                   their agent. {matchCount - 1} {matchCount - 1 === 1 ? 'request' : 'requests'} still pending.
                 </span>
               </div>

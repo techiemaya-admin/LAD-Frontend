@@ -174,7 +174,7 @@ export function useLinkedInSearch() {
    * Extra fields passed through:
    *   module_used, module_label, subtype, confidence_score, needs_refinement, stats
    *
-   * Body accepted: same shape as `search()` — query, count, targeting, filters, etc.
+   * Body accepted: same shape as `search()` - query, count, targeting, filters, etc.
    * Returns: normalised response (same shape as `search()`) or null on failure.
    */
   const searchUnified = useCallback(
@@ -193,14 +193,14 @@ export function useLinkedInSearch() {
           ...(body.targeting_filters  ? { targeting_filters:  body.targeting_filters  } : {}),
           // ICP description for lead qualification scoring
           ...(body.icp_description    ? { icp_description:    body.icp_description    } : {}),
-          // Minimum ICP score to return. 0 = return all scored leads (0–100) so
+          // Minimum ICP score to return. 0 = return all scored leads (0-100) so
           // the caller can present the full range for checkbox selection. Checked
           // with `!== undefined` because 0 is a valid, intentional value.
           ...(body.icp_min_score !== undefined ? { icp_min_score: body.icp_min_score } : {}),
           // Return leads as soon as the LinkedIn search lands, without waiting for
           // ICP scoring (~25s of Gemini calls). The caller renders them immediately
           // and fills scores in via scoreIcp(). Backend only honours this when
-          // icp_min_score is 0 — it can't skip scoring it needs in order to filter.
+          // icp_min_score is 0 - it can't skip scoring it needs in order to filter.
           ...(body.defer_icp          ? { defer_icp:          true                   } : {}),
           // Sales Navigator flag
           ...(body.useSalesNav        ? { useSalesNav:        body.useSalesNav        } : {}),
@@ -240,7 +240,7 @@ export function useLinkedInSearch() {
           // Intent fields (same structure in both endpoints)
           intent: data.intent || null,
 
-          // Unified-only metadata — available to page.tsx if it wants to display them
+          // Unified-only metadata - available to page.tsx if it wants to display them
           module_used:      data.module_used      || 'advanced_search',
           module_label:     data.module_label     || 'Multi-Filter Lead Search',
           subtype:          data.subtype          || null,
@@ -258,7 +258,7 @@ export function useLinkedInSearch() {
           excluded_already_contacted: data.excluded_already_contacted ?? 0,
 
           // True when 0 results is caused by a provider rate-limit (HTTP 429),
-          // not an empty match set — lets the UI say "temporarily throttled, retry
+          // not an empty match set - lets the UI say "temporarily throttled, retry
           // shortly" instead of a bare empty state / "broaden your filters".
           rate_limited: data.rate_limited ?? false,
 
@@ -311,7 +311,7 @@ export function useLinkedInSearch() {
    *
    * Pairs with `defer_icp` on searchUnified(): the search returns leads without
    * waiting on ~25s of Gemini qualification, the UI paints them, then this fills
-   * the scores in. Stateless by design — the leads go back up in the request
+   * the scores in. Stateless by design - the leads go back up in the request
    * rather than the caller polling a job id, because the backend runs at
    * maxScale 10 and a poll can land on an instance that never saw the job.
    *
@@ -377,8 +377,8 @@ export function useLinkedInSearch() {
     ...state,
     // Actions
     extractIntent,
-    search,           // ← BACKUP: /search/advanced — use for pagination ("Get More")
-    searchUnified,    // ← PRIMARY: /search/unified — 6-module router for fresh searches
+    search,           // ← BACKUP: /search/advanced - use for pagination ("Get More")
+    searchUnified,    // ← PRIMARY: /search/unified - 6-module router for fresh searches
     inferNationality,
     scoreIcp,         // ← deferred ICP scoring for searchUnified({ defer_icp: true })
     reset,

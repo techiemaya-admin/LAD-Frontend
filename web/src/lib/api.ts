@@ -146,7 +146,7 @@ export async function proxyPost<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
-/** GET via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** GET via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyGet<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -162,7 +162,7 @@ export async function proxyGet<T>(path: string, options?: { signal?: AbortSignal
   return res.json();
 }
 
-/** PATCH via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** PATCH via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyPatch<T>(path: string, body: any): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -177,7 +177,7 @@ export async function proxyPatch<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
-/** PUT via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** PUT via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyPut<T>(path: string, body: any): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {
@@ -192,7 +192,7 @@ export async function proxyPut<T>(path: string, body: any): Promise<T> {
   return res.json();
 }
 
-/** DELETE via Next.js API proxy — relative URL, no BACKEND_URL base. */
+/** DELETE via Next.js API proxy - relative URL, no BACKEND_URL base. */
 export async function proxyDelete<T>(path: string): Promise<T> {
   const p = path.startsWith('/') ? path : `/${path}`;
   const res = await loadingFetch(p, {

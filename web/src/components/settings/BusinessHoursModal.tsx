@@ -47,7 +47,7 @@ const CustomTimePicker = ({ value, onChange }: { value: string; onChange: (v: st
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-[#132035] border border-gray-100 dark:border-slate-700/60 rounded-xl shadow-xl py-1">
+        <div className="absolute z-50 top-full left-0 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-[#081331] border border-gray-100 dark:border-slate-700/60 rounded-xl shadow-xl py-1 custom-scrollbar">
           {options.map(o => {
             const isSelected = value === o.val || (value === '23:59' && o.val === '23:30');
             return (
@@ -57,7 +57,70 @@ const CustomTimePicker = ({ value, onChange }: { value: string; onChange: (v: st
                 className={`px-3.5 py-2 text-sm cursor-pointer transition-colors ${
                   isSelected 
                   ? 'bg-[#0B1957] dark:bg-[#2B7CFF] text-white font-medium' 
-                  : 'text-gray-700 dark:text-slate-300 hover:bg-[#0B1957]/10 dark:hover:bg-[#2B7CFF]/15 dark:hover:text-[#2B7CFF]'}`}
+                  : 'text-gray-700 dark:text-slate-300 hover:bg-[#0B1957] hover:text-white dark:hover:bg-[#2B7CFF] dark:hover:text-white'}`}
+              >
+                {o.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CustomTimezoneSelect = ({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string; short: string }[];
+}) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const selectedOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div className="relative" ref={ref}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full bg-gray-50 dark:bg-slate-800/60 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 dark:text-slate-100 cursor-pointer transition-all flex items-center justify-between ${
+          isOpen
+            ? 'border-[#0B1957] dark:border-[#2B7CFF] ring-2 ring-[#0B1957]/10 dark:ring-[#2B7CFF]/20'
+            : 'border-gray-200 dark:border-slate-700/60 hover:border-[#0B1957]/50 dark:hover:border-[#2B7CFF]/60'
+        }`}
+      >
+        <span className="truncate pr-2">{selectedOption?.label}</span>
+        <span className={`text-gray-400 dark:text-slate-400 text-xs flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-[#081331] border border-gray-100 dark:border-slate-700/60 rounded-xl shadow-xl py-1 custom-scrollbar">
+          {options.map(o => {
+            const isSelected = value === o.value;
+            return (
+              <div
+                key={o.value}
+                onClick={() => {
+                  onChange(o.value);
+                  setIsOpen(false);
+                }}
+                className={`px-3.5 py-2.5 text-sm cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'bg-[#0B1957] dark:bg-[#2B7CFF] text-white font-medium'
+                    : 'text-gray-700 dark:text-slate-300 hover:bg-[#0B1957] hover:text-white dark:hover:bg-[#2B7CFF] dark:hover:text-white'
+                }`}
               >
                 {o.label}
               </div>
@@ -76,7 +139,7 @@ interface BusinessHoursModalProps {
   /** Receives structured payload AND formatted summary string */
   onSave: (payload: BusinessHoursPayload, summary: string) => void;
   onClose: () => void;
-  /** Mutation in flight — disables the button so a slow save can't be double-fired. */
+  /** Mutation in flight - disables the button so a slow save can't be double-fired. */
   saving?: boolean;
   /** Set by the caller's onError. Previously there was nowhere for this to go:
    *  a failed save left the modal open with no indication anything went wrong. */
@@ -90,15 +153,15 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
   const [activeDays, setActiveDays] = useState<number[]>(initialData?.activeDays ?? [0, 1, 2, 3, 4]);
 
   const timezoneOptions = [
-    { value: 'UTC+0', label: 'UTC — Coordinated Universal Time (UTC+0)', short: 'UTC(UTC+0)' },
-    { value: 'GMT+0', label: 'GMT — Greenwich Mean Time (UTC+0)', short: 'GMT(UTC+0)' },
-    { value: 'GST+4', label: 'GST — Gulf Standard Time (UTC+4)', short: 'GST(UTC+4)' },
-    { value: 'IST+5:30', label: 'IST — India Standard Time (UTC+5:30)', short: 'IST(UTC+5:30)' },
-    { value: 'EST-5', label: 'EST — Eastern Standard Time (UTC−5)', short: 'EST(UTC-5)' },
-    { value: 'PST-8', label: 'PST — Pacific Standard Time (UTC−8)', short: 'PST(UTC-8)' },
-    { value: 'CET+1', label: 'CET — Central European Time (UTC+1)', short: 'CET(UTC+1)' },
-    { value: 'JST+9', label: 'JST — Japan Standard Time (UTC+9)', short: 'JST(UTC+9)' },
-    { value: 'AEST+10', label: 'AEST — Australian Eastern Time (UTC+10)', short: 'AEST(UTC+10)' },
+    { value: 'UTC+0', label: 'UTC - Coordinated Universal Time (UTC+0)', short: 'UTC(UTC+0)' },
+    { value: 'GMT+0', label: 'GMT - Greenwich Mean Time (UTC+0)', short: 'GMT(UTC+0)' },
+    { value: 'GST+4', label: 'GST - Gulf Standard Time (UTC+4)', short: 'GST(UTC+4)' },
+    { value: 'IST+5:30', label: 'IST - India Standard Time (UTC+5:30)', short: 'IST(UTC+5:30)' },
+    { value: 'EST-5', label: 'EST - Eastern Standard Time (UTC−5)', short: 'EST(UTC-5)' },
+    { value: 'PST-8', label: 'PST - Pacific Standard Time (UTC−8)', short: 'PST(UTC-8)' },
+    { value: 'CET+1', label: 'CET - Central European Time (UTC+1)', short: 'CET(UTC+1)' },
+    { value: 'JST+9', label: 'JST - Japan Standard Time (UTC+9)', short: 'JST(UTC+9)' },
+    { value: 'AEST+10', label: 'AEST - Australian Eastern Time (UTC+10)', short: 'AEST(UTC+10)' },
   ];
 
   const toggleDay = (i: number) => {
@@ -128,8 +191,8 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
     const sorted = [...activeDays].sort((a, b) => a - b);
     if (!sorted.length) return 'No days selected';
     if (sorted.length === 7) return 'All 7 days selected';
-    if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) return 'Mon – Fri selected';
-    if (JSON.stringify(sorted) === JSON.stringify([5, 6])) return 'Sat – Sun selected';
+    if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) return 'Mon-Fri selected';
+    if (JSON.stringify(sorted) === JSON.stringify([5, 6])) return 'Sat-Sun selected';
     return sorted.map(i => DAYS[i]).join(', ') + ' selected';
   };
 
@@ -146,10 +209,10 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
     const sorted = [...activeDays].sort((a, b) => a - b);
     let dayStr = 'No days';
     if (sorted.length === 7) dayStr = 'All Days';
-    else if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) dayStr = 'Mon–Fri';
-    else if (JSON.stringify(sorted) === JSON.stringify([5, 6])) dayStr = 'Sat–Sun';
+    else if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) dayStr = 'Mon-Fri';
+    else if (JSON.stringify(sorted) === JSON.stringify([5, 6])) dayStr = 'Sat-Sun';
     else dayStr = sorted.map(i => DAYS[i]).join(', ');
-    return `${fmt12(startTime)} – ${fmt12(endTime)} · ${dayStr} · ${tzText}`;
+    return `${fmt12(startTime)} - ${fmt12(endTime)} · ${dayStr} · ${tzText}`;
   };
 
   const PRESET_LABELS: Record<string, string> = {
@@ -162,38 +225,37 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[560px] max-h-[calc(100dvh-5rem)] sm:max-h-[85dvh] flex flex-col bg-white dark:bg-[#132035] border border-transparent dark:border-[#2B7CFF]/20 rounded-2xl shadow-2xl overflow-hidden font-sans"
+        className="relative w-full max-w-[560px] max-h-[calc(100dvh-5rem)] sm:max-h-[85dvh] flex flex-col bg-white dark:bg-[#000724] border border-transparent dark:border-blue-950/40 rounded-2xl shadow-2xl overflow-hidden font-sans"
         onClick={e => e.stopPropagation()}
       >
-        {/* Accent top bar */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#0B1957] dark:bg-[#2B7CFF] rounded-t-2xl z-30" />
-
-        {/* STICKY TOP HEADER (Close button stays pinned here during scroll) */}
-        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#132035]/95 backdrop-blur-md p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-slate-800/60 flex-shrink-0">
-          {/* Fixed Close Button */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 z-30 flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer"
-          >
-            <XIcon className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </button>
-
-          {/* Header Info */}
-          <div className="flex items-center gap-3 pr-8">
-            <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0">
-              🕐
+        {/* STICKY TOP HEADER (Close button aligns with heading) */}
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#081331]/95 backdrop-blur-md p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            {/* Header Info */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0">
+                🕐
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-slate-100 leading-tight tracking-tight">Business Hours</h2>
+                <p className="text-[12px] sm:text-[13px] text-gray-400 dark:text-slate-400 mt-0.5">Configure availability &amp; timezone</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-slate-100 leading-tight tracking-tight">Business Hours</h2>
-              <p className="text-[12px] sm:text-[13px] text-gray-400 dark:text-slate-400 mt-0.5">Configure availability &amp; timezone</p>
-            </div>
+
+            {/* Fixed Close Button aligned with Heading */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center justify-center p-2 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer flex-shrink-0 -mr-1"
+            >
+              <XIcon className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </button>
           </div>
         </div>
 
         {/* SCROLLABLE FORM BODY */}
-        <div className="p-5 sm:p-8 pt-6 sm:pt-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+        <div className="p-5 sm:p-8 pt-6 sm:pt-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-white dark:bg-[#071131]">
           {/* Operating Hours */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400 mb-2.5">Operating Hours</p>
@@ -215,18 +277,11 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
           {/* Timezone */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400 mb-2.5">Timezone</p>
-            <div className="relative">
-              <select
-                value={timezone}
-                onChange={e => setTimezone(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700/60 rounded-xl px-3.5 py-2.5 pr-9 text-sm text-gray-800 dark:text-slate-100 outline-none focus:border-[#0B1957] dark:focus:border-[#2B7CFF] focus:ring-2 focus:ring-[#0B1957]/10 dark:focus:ring-[#2B7CFF]/20 transition-all appearance-none cursor-pointer"
-              >
-                {timezoneOptions.map(o => (
-                  <option key={o.value} value={o.value} className="bg-white dark:bg-[#132035] text-gray-800 dark:text-slate-100">{o.label}</option>
-                ))}
-              </select>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-400 pointer-events-none text-xs">▾</span>
-            </div>
+            <CustomTimezoneSelect
+              value={timezone}
+              onChange={setTimezone}
+              options={timezoneOptions}
+            />
           </div>
 
           <hr className="border-gray-100 dark:border-slate-800" />
@@ -282,7 +337,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
             </div>
           </div>
 
-          {/* Save error — the mutation's onError previously had nowhere to surface to. */}
+          {/* Save error - the mutation's onError previously had nowhere to surface to. */}
           {error && (
             <div
               role="alert"

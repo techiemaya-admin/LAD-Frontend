@@ -8,13 +8,13 @@ import type { LlmRoutingEntry, LlmProvider } from '@lad/frontend-features/lad-mo
 /**
  * Per-tenant, per-feature LLM routing.
  *
- * A tenant with NO rules here runs on the platform default — that is the normal
+ * A tenant with NO rules here runs on the platform default - that is the normal
  * state, and the empty view says so rather than looking broken. Rules are the
  * exception, added when a tenant needs a specific model for a specific job.
  */
 
 // The feature catalogue comes from /meta, not from here. A hardcoded list in
-// the frontend drifts from what the backend can actually route — and worse, it
+// the frontend drifts from what the backend can actually route - and worse, it
 // offered features whose call sites ignore routing entirely, so the rule saved
 // and did nothing.
 
@@ -58,7 +58,7 @@ export default function MonitorLlmRoutingPage() {
       await saveChain(featureKey, draft.filter((d) => d.model.trim()));
       setEditing(null);
     } catch (err) {
-      // The server rejects unpriceable models and provider-locked features —
+      // The server rejects unpriceable models and provider-locked features  - 
       // show its reason verbatim, it is the actionable part.
       setSaveError(err instanceof Error ? err.message : 'Save failed');
     }
@@ -98,12 +98,12 @@ export default function MonitorLlmRoutingPage() {
         </div>
       </div>
 
-      {/* A fallback bills a different model than the one pinned — say so up front. */}
+      {/* A fallback bills a different model than the one pinned - say so up front. */}
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           Fallbacks change what the tenant is billed for. If the primary fails, usage is charged
-          against whichever provider actually answered — and output quality differs between models.
+          against whichever provider actually answered - and output quality differs between models.
         </span>
       </div>
 
@@ -148,7 +148,7 @@ export default function MonitorLlmRoutingPage() {
                     <p className="mt-0.5 text-xs text-gray-500">
                       {locked
                         || (notWired
-                          ? `${f.hint} — not yet wired to routing; a rule here would be ignored.`
+                          ? `${f.hint} - not yet wired to routing; a rule here would be ignored.`
                           : f.hint)}
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export default function MonitorLlmRoutingPage() {
                           onChange={(e) => {
                             const provider = e.target.value as LlmProvider;
                             const next = [...draft];
-                            // Drop the model if the new provider does not serve it —
+                            // Drop the model if the new provider does not serve it  - 
                             // leaving it would show an empty select and fail on save.
                             const stillValid = (meta?.models?.[provider] ?? []).some(
                               (m) => m.model === next[i].model

@@ -19,7 +19,6 @@ import type {
   ApolloPerson
 } from './types';
 import * as apolloApi from './api';
-import { isFeatureEnabled } from '../../shared/featureFlags';
 export const useApolloLeads = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +28,6 @@ export const useApolloLeads = () => {
     setLoading(true);
     setError(null);
     try {
-      // Check feature flag
-      const featureEnabled = await isFeatureEnabled('apollo_leads');
-      if (!featureEnabled) {
-        throw new Error('Apollo Leads feature is not enabled');
-      }
       return await apolloApi.searchCompanies(params);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -47,11 +41,6 @@ export const useApolloLeads = () => {
     setLoading(true);
     setError(null);
     try {
-      // Check feature flag
-      const featureEnabled = await isFeatureEnabled('apollo_leads');
-      if (!featureEnabled) {
-        throw new Error('Apollo Leads feature is not enabled');
-      }
       return await apolloApi.getCompanyDetails(companyId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -67,11 +56,6 @@ export const useApolloLeads = () => {
     setLoading(true);
     setError(null);
     try {
-      // Check feature flag
-      const featureEnabled = await isFeatureEnabled('apollo_leads');
-      if (!featureEnabled) {
-        throw new Error('Apollo Leads feature is not enabled');
-      }
       return await apolloApi.searchEmployees(params);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -85,11 +69,6 @@ export const useApolloLeads = () => {
     setLoading(true);
     setError(null);
     try {
-      // Check feature flag
-      const featureEnabled = await isFeatureEnabled('apollo_leads');
-      if (!featureEnabled) {
-        throw new Error('Apollo Leads feature is not enabled');
-      }
       return await apolloApi.revealEmail(personId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -103,11 +82,6 @@ export const useApolloLeads = () => {
     setLoading(true);
     setError(null);
     try {
-      // Check feature flag
-      const featureEnabled = await isFeatureEnabled('apollo_leads');
-      if (!featureEnabled) {
-        throw new Error('Apollo Leads feature is not enabled');
-      }
       return await apolloApi.revealPhone(personId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

@@ -12,6 +12,6 @@ import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../../whatsapp-conversations/utils/python-proxy';
 
 export async function GET(req: NextRequest) {
-  // channel param is forwarded as-is — proxyToPythonService handles routing
+  // channel param is forwarded as-is - proxyToPythonService handles routing
   return proxyToPythonService(req, getWhatsAppServiceUrl(), '/threads/team/workload');
 }

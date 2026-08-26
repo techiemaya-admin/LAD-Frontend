@@ -1,5 +1,5 @@
 /**
- * Prospects feature — TypeScript types.
+ * Prospects feature - TypeScript types.
  *
  * Mirrors the Pydantic models in LAD-Master-Agent/models/prospect.py and
  * LAD-Master-Agent/models/event.py. Keep these in sync when the Python schema
@@ -79,7 +79,7 @@ export interface ProspectState {
   updated_at: string;
   last_event_seq: number;
 
-  // Fit + enrichment (migration 032) — surfaced to the CRM / Unified Prospect View
+  // Fit + enrichment (migration 032) - surfaced to the CRM / Unified Prospect View
   apollo_id?: string | null;
   fit_score?: number | null;
   fit_signals?: Record<string, number>;
@@ -132,8 +132,15 @@ export interface ProspectEvent {
 export interface ListProspectsParams {
   lifecycle_stage?: LifecycleStage;
   channel?: Channel;
+  /** Case-insensitive substring match against name/email/phone/company,
+   *  server-side across the whole tenant (not just the current page). */
+  search?: string;
   limit?: number;
   offset?: number;
+  /** Server-side sort — only fields the backend actually indexes on
+   *  prospect_state. Omit for the backend's default (last_event_at desc). */
+  sort_by?: 'last_event_at' | 'fit_score' | 'sah_at' | 'created_at';
+  sort_dir?: 'asc' | 'desc';
 }
 
 export interface ListProspectEventsParams {

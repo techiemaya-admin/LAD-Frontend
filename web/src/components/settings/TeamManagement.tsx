@@ -88,6 +88,12 @@ export const TeamManagement: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCapabilitiesDropdown, setShowCapabilitiesDropdown] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Private workspaces. One tenant_features flag, read by the backend and by the
+  // conversation service; this is just a second door onto it for the people who
+  // actually run the workspace.
+  const [privacy, setPrivacy] = useState<{ enabled: boolean; canEdit: boolean } | null>(null);
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacyNote, setPrivacyNote] = useState<string>('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -100,7 +106,48 @@ export const TeamManagement: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
+    void fetchPrivacy();
   }, []);
+
+  const fetchPrivacy = async () => {
+    try {
+      const token = safeStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch(`${getApiBaseUrl()}/api/users/team-privacy`, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data?.success) setPrivacy({ enabled: !!data.enabled, canEdit: !!data.canEdit });
+    } catch {
+      // Leave it null — the card simply does not render rather than showing a
+      // switch whose position we cannot vouch for. A toggle that displays "off"
+      // when we failed to read it is a lie about who can see what.
+    }
+  };
+
+  const setPrivacyEnabled = async (enabled: boolean) => {
+    setPrivacySaving(true);
+    setPrivacyNote('');
+    const previous = privacy;
+    setPrivacy((p) => (p ? { ...p, enabled } : p));   // optimistic
+    try {
+      const token = safeStorage.getItem('token');
+      const res = await fetch(`${getApiBaseUrl()}/api/users/team-privacy`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Could not save');
+      setPrivacy((p) => (p ? { ...p, enabled: !!data.enabled } : p));
+      setPrivacyNote(data.note || '');
+    } catch (err) {
+      setPrivacy(previous);   // put the switch back where it was
+      setError(err instanceof Error ? err.message : 'Could not change this setting');
+    } finally {
+      setPrivacySaving(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -289,12 +336,63 @@ export const TeamManagement: React.FC = () => {
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+          className="h-12 px-6 mr-3 sm:mr-4 lg:mr-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
         >
           <UserPlus className="w-5 h-5" />
           Add Team Member
         </Button>
       </div>
+
+      {/* Private workspaces */}
+      {privacy && (
+        <div className="mx-6 sm:mx-8 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100">Private workspaces</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Each team member sees only their own campaigns, their own connected
+                WhatsApp and LinkedIn accounts, and their own conversations. Company
+                details and credits stay shared across the workspace. Owners and
+                admins continue to see everything.
+              </p>
+              {privacy.enabled && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 leading-relaxed">
+                  A member with no connected account of their own will see an empty
+                  inbox until they connect one.
+                </p>
+              )}
+              {privacyNote && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{privacyNote}</p>
+              )}
+              {!privacy.canEdit && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  Only a workspace owner or admin can change this.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={privacy.enabled}
+              aria-label="Private workspaces"
+              disabled={!privacy.canEdit || privacySaving}
+              onClick={() => setPrivacyEnabled(!privacy.enabled)}
+              className={cn(
+                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+                privacy.enabled ? 'bg-[#0B1957] dark:bg-blue-600' : 'bg-gray-300 dark:bg-zinc-700',
+                (!privacy.canEdit || privacySaving) && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  privacy.enabled ? 'translate-x-6' : 'translate-x-1',
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 rounded-2xl p-6 flex items-center gap-4">
@@ -319,7 +417,7 @@ export const TeamManagement: React.FC = () => {
       {loading && users.length === 0 ? (
         <TeamManagementSkeleton />
       ) : (
-        <div className="bg-white dark:bg-[#071131]/60 rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
+        <div className="bg-white mx-6 dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full min-w-[700px]">
               <thead className="bg-slate-50/50 dark:bg-transparent border-b border-slate-200 dark:border-blue-950/40">
@@ -354,7 +452,7 @@ export const TeamManagement: React.FC = () => {
                             {(user.name || user.email || '?').charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">{user.name || '—'}</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{user.name || '-'}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                               <Mail className="h-3 w-3 opacity-60 text-slate-400" />
                               {user.email}
@@ -488,7 +586,7 @@ export const TeamManagement: React.FC = () => {
                 <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-zinc-300">Name</label>
                 <Input
                   placeholder="John Doe"
-                  className="h-11 rounded-xl bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
+                  className="h-11 rounded-xl bg-gray-50/50 dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                 />
@@ -499,7 +597,7 @@ export const TeamManagement: React.FC = () => {
                 <Input
                   type="email"
                   placeholder="admin@techiemaya.com"
-                  className="h-11 rounded-xl bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
+                  className="h-11 rounded-xl bg-gray-50/50 dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 />
@@ -511,7 +609,7 @@ export const TeamManagement: React.FC = () => {
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
-                    className="h-11 rounded-xl bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
+                    className="h-11 rounded-xl bg-gray-50/50 dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   />
@@ -530,7 +628,7 @@ export const TeamManagement: React.FC = () => {
                 <Input
                   type="tel"
                   placeholder="+1 (555) 123-4567"
-                  className="h-11 rounded-xl bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
+                  className="h-11 rounded-xl bg-gray-50/50 dark:text-white dark:placeholder-zinc-600 dark:autofill:shadow-[inset_0_0_0_1000px_#000724] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]"
                   value={newUser.phoneNumber}
                   onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
                 />
@@ -542,14 +640,13 @@ export const TeamManagement: React.FC = () => {
                   value={newUser.role}
                   onValueChange={(val) => setNewUser({ ...newUser, role: val })}
                 >
-                  <SelectTrigger className="h-11 rounded-xl bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] dark:text-white">
+                  <SelectTrigger className="h-11 rounded-xl bg-gray-50/50 dark:text-white">
                     <SelectValue placeholder="Select role..." />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-[#000c3b] border border-slate-200 dark:border-[#262831] rounded-xl shadow-xl">
                     {ROLE_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-slate-900 dark:text-white focus:bg-emerald-500 focus:text-black dark:focus:bg-emerald-500 dark:focus:text-white cursor-pointer"
-                        >
-                          {opt.label}</SelectItem>
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        {opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -561,7 +658,7 @@ export const TeamManagement: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowCapabilitiesDropdown(!showCapabilitiesDropdown)}
-                    className="w-full h-11 px-4 rounded-xl border border-input bg-gray-50/50 dark:bg-[#000724] dark:border-[#262831] flex items-center justify-between text-sm transition-colors hover:bg-gray-100/50 dark:hover:bg-[#1a2a43] dark:text-white cursor-pointer outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-input bg-gray-50/50 dark:bg-slate-900/50 dark:border-[#1c2c4e] flex items-center justify-between text-sm transition-colors hover:bg-gray-100/50 dark:hover:bg-[#1a2a43] dark:text-white cursor-pointer outline-none"
                   >
                     <span className={newUser.capabilities.length ? 'text-foreground dark:text-white font-medium' : 'text-muted-foreground dark:text-slate-400 font-medium'}>
                       {newUser.capabilities.length
@@ -597,7 +694,7 @@ export const TeamManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-row items-start justify-between p-4 md:p-6 bg-gray-50/50 dark:bg-[#000c3b]/40 rounded-2xl border border-gray-100 dark:border-[#262831] gap-3">
+            <div className="flex flex-row items-start justify-between p-4 md:p-6 bg-gray-50/50 dark:bg-slate-900/50 rounded-2xl border border-gray-100 dark:border-[#1c2c4e] gap-3">
               <div className="flex flex-col gap-1 min-w-0 flex-1">
                 <label className="text-sm font-bold text-gray-900 dark:text-white">Mask Phone Numbers</label>
                 <span className="text-xs text-gray-500 dark:text-zinc-400 leading-normal">Hide lead phone numbers from this team member for privacy (e.g. ••••3456)</span>

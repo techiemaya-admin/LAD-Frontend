@@ -4,8 +4,8 @@
  * A test run that re-read the canvas its own way would drift from Launch, and
  * the drift would be invisible: the test would pass against a workflow that
  * behaves differently once launched, which is worse than no test at all. So
- * every node the test actually EXECUTES — the web-intel steps, the report step,
- * and the three content macros — is emitted here once and used by both.
+ * every node the test actually EXECUTES - the web-intel steps, the report step,
+ * and the three content macros - is emitted here once and used by both.
  *
  * Outreach nodes are deliberately NOT here. The test run sends them as bare
  * `{ type, title }` so the timeline can list what it skipped, and the request
@@ -61,7 +61,7 @@ export function buildIntelSteps(workflowPreview: Node[], configs: Cfgs): any[] {
 
 /**
  * The per-lead report step's config. Returns null for the campaign-scoped
- * variant, which is a macro (see buildContentMacros) rather than a step — same
+ * variant, which is a macro (see buildContentMacros) rather than a step - same
  * node, two execution models, chosen by its own scope field.
  */
 export function buildLeadReportStepConfig(c: Record<string, any>, delay: Record<string, number>) {
@@ -87,7 +87,7 @@ export function buildContentMacros(workflowPreview: Node[], configs: Cfgs): Reco
 
   if (workflowPreview.some((s) => s.id === EXPORT_STEP_ID)) {
     const ec = configs[EXPORT_STEP_ID] || {};
-    // Read by CampaignExportService — on completion and from "Export now".
+    // Read by CampaignExportService - on completion and from "Export now".
     out.export_results = {
       format: ec.format || 'csv',
       destinations: Array.isArray(ec.destinations) && ec.destinations.length ? ec.destinations : ['file'],
@@ -152,7 +152,7 @@ export const TEST_RUNNABLE_TYPES = new Set([
 /**
  * The `steps` array for a test run.
  *
- * Executable steps come from the shared emitters above — byte-for-byte what
+ * Executable steps come from the shared emitters above - byte-for-byte what
  * Launch posts. Everything else is reduced to type + title: enough for the
  * timeline to name what it skipped, and nothing the backend could act on even
  * if its filter were removed.
@@ -183,7 +183,7 @@ export function buildTestRunSteps(workflowPreview: Node[], configs: Cfgs): any[]
     // The two nodes the backend runs from `config` rather than from `steps`.
     // Sending them as steps too listed each one TWICE in the timeline: once
     // "skipped" (there is no step handler for their type) and again "ran" (from
-    // the macro pass) — with a skip reason about contacting the lead that makes
+    // the macro pass) - with a skip reason about contacting the lead that makes
     // no sense for a landing page.
     //
     // Deliberately not MACRO_STEP_IDS, which is a much wider list: AI Agent,

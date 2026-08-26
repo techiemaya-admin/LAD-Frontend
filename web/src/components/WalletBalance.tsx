@@ -379,8 +379,8 @@ export const WalletBalance: React.FC = () => {
                     {(() => {
                       const pkg = packages.find(p => p.id === selectedPackage);
                       if (!pkg) return 'Continue';
-                      if (purchaseMode === 'monthly') return `Subscribe ${pkg.name} — $${pkg.price}/mo`;
-                      if (purchaseMode === 'auto_recharge') return `Enable auto-recharge — $${pkg.price} per top-up`;
+                      if (purchaseMode === 'monthly') return `Subscribe ${pkg.name} - $${pkg.price}/mo`;
+                      if (purchaseMode === 'auto_recharge') return `Enable auto-recharge - $${pkg.price} per top-up`;
                       return `Purchase ${pkg.name} - $${pkg.price}`;
                     })()}
                     <ArrowUpRight className="h-4 w-4 ml-1.5" />

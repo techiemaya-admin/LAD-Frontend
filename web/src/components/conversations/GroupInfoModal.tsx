@@ -14,7 +14,7 @@ interface GroupInfoModalProps {
   open: boolean;
   onClose: () => void;
   group: ChatGroup | null;
-  /** All loaded groups — used to resolve a broadcast list's member group ids → names. */
+  /** All loaded groups - used to resolve a broadcast list's member group ids → names. */
   allGroups: ChatGroup[];
   channel: 'personal' | 'waba';
   onChanged?: () => void;
@@ -70,7 +70,7 @@ export function GroupInfoModal({ open, onClose, group, allGroups, channel, onCha
 
   // Reset to Members whenever a DIFFERENT group opens. Without this the modal
   // reopens on whichever tab was last used, showing another group's history
-  // while it loads — which reads as the wrong data rather than as loading.
+  // while it loads - which reads as the wrong data rather than as loading.
   useEffect(() => {
     setTab('members');
     setAddValue('');
@@ -87,7 +87,7 @@ export function GroupInfoModal({ open, onClose, group, allGroups, channel, onCha
     setHistoryLoading(true);
     setHistoryError(null);
     // broadcasts_only: without it this returns every message in every member
-    // conversation — measured 36% agent replies on a live tenant — which would
+    // conversation - measured 36% agent replies on a live tenant - which would
     // render as "past broadcasts" that nobody sent.
     fetchWithTenant(
       `/api/whatsapp-conversations/chat-groups/${group.id}/messages?channel=${channel}&broadcasts_only=true&limit=500`,
@@ -211,7 +211,7 @@ export function GroupInfoModal({ open, onClose, group, allGroups, channel, onCha
         </DialogHeader>
 
         {/* A broadcast LIST contains groups, not people, and has no send history
-            of its own — so it keeps the single-list view rather than growing
+            of its own - so it keeps the single-list view rather than growing
             tabs that would both be wrong for it. */}
         {!isBroadcastList && (
           <div className="flex border-b border-border px-2">
@@ -250,7 +250,7 @@ export function GroupInfoModal({ open, onClose, group, allGroups, channel, onCha
                 value={addValue}
                 onChange={(e) => setAddValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !adding) addMembers(); }}
-                placeholder="Add by phone number — comma or space separated"
+                placeholder="Add by phone number, comma or space separated"
                 className="flex-1 h-8 px-2.5 text-sm rounded-md border border-border bg-background
                            focus:outline-none focus:ring-1 focus:ring-emerald-600"
               />

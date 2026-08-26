@@ -138,7 +138,7 @@ function formatContextStatus(value: string): string {
 }
 
 /** Solid colour per WABA conversation stage, shown as a small WhatsApp-style
- *  label tag on each conversation row (colour only — the stage name shows on
+ *  label tag on each conversation row (colour only - the stage name shows on
  *  hover and in the filter, not repeated as text on every row). Keyed by the
  *  lowercased context_status. */
 const WABA_STAGE_TAG_HEX: Record<string, string> = {
@@ -162,7 +162,7 @@ const CONFIG = {
   LOAD_MORE_LIMIT: 100,
   MAX_OLDER_MESSAGES: 500,
   MAX_RECENT_EMOJIS: 20,
-  EMOJI_STORAGE_KEY: 'wa_emoji_recent_v1', // gitleaks:allow — localStorage key for recent emojis, not a secret
+  EMOJI_STORAGE_KEY: 'wa_emoji_recent_v1', // gitleaks:allow - localStorage key for recent emojis, not a secret
   VOICE_RECORDING_TIMEOUT: 10000, // 10 seconds
   SEARCH_DEBOUNCE_MS: 150,
   SIDEBAR_MIN_WIDTH: 260,
@@ -371,7 +371,7 @@ function MessageTicks({ status }: { status?: string }) {
     );
   }
 
-  // 'sent' or 'pending' — single tick
+  // 'sent' or 'pending' - single tick
   return (
     <svg width="12" height="11" viewBox="0 0 12 11" fill="none" className="inline-block shrink-0">
       <path d="M1 5.5L4.5 9L11 2" stroke="#8696a0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -596,7 +596,7 @@ function LocationModal({ onClose, onSend }: { onClose: () => void; onSend: (p: R
 const EMOJI_CATEGORIES = [
   {
   id: 'recent', label: 'Recently used', icon: '🕐',
-  emojis: [], // populated dynamically — see EmojiPicker state
+  emojis: [], // populated dynamically - see EmojiPicker state
 },
   {
     id: 'smileys', label: 'Smileys & People', icon: '😊',
@@ -1089,7 +1089,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       const data = await res.json();
       // "Add to Group" targets broadcast groups: the manually-created chat groups
       // (collections of contacts) AND the saved broadcast sets (is_broadcast_list).
-      // Only native WhatsApp groups (wa_group_jid) are excluded — you can't add
+      // Only native WhatsApp groups (wa_group_jid) are excluded - you can't add
       // members to a synced WA group from here.
       const rows = (Array.isArray(data?.data) ? data.data : []).filter(
         (g: { metadata?: { wa_group_jid?: string } | null }) =>
@@ -1367,7 +1367,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
           meta.sender_type === 'human_agent' && rawRole === 'assistant' ? 'human_agent' : rawRole;
         const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
         // Agent-forward: NEW forwards carry the customer name in metadata (clean body);
-        // OLD ones baked "📩 *New message from X*\n\nBody" into content — parse as fallback.
+        // OLD ones baked "📩 *New message from X*\n\nBody" into content - parse as fallback.
         let displayContent = (r.content as string) || '';
         let forwardSender: string | undefined =
           (meta.via === 'agent_forward' || meta.sender_type === 'forward')
@@ -1586,7 +1586,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       e.stopPropagation();
       handleSend();
     }
-    // Shift+Enter: do nothing — browser inserts \n naturally
+    // Shift+Enter: do nothing - browser inserts \n naturally
   }, [handleSend]);
 
   const handleAttachItem = useCallback((id: string) => {
@@ -1667,10 +1667,13 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
     templateName: string, languageCode: string, parameters: string[],
     _nameFormat: 'first' | 'full', _batch: { batchSize?: number; delayMin?: number; delayRandom?: number; dailyLimit?: number },
     headerParamCount: number, headerType: string, headerUrl: string,
+    // The number the template lives on. A template exists on one WABA, so the
+    // send has to leave from that number or Meta cannot find it.
+    accountId: string,
   ) => {
     const convId = conversationId || conversation?.id;
     if (!convId) {
-      // Never fail silently — otherwise the picker can appear to "succeed"
+      // Never fail silently - otherwise the picker can appear to "succeed"
       // while no request is ever sent.
       setTemplateSendResult({ success: false, message: 'Cannot send: this conversation has no ID. Reopen the chat and try again.' });
       return;
@@ -1693,6 +1696,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             header_param_count: headerParamCount ?? 0,
             header_type: headerType || '',
             header_url: headerUrl || '',
+            account_id: accountId || '',
           }),
         }
       );
@@ -1702,7 +1706,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       setTemplateSendProgress({ sent, total: 1, running: false });
       // Gate success on ACTUAL delivery. A 2xx with sent:0 means WhatsApp/Meta
       // rejected the send (e.g. template not yet approved, or a parameter
-      // mismatch) — surface the real reason instead of a misleading "✓ sent".
+      // mismatch) - surface the real reason instead of a misleading "✓ sent".
       if (!res.ok || !data.success || sent < 1) {
         throw new Error(
           data.results?.[0]?.error || data.error ||
@@ -1937,7 +1941,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
         ) : (
           <>
             <div className="flex items-center gap-3">
-              {/* Back button — visible only on mobile, matches LinkedIn style exactly */}
+              {/* Back button - visible only on mobile, matches LinkedIn style exactly */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -2039,7 +2043,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
       {/* Messages */}
       {/*
-        68 px = px-4 (16) + avatar w-10 (40) + gap-3 (12) — matches the
+        68 px = px-4 (16) + avatar w-10 (40) + gap-3 (12) - matches the
         header's contact-name start position exactly.
         We target both sides:
           • ml-[68px]  on the incoming bubble container
@@ -2051,10 +2055,10 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       */}
       <div className={cn(
         "flex-1 overflow-hidden flex flex-col min-h-0",
-        // incoming bubbles — left indent aligns with header name
+        // incoming bubbles - left indent aligns with header name
         "[&_[data-incoming='true']>*:first-child]:ml-[68px]",
         "[&_[data-role='user']>*:first-child]:ml-[68px]",
-        // outgoing bubbles — mirror indent from the right
+        // outgoing bubbles - mirror indent from the right
         "[&_[data-incoming='false']>*:first-child]:mr-[68px]",
         "[&_[data-role='assistant']>*:first-child]:mr-[68px]",
         "[&_[data-role='human_agent']>*:first-child]:mr-[68px]",
@@ -2151,10 +2155,10 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
 
         <div className="flex items-center gap-2">
 
-          {/* ── Pill — attach + emoji + textarea all inside ── */}
+          {/* ── Pill - attach + emoji + textarea all inside ── */}
           <div className="flex-1 flex items-center rounded-[24px] py-1 min-h-[44px] gap-1">
 
-            {/* Attach — inside pill */}
+            {/* Attach - inside pill */}
             <div ref={attachBtnRef} className="relative flex-shrink-0">
               <button
                 type="button"
@@ -2184,7 +2188,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
               )}
             </div>
 
-            {/* Emoji — inside pill */}
+            {/* Emoji - inside pill */}
             <div className="relative flex-shrink-0">
               <button
                 type="button"
@@ -2225,7 +2229,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
             <DropdownMenuTrigger asChild>
               <button
                 className={cn('h-9 w-9 flex items-center justify-center rounded-full transition-colors hover:bg-[#00a884]/10 dark:hover:bg-[#00a884]/20 flex-shrink-0', agentType === 'human' && 'text-orange-500')}
-                title={agentType === 'human' ? 'Human agent — tap to hand back to Mr LAD' : 'Mr LAD is replying — tap to take over'}
+                title={agentType === 'human' ? 'Human agent - tap to hand back to Mr LAD' : 'Mr LAD is replying - tap to take over'}
               >
                 {agentType === 'human' ? <User className="h-5 w-5" /> : <img src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" className="h-7 w-7 object-contain" />}
               </button>
@@ -2463,9 +2467,9 @@ function WABASidebar({
   isImportDialogOpen: externalIsImportDialogOpen,
   onImportDialogOpenChange,
 }: WABASidebarProps) {
-  // Per-viewer phone masking. The list renders a contact number twice — as the
+  // Per-viewer phone masking. The list renders a contact number twice - as the
   // title when no name is known, and as the subtitle under every named contact
-  // — so without this the sidebar showed raw numbers for essentially every
+  // - so without this the sidebar showed raw numbers for essentially every
   // conversation regardless of the setting.
   const { displayPhone, displayNameOrPhone } = usePhoneMasking();
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
@@ -2550,7 +2554,7 @@ function WABASidebar({
   const [createGroupIds, setCreateGroupIds] = useState<string[]>([]);
 
   // ── Group-chat broadcast: post one message into each selected WhatsApp group
-  //    chat (not its members), throttled server-side (batch 5–10, 2min+, 250/day).
+  //    chat (not its members), throttled server-side (batch 5-10, 2min+, 250/day).
   const [groupBroadcastBatchSize, setGroupBroadcastBatchSize] = useState(5);
   const [groupBroadcastSending, setGroupBroadcastSending] = useState(false);
   const [groupBroadcastResult, setGroupBroadcastResult] = useState<string | null>(null);
@@ -2605,12 +2609,12 @@ function WABASidebar({
         return;
       }
       // Not in the loaded list. For a synced WA group, resolve-or-create its chat so
-      // a single click always opens it — even before any messages have arrived.
+      // a single click always opens it - even before any messages have arrived.
       //
       // A BROADCAST group has no chat to open, and never will: it is a saved
       // audience that fans out to N separate 1:1 conversations. Telling the user
       // "no chat to open" described our data model rather than answering what
-      // they clicked for, so a click now opens the group itself — members, who
+      // they clicked for, so a click now opens the group itself - members, who
       // can be added, and what has been broadcast to them.
       if (!jid) {
         setInfoGroup(group);
@@ -2648,7 +2652,7 @@ function WABASidebar({
       const res = await fetchWithTenant('/api/whatsapp-conversations/wa-groups/sync', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false) {
-        setGroupBroadcastResult(data.error || 'Sync failed — is your Personal WhatsApp connected?');
+        setGroupBroadcastResult(data.error || 'Sync failed - is your Personal WhatsApp connected?');
       } else {
         setGroupBroadcastResult(data.message || `Synced ${data.synced ?? 0} WhatsApp group${data.synced === 1 ? '' : 's'}.`);
         // Refresh the panel list so the newly-synced groups appear.
@@ -2674,8 +2678,8 @@ function WABASidebar({
     setPanelSelectionMode(true); // show checkboxes so the loaded set is visible/editable
     setGroupBroadcastResult(
       present.length < ids.length
-        ? `${present.length}/${ids.length} groups from "${list.name}" available — re-sync if some are missing.`
-        : `Loaded "${list.name}" — ${present.length} group${present.length === 1 ? '' : 's'} selected. Compose a message to broadcast.`,
+        ? `${present.length}/${ids.length} groups from "${list.name}" available - re-sync if some are missing.`
+        : `Loaded "${list.name}" - ${present.length} group${present.length === 1 ? '' : 's'} selected. Compose a message to broadcast.`,
     );
   }, [newChatGroups]);
 
@@ -2998,6 +3002,9 @@ function WABASidebar({
       headerParamCount = 0,
       headerType = '',
       headerUrl = '',
+      // The number the template lives on. A template exists on one WABA, so the
+      // blast has to leave from that number or Meta cannot find it.
+      accountId = '',
     ) => {
       setTemplateSending(true);
       const totalCount = groupTemplateSendTarget?.count ?? 0;
@@ -3019,6 +3026,7 @@ function WABASidebar({
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
+                    account_id: accountId || '',
                     template_name: templateName,
                     language_code: languageCode,
                     parameters,
@@ -3069,6 +3077,7 @@ function WABASidebar({
             body: JSON.stringify({
               action: 'send-template',
               conversation_ids: Array.from(selectedChatIds),
+              account_id: accountId || '',
               template_name: templateName,
               language_code: languageCode,
               parameters,
@@ -3120,7 +3129,7 @@ function WABASidebar({
     });
     return [...filtered].sort((a, b) => {
       if (sortBy === 'name') {
-        // Sorts on the RAW value deliberately — this comparator renders
+        // Sorts on the RAW value deliberately - this comparator renders
         // nothing, so it leaks nothing, and masked numbers all share the same
         // leading bullets, which would collapse the ordering into "grouped by
         // last 4 digits". Sorting stays stable and meaningful while the
@@ -3317,7 +3326,7 @@ function WABASidebar({
           </button>
         ))}
 
-        {/* ── Hide Empty button — same pill style ── */}
+        {/* ── Hide Empty button - same pill style ── */}
         {onHideEmptyChange && (
           <button
             type="button"
@@ -3334,7 +3343,7 @@ function WABASidebar({
           </button>
         )}
 
-        {/* ── Labels filter — hidden for now (code kept, gated off for easy re-enable) ── */}
+        {/* ── Labels filter - hidden for now (code kept, gated off for easy re-enable) ── */}
         {false && onLabelFilterChange && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -3430,7 +3439,7 @@ function WABASidebar({
           </DropdownMenu>
         )}
 
-        {/* ── Sort button — at the end ── */}
+        {/* ── Sort button - at the end ── */}
         {onSortByChange && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -3759,7 +3768,7 @@ function WABASidebar({
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-medium text-[16px] truncate text-foreground dark:text-white">{conv.contact?.name}</span>
                       {/* Conversation stage (context_status) as a small WhatsApp-style colour
-                          tag — colour only; the stage name shows on hover, not as repeated text. */}
+                          tag - colour only; the stage name shows on hover, not as repeated text. */}
                       {(() => {
                         const stage = getConversationContextStatus(conv);
                         if (!stage) return null;
@@ -3798,7 +3807,7 @@ function WABASidebar({
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          Rich New Chat Overlay — mirrors ConversationSidebar's isNewChatOpen panel
+          Rich New Chat Overlay - mirrors ConversationSidebar's isNewChatOpen panel
           absolute inset-0 z-30 so it covers only this sidebar column
       ════════════════════════════════════════════════════════════════════ */}
       {isNewChatOpen && (
@@ -4112,7 +4121,7 @@ function WABASidebar({
             })()}
           </div>
 
-          {/* Bottom action bar — visible when items are selected */}
+          {/* Bottom action bar - visible when items are selected */}
           {(selectedNewChatIds.size > 0 || selectedNewChatGroupIds.size > 0) && (
             <div className="px-4 py-3 border-t border-border dark:border-[#222d34] bg-card dark:bg-[#161717] flex items-center gap-2">
               <button
@@ -4275,7 +4284,7 @@ function WABASidebar({
                     <option value="broadcast">Broadcast groups</option>
                   </select>
                 </div>
-                {/* Select-all row — operates on the currently-filtered groups */}
+                {/* Select-all row - operates on the currently-filtered groups */}
                 <div className="px-4 py-2 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                   <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Groups
@@ -4360,12 +4369,12 @@ function WABASidebar({
                       title={
                         isBroadcastList
                           ? `Load ${memberGroupCount} group${memberGroupCount !== 1 ? 's' : ''} from "${group.name}"`
-                          : panelSelectionMode ? undefined : `Open ${group.name} — double-click to multi-select`
+                          : panelSelectionMode ? undefined : `Open ${group.name} - double-click to multi-select`
                       }
                       className="group/item relative px-4 py-3 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer select-none border-b border-zinc-100 dark:border-zinc-800/40"
                     >
                       <div className="flex items-center gap-3 w-full">
-                        {/* Checkbox — only in multi-select mode, and not for saved sets */}
+                        {/* Checkbox - only in multi-select mode, and not for saved sets */}
                         {panelSelectionMode && !isBroadcastList && (
                         <button
                           type="button"
@@ -4496,7 +4505,7 @@ function WABASidebar({
             )}
           </div>
  
-          {/* Bottom action bar — compose a rich message + post into the selected group chats */}
+          {/* Bottom action bar - compose a rich message + post into the selected group chats */}
           {selectedGroupsPanelIds.size > 0 && (
             <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col">
               <div className="px-4 pt-2 flex items-center gap-2">
@@ -4533,12 +4542,12 @@ function WABASidebar({
               <p className="px-4 pt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 {groupBroadcastSending
                   ? 'Sending…'
-                  : 'Compose below (text, photo, document, poll…) — posts into each selected group chat · throttled · max 250/day'}
+                  : 'Compose below (text, photo, document, poll…) - posts into each selected group chat · throttled · max 250/day'}
               </p>
               {groupBroadcastResult && (
                 <p className="px-4 pt-1 text-[11px] text-emerald-600 dark:text-emerald-400">{groupBroadcastResult}</p>
               )}
-              {/* Full rich composer — its attachment menu / modals produce a payload sent to every selected group */}
+              {/* Full rich composer - its attachment menu / modals produce a payload sent to every selected group */}
               <MessageComposer
                 channel={'whatsapp' as Channel}
                 backendChannel="personal"
@@ -4651,7 +4660,7 @@ function WABASidebar({
             <p className="text-muted-foreground text-xs mt-0.5">
               Sent <strong>{sendSummary.sent}</strong> today.{' '}
               <strong>{sendSummary.queued}</strong> remaining scheduled across{' '}
-              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} — continues at 9:00 AM daily.
+              <strong>{sendSummary.scheduledDays}</strong> day{sendSummary.scheduledDays !== 1 ? 's' : ''} - continues at 9:00 AM daily.
             </p>
           </div>
           <button className="text-muted-foreground hover:text-foreground text-xs mt-0.5" onClick={() => setSendSummary(null)}>✕</button>
@@ -4691,7 +4700,7 @@ export function WABusinessView({
 }) {
   // Drive every request (conversation list, actions, and all children) through
   // the selected channel. 'waba' → LAD-WABA-Comms, 'personal' → LAD-WAPA-Comms.
-  // Do NOT hardcode this — doing so sends one tab's requests to the wrong service.
+  // Do NOT hardcode this - doing so sends one tab's requests to the wrong service.
   const channel = backendChannel;
   const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
@@ -4723,7 +4732,7 @@ export function WABusinessView({
   const [mockSelectedId, setMockSelectedId] = useState<string | null>(null);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [isStarredOpen, setIsStarredOpen] = useState(false);
-  // Groups currently multi-selected in the Broadcast Groups panel — when non-empty,
+  // Groups currently multi-selected in the Broadcast Groups panel - when non-empty,
   // the right pane shows broadcast-group actions instead of the chat splash.
   const [multiSelectGroupIds, setMultiSelectGroupIds] = useState<string[]>([]);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -4913,7 +4922,7 @@ const handleFavorite = useCallback(
 
   // ── Sort / filter state ────────────────────────────────────────────────
   const [sortBy, setSortBy] = useState<'date' | 'message_count' | 'name'>('date');
-  // Personal WA has many empty campaign/greeting shells — default to hiding
+  // Personal WA has many empty campaign/greeting shells - default to hiding
   // empties so the inbox shows real chats first. WABA keeps showing everything.
   const [hideEmpty, setHideEmpty] = useState(channel === 'personal');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
@@ -5015,7 +5024,7 @@ const handleFavorite = useCallback(
           </div>
         </div>
       )}
-      {/* Sidebar — desktop: controlled by isSidebarCollapsed; mobile: shown when no chat is selected */}
+      {/* Sidebar - desktop: controlled by isSidebarCollapsed; mobile: shown when no chat is selected */}
       <AnimatePresence mode="wait">
         {(!isSidebarCollapsed || (isMobileViewport && !typedSelectedConversation)) && (
           <motion.div
@@ -5071,7 +5080,7 @@ const handleFavorite = useCallback(
         )}
       </AnimatePresence>
 
-      {/* Draggable divider — desktop only, visible when sidebar is open */}
+      {/* Draggable divider - desktop only, visible when sidebar is open */}
       {!isMobileViewport && !isSidebarCollapsed && (
         <div
           className="hidden lg:flex w-1 h-full shrink-0 cursor-col-resize z-20 group relative select-none items-center justify-center bg-background dark:bg-[#161717]"
@@ -5084,7 +5093,7 @@ const handleFavorite = useCallback(
         </div>
       )}
 
-      {/* Main Chat Area — hidden on mobile when no conversation selected */}
+      {/* Main Chat Area - hidden on mobile when no conversation selected */}
       <div className={cn(
         "flex-1 overflow-hidden min-w-0 dark:bg-[#161717]",
         (!typedSelectedConversation && multiSelectGroupIds.length === 0) ? "hidden lg:flex" : "flex"

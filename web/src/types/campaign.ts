@@ -40,7 +40,7 @@ export type StepType =
   // Per-lead by default; switches to a campaign-level macro when its scope is
   // set to the whole campaign's industry (see config.campaign_report).
   | 'lead_report'
-  // Campaign-level: generates ONE public page for the campaign. Never per-lead —
+  // Campaign-level: generates ONE public page for the campaign. Never per-lead  - 
   // a per-lead landing page would mint one public URL per enrolled prospect.
   | 'landing_page'
   | 'linkedin_content'

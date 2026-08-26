@@ -1,5 +1,5 @@
 /**
- * Lead Appreciation — review queue.
+ * Lead Appreciation - review queue.
  *
  * Lists appreciation DMs drafted for accepted LinkedIn connections who posted
  * an achievement. In review mode (the default) every DM waits here for a
@@ -46,9 +46,9 @@ const SIGNAL_TYPE_LABELS: Record<string, string> = {
 };
 
 function formatDate(value: string | null): string {
-  if (!value) return '—';
+  if (!value) return '-';
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
 }
 
 function SignalCard({ signal }: { signal: AppreciationSignal }) {
@@ -148,7 +148,7 @@ function SignalCard({ signal }: { signal: AppreciationSignal }) {
           />
         ) : (
           <p className="mt-1 whitespace-pre-wrap text-sm text-gray-800">
-            {signal.message_text || '—'}
+            {signal.message_text || '-'}
           </p>
         )}
       </div>
@@ -210,7 +210,7 @@ export default function LeadAppreciationPage() {
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           Accepted connections who posted an achievement. Approve a drafted DM
-          to queue it for the next send window — every send still passes rate
+          to queue it for the next send window - every send still passes rate
           limits, freshness and safety checks.
           {pendingCount > 0 && (
             <span className="ml-1 font-medium text-gray-700">

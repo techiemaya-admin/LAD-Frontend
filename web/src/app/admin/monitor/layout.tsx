@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ShieldAlert, LayoutDashboard, Building2, ScrollText, Clock, Target, ListChecks, Sparkles, Database, ShieldCheck, Inbox, Route } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Client-side gate for UX only — the real enforcement is server-side
+// Client-side gate for UX only - the real enforcement is server-side
 // (backend requireSuperAdmin on every /api/admin/monitor route). Keep this
 // email in sync with the backend SUPER_ADMIN_EMAIL.
 const SUPER_ADMIN_EMAIL = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com').toLowerCase();

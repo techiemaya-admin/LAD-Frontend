@@ -53,7 +53,7 @@ export function getBackendUrl(): string {
  * Frontend ID identifies which integration context is making the request.
  * VOAG uses it to select the correct OAuth redirect URIs and call configs.
  *
- * Env vars (server-side, no NEXT_PUBLIC_ needed — only used in API routes):
+ * Env vars (server-side, no NEXT_PUBLIC_ needed - only used in API routes):
  *   VOAG_FRONTEND_ID          → default context (calendar, voice calls)  default: 'settings'
  *   VOAG_ADS_FRONTEND_ID      → ads/social integration context            default: 'group-info'
  *   VOAG_API_KEY              → API key for VOAG service (same as BASE_URL_FRONTEND_APIKEY)

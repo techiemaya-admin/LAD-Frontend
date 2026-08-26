@@ -243,7 +243,7 @@ export function CallLogsTable({
 
   // Helper function to clean lead names from placeholder text
   const cleanLeadName = (leadName?: string): string => {
-    if (!leadName || !leadName.trim()) return "—";
+    if (!leadName || !leadName.trim()) return "-";
 
     const cleaned = leadName.trim();
     const placeholders = [
@@ -258,7 +258,7 @@ export function CallLogsTable({
     const lowerName = cleaned.toLowerCase();
     // Check if the entire name is a placeholder
     if (placeholders.some(p => lowerName === p || lowerName.includes(`(${p}`) || lowerName.includes(`${p})`))) {
-      return "—";
+      return "-";
     }
 
     return cleaned;
@@ -302,12 +302,12 @@ export function CallLogsTable({
   };
 
   const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return "—";
+    if (!dateStr) return "-";
     return formatDateTimeUnified(dateStr);
   };
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return "—";
+    if (!seconds) return "-";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
@@ -467,7 +467,7 @@ export function CallLogsTable({
       header: 'Agent',
       size: 120,
       maxSize: 150,
-      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "—"}</span>,
+      cell: ({ getValue }) => <span className="font-medium text-sm">{(getValue() as string) || "-"}</span>,
     },
     {
       id: 'lead_name',
@@ -476,7 +476,7 @@ export function CallLogsTable({
       header: 'Lead',
       cell: ({ row }) => {
         const leadName = cleanLeadName(row.original.lead_name);
-        const hasLead = leadName !== "—";
+        const hasLead = leadName !== "-";
         return (
           <div className="group flex items-center gap-2">
             <span className="text-muted-foreground">{leadName}</span>
@@ -539,7 +539,7 @@ export function CallLogsTable({
       header: "Response",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
-          {getStatusReason(row.original) || "—"}
+          {getStatusReason(row.original) || "-"}
         </span>
       ),
     },
@@ -639,7 +639,7 @@ export function CallLogsTable({
     //     const cost = row.original.cost || row.original.call_cost;
     //     return (
     //       <span className="font-mono text-sm">
-    //         {cost ? `$${Number(cost).toFixed(2)}` : "—"}
+    //         {cost ? `$${Number(cost).toFixed(2)}` : " - "}
     //       </span>
     //     );
     //   },
@@ -1092,7 +1092,7 @@ export function CallLogsTable({
                   // Check if there's any data
                   if (timelineItems.length === 0) {
                     return (
-                      <TableRow>
+                      <TableRow className="hover:bg-transparent">
                         <TableCell
                           colSpan={columns.length}
                           className="text-center py-16"
@@ -1112,7 +1112,7 @@ export function CallLogsTable({
                               </div>
                               <button
                                 onClick={() => router.push('/make-call')}
-                                className="px-6 py-2.5 bg-[#ffffff] rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                                className="px-6 py-2.5 bg-primary hover:bg-primary/90 rounded-lg text-white transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2"
                               >
                                 <Plus className="w-4 h-4" />
                                 Go to Make Call
@@ -1174,7 +1174,7 @@ export function CallLogsTable({
                   });
                 })()
               ) : table.getRowModel().rows.length === 0 ? (
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={columns.length}
                     className="text-center py-16"
@@ -1255,7 +1255,7 @@ export function CallLogsTable({
           </Table>
         </div>
       </div>
-      {/* Pagination Controls – Server-Side Pagination */}
+      {/* Pagination Controls-Server-Side Pagination */}
       {table.getRowModel().rows.length > 0 && onPageChange && (
         <div className="flex items-center justify-between px-2 xs:px-4 py-3 gap-2 border-t border-[#E2E8F0] dark:border-[#262831] bg-[#F8FAFC] dark:bg-[#000724]">
           {/* Left Side: Records per page */}
@@ -1354,18 +1354,18 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-[#262831]">
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
           {/* Added padding and matching sub-borders to the dialog header line */}
-          <DialogHeader className="p-6 border-b border-slate-100 dark:border-[#262831] dark:bg-[#0e1a3a]/60">
+          <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40 dark:bg-[#081331]">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-500 text-blue-600 dark:text-blue-950 border border-blue-100 dark:border-transparent shadow-sm flex items-center justify-center w-10 h-10">
+              <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400 border border-blue-100 dark:border-blue-900/40 shadow-sm flex items-center justify-center w-10 h-10">
                 <CalendarRange className="h-5 w-5" />
               </div>
               <DialogTitle className="dark:text-white text-[#0b1957] text-left font-semibold text-lg leading-tight">
                   <span className="block md:inline">Schedule</span>{' '}
                   <span className="block md:inline">Appointment</span>
                   {selectedLead?.name && (
-                      <span className="block md:inline">
+                      <span className="block md:inline text-slate-500 dark:text-slate-400 font-normal">
                       <span> — </span>
                       <span className="md:hidden"><br /></span>
                                       {selectedLead.name}

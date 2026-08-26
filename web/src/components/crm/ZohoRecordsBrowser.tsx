@@ -17,6 +17,13 @@ type RecordType = 'contacts' | 'leads' | 'deals' | 'tasks';
 
 interface ZohoStatus {
   connected: boolean;
+  /**
+   * The server could not DETERMINE the connection state (its status lookup
+   * threw). `connected` is false only because we do not know — treating that as
+   * "not connected" told tenants with a working Zoho to go and connect it.
+   * Optional: older backends omit it, and `undefined` reads as "we do know".
+   */
+  status_unavailable?: boolean;
   last_synced?: string;
   counts?: { contacts?: number; leads?: number; deals?: number; tasks?: number } | null;
   syncing?: boolean;
@@ -68,6 +75,12 @@ export const ZohoRecordsBrowser: React.FC = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [recordsLoading, setRecordsLoading] = useState(false);
+  // A failed records fetch used to be indistinguishable from a successful empty
+  // one: both paths below just cleared the list, and the empty state then said
+  // "No {type} synced yet. Click 'Sync from Zoho' to pull them in." — telling a
+  // tenant who has synced thousands of records that they have none, and
+  // inviting a pointless full re-sync.
+  const [recordsError, setRecordsError] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingRef = useRef(false);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -89,26 +102,43 @@ export const ZohoRecordsBrowser: React.FC = () => {
     (async () => { await checkStatus(); setLoading(false); })();
   }, [checkStatus]);
 
+  // Same response-race guard as the Sales funnel widget. loadRecords takes the
+  // varying key (record type / page / search) as ARGUMENTS, so switching tabs,
+  // paging or typing fires a new request without cancelling the previous one.
+  // Nothing here stops an earlier request that lands late from overwriting a
+  // newer one — and because the stale branch also calls setPage(p), it would
+  // snap the pager back to the page the user already navigated away from.
+  const recordsSeq = useRef(0);
+
   const loadRecords = useCallback(async (type: RecordType, p: number, q: string, size?: number) => {
     const limit = size ?? pageSize;
+    const seq = ++recordsSeq.current;
+    const isStale = () => seq !== recordsSeq.current;
     setRecordsLoading(true);
     try {
       const params = new URLSearchParams({ type, page: String(p), limit: String(limit) });
       if (q) params.set('search', q);
       const res = await fetchWithTenant(`${ZOHO_API}/records/local?${params.toString()}`);
       const data = await res.json();
+      if (isStale()) return;
       if (res.ok && data?.success) {
         setRecords(data.data || []);
         setTotal(data.total || 0);
         setPage(p);
+        setRecordsError(false);
       } else {
-        setRecords([]); setTotal(0);
+        setRecords([]); setTotal(0); setRecordsError(true);
       }
     } catch {
-      setRecords([]); setTotal(0);
+      if (isStale()) return;
+      setRecords([]); setTotal(0); setRecordsError(true);
     } finally {
-      setRecordsLoading(false);
-      listContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      // Only the newest request may clear the spinner or yank the list back to
+      // the top; a stale one doing either fights the request still in flight.
+      if (!isStale()) {
+        setRecordsLoading(false);
+        listContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   }, [pageSize]);
 
@@ -148,7 +178,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
         }
       } catch { /* transient */ }
       if (tries < 120) setTimeout(tick, 3000);
-      else { pollingRef.current = false; setSyncing(false); setError('Sync is taking longer than expected — refresh shortly.'); }
+      else { pollingRef.current = false; setSyncing(false); setError('Sync is taking longer than expected - refresh shortly.'); }
     };
     setTimeout(tick, 3000);
   }, [loadRecords, recordType, search, pageSize]);
@@ -164,7 +194,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
       const res = await fetchWithTenant(`${ZOHO_API}/sync`, { method: 'POST' });
       const data = await res.json();
       if (res.ok && data?.success) {
-        setSuccess('Sync started — pulling from Zoho. This can take a minute for large accounts…');
+        setSuccess('Sync started - pulling from Zoho. This can take a minute for large accounts…');
         pollSyncStatus();
       } else { setSyncing(false); setError(data?.error || 'Sync failed'); }
     } catch { setSyncing(false); setError('Sync failed'); }
@@ -182,6 +212,23 @@ export const ZohoRecordsBrowser: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-16 text-slate-500 dark:text-[#7a8ba3]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading Zoho CRM…
+      </div>
+    );
+  }
+
+  // We could not read the status. Saying "isn't connected" here sent tenants
+  // whose Zoho works fine off to reconnect it, and hid the records they had
+  // already synced — see the backend fix that added this flag.
+  if (status?.status_unavailable) {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-8 text-center space-y-2">
+        <div className="text-sm font-medium text-amber-800 dark:text-amber-300">
+          Couldn’t check your Zoho connection
+        </div>
+        <p className="text-sm text-amber-700 dark:text-amber-400/80">
+          This isn’t “not connected” — we couldn’t reach the connection status just now,
+          so your synced records aren’t shown. Please try again shortly.
+        </p>
       </div>
     );
   }
@@ -285,6 +332,11 @@ export const ZohoRecordsBrowser: React.FC = () => {
           <div className="flex items-center justify-center py-12 text-slate-500 dark:text-[#7a8ba3]">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading {recordType}…
           </div>
+        ) : recordsError ? (
+          <div className="text-center py-12 text-rose-600 dark:text-rose-300 text-sm">
+            Couldn&apos;t load your {recordType}. This is a loading problem, not an empty
+            sync — please try again.
+          </div>
         ) : records.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-[#7a8ba3] text-sm">
             No {recordType} synced yet. Click “Sync from Zoho” to pull them in.
@@ -305,7 +357,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
                       <div className="min-w-0">
                         <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.deal_name || 'Untitled deal'}</div>
                         <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] truncate">
-                          {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '—'}
+                          {[r.account_name, r.contact_name].filter(Boolean).join(' · ') || '-'}
                         </div>
                       </div>
                     </div>
@@ -344,7 +396,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
                         {initialsOf(r.name)}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.name || '—'}</div>
+                        <div className="text-xs font-semibold text-[#172560] dark:text-white truncate">{r.name || '-'}</div>
                         <div className="text-[11px] text-slate-500 dark:text-[#7a8ba3] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                           {r.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
                           {r.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
@@ -366,7 +418,7 @@ export const ZohoRecordsBrowser: React.FC = () => {
         {total > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3.5 mt-3 border-t border-slate-100 dark:border-[#132247] shrink-0">
             <div className="text-xs text-slate-500 dark:text-[#7a8ba3] font-medium">
-              Showing {Math.min((page - 1) * pageSize + 1, total).toLocaleString()}–{Math.min(page * pageSize, total).toLocaleString()} of {total.toLocaleString()} {recordType}
+              Showing {Math.min((page - 1) * pageSize + 1, total).toLocaleString()}-{Math.min(page * pageSize, total).toLocaleString()} of {total.toLocaleString()} {recordType}
               {totalPages > 1 && <span className="ml-1 opacity-80">(Page {page} of {totalPages})</span>}
             </div>
             <div className="flex items-center gap-3">

@@ -65,7 +65,7 @@ interface Props {
 
 /**
  * GET /campaigns/:id/followup-settings. `source` says which scope the effective
- * cadence came from — the whole point of the panel: an inherited tenant cadence
+ * cadence came from - the whole point of the panel: an inherited tenant cadence
  * used to be invisible here, so a campaign could quietly queue someone else's
  * template on acceptance.
  */
@@ -90,12 +90,12 @@ const SOURCE_STYLE: Record<CadenceResponse['source'], string> = {
   default:  'bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-300',
 };
 
-/** "48h · MEE - Followup" / "24h AI · 72h AI" — one line describing the cadence. */
+/** "48h · MEE - Followup" / "24h AI · 72h AI" - one line describing the cadence. */
 function describeTouches(
   touches: FollowupTouch[] | undefined,
   templates: Array<{ id: string; name: string }> | undefined
 ): string {
-  if (!touches || touches.length === 0) return '—';
+  if (!touches || touches.length === 0) return '-';
   return touches
     .map((t) => {
       const when = t.hours % 24 === 0 ? `${t.hours / 24}d` : `${t.hours}h`;
@@ -115,9 +115,9 @@ const PRESETS: Array<{ label: string; hours: number }> = [
 ];
 
 function fmtDateTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString(undefined, {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
@@ -215,7 +215,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
   // ── Cadence for FUTURE acceptances (campaigns.config.followup_touches) ──────
   // Distinct from the rows listed below: those are already scheduled and keep the
   // template stamped when they were created. This governs what the NEXT accepted
-  // lead gets — and, crucially, shows whether that comes from this campaign or is
+  // lead gets - and, crucially, shows whether that comes from this campaign or is
   // inherited from tenant settings.
   const loadCadence = useCallback(async () => {
     setCadenceLoading(true);
@@ -392,7 +392,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
             <div>
               <DialogTitle>Scheduled Follow-ups</DialogTitle>
               <DialogDescription>
-                Connection-accepted leads — schedule or remove upcoming LinkedIn follow-ups.
+                Connection accepted leads. Schedule or remove upcoming LinkedIn follow-ups.
               </DialogDescription>
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
             </div>
           )}
           <p className="text-[11px] text-slate-400 dark:text-[#7a8ba3]">
-            Optional — pick a saved template to send its message{selectedMedia ? ' + attachment' : ''} instead of an AI-generated follow-up.
+            Optional, pick a saved template to send its message{selectedMedia ? ' + attachment' : ''} instead of an AI-generated follow-up.
           </p>
         </div>
 
@@ -536,8 +536,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
               )}
 
               <p className="text-[11px] text-slate-400 dark:text-[#7a8ba3]">
-                Changes apply to leads who accept from now on. Follow-ups already listed below keep
-                the message they were scheduled with — remove and re-add one to change it.
+                Changes apply to leads who accept from now on. Follow-ups already listed below keep the message they were scheduled with. Remove and re-add one to change it.
               </p>
             </div>
           )}

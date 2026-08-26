@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * usePhoneMasking — should this VIEWER see contact phone numbers, and how are
+ * usePhoneMasking - should this VIEWER see contact phone numbers, and how are
  * they rendered when they should not?
  *
  * The flag is per-user, not per-tenant/account/channel: it lives on the
@@ -14,7 +14,7 @@
  * useCallback inside ConversationContextPanel, so exactly two render sites
  * were masked while the conversation list, group member lists, group sender
  * labels and starred messages all printed the raw number. Anyone with masking
- * enabled still saw unmasked numbers on nearly every surface — which reads as
+ * enabled still saw unmasked numbers on nearly every surface - which reads as
  * "masking is broken" rather than "masking was never wired up there".
  *
  * ── IMPORTANT: this is cosmetic, not access control ──────────────────────
@@ -41,13 +41,13 @@ export function maskPhoneNumber(phone: string): string {
  * Does this string look like a phone number rather than a person's name?
  *
  * Needed because some fields arrive already collapsed to `name || phone` by
- * the time they reach a render site — a group participant's `senderName` is
+ * the time they reach a render site - a group participant's `senderName` is
  * their WhatsApp pushname when they have one and their raw number when they
  * do not. Masking the whole field unconditionally would bullet out real names.
  *
  * Deliberately strict: digits and phone punctuation only, at least 7 digits.
  * Any letter disqualifies it, so a name is never masked. A name that is
- * literally all digits would be masked — an acceptable trade, since that is
+ * literally all digits would be masked - an acceptable trade, since that is
  * indistinguishable from a number and erring toward masking is the safe
  * direction for a privacy setting.
  */
@@ -67,7 +67,7 @@ export interface PhoneMasking {
    */
   displayPhone: (phone: string | null | undefined) => string;
   /**
-   * Render a label that falls back to the phone when no name is known —
+   * Render a label that falls back to the phone when no name is known  - 
    * `name || phone` shapes, which are how raw numbers leaked into the
    * conversation list and group views. Masks ONLY the fallback, never a real
    * name, and never turns an empty label into a bullet string.
@@ -79,7 +79,7 @@ export interface PhoneMasking {
   ) => string;
   /**
    * Render a field that is ALREADY collapsed to "a name, or a phone if no name
-   * was known" — e.g. a group participant's senderName. Masks only when the
+   * was known" - e.g. a group participant's senderName. Masks only when the
    * value is phone-shaped, so real names pass through untouched.
    */
   displayPossiblePhone: (value: string | null | undefined) => string;

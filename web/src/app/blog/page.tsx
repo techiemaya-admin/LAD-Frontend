@@ -47,7 +47,7 @@ export default async function BlogIndexPage() {
             Sales, AI, and everything in between.
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl">
-            Notes from the team building Mr LAD — playbooks, product updates,
+            Notes from the team building Mr LAD - playbooks, product updates,
             and lessons learned from automating outbound at scale.
           </p>
         </div>

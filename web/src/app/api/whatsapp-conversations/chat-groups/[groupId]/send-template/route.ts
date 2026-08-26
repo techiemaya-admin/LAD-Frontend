@@ -2,8 +2,8 @@
  * Send Template to Group Proxy
  *
  * Routing:
- *   ?channel=personal → LAD_backend (Node.js) — personal WA bulk send via Baileys
- *   ?channel=waba     → LAD-WABA-Comms (Python) — DEFAULT
+ *   ?channel=personal → LAD_backend (Node.js) - personal WA bulk send via Baileys
+ *   ?channel=waba     → LAD-WABA-Comms (Python) - DEFAULT
  *
  * POST /api/whatsapp-conversations/chat-groups/:groupId/send-template
  */

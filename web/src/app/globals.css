@@ -235,7 +235,7 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles — WhatsApp styling */
+  /* Message bubbles - WhatsApp styling */
   .message-bubble-incoming {
     background: #ffffff;
     color: #111b21;
@@ -351,7 +351,7 @@
     scrollbar-color: #e5e7eb transparent;
   }
   
-  /* Global dark mode scrollbar — applies to ALL scrollable elements */
+  /* Global dark mode scrollbar - applies to ALL scrollable elements */
   .dark *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -477,6 +477,16 @@
     .animate-top-progress {
       animation: none;
     }
+  }
+
+  /* Light mode input focus override */
+  :root input:focus-visible,
+  :root textarea:focus-visible,
+  :root select:focus-visible,
+  :root [contenteditable="true"]:focus-visible {
+    outline: none;
+    border-color: oklch(25.4% 0.133 267.2) !important;
+    box-shadow: 0 0 0 1px oklch(25.4% 0.133 267.2) !important;
   }
 }
 
@@ -625,7 +635,7 @@
   --sidebar: oklch(98% 0.003 247.858);
   --sidebar-foreground: oklch(20% 0.042 265.755);
   --sidebar-primary: #0B1957;
-  --sidebar-primary-foreground: oklch(97% 0.013 17.38);
+  --sidebar-primary-foreground: oklch(98% 0.003 247.858);
   --sidebar-accent: oklch(62% 0.194 149.214);
   --sidebar-accent-foreground: oklch(98% 0.014 180.72);
   --sidebar-border: oklch(92% 0.013 255.508);
@@ -644,13 +654,13 @@
 
   /* Primary - Electric Blue (CTA) */
   --primary: #2B7CFF;
-  --primary-foreground: #000724;
+  --primary-foreground: #FFFFFF;
 
   /* Secondary */
   --secondary: #1A2A43;
   --secondary-foreground: #E0E0E0;
 
-  /* Accent - Light Blue (Highlight) */
+  /* Accent - Neon Mint / Light Blue (Highlight) */
   --accent: #2563eb;
   --accent-foreground: #ffffff;
 
@@ -701,7 +711,7 @@
   --chart-5: oklch(0.645 0.246 16.439);
 
   /* Sidebar - Modern Tech/SaaS */
-  --sidebar: #1A2A43;
+  --sidebar: #000724;
   --sidebar-foreground: #E0E0E0;
   --sidebar-primary: #2B7CFF;
   --sidebar-primary-foreground: #000724;
@@ -790,6 +800,64 @@ body {
 }
 
 /* -------------------------------------------------------------
+/* -------------------------------------------------------------
+   GLOBAL DARK MODE INPUT / TEXTAREA / DROPDOWN & MODAL FIELD STYLES
+   Ensures all input, textarea, select, combobox, and modal fields use
+   slate-900/50 (rgba(15, 23, 42, 0.5)) background and subtle #1c2c4e border.
+----------------------------------------------------------------- */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+.dark textarea,
+.dark select,
+.dark [data-slot="input"],
+.dark [data-slot="textarea"],
+.dark [data-slot="select-trigger"],
+.dark [role="combobox"],
+.dark button[role="combobox"],
+.dark [role="dialog"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.dark [role="dialog"] textarea,
+.dark [role="dialog"] select,
+.dark [role="dialog"] [role="combobox"],
+.dark [data-slot="dialog-content"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.dark [data-slot="dialog-content"] textarea,
+.dark [data-slot="dialog-content"] select,
+.dark [data-slot="dialog-content"] [role="combobox"] {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+  border-color: #1c2c4e !important;
+  color: #ffffff !important;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus,
+.dark [data-slot="input"]:focus,
+.dark [data-slot="textarea"]:focus,
+.dark [data-slot="select-trigger"]:focus,
+.dark [role="combobox"]:focus,
+.dark button[role="combobox"]:focus,
+.dark [role="dialog"] input:focus,
+.dark [role="dialog"] textarea:focus,
+.dark [role="dialog"] select:focus,
+.dark [role="dialog"] [role="combobox"]:focus {
+  border-color: #2563eb !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Invert number input spin buttons in dark mode */
+.dark input[type="number"]::-webkit-inner-spin-button,
+.dark input[type="number"]::-webkit-outer-spin-button {
+  filter: invert(1);
+}
+
+.dark input[type="checkbox"] {
+  color-scheme: dark;
+  accent-color: #2563eb; /* Or your preferred brand color (e.g. #2563eb for blue) */
+}
+
+/* -------------------------------------------------------------
    GLOBAL DARK MODE DROPDOWN & SELECT STYLES
    Ensures popovers use #071131 navy background with subtle #1c2c4e border,
    and option hover/focused/active states use standard light blue (#2563eb).
@@ -837,14 +905,14 @@ body {
 /* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
 .dark input:focus,
 .dark input:focus-visible,
-.dark textarea:focus,
-.dark textarea:focus-visible,
+.dark textarea:focus:not(.adv-chat-ta),
+.dark textarea:focus-visible:not(.adv-chat-ta),
 .dark select:focus,
 .dark select:focus-visible,
 .dark [data-slot="input"]:focus,
 .dark [data-slot="input"]:focus-visible,
-.dark [data-slot="textarea"]:focus,
-.dark [data-slot="textarea"]:focus-visible,
+.dark [data-slot="textarea"]:focus:not(.adv-chat-ta),
+.dark [data-slot="textarea"]:focus-visible:not(.adv-chat-ta),
 .dark [data-slot="select-trigger"]:focus,
 .dark [data-slot="select-trigger"]:focus-visible {
   border-color: rgba(43, 124, 255, 0.5) !important;
@@ -852,5 +920,44 @@ body {
   outline: none !important;
 }
 
+/* ── ReactFlow Controls Dark Mode Styling ── */
+.dark .react-flow__controls {
+  background-color: rgba(7, 17, 49, 0.95) !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+}
+/* Specific override to strip focus ring on AI Assistant prompt textarea (.adv-chat-ta) */
+textarea.adv-chat-ta:focus,
+textarea.adv-chat-ta:focus-visible,
+textarea.adv-chat-ta:focus-within,
+.dark textarea.adv-chat-ta:focus,
+.dark textarea.adv-chat-ta:focus-visible,
+.dark textarea.adv-chat-ta:focus-within {
+  border-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  ring: 0 !important;
+  -webkit-ring-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+.dark .react-flow__controls-button {
+  background-color: transparent !important;
+  border-bottom-color: rgba(30, 58, 138, 0.4) !important;
+  color: #e2e8f0 !important;
+  fill: #e2e8f0 !important;
+}
 
+.dark .react-flow__controls-button:hover {
+  background-color: rgba(30, 58, 138, 0.5) !important;
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
 
+.dark .react-flow__controls-button svg {
+  fill: currentColor !important;
+}

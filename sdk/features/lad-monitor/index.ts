@@ -1,5 +1,5 @@
 /**
- * lad-monitor — admin observability feature SDK.
+ * lad-monitor - admin observability feature SDK.
  * Internal cross-tenant monitoring: dashboard, per-tenant health, Cloud Run logs.
  */
 

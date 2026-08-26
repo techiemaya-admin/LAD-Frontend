@@ -1,5 +1,5 @@
 /**
- * /settings/icp-search-strategy — strategy editor for the tenant's active ICP.
+ * /settings/icp-search-strategy - strategy editor for the tenant's active ICP.
  *
  * Loads the canonical active ICP via useActiveIcpDefinition, hands its
  * `icp_definition.search_strategy` to SearchStrategyEditor, and persists

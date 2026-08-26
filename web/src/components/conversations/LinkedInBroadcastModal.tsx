@@ -6,9 +6,9 @@
  * Purpose-built for the rate-limited LinkedIn reality (NOT a fork of the
  * WhatsApp BroadcastModal, whose naive client-side per-recipient fan-out would
  * get LinkedIn accounts restricted). Flow:
- *   1. Audience — pick or build a broadcast group from campaign-accepted connections.
- *   2. Message — pick a saved LinkedIn template.
- *   3. Queue — POST /send returns 202 + an ETA; the backend drips the sends over
+ *   1. Audience - pick or build a broadcast group from campaign-accepted connections.
+ *   2. Message - pick a saved LinkedIn template.
+ *   3. Queue - POST /send returns 202 + an ETA; the backend drips the sends over
  *      days within each account's daily cap. Progress shows in the Runs tab.
  *
  * All data is reached under /api/campaigns/linkedin-broadcast/* via fetchWithTenant.
@@ -46,7 +46,7 @@ function runLabel(r: Run) {
   return r.group_name || r.name || r.template_name || 'Broadcast';
 }
 
-/** "3 Aug 2026, 14:32" — the send date, or the queue date if it never started. */
+/** "3 Aug 2026, 14:32" - the send date, or the queue date if it never started. */
 function formatSentAt(r: Run) {
   const raw = r.started_at || r.created_at;
   if (!raw) return null;
@@ -125,7 +125,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
 
   const createGroupFromAccepted = async () => {
     if (!selectedCampaign || !chosenCampaign) { setNotice({ kind: 'err', text: 'Select a campaign first' }); return; }
-    const suffix = excludeResponded ? ' — not responded' : ' — accepted';
+    const suffix = excludeResponded ? ' - not responded' : ' - accepted';
     const name = (newGroupName.trim() || `${chosenCampaign.name}${suffix}`).slice(0, 200);
     setBusy('create');
     setNotice(null);
@@ -140,7 +140,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
       if (!mat.ok) { setNotice({ kind: 'err', text: mat.data?.error || 'Group created but adding members failed' }); }
       else {
         const { added, skipped, member_count } = mat.data.data;
-        setNotice({ kind: 'ok', text: `Added ${added} connection(s)${skipped ? ` — ${skipped} skipped (no LinkedIn id)` : ''}. Group has ${member_count}.` });
+        setNotice({ kind: 'ok', text: `Added ${added} connection(s)${skipped ? ` - ${skipped} skipped (no LinkedIn id)` : ''}. Group has ${member_count}.` });
       }
       setNewGroupName('');
       await loadGroups();
@@ -156,7 +156,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
       const mat = await getJson(`${BASE}/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ source: 'campaign_accepted' }) });
       if (mat.ok) {
         const { added, skipped, member_count } = mat.data.data;
-        setNotice({ kind: 'ok', text: `Refreshed — ${added} new, ${skipped} skipped, ${member_count} total.` });
+        setNotice({ kind: 'ok', text: `Refreshed - ${added} new, ${skipped} skipped, ${member_count} total.` });
       }
       await loadGroups();
     } finally {
@@ -233,7 +233,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
               {/* Drip reality note */}
               <div className="rounded-md bg-blue-50 text-blue-800 text-xs px-3 py-2 leading-relaxed">
                 LinkedIn caps how many messages an account can send per day, so a broadcast <strong>drips</strong> out
-                over hours/days within a safe limit — not all at once. You&apos;ll get an ETA when you queue it.
+                over hours/days within a safe limit - not all at once. You&apos;ll get an ETA when you queue it.
               </div>
 
               {/* Audience */}
@@ -286,7 +286,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
                       )}
 
                       <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)}
-                        placeholder={chosenCampaign ? `${chosenCampaign.name}${excludeResponded ? ' — not responded' : ' — accepted'}` : 'Group name (optional)'}
+                        placeholder={chosenCampaign ? `${chosenCampaign.name}${excludeResponded ? ' - not responded' : ' - accepted'}` : 'Group name (optional)'}
                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
 
                       <button onClick={createGroupFromAccepted} disabled={!selectedCampaign || busy === 'create'}
@@ -350,7 +350,7 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
                 const seen = r.seen_count || 0;
                 const replied = r.replied_count || 0;
                 const sent = r.sent_count || 0;
-                // Percentages are of what actually went out — "12 seen of 36 queued"
+                // Percentages are of what actually went out - "12 seen of 36 queued"
                 // would understate a broadcast still mid-drip.
                 const rate = (n: number) => (sent ? Math.round((n / sent) * 100) : 0);
                 return (

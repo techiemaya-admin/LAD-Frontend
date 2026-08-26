@@ -2,7 +2,7 @@
  * Proxy utility for forwarding Next.js API requests to LAD-Email-Comms
  * (Python FastAPI service at asia-south1).
  *
- * Mirrors the python-proxy pattern used by whatsapp-conversations but simpler —
+ * Mirrors the python-proxy pattern used by whatsapp-conversations but simpler  - 
  * no channel multiplexing, single target service. Lifts the JWT from
  * Authorization header OR access_token cookie, extracts tenantId, forwards
  * as X-Tenant-ID so the Python TenantMiddleware can route to the correct
@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-/** LAD-Email-Comms (Python FastAPI) — outbound broadcasts + account listing. */
+/** LAD-Email-Comms (Python FastAPI) - outbound broadcasts + account listing. */
 export function getEmailCommsServiceUrl(): string {
   return (
     process.env.NEXT_PUBLIC_EMAIL_COMMS_URL ||
@@ -19,7 +19,7 @@ export function getEmailCommsServiceUrl(): string {
   );
 }
 
-/** Decode JWT payload (no signature verification — Python service trusts the
+/** Decode JWT payload (no signature verification - Python service trusts the
  * X-Tenant-ID we forward, so this is a routing hint only). */
 function extractTenantIdFromJwt(token: string): string | null {
   try {
@@ -60,7 +60,7 @@ export async function proxyToEmailComms(
     'Content-Type': 'application/json',
   };
 
-  // Resolve auth — prefer Authorization header, fall back to access_token cookie.
+  // Resolve auth - prefer Authorization header, fall back to access_token cookie.
   const authHeader = req.headers.get('authorization');
   let token: string | null = null;
   if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
@@ -77,7 +77,7 @@ export async function proxyToEmailComms(
     }
   }
 
-  // Forward X-Tenant-ID — explicit header from the client wins.
+  // Forward X-Tenant-ID - explicit header from the client wins.
   const explicitTenant = req.headers.get('x-tenant-id');
   if (explicitTenant) {
     headers['X-Tenant-ID'] = explicitTenant;
@@ -106,12 +106,15 @@ export async function proxyToEmailComms(
 
   try {
     const response = await fetch(url.toString(), fetchOptions);
+    if (response.status === 204) {
+      return new Response(null, { status: 204 });
+    }
     const contentType = response.headers.get('content-type') || '';
     const isJson = contentType.includes('application/json');
 
     if (!isJson) {
       // The unsubscribe route returns HTML on the public endpoint, but THAT
-      // endpoint isn't proxied through here — every route under
+      // endpoint isn't proxied through here - every route under
       // /api/email-comms/* targets a JSON FastAPI endpoint. If we get HTML,
       // something's wrong upstream.
       const text = await response.text();

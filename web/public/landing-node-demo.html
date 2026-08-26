@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verdant Landscapes — grounds contracts across the UAE</title>
+<title>Verdant Landscapes - grounds contracts across the UAE</title>
 
 <meta name="description" content="Design-build and grounds maintenance for UAE communities, hotels and developers.">
 <meta property="og:title" content="Win the grounds contract before it goes to tender">
@@ -67,7 +67,7 @@
   .faq summary{cursor:pointer;font-weight:600;list-style:none}
   .faq summary::-webkit-details-marker{display:none}
   .faq summary::before{content:"+";display:inline-block;width:1.2em;color:var(--brand);font-weight:700}
-  .faq[open] summary::before{content:"–"}
+  .faq[open] summary::before{content:"-"}
   .faq p{margin:8px 0 0 1.2em;color:var(--muted)}
   .cta{padding:44px 0;border-top:1px solid var(--line)}
   .form{display:grid;gap:12px;max-width:440px;margin-top:20px}
@@ -262,7 +262,7 @@
             return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, b: b }; });
           }).then(function (res) {
             if (!res.ok) throw new Error((res.b && res.b.error) || 'Something went wrong.');
-            // The server decides whether a download is on offer — the page is a
+            // The server decides whether a download is on offer - the page is a
             // static object and cannot know at render time whether the report
             // finished generating.
             var dl = res.b && res.b.download_url;

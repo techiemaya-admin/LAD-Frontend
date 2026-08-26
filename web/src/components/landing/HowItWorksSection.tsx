@@ -163,7 +163,7 @@ export default function HowItWorksSection() {
       id: 0,
       step: '01',
       title: 'Hire Mr LAD',
-      description: 'Connect your channels in minutes — LinkedIn, WhatsApp, Instagram, email, and voice',
+      description: 'Connect your channels in minutes: LinkedIn, WhatsApp, Instagram, email, and voice',
       icon: <Zap className="w-6 h-6 text-white" />,
       duration: '2 mins',
       color: 'from-blue-500 to-cyan-500',

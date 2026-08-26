@@ -4,7 +4,7 @@
  * Founding-group applications from the public /community landing page.
  *
  * The source column is the point of this screen: it answers "is the InMail
- * campaign actually working, or is this all organic traffic?" — which is the
+ * campaign actually working, or is this all organic traffic?" - which is the
  * only way to know whether to send more of them.
  */
 import React from 'react';
@@ -45,7 +45,7 @@ export default function MonitorSignupsPage() {
   const { data, summary, loading, error, refetch, setStatus: save, savingId } =
     useCommunitySignups(status);
 
-  // Source mix across whatever is currently loaded — the attribution answer.
+  // Source mix across whatever is currently loaded - the attribution answer.
   const bySource = data.reduce<Record<string, number>>((acc, s) => {
     acc[s.source] = (acc[s.source] || 0) + 1;
     return acc;

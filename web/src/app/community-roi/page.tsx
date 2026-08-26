@@ -31,6 +31,7 @@ import RelationshipHeatmap, { RelationshipHeatmapWithRecommendations } from '@/f
 import { BroadcastPerformanceContainer } from '@/features/community-roi/components/BroadcastPerformanceContainer'
 import { AuditLogPanel } from '@/features/community-roi/components/AuditLogPanel'
 import { VerificationClaimsPanel } from '@/features/community-roi/components/VerificationClaimsPanel'
+import { MemberAvailabilityPanel } from '@/features/community-roi/components/MemberAvailabilityPanel'
 import MemberProfileView from './components/MemberProfileView'
 import LeaderboardPanel from './components/LeaderboardPanel'
 import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
@@ -115,7 +116,7 @@ export default function CommunityROIDashboard() {
     // { id: 'LinkedIn', name: 'LinkedIn Network', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-50' },
   ]
 
-  // Server now returns only the matching subset — no client-side filter needed.
+  // Server now returns only the matching subset - no client-side filter needed.
   const filteredMembers = Array.isArray(members) ? members : []
 
   return (
@@ -334,13 +335,16 @@ export default function CommunityROIDashboard() {
                 <RelationshipHeatmapWithRecommendations />
               </div>
 
-              {/* 1-2-1 Verification Claims — admin review queue (self-hides when empty) */}
+              {/* 1-2-1 Verification Claims - admin review queue (self-hides when empty) */}
               <VerificationClaimsPanel />
 
-              {/* Broadcast Performance — per-template delivery & read-rate */}
+              {/* Per-member 1-2-1 availability - the agent RANKS slots by these */}
+              <MemberAvailabilityPanel />
+
+              {/* Broadcast Performance - per-template delivery & read-rate */}
               <BroadcastPerformanceContainer />
 
-              {/* Unified Audit Log — who changed what across the BNI flow */}
+              {/* Unified Audit Log - who changed what across the BNI flow */}
               <AuditLogPanel />
 
               {/* Leaderboards (Excel KPIs) */}

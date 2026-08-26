@@ -1,4 +1,4 @@
-// lad-monitor (admin observability) SDK — types
+// lad-monitor (admin observability) SDK - types
 // Mirrors the backend /api/admin/monitor/* response shapes.
 
 export interface DateRangeParams {
@@ -398,7 +398,7 @@ export type StrategyReviewStatus = 'pending' | 'approved' | 'rejected' | 'withdr
 
 /**
  * A tenant-published strategy in the review queue. Carries only the SANITIZED
- * `shared_definition` — the author's private definition is never returned by
+ * `shared_definition` - the author's private definition is never returned by
  * the moderation endpoint either.
  */
 export interface StrategyForReview {

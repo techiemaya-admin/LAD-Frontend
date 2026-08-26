@@ -4,7 +4,7 @@
  *   → WAPA /chat-groups/:groupId/resolve-conversation (personal WhatsApp only)
  *
  * Returns (creating if needed) the synced WA group's chat conversation id, so a
- * single click on a group reliably opens its chat — even before any messages.
+ * single click on a group reliably opens its chat - even before any messages.
  */
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWABAServiceUrl } from '../../../utils/python-proxy';

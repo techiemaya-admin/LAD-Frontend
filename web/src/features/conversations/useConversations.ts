@@ -22,7 +22,7 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
 /**
  * Sort modes for the conversation list.
- *  - 'date'           : Most recent activity first (default — matches WhatsApp).
+ *  - 'date'           : Most recent activity first (default - matches WhatsApp).
  *  - 'message_count'  : Busiest conversations first (most messages → top).
  *  - 'name'           : Contact name A → Z, unnamed contacts (phone-only) last.
  */
@@ -43,7 +43,7 @@ export interface UseConversationsReturn {
   /** When true, conversations with no messages yet are hidden from the list. */
   hideEmpty: boolean;
   setHideEmpty: (hide: boolean) => void;
-  /** Active sort order — see ConversationSortBy for options. */
+  /** Active sort order - see ConversationSortBy for options. */
   sortBy: ConversationSortBy;
   setSortBy: (sortBy: ConversationSortBy) => void;
   unreadCounts: Record<string, number>;
@@ -73,7 +73,7 @@ export function useConversations({ channel }: { channel?: 'personal' | 'waba' } 
   const [channelFilter, setChannelFilter] = useState<string | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // New UX controls — hide empty conversations + sort mode.
+  // New UX controls - hide empty conversations + sort mode.
   // Defaults preserve previous behaviour: show everything, sorted by recency.
   const [hideEmpty, setHideEmpty] = useState(false);
   const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
@@ -175,7 +175,7 @@ export function useConversations({ channel }: { channel?: 'personal' | 'waba' } 
           if (!bn) return -1;
           return an.localeCompare(bn);
         }
-        // 'date' (default) — newest activity first.
+        // 'date' (default) - newest activity first.
         return timeOf(b) - timeOf(a);
       });
   }, [conversationsFromRedux, channelFilter, contextStatusFilter, searchQuery, hideEmpty, sortBy]);

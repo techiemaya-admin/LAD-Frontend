@@ -1,5 +1,5 @@
 /**
- * WA Groups Sync Proxy — Personal WhatsApp only
+ * WA Groups Sync Proxy - Personal WhatsApp only
  *
  * POST /api/whatsapp-conversations/wa-groups/sync
  *   → LAD-WAPA-Comms /api/whatsapp-conversations/wa-groups/sync (where the Baileys session lives)
@@ -30,7 +30,7 @@ function authHeaders(req: NextRequest): Record<string, string> {
         if (tenantId) headers['X-Tenant-ID'] = tenantId;
       }
     } catch {
-      // ignore — token may not be a JWT
+      // ignore - token may not be a JWT
     }
   }
 

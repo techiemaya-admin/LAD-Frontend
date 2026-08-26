@@ -65,7 +65,7 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, bgColor, onClick, isLeadTag, isSelected }: StatCardProps) => (
   <div className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
     <div 
-      className={`bg-white dark:bg-[#071131] rounded-[20px] border-2 w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
+      className={`bg-white dark:bg-[#071131] rounded-[20px] border w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer' : ''}
         ${isLeadTag
           ? `hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.05] hover:-translate-y-1 hover:border-primary-300 active:scale-[0.98] ${isSelected ? 'border-primary-400 shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50' : 'border-slate-200 dark:border-blue-950/40'}`

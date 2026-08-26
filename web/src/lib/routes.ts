@@ -40,13 +40,20 @@ export const AUTH_ROUTES = [
   '/wallet',
   '/make-call',
   '/pipeline',
+  // Curated vertical-snapshot pipelines. MUST be listed separately from
+  // '/pipeline' above: that entry is the deals pipeline, a different feature,
+  // and the auth matcher is exact-or-'/'-prefixed so it does not cover
+  // '/pipelines'. Without its own entry this falls through to the open-route
+  // check, where a bare startsWith against '/' matches everything and the page
+  // renders in the PUBLIC layout - marketing chrome, no sidebar, wrong ground.
+  '/pipelines',
   '/crm',
   '/prospects',
   '/onboarding',
   '/community-roi',
   '/follow-ups',
   '/instagram', // Instagram management (accounts, AI replies, comments, goals)
-  '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) — super-admin gated
+  '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) - super-admin gated
   '/api/protected', // Mark all protected API routes with /api/protected prefix
 ];
 

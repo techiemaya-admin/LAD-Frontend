@@ -15,7 +15,7 @@ const SITE_URL =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Mr LAD — AI-Powered Sales Platform",
+    default: "Mr LAD - AI-Powered Sales Platform",
     template: "%s · Mr LAD",
   },
   description:
@@ -24,15 +24,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Mr LAD",
-    title: "Mr LAD — AI-Powered Sales Platform",
+    title: "Mr LAD - AI-Powered Sales Platform",
     description:
-      "One AI Sales Employee across LinkedIn, WhatsApp, Instagram, email, and voice — the output of an entire sales team.",
+      "One AI Sales Employee across LinkedIn, WhatsApp, Instagram, email, and voice. The output of an entire sales team.",
     url: SITE_URL,
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Mr LAD" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mr LAD — AI-Powered Sales Platform",
+    title: "Mr LAD - AI-Powered Sales Platform",
     description:
       "One AI Sales Employee across LinkedIn, WhatsApp, Instagram, email, and voice.",
     images: ["/og-image.png"],
@@ -49,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Favicon — MrLAD square mark */}
+        {/* Favicon - MrLAD square mark */}
         <link rel="icon" href="/MrLad-code.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/MrLad-code.svg" />
         
@@ -58,21 +58,19 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              // Initialize theme from localStorage or system preference
+              // Initialize from a saved preference; first visits use light mode.
               (function() {
                 try {
                   const theme = localStorage.getItem('theme');
-                  const isDark = theme === 'dark' || ((theme === null || theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   if (isDark) {
                     document.documentElement.classList.add('dark');
                   } else {
                     document.documentElement.classList.remove('dark');
                   }
                 } catch(e) {
-                  // Fallback to system preference
-                  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                  }
+                  // A storage failure should still produce the light default.
+                  document.documentElement.classList.remove('dark');
                 }
               })();
               // Suppress Chrome extension message passing errors immediately
@@ -91,7 +89,7 @@ export default function RootLayout({
           }}
         />
         {/* Load the fonts the design actually uses (Inter for body, Space
-            Grotesk for headings — see globals.css). Preconnect first so the
+            Grotesk for headings - see globals.css). Preconnect first so the
             font CSS + files aren't gated behind a cold cross-origin handshake. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

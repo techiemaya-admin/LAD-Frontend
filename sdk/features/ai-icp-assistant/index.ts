@@ -106,7 +106,7 @@ export type {
   WorkflowNode,
 } from './types';
 
-// R8 — Tenant ICP Definitions (canonical active ICP)
+// R8 - Tenant ICP Definitions (canonical active ICP)
 export type {
   IcpStructured,
   IcpDefinition,
@@ -158,7 +158,7 @@ export type {
 export { useIcpSearchHistory } from './hooks/useIcpSearchHistory';
 export type { UseIcpSearchHistoryResult } from './hooks/useIcpSearchHistory';
 
-// D6 — SearchDispatcher HTTP client + hooks
+// D6 - SearchDispatcher HTTP client + hooks
 export {
   runSearch,
   listDispatchedSearches,

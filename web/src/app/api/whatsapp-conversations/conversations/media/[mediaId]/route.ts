@@ -1,5 +1,5 @@
 /**
- * Media Proxy — streams inbound WhatsApp media to the browser
+ * Media Proxy - streams inbound WhatsApp media to the browser
  *
  * GET /api/whatsapp-conversations/conversations/media/{mediaId}?channel=waba
  *
@@ -27,7 +27,7 @@ export async function GET(
 ) {
   const { mediaId } = await params;
 
-  // Personal WhatsApp inbound media — IDs are prefixed with "pwa_".
+  // Personal WhatsApp inbound media - IDs are prefixed with "pwa_".
   // The WAPA service (Baileys) downloaded and stored these on its own disk
   // (uploads/personal-media), so they're served from WAPA, not LAD_backend.
   const isPersonalMedia = mediaId.startsWith('pwa_');
@@ -43,7 +43,7 @@ export async function GET(
   // Auth + tenant extraction (same as python-proxy.ts).
   // Browsers load media via <img src>, which sends cookies but NO Authorization
   // header. The WAPA (Node) service verifies the JWT, so a missing Authorization
-  // header → 401 — lift the cookie token into it when the header is absent.
+  // header → 401 - lift the cookie token into it when the header is absent.
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
     headers['Authorization'] = authHeader;

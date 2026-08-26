@@ -72,7 +72,7 @@ export default function MRLadsSection() {
             Mr LADS
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-medium">
-            Meet Mr LAD — your AI Sales Employee for sales and marketing. Hire one AI Sales Employee who finds your ideal customers, starts conversations, builds relationships, and books meetings for your business 24/7.
+            Meet Mr LAD, your AI Sales Employee for sales and marketing. Hire one AI Sales Employee who finds your ideal customers, starts conversations, builds relationships, and books meetings for your business 24/7.
           </p>
         </motion.div>
 

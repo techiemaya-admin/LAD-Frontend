@@ -12,7 +12,7 @@
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
 
-  // Try cookie first (primary store — LAD uses httpOnly: false cookies)
+  // Try cookie first (primary store - LAD uses httpOnly: false cookies)
   const cookies = document.cookie ? document.cookie.split(';') : [];
   for (const cookie of cookies) {
     const [rawName, ...rawValueParts] = cookie.trim().split('=');

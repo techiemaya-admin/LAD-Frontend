@@ -5,7 +5,7 @@
  *
  * WHY THIS EXISTS
  * When WhatsApp revokes a linked device, LAD-WAPA-Comms wipes the stored
- * credentials on purpose — dead creds must not be retried forever. The side
+ * credentials on purpose - dead creds must not be retried forever. The side
  * effect is that the account DISAPPEARS from GET /accounts, so the settings page
  * showed a plain "Disconnected" that looked exactly like "never set up". One
  * tenant sat dead for three days because nothing distinguished the two.
@@ -52,7 +52,7 @@ export const WhatsAppRelinkBanner: React.FC<{ linkState: LinkState | null }> = (
       <div className="flex items-center gap-2 mb-1">
         <AlertCircle className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
         <span className="text-sm font-semibold text-amber-900 dark:text-amber-300">
-          WhatsApp disconnected — re-link required
+          WhatsApp disconnected - re-link required
         </span>
       </div>
       <p className="text-xs text-amber-800 dark:text-amber-200/90">

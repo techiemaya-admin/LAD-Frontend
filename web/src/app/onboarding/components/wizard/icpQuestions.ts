@@ -1,4 +1,4 @@
-// R8 Phase 3 redesign — terse, controlled question script for the wizard's
+// R8 Phase 3 redesign - terse, controlled question script for the wizard's
 // ICP discovery step.
 //
 // Each question writes to ONE or BOTH of two destinations:
@@ -12,7 +12,7 @@
 // Both are required: until R8.1 this step only wrote the first, so every
 // ICP-half field in Settings → Business Profile stayed permanently blank even
 // though the tenant had answered the question. Any NEW question must declare
-// `applyProfile` if a canonical BusinessProfile key exists for it — otherwise
+// `applyProfile` if a canonical BusinessProfile key exists for it - otherwise
 // the answer is invisible to every surface except the search dispatcher.
 
 import type { IcpStructured, BusinessProfile } from '@lad/frontend-features/ai-icp-assistant';
@@ -28,17 +28,17 @@ export interface IcpQuestion {
   helper?: string;
   type: QuestionType;
   placeholder?: string;
-  /** Marks a question the tenant can reasonably skip — surfaced in the UI. */
+  /** Marks a question the tenant can reasonably skip - surfaced in the UI. */
   optional?: boolean;
-  /** For `pills` type — the fixed option list. */
+  /** For `pills` type - the fixed option list. */
   options?: Array<{ value: string; label: string }>;
-  /** For `text` type — render a multi-line box instead of a single input. */
+  /** For `text` type - render a multi-line box instead of a single input. */
   multiline?: boolean;
   /** Which IcpStructured field this answer writes to. Omit for profile-only questions. */
   apply?: (value: AnswerValue, icp: IcpStructured) => IcpStructured;
   /**
    * Which BusinessProfile key(s) this answer writes to. Omit only when no
-   * canonical key exists (e.g. seniorities, departments, channels — these live
+   * canonical key exists (e.g. seniorities, departments, channels - these live
    * in IcpStructured alone).
    */
   applyProfile?: (value: AnswerValue) => Partial<BusinessProfile>;
@@ -95,7 +95,7 @@ const joinList = (v: AnswerValue): string => (Array.isArray(v) ? v.join(', ') : 
 function formatSize(v: AnswerValue): string {
   if (Array.isArray(v) || typeof v === 'string') return String(v ?? '');
   const { min, max } = v || {};
-  if (min != null && max != null) return `${min}–${max} employees`;
+  if (min != null && max != null) return `${min}-${max} employees`;
   if (min != null) return `${min}+ employees`;
   if (max != null) return `Up to ${max} employees`;
   return '';
@@ -105,7 +105,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'companyDescription',
     prompt: 'How would you describe your company?',
-    helper: 'A sentence or two — this grounds every message the agent writes.',
+    helper: 'A sentence or two - this grounds every message the agent writes.',
     type: 'text',
     multiline: true,
     placeholder: 'We help outbound sales teams in MENA run AI-driven LinkedIn and WhatsApp campaigns.',
@@ -114,7 +114,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'industries',
     prompt: 'Which industries?',
-    helper: 'Comma-separate any number — e.g. Healthtech, B2B SaaS.',
+    helper: 'Comma-separate any number - e.g. Healthtech, B2B SaaS.',
     type: 'chips',
     placeholder: 'Healthtech, B2B SaaS',
     apply: (v, icp) => ({ ...icp, company: { ...icp.company, industries: v as string[] } }),
@@ -154,7 +154,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'jobTitles',
     prompt: 'Job titles?',
-    helper: 'Free text — partial matches are fine.',
+    helper: 'Free text - partial matches are fine.',
     type: 'chips',
     placeholder: 'Head of Growth, VP Marketing',
     apply: (v, icp) => ({ ...icp, person: { ...icp.person, job_titles_includes: v as string[] } }),
@@ -174,7 +174,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'icpPainPoints',
     prompt: 'What problems do you solve for them?',
-    helper: 'In their language, not yours — the agent opens with these.',
+    helper: 'In their language, not yours - the agent opens with these.',
     type: 'text',
     multiline: true,
     placeholder: 'Reps spend hours on manual prospecting and follow-ups slip through the cracks.',
@@ -195,7 +195,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
     prompt: 'What are your operating hours?',
     helper: 'Used to time outreach and set reply expectations.',
     type: 'text',
-    placeholder: '09:00 – 18:00',
+    placeholder: '09:00-18:00',
     applyProfile: (v) => ({ operatingHours: String(v ?? '').trim() }),
   },
   {
@@ -208,7 +208,7 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'competitors',
     prompt: 'Who do you usually compete against?',
-    helper: 'Optional — names help the AI position you.',
+    helper: 'Optional - names help the AI position you.',
     type: 'chips',
     placeholder: 'Outreach, Lemlist',
     optional: true,
@@ -217,11 +217,11 @@ export const ICP_QUESTIONS: IcpQuestion[] = [
   {
     id: 'sampleConversation',
     prompt: 'Paste a sales conversation that worked.',
-    helper: 'Optional — the strongest single input for message quality.',
+    helper: 'Optional - the strongest single input for message quality.',
     type: 'text',
     multiline: true,
     optional: true,
-    placeholder: 'Them: we already use a tool for this…\nYou: totally — most teams do. What usually breaks is…',
+    placeholder: 'Them: we already use a tool for this…\nYou: totally - most teams do. What usually breaks is…',
     applyProfile: (v) => ({ sampleConversation: String(v ?? '').trim() }),
   },
   {
@@ -277,7 +277,7 @@ export function parseChips(raw: string): string[] {
 export function parseRange(raw: string): { min?: number; max?: number } | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const range = trimmed.match(/(\d{1,7})\s*[-–to]+\s*(\d{1,7})/i);
+  const range = trimmed.match(/(\d{1,7})\s*[--to]+\s*(\d{1,7})/i);
   if (range) return { min: parseInt(range[1], 10), max: parseInt(range[2], 10) };
   const plus = trimmed.match(/(\d{1,7})\s*\+/);
   if (plus) return { min: parseInt(plus[1], 10) };

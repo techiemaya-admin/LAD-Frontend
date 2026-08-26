@@ -2,7 +2,7 @@
  * SSE Streaming Proxy for /api/voice-agent/calls/stream
  *
  * Why a dedicated route is needed:
- * - The backend sets the JWT as an httpOnly cookie — JavaScript cannot read it.
+ * - The backend sets the JWT as an httpOnly cookie - JavaScript cannot read it.
  * - The generic proxy at /api/[feature]/[...path] buffers the full response (no streaming).
  * - This route reads the token server-side and pipes the SSE body straight through.
  */
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         const upstream = await fetch(backendUrl, {
             method: 'GET',
             headers,
-            // @ts-expect-error — Node.js fetch supports duplex for streaming
+            // @ts-expect-error - Node.js fetch supports duplex for streaming
             duplex: 'half',
         });
 

@@ -125,7 +125,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
           setMemberStats(json.data)
         }
       } catch {
-        // Stats are supplementary — silently degrade to member row data
+        // Stats are supplementary - silently degrade to member row data
       }
     }
     fetchStats()
@@ -250,7 +250,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
     }
   }, [])
 
-  // Calculate dynamic KPIs — prefer live stats over denormalized member totals
+  // Calculate dynamic KPIs - prefer live stats over denormalized member totals
   const kpis = useMemo(() => {
     if (!member) return null;
 
@@ -517,7 +517,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
               </>
             ) : (
               <>
-                <span className="text-2xl font-bold text-slate-300 leading-tight">—</span>
+                <span className="text-2xl font-bold text-slate-300 leading-tight">-</span>
                 <span className="text-[11px] font-medium text-slate-400 italic">No meetings yet</span>
               </>
             )}
@@ -589,7 +589,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
           {/* Outreach Analysis Component */}
           <OutreachAnalysis memberId={memberId} />
 
-          {/* Template Broadcast Delivery — sent / delivered / read / failed */}
+          {/* Template Broadcast Delivery - sent / delivered / read / failed */}
           <MemberMessageStatusCard memberName={member.name} memberPhone={member.phone} />
 
           {/* ── Member Intelligence Section ─────────────────────────────── */}

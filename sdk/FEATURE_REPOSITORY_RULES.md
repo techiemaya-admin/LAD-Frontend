@@ -29,7 +29,7 @@ backend/features/<feature-name>/
 - ✅ Uses LAD shared utilities only
 - ✅ Feature-prefixed APIs only (`/api/<feature>/*`)
 
-#### 2️⃣ Frontend SDK – Feature Only (Required)
+#### 2️⃣ Frontend SDK-Feature Only (Required)
 ```
 frontend/sdk/features/<feature-name>/
 ├── api.ts              # API functions

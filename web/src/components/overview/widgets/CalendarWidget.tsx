@@ -106,18 +106,20 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
     <WidgetWrapper
       id={id}
       title="Calendar & Scheduler"
+      className="bg-white dark:bg-[#071131]"
+      headerClassName="bg-white dark:bg-[#071131]"
     >
       <div className="h-full flex flex-col">
         {/* Controls Row: User selector + Month/Week toggle */}
         <div className="flex items-center gap-2 mb-3">
           {/* User Selector */}
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="flex-1 h-8 text-xs">
+            <SelectTrigger className="flex-1 h-8 text-xs bg-white dark:bg-[#071131] border border-slate-200 dark:border-[#1e2e4a] text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:bg-slate-50 dark:hover:bg-[#0c1a42] transition-colors">
               <SelectValue placeholder="Select user..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-[#1e2e4a] text-slate-700 dark:text-slate-100">
               {users.map((user: any) => (
-                <SelectItem key={user.id} value={user.id}>
+                <SelectItem key={user.id} value={user.id} className="hover:bg-slate-50 dark:hover:bg-[#1a2a43] focus:bg-slate-50 dark:focus:bg-[#1a2a43]">
                   {user.name}
                 </SelectItem>
               ))}
@@ -195,11 +197,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
                       setIsModalOpen(true);
                     }}
                     className={cn(
-                      'relative p-1 min-h-[60px] rounded-lg border cursor-pointer transition-colors',
+                      'relative p-1 min-h-[60px] rounded-lg border cursor-pointer transition-colors bg-white dark:bg-[#071131] border-slate-200 dark:border-[#1e2e4a]',
                       !isCurrentMonth && 'opacity-40',
-                      isSelected && 'border-accent bg-accent/5',
-                      isTodayDate && !isSelected && 'border-primary/50 bg-primary/5',
-                      !isSelected && !isTodayDate && 'border-transparent hover:border-border hover:bg-secondary/50'
+                      isSelected && 'border-sky-500/60 bg-sky-500/10',
+                      isTodayDate && !isSelected && 'border-slate-400/60 dark:border-slate-500/60 bg-slate-50/50 dark:bg-[#1a2a43]/50',
+                      !isSelected && !isTodayDate && 'hover:border-slate-300 dark:hover:border-slate-400/50 hover:bg-slate-50 dark:hover:bg-[#1a2a43]'
                     )}
                   >
                     <span className={cn(
@@ -327,21 +329,21 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({ id }) => {
         )}
         {/* Selected Date Events Popup Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">
+          <DialogContent className="sm:w-[90vw] sm:max-w-5xl flex flex-col p-0 overflow-hidden max-h-[90vh] bg-white dark:bg-[#000724] border border-slate-200 dark:border-0 text-slate-800 dark:text-white shadow-2xl">
+            <DialogHeader className="bg-white dark:bg-[#081331] border-b border-slate-200 dark:border-transparent px-4 py-3.5 sm:px-8 sm:py-6">
+              <DialogTitle className="text-base sm:text-2xl font-bold text-slate-900 dark:text-white pr-6 sm:pr-0">
                 {format(selectedDate, 'EEEE, MMMM d, yyyy')}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto px-8 py-6">
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-8 sm:py-6 bg-white dark:bg-[#000724]">
               <div className="space-y-4">
-              <div className="text-sm text-gray-500 dark:text-[#7a8ba3] font-medium">
+              <div className="text-xs sm:text-sm text-gray-400 dark:text-[#7a8ba3] font-medium">
                 {getEventsForDate(selectedDate).length} booking{getEventsForDate(selectedDate).length !== 1 ? 's' : ''} scheduled
               </div>
 
               {getEventsForDate(selectedDate).length === 0 ? (
-                <div className="py-12 text-center text-sm text-gray-400 dark:text-[#7a8ba3] font-medium bg-gray-50/50 dark:bg-[#0d1b3e]/50 rounded-2xl border border-gray-100 dark:border-[#262831]">
+                <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-300 font-medium bg-slate-50 dark:bg-[#081331] rounded-2xl border border-slate-200 dark:border-transparent">
                   No bookings scheduled for this date
                 </div>
               ) : (

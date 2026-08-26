@@ -771,7 +771,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
 
         // Create the campaign
         try {
-          // Build steps array — lead_generation FIRST, then action steps
+          // Build steps array - lead_generation FIRST, then action steps
           const actionSteps: any[] = [];
           let orderIdx = 1; // Start at 1 since lead_generation is 0
 
@@ -826,7 +826,7 @@ export default function ChatPanel({ campaignId }: ChatPanelProps = {}) {
               }
             },
             steps: [
-              // Lead generation step FIRST — the processor needs this to find leads
+              // Lead generation step FIRST - the processor needs this to find leads
               {
                 type: 'lead_generation',
                 title: 'LinkedIn Lead Search',
@@ -2852,7 +2852,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                               setShowLeadImport(true);
                               addAIMessage({
                                 role: 'ai',
-                                content: `📁 **Import Your Leads**\n\nUpload a CSV or Excel file with your lead data below. You can download our template first to see the expected format.\n\nAll fields are optional — I'll auto-detect which channels to enable based on your data.`,
+                                content: `📁 **Import Your Leads**\n\nUpload a CSV or Excel file with your lead data below. You can download our template first to see the expected format.\n\nAll fields are optional - I'll auto-detect which channels to enable based on your data.`,
                                 timestamp: new Date(),
                               });
                             }
@@ -3150,7 +3150,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
             const hasOutreachKeyword = /\b(outreach|reach out)\s+(to\s+)?[\+\d\w]/i.test(msg);
 
             if ((hasPhoneInMsg || hasEmailInMsg || hasOutreachKeyword) && !showLeadImport) {
-              // User is sending lead contact info — route to lead import flow, NOT ICP flow
+              // User is sending lead contact info - route to lead import flow, NOT ICP flow
               addAIMessage({ role: 'user', content: msg, timestamp: new Date() });
               setIsProcessingAI(true);
 
@@ -3325,7 +3325,7 @@ When complete, present the comprehensive ICP profile focused on the TARGET CUSTO
                     // Store extracted intent for campaign setup
                     useOnboardingStore.setState({ advancedSearchIntent: intent });
 
-                    // Proceed to campaign setup — skip location question since we have leads
+                    // Proceed to campaign setup - skip location question since we have leads
                     setFlowState('adv_search_location');
                     addAIMessage({
                       role: 'ai',

@@ -3,7 +3,7 @@ import { getBackendUrl, getVoagHeaders } from '../utils/backend';
 
 const BACKEND_PATH = '/api/ai-playground';
 
-/** GET /api/ai-playground — load saved profile + chat history */
+/** GET /api/ai-playground - load saved profile + chat history */
 export async function GET(req: NextRequest) {
   try {
     const backend = getBackendUrl();
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/ai-playground — save profile */
+/** POST /api/ai-playground - save profile */
 export async function POST(req: NextRequest) {
   try {
     const backend = getBackendUrl();

@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — discovery backends toggle. Updates the search_strategy
+// R8 Phase 5 - discovery backends toggle. Updates the search_strategy
 // `discovery_order` array + each backend's `enabled` flag consistently so the
 // dispatcher sees one source of truth.
 
@@ -36,7 +36,7 @@ export default function DiscoveryBackendsToggle({ strategy, onChange }: Discover
 
   const toggle = (k: DiscoveryBackend) => {
     const wasOn = enabled(k);
-    // Fallback base reflects the "all on by default" intent — otherwise
+    // Fallback base reflects the "all on by default" intent - otherwise
     // toggling one backend would accidentally drop the others that were only
     // virtually enabled via the `if (!strategy) return true` fallback above.
     const base: SearchStrategy = strategy ?? {
@@ -47,7 +47,7 @@ export default function DiscoveryBackendsToggle({ strategy, onChange }: Discover
     };
     const nextBlock = { ...(base[k] || {}), enabled: !wasOn };
     const next: SearchStrategy = { ...base, [k]: nextBlock };
-    // Keep discovery_order in sync — include exactly the enabled backends, in
+    // Keep discovery_order in sync - include exactly the enabled backends, in
     // the existing order; append newly-enabled ones at the end.
     const previousOrder = base.discovery_order ?? [];
     const enabledNow = BACKENDS.map((b) => b.key).filter((bk) => {

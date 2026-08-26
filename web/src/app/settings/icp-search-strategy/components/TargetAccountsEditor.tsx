@@ -1,5 +1,5 @@
 /**
- * TargetAccountsEditor — managed list of `{ company_name, domain?, apollo_company_id? }`
+ * TargetAccountsEditor - managed list of `{ company_name, domain?, apollo_company_id? }`
  * rows used by the AbmSearchAdapter (D10).
  *
  * UX:
@@ -12,7 +12,7 @@
  *   - Live count + a hint when accounts have no resolvable domain (because
  *     the AbmSearchAdapter will skip those silently for now).
  *
- * Pure controlled component — emits the whole accounts array on every change.
+ * Pure controlled component - emits the whole accounts array on every change.
  */
 'use client';
 

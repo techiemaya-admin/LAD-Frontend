@@ -1,6 +1,6 @@
 /**
  * Per-template icon, shared by the builder's template gallery/overview drawer
- * and the chat "Roles" launcher — one visual identity for a template wherever
+ * and the chat "Roles" launcher - one visual identity for a template wherever
  * it appears.
  */
 import React from 'react';
@@ -10,7 +10,7 @@ export function TemplateIcon({ tplKey, color, size = 16 }: { tplKey: string; col
     width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
     stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
   };
-  // LinkedIn Accelerator — the LinkedIn glyph (filled, so it reads at 15px).
+  // LinkedIn Accelerator - the LinkedIn glyph (filled, so it reads at 15px).
   if (tplKey === 'linkedin_accelerator') return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
       <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM2.4 21.5h5.16V9.75H2.4V21.5zM9.9 9.75h4.95v1.6h.07c.69-1.24 2.37-2.55 4.88-2.55 5.22 0 6.18 3.3 6.18 7.6v5.1h-5.15v-4.52c0-1.08-.02-2.47-1.55-2.47-1.56 0-1.8 1.17-1.8 2.39v4.6H12.3V9.75z" transform="scale(0.86) translate(1.6, 1.2)" />

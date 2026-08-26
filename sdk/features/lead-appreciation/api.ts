@@ -1,5 +1,5 @@
 /**
- * Lead Appreciation feature — API functions.
+ * Lead Appreciation feature - API functions.
  *
  * All requests flow through the shared apiClient; the Next.js catch-all proxy
  * at /api/[feature]/* forwards 'lead-appreciation' to LAD_backend.

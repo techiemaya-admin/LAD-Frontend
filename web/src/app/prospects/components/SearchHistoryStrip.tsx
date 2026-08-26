@@ -1,5 +1,5 @@
 /**
- * SearchHistoryStrip — compact recent-runs list on /prospects.
+ * SearchHistoryStrip - compact recent-runs list on /prospects.
  *
  * Renders the 5 most recent SearchDispatcher runs as a horizontal chip strip
  * below the run panel. Click a chip to see its detail (status, cost, dedup).

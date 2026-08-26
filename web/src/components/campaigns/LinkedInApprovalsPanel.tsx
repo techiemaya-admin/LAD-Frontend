@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LinkedIn post approvals — the read-back for the Approval node.
+ * LinkedIn post approvals - the read-back for the Approval node.
  *
  * The workflow's Approval node gates each scheduled post behind a human: the
  * cron stages a draft, messages the approver two links, and publishes only when
@@ -49,7 +49,7 @@ interface ApprovalsData {
   approvals: ApprovalRow[];
 }
 
-/** Drafts nobody answers are swept after 48h — mirrors expireStaleApprovals. */
+/** Drafts nobody answers are swept after 48h - mirrors expireStaleApprovals. */
 const APPROVAL_TTL_HOURS = 48;
 
 const STATUS_STYLE: Record<ApprovalStatus, { label: string; icon: React.ElementType; cls: string }> = {
@@ -60,9 +60,9 @@ const STATUS_STYLE: Record<ApprovalStatus, { label: string; icon: React.ElementT
 };
 
 function when(iso?: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   const mins = Math.round((Date.now() - d.getTime()) / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
@@ -112,7 +112,7 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
     return () => clearInterval(t);
   }, [isPending, load]);
 
-  // No auto-post node on this campaign (or we couldn't tell) — show nothing
+  // No auto-post node on this campaign (or we couldn't tell) - show nothing
   // rather than an empty card the user has to reason about.
   if (failed || !data?.enabled || !data.require_approval) return null;
 
@@ -146,21 +146,21 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
 
       {open && (
         <div className="overflow-y-auto">
-          {/* Live gate — what the cron is actually waiting on right now */}
+          {/* Live gate - what the cron is actually waiting on right now */}
           {isPending && (
             <div className="m-3 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-500/10 p-3">
               <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
                 <Hourglass className="h-3.5 w-3.5" /> Awaiting approval
               </div>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-wrap line-clamp-6">
-                {data.pending_content || '—'}
+                {data.pending_content || '-'}
               </p>
               <div className="mt-2 text-[11px] text-amber-700/80 dark:text-amber-400/80">
                 Sent to {data.approval_to || 'the approver'} on {data.approval_channel === 'email' ? 'email' : 'WhatsApp'} · {when(data.approval_sent_at)}
                 {untilExpiry(data.approval_sent_at) ? ` · ${untilExpiry(data.approval_sent_at)}` : ''}
               </div>
               <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                Approve or skip from the links in that message — nothing posts until then.
+                Approve or skip from the links in that message - nothing posts until then.
               </div>
             </div>
           )}
@@ -213,7 +213,7 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
                       <p className="mt-1.5 text-[12px] leading-relaxed text-slate-600 dark:text-slate-300 line-clamp-3 whitespace-pre-wrap">
                         {r.content}
                       </p>
-                      {/* An approval that failed to publish is not a success — say so. */}
+                      {/* An approval that failed to publish is not a success - say so. */}
                       {r.error && (
                         <div className="mt-1.5 text-[11px] text-rose-600 dark:text-rose-400">Did not post: {r.error}</div>
                       )}

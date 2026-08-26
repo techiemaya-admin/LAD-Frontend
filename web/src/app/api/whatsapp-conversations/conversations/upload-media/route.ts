@@ -1,5 +1,5 @@
 /**
- * Media Upload Proxy (multipart) — for large file uploads bypassing JSON body limits
+ * Media Upload Proxy (multipart) - for large file uploads bypassing JSON body limits
  *
  * POST /api/whatsapp-conversations/conversations/upload-media?channel=waba
  *   Accepts: multipart/form-data with a `file` field
@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWABAServiceUrl, getBackendUrl } from '../../utils/python-proxy';
 
-// No body size limit configuration needed — multipart streams directly to backend
+// No body size limit configuration needed - multipart streams directly to backend
 export const maxDuration = 300;
 
 /** Extract tenantId from JWT token payload (same as python-proxy.ts) */
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const channel = req.nextUrl.searchParams.get('channel') || 'waba';
 
   // Personal channel → LAD_backend template upload endpoint (multer, no JSON body limit)
-  // Returns { success, url, filename, media_type, size } — we map url → media_id for the frontend
+  // Returns { success, url, filename, media_type, size } - we map url → media_id for the frontend
   if (channel === 'personal') {
     const backendUrl = getBackendUrl();
     const url = new URL('/api/whatsapp-conversations/conversations/templates/upload-media', backendUrl);
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         );
       }
       // Map the LAD_backend response to the format the frontend expects
-      // frontend reads data.media_id — use the file URL as the "media_id" for personal channel
+      // frontend reads data.media_id - use the file URL as the "media_id" for personal channel
       return NextResponse.json({
         success: true,
         media_id: data.url,          // URL used as reference when sending the message
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers,
       body: req.body,
-      // @ts-ignore — duplex is required for streaming body in Node.js fetch
+      // @ts-ignore - duplex is required for streaming body in Node.js fetch
       duplex: 'half',
     });
 

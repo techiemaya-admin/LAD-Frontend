@@ -5,7 +5,7 @@
  *
  * Routes to LAD-WABA-Comms (Python FastAPI) which persists the config to the
  * tenant's followup_config JSONB table. The Node.js stub at
- * /api/personal-whatsapp/followup-config does not persist — do not use it.
+ * /api/personal-whatsapp/followup-config does not persist - do not use it.
  */
 import { NextRequest } from 'next/server';
 import { proxyToPythonService, getWABAServiceUrl } from '../utils/python-proxy';

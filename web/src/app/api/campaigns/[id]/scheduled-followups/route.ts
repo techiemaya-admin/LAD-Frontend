@@ -10,7 +10,7 @@ function getAuthHeaders(req: NextRequest): Record<string, string> {
   return headers;
 }
 
-/** GET /api/campaigns/[id]/scheduled-followups — accepted leads + their scheduled follow-ups */
+/** GET /api/campaigns/[id]/scheduled-followups - accepted leads + their scheduled follow-ups */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

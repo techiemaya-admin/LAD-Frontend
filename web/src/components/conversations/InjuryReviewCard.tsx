@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * InjuryReviewCard — staff control for the injury-screening booking gate.
+ * InjuryReviewCard - staff control for the injury-screening booking gate.
  *
  * Background: when a customer tells the WhatsApp agent they have an injury or
  * medical condition, the bot keeps chatting normally but will NOT show class
@@ -10,7 +10,7 @@
  *
  * The backend owns the decision. `gate_reason` comes straight from the same
  * function the bot enforces (WhatsAppService._compute_injury_gate_reason), so
- * this component never re-derives "is it cleared?" from the raw fields — that
+ * this component never re-derives "is it cleared?" from the raw fields - that
  * would be a second source of truth free to drift from what actually blocks
  * the bot.
  *
@@ -145,7 +145,7 @@ export function InjuryReviewCard({ conversationId, backendChannel = 'waba' }: In
 
   // Deliberately SILENT on gate_reason === 'unanswered'. That's the default
   // state for every customer who hasn't answered yet, so surfacing it would
-  // put a card on virtually every conversation — training staff to tune the
+  // put a card on virtually every conversation - training staff to tune the
   // card out, which would cost us the 'needs_review' case that actually needs
   // action. We render only when something is genuinely notable: an injury
   // awaiting review, or one already reviewed.
@@ -162,7 +162,7 @@ export function InjuryReviewCard({ conversationId, backendChannel = 'waba' }: In
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Reported an injury — booking on hold</p>
+              <p className="text-sm font-medium">Reported an injury - booking on hold</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {state.note_changed_since_review
                   ? 'Previously cleared, but they have since shared new detail. Please review again.'
@@ -199,7 +199,7 @@ export function InjuryReviewCard({ conversationId, backendChannel = 'waba' }: In
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Injury reviewed — cleared for booking</p>
+              <p className="text-sm font-medium">Injury reviewed - cleared for booking</p>
               {state.injuries_note && (
                 <p className="text-xs text-muted-foreground mt-0.5 break-words">
                   “{state.injuries_note}”
@@ -250,7 +250,7 @@ export function InjuryReviewCard({ conversationId, backendChannel = 'waba' }: In
             </label>
             <Textarea
               id="injury-review-notes"
-              placeholder="e.g. Reformer Basics only — avoid Intermediate and Advanced"
+              placeholder="e.g. Reformer Basics only - avoid Intermediate and Advanced"
               value={reviewNotes}
               onChange={(e) => setReviewNotes(e.target.value)}
               rows={3}

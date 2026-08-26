@@ -1,11 +1,11 @@
 /**
- * useRunSearch — mutation hook for POST /api/ai-icp-assistant/search.
+ * useRunSearch - mutation hook for POST /api/ai-icp-assistant/search.
  *
  * Triggers a discovery run via the SearchDispatcher backend and exposes the
  * candidates + per-backend results to the UI. Keeps the last result so the
  * "Run search" panel can show the previous run when idle.
  *
- * Sync mode (default) — runs Apollo + Sales Nav serverside, ~3-8s for typical
+ * Sync mode (default) - runs Apollo + Sales Nav serverside, ~3-8s for typical
  * caps. Async mode (`{ async: true }`) returns immediately with a `searchId`
  * and the caller can poll `useSearch(searchId)` for completion.
  */

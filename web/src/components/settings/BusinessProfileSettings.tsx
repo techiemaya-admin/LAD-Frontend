@@ -7,7 +7,7 @@
  * Reads/writes through `useBusinessProfile()` so the wizard's Company step,
  * the ICP Discovery chat, and this tab all stay in sync.
  *
- * Field set + completeness math come from the shared SDK module — do not
+ * Field set + completeness math come from the shared SDK module - do not
  * duplicate that vocabulary here.
  */
 
@@ -40,9 +40,9 @@ function bhSummary(bh: BusinessHoursRecord | BusinessHoursPayload | null | undef
   const sorted = [...(bh.activeDays || [])].sort((a, b) => a - b);
   let days = sorted.map((i) => BH_DAY_LABELS[i]).join(', ') || 'No days';
   if (sorted.length === 7) days = 'All days';
-  else if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) days = 'Mon–Fri';
-  else if (JSON.stringify(sorted) === JSON.stringify([5, 6])) days = 'Sat–Sun';
-  return `${fmt(bh.startTime)} – ${fmt(bh.endTime)} · ${days} · ${bh.timezone}`;
+  else if (JSON.stringify(sorted) === JSON.stringify([0, 1, 2, 3, 4])) days = 'Mon-Fri';
+  else if (JSON.stringify(sorted) === JSON.stringify([5, 6])) days = 'Sat-Sun';
+  return `${fmt(bh.startTime)} - ${fmt(bh.endTime)} · ${days} · ${bh.timezone}`;
 }
 
 type Key = keyof BusinessProfile;
@@ -63,7 +63,7 @@ const FIELD_COPY: Record<string, { label: string; hint?: string; multiline?: boo
   website:            { label: 'Website',              placeholder: 'https://acme.com' },
   valueProposition:   { label: 'Value proposition',    multiline: true,  placeholder: 'AI sales assistant for outbound teams in MENA.' },
   productsServices:   { label: 'Products & services',  multiline: true,  hint: 'What the prospect actually buys.' },
-  targetCustomers:    { label: 'Target customers',     multiline: true,  hint: 'Plain language — the chat dives deeper.' },
+  targetCustomers:    { label: 'Target customers',     multiline: true,  hint: 'Plain language - the chat dives deeper.' },
   contactEmail:       { label: 'Contact email',        hint: 'Shared by the agent when a prospect asks how to reach you.', placeholder: 'you@company.com' },
   contactPhone:       { label: 'Contact phone',        hint: 'Shared by the agent when a prospect asks how to reach you.', placeholder: '+971 50 123 4567' },
   personaName:        { label: 'Agent speaks as',       hint: 'The name the LinkedIn agent messages prospects as.', placeholder: 'e.g. Sneha' },
@@ -72,22 +72,22 @@ const FIELD_COPY: Record<string, { label: string; hint?: string; multiline?: boo
 
   companyDescription: { label: 'Company description',  multiline: true },
   icpJobTitles:       { label: 'Job titles',           hint: 'Comma-separate, partial matches OK.', placeholder: 'Head of Growth, VP Sales' },
-  icpCompanySize:     { label: 'Company size',         hint: 'Headcount or revenue range.', placeholder: '50–250 employees' },
+  icpCompanySize:     { label: 'Company size',         hint: 'Headcount or revenue range.', placeholder: '50-250 employees' },
   icpLocations:       { label: 'Locations',            hint: 'Where your buyers are based.', placeholder: 'UAE, Saudi Arabia' },
   icpPainPoints:      { label: 'Pain points',          multiline: true,  hint: 'What you solve, in their language.' },
-  sampleConversation: { label: 'Sample conversation',  multiline: true,  hint: 'Optional — a real conversation that worked.' },
-  operatingHours:     { label: 'Operating hours',      placeholder: '09:00 – 18:00' },
+  sampleConversation: { label: 'Sample conversation',  multiline: true,  hint: 'Optional - a real conversation that worked.' },
+  operatingHours:     { label: 'Operating hours',      placeholder: '09:00-18:00' },
   timezone:           { label: 'Timezone',             placeholder: 'GST+4' },
   geographicFocus:    { label: 'Geographic focus',     placeholder: 'GCC, MENA' },
-  competitors:        { label: 'Competitors',          hint: 'Optional — names help the AI position you.' },
+  competitors:        { label: 'Competitors',          hint: 'Optional - names help the AI position you.' },
   campaignTone:       { label: 'Campaign tone',        placeholder: 'Friendly, direct, low-jargon' },
 
-  // Offer half — grounding for generated landing pages and lead reports.
-  icpSegments:        { label: 'Buyer segments',       multiline: true, hint: 'The 2–4 distinct types of buyer you sell to, one per line.', placeholder: 'Owner-led firm, 20–80 staff — you are the whole sales team\nGrowing operator, 80–300 staff — one or two people carrying a target' },
+  // Offer half - grounding for generated landing pages and lead reports.
+  icpSegments:        { label: 'Buyer segments',       multiline: true, hint: 'The 2-4 distinct types of buyer you sell to, one per line.', placeholder: 'Owner-led firm, 20-80 staff - you are the whole sales team\nGrowing operator, 80-300 staff - one or two people carrying a target' },
   costOfInaction:     { label: 'Cost of doing nothing', multiline: true, hint: 'What actually goes wrong for a client who leaves this another year.' },
   discoveryQuestions: { label: 'Discovery questions',  multiline: true, hint: 'The questions you ask on a first call, one per line. Used to let readers diagnose themselves.' },
   deliveryProcess:    { label: 'What happens after they sign', multiline: true, hint: 'The first three or four steps, and roughly how long each takes.' },
-  proofPoints:        { label: 'Evidenced results',    multiline: true, hint: 'The only place a number on a generated page can come from. Write each as a full sentence saying what the number is, what it measures and over what period — a bare figure like "40%" is left off the page, because captioning it would mean inventing what it measured. Only figures you could defend if challenged.', placeholder: '40% reply rate across 2,000 prospects in the last 30 days' },
+  proofPoints:        { label: 'Evidenced results',    multiline: true, hint: 'The only place a number on a generated page can come from. Write each as a full sentence saying what the number is, what it measures and over what period - a bare figure like "40%" is left off the page, because captioning it would mean inventing what it measured. Only figures you could defend if challenged.', placeholder: '40% reply rate across 2,000 prospects in the last 30 days' },
   notAGoodFit:        { label: 'Who is not a good fit', multiline: true, hint: 'The clients you turn away. Stating it plainly reads as confidence.' },
   commonObjections:   { label: 'Common objections',    multiline: true, hint: 'What you hear most often, and your answer. One per line.' },
   differentiators:    { label: 'Why buyers pick you',  multiline: true, hint: 'What you can say that a competitor honestly cannot.' },
@@ -136,13 +136,13 @@ export const BusinessProfileSettings: React.FC = () => {
   // Both used to live in Redux/localStorage only: the logo was a blob URL that
   // died with the tab and the location never left the browser.
   // The Redux dispatches are kept so the header avatar and any other consumer
-  // of `settings` update immediately — Redux is now a mirror, not the store.
+  // of `settings` update immediately - Redux is now a mirror, not the store.
   const dispatch = useDispatch();
   const settings = useSelector(selectSettings);
   const { data: savedBH } = useBusinessHours();
   const updateBH = useUpdateBusinessHours();
   const [hoursOpen, setHoursOpen] = useState(false);
-  // useUpdateBusinessHours already supports onError — nothing previously wired
+  // useUpdateBusinessHours already supports onError - nothing previously wired
   // it up, so a failed save left the modal open with no feedback at all: no
   // toast, no banner, the button just sat there. A user had no way to tell a
   // failed save from a slow one.
@@ -322,7 +322,7 @@ export const BusinessProfileSettings: React.FC = () => {
         </div>
       </div>
     </div>
-      {/* Company basics — merged in from the former Company tab. Operational
+      {/* Company basics - merged in from the former Company tab. Operational
           fields (logo, location, hours) that aren't part of the 14-field ICP. */}
       <div className="bg-white dark:bg-[#071131] rounded-lg shadow-sm border border-gray-200 dark:border-blue-950/40 p-6">
         <h3 className="text-gray-900 dark:text-slate-100 text-base font-semibold flex items-center gap-2">
@@ -389,7 +389,7 @@ export const BusinessProfileSettings: React.FC = () => {
             </div>
           </label>
 
-          {/* Business hours — DB-backed via the settings API; edited in the modal */}
+          {/* Business hours - DB-backed via the settings API; edited in the modal */}
           <div className="sm:col-span-2 flex items-center justify-between gap-4 rounded-lg border border-slate-200 dark:border-blue-900/40 dark:bg-[#0b1739]/40 px-4 py-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-lg grid place-items-center flex-shrink-0 bg-[#e8ebf7] dark:bg-[#0b1739] border dark:border-blue-900/30">

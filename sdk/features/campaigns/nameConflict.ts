@@ -3,7 +3,7 @@
  *
  * POST /api/campaigns enforces one campaign name per tenant, case- and
  * whitespace-insensitively. The check ignores status, so a draft, paused or
- * completed campaign holds its name just as firmly as a running one — only a
+ * completed campaign holds its name just as firmly as a running one - only a
  * delete frees it. That surprises people, and every create surface in the app
  * used to render the failure as either raw prose or (in the AI search flow)
  * "Campaign creation failed: Conflict", which says nothing actionable.
@@ -34,12 +34,12 @@ export function isCampaignNameTaken(err: unknown): boolean {
 
 /**
  * The message to show the user. Names the collision and states the
- * non-obvious part — that finished and draft campaigns still hold their names.
+ * non-obvious part - that finished and draft campaigns still hold their names.
  */
 export function campaignNameTakenMessage(name?: string): string {
   const quoted = name && name.trim() ? `"${name.trim()}"` : 'that name';
   return (
-    `A campaign called ${quoted} already exists — drafts and finished campaigns ` +
+    `A campaign called ${quoted} already exists - drafts and finished campaigns ` +
     `keep their names too. Rename this one, or open the existing campaign instead.`
   );
 }

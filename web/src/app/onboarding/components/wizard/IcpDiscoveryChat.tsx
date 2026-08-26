@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 redesign — split-layout ICP discovery used by the wizard.
+// R8 Phase 3 redesign - split-layout ICP discovery used by the wizard.
 //
 // Left column: a guided question/answer chat with a terse voice. The chat is
 // client-side controlled; questions come from icpQuestions.ts, no backend
@@ -67,7 +67,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
 
   // finalize() is invoked from a setTimeout scheduled inside the same handler
   // that records the final answer, so it closes over a pre-update render. Refs
-  // give it the post-update values — without them the LAST question's answer
+  // give it the post-update values - without them the LAST question's answer
   // was silently dropped from everything we persist.
   const icpRef = useRef<IcpStructured>(icp);
   const profilePatchRef = useRef<Partial<BusinessProfile>>({});
@@ -194,7 +194,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
     const value = { min, max };
     recordAnswer(currentQuestion, value);
     const label =
-      min != null && max != null ? `${min}–${max}` : min != null ? `${min}+` : `up to ${max}`;
+      min != null && max != null ? `${min}-${max}` : min != null ? `${min}+` : `up to ${max}`;
     pushUserAnswer(
       <span
         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-medium text-white tabular-nums"
@@ -259,7 +259,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
         await saveProfile(meaningful);
       }
 
-      // 2. ICP definition — read from the ref so the final answer is included.
+      // 2. ICP definition - read from the ref so the final answer is included.
       const finalIcp = icpRef.current;
       const definition = await createIcpDefinition({
         icp_definition: { ...finalIcp, metadata: { ...finalIcp.metadata, captured_at: new Date().toISOString() } },
@@ -281,7 +281,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
         </p>,
       );
       setFinished(true);
-      // Tell the wizard to advance — useActiveIcpDefinition doesn't auto-refetch
+      // Tell the wizard to advance - useActiveIcpDefinition doesn't auto-refetch
       // after a mutation, so we can't rely on the observer alone.
       if (onComplete) setTimeout(onComplete, 700);
     } catch (err) {
@@ -307,7 +307,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="w-full h-full min-h-[600px] flex flex-col lg:flex-row bg-[#F8F9FE] dark:bg-[#000724]">
-      {/* LEFT — chat column */}
+      {/* LEFT - chat column */}
       <section className="flex-1 lg:max-w-[680px] flex flex-col min-h-0 border-r border-slate-200 dark:border-[#262831]">
         {/* Top bar */}
         <div className="px-5 py-3 border-b border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] flex items-center justify-between">
@@ -409,7 +409,7 @@ export default function IcpDiscoveryChat({ onBack, onSkip, onComplete }: IcpDisc
         )}
       </section>
 
-      {/* RIGHT — live ICP preview */}
+      {/* RIGHT - live ICP preview */}
       <section className="hidden lg:flex flex-1 min-w-0">
         <IcpLivePreview
           icp={icp}

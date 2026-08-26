@@ -102,7 +102,7 @@ export default function MonitorSahPage() {
 
           <p className="mt-3 text-xs text-gray-400">
             Voice/telephony cost is attributed precisely per lead; LLM cost is allocated (tenant-month spend ÷ that month&apos;s SAH count)
-            because LLM usage isn&apos;t lead-tagged in billing. Order/quotation SAH types aren&apos;t modeled yet — meetings only for now.
+            because LLM usage isn&apos;t lead-tagged in billing. Order/quotation SAH types aren&apos;t modeled yet - meetings only for now.
           </p>
         </>
       ) : null}

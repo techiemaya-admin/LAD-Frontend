@@ -1,5 +1,5 @@
 /**
- * Meta Onboarding — useWhatsAppEmbeddedSignup
+ * Meta Onboarding - useWhatsAppEmbeddedSignup
  *
  * Drives Meta's Embedded Signup dialog end-to-end and hands the result to the
  * backend. Everything non-render lives here so the component stays presentational.
@@ -9,8 +9,8 @@
  * unpredictable order:
  *
  *   1. A `postMessage` from facebook.com carrying `{ waba_id, phone_number_id,
- *      business_id }` — WHICH account was onboarded.
- *   2. The `FB.login` callback carrying `authResponse.code` — the authorization
+ *      business_id }` - WHICH account was onboarded.
+ *   2. The `FB.login` callback carrying `authResponse.code` - the authorization
  *      code that proves the user consented.
  *
  * Neither is sufficient alone, and the popup can emit the message before or
@@ -21,7 +21,7 @@
  *
  * ── Cancellation vs failure ─────────────────────────────────────────────────
  * Meta reports BOTH as event 'CANCEL'. They are distinguished only by
- * `error_message` being present in the payload — there is no separate 'ERROR'
+ * `error_message` being present in the payload - there is no separate 'ERROR'
  * event in the documented set. A plain close is a benign abort (no error
  * surface, no partial state, because closing a dialog is a decision); a CANCEL
  * carrying an error_message is a real failure and must be shown.
@@ -34,14 +34,14 @@ import type { WhatsAppAccount, WhatsAppSignupConfig } from '../types';
 /**
  * Is this postMessage really from Meta?
  *
- * Meta's own sample uses `event.origin.endsWith('facebook.com')` — which also
+ * Meta's own sample uses `event.origin.endsWith('facebook.com')` - which also
  * accepts `https://evil-facebook.com`, since that string genuinely ends with
  * those characters. We require a DOT boundary so only real subdomains match,
  * and https so a downgraded origin cannot impersonate one.
  *
  * The previous hardcoded pair (www + web) was safe but too narrow: the dialog
  * also posts from business.facebook.com, and an unlisted origin is dropped in
- * silence — the popup completes and the handshake simply never fires.
+ * silence - the popup completes and the handshake simply never fires.
  */
 function isMetaOrigin(origin: string): boolean {
   try {
@@ -58,7 +58,7 @@ const SDK_SCRIPT_ID = 'facebook-jssdk';
 /**
  * Events that mean "the user finished and we have an account".
  *
- * FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING is the COEXISTENCE completion — Meta
+ * FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING is the COEXISTENCE completion - Meta
  * emits a different event name for that flow, so treating only FINISH* as
  * success would silently drop every coexistence signup: the popup closes, the
  * user believes it worked, and nothing is ever persisted.
@@ -68,14 +68,14 @@ const FINISH_EVENTS = [
   'FINISH_ONLY_WABA',
   'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
   // Documented alongside the three above. An unhandled finish event looks
-  // exactly like an abandoned dialog — nothing persists and nothing errors —
+  // exactly like an abandoned dialog - nothing persists and nothing errors  - 
   // so listing all of them is cheaper than diagnosing one later.
   'FINISH_OBO_MIGRATION',
   'FINISH_GRANT_ONLY_API_ACCESS',
 ];
 
 /**
- * The coexistence completion. Its payload carries ONLY `waba_id` — no
+ * The coexistence completion. Its payload carries ONLY `waba_id` - no
  * `phone_number_id`, unlike every other finish event. Requiring both would
  * reject the signup with "finished without a phone number" at the exact moment
  * it succeeded, so the backend resolves the number from the WABA instead.
@@ -84,10 +84,10 @@ const COEXISTENCE_FINISH_EVENT = 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING';
 
 interface SessionInfo {
   waba_id: string;
-  /** Absent on the coexistence flow — resolved server-side from the WABA. */
+  /** Absent on the coexistence flow - resolved server-side from the WABA. */
   phone_number_id?: string;
   business_id?: string;
-  /** Literal completion event — the backend uses it to detect coexistence. */
+  /** Literal completion event - the backend uses it to detect coexistence. */
   onboarding_event: string;
 }
 
@@ -128,7 +128,7 @@ function loadFacebookSdk(appId: string, version: string): Promise<void> {
       }
     };
 
-    // The SDK may already be present from an earlier mount — init is idempotent.
+    // The SDK may already be present from an earlier mount - init is idempotent.
     if (w.FB) { init(); return; }
 
     const existing = document.getElementById(SDK_SCRIPT_ID) as HTMLScriptElement | null;
@@ -225,7 +225,7 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
     if (typeof window === 'undefined') return;
 
     const handler = (event: MessageEvent) => {
-      // Origin check first — this listener is on window, so anything can post.
+      // Origin check first - this listener is on window, so anything can post.
       if (!isMetaOrigin(event.origin)) return;
 
       let payload: any;
@@ -263,7 +263,7 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
       }
 
       // Meta reports BOTH abandonment and hard failures as event 'CANCEL'.
-      // The two are told apart by `error_message` being present — there is no
+      // The two are told apart by `error_message` being present - there is no
       // separate 'ERROR' event, so treating every CANCEL as a benign close
       // swallowed real failures and left the user staring at an unchanged page.
       if (payload.event === 'CANCEL') {
@@ -275,7 +275,7 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
           const code = data.error_code ? ` (${data.error_code})` : '';
           setError(`${data.error_message}${code}`);
         }
-        // Otherwise the user closed the dialog — a decision, not a failure.
+        // Otherwise the user closed the dialog - a decision, not a failure.
         // `data.current_step` says where they stopped, which is the useful
         // signal for onboarding drop-off rather than anything to show them.
         return;
@@ -317,13 +317,13 @@ export function useWhatsAppEmbeddedSignup(options: UseWhatsAppEmbeddedSignupOpti
       },
       {
         config_id: config.configId,
-        // Must be 'code' — the System User access token is minted server-side
+        // Must be 'code' - the System User access token is minted server-side
         // by exchanging this code, never handed to the browser.
         response_type: 'code',
         override_default_response_type: true,
         // Matches the snippet Meta's App Dashboard generates for our app's flow
         // version. NOT the pre-v4 `{ setup, featureType, sessionInfoVersion }`
-        // shape, and NOT the Graph API version — the backend supplies the value
+        // shape, and NOT the Graph API version - the backend supplies the value
         // so a Meta-side bump is a config change rather than a redeploy.
         //
         // featureType selects a non-default flow (coexistence, which lets a

@@ -29,6 +29,7 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { MessageFeedback } from './MessageFeedback';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { LinkedInFollowupComposer } from './LinkedInFollowupComposer';
@@ -163,14 +164,14 @@ const STATUS_CONFIG: Record<ConnectionStatus, {
     icon:       <Clock className="w-3 h-3" />,
     dotClass:   'bg-slate-300 dark:bg-slate-500',
     badgeClass: 'bg-slate-100 text-slate-500 dark:bg-slate-800/80 dark:text-slate-300',
-    bannerText: 'Connection request sent — chat will be available once they accept.',
+    bannerText: 'Connection request sent - chat will be available once they accept.',
   },
   accepted: {
     label:      'Connected',
     icon:       <CheckCircle className="w-3 h-3" />,
     dotClass:   'bg-amber-400',
     badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-500',
-    // Empty — chat is now unlocked immediately on acceptance. Sending any
+    // Empty - chat is now unlocked immediately on acceptance. Sending any
     // message records CONTACTED on the backend, which cancels the workflow
     // scheduler's automated follow-up so there's no duplicate. The
     // FollowupComposer above the chat still offers AI/template shortcuts.
@@ -204,7 +205,7 @@ function toProxiedAvatarUrl(raw?: string | null): string | null {
   try {
     const u = new URL(raw);
     // LinkedIn CDN, Unipile, and any non-public host that needs server-side
-    // fetch — proxy through Next.js. Allowlist enforced server-side.
+    // fetch - proxy through Next.js. Allowlist enforced server-side.
     if (
       /\.licdn\.com$/.test(u.hostname) ||
       u.hostname === 'static.licdn.com' ||
@@ -214,7 +215,7 @@ function toProxiedAvatarUrl(raw?: string | null): string | null {
     ) {
       return `/api/proxy-image?url=${encodeURIComponent(raw)}`;
     }
-    // Other public CDNs (e.g. Gravatar) — load directly
+    // Other public CDNs (e.g. Gravatar) - load directly
     return raw;
   } catch {
     return null;
@@ -380,7 +381,7 @@ function ConvListItem({
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
-function MessageBubble({ msg }: { msg: LinkedInMessage }) {
+function MessageBubble({ msg, conversationId }: { msg: LinkedInMessage; conversationId?: string }) {
   const isOut = msg.is_sender || msg.role === 'assistant';
 
   // Label virtual messages differently
@@ -410,6 +411,17 @@ function MessageBubble({ msg }: { msg: LinkedInMessage }) {
           {formatBubbleTime(msg.created_at)}
         </p>
       </div>
+      {/* Only the agent's own replies are rateable — correcting the lead teaches
+          nothing, and virtual rows are campaign-analytics echoes rather than real
+          stored messages the agent could learn from. */}
+      {msg.role === 'assistant' && !msg.is_virtual && conversationId && (
+        <MessageFeedback
+          channel="linkedin"
+          conversationId={conversationId}
+          messageId={String(msg.id)}
+          content={msg.content || ''}
+        />
+      )}
     </div>
   );
 }
@@ -454,10 +466,10 @@ export function LinkedInConversationView({
   const [messages, setMessages]           = useState<LinkedInMessage[]>([]);
   const [searchQuery, setSearchQuery]     = useState('');
   const [broadcastOpen, setBroadcastOpen] = useState(false);
-  // Sidebar status filter — null shows everything, otherwise narrows to that status.
+  // Sidebar status filter - null shows everything, otherwise narrows to that status.
   // Toggled by the chips at the top of the conversation list.
   const [statusFilter, setStatusFilter]   = useState<ConnectionStatus | null>(null);
-  // Right-side Contact Details panel — open by default on wide desktops.
+  // Right-side Contact Details panel - open by default on wide desktops.
   const [contextPanelOpen, setContextPanelOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth >= 1280;
@@ -554,7 +566,7 @@ export function LinkedInConversationView({
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setAttachInfo(`Selected "${file.name}" — media upload to LinkedIn DMs is queued for the next backend release.`);
+    setAttachInfo(`Selected "${file.name}" - media upload to LinkedIn DMs is queued for the next backend release.`);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setTimeout(() => setAttachInfo(null), 6000);
   };
@@ -733,7 +745,7 @@ export function LinkedInConversationView({
       // cancels the workflow scheduler's automated follow-up so the lead
       // never gets a duplicate auto-message after the user has already
       // engaged in chat manually. Media (from a template) rides along as
-      // media_url/type/filename — the backend re-downloads the bytes and
+      // media_url/type/filename - the backend re-downloads the bytes and
       // sends a real LinkedIn attachment.
       const res  = await fetchWithTenant(li(`${API_BASE}/conversations/${selectedId}/messages`), {
         method: 'POST',
@@ -759,7 +771,7 @@ export function LinkedInConversationView({
           )
         );
       } else {
-        // Non-success response — drop the optimistic bubble and restore the draft.
+        // Non-success response - drop the optimistic bubble and restore the draft.
         setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
         setMessageText(text);
         if (media) setPendingMedia(media);
@@ -856,7 +868,7 @@ export function LinkedInConversationView({
 
         {broadcastOpen && <LinkedInBroadcastModal onClose={() => setBroadcastOpen(false)} />}
 
-        {/* Status summary pills — clickable: tap to filter the list to that status,
+        {/* Status summary pills - clickable: tap to filter the list to that status,
             tap the same chip again (or "All") to clear the filter. */}
         {conversations.length > 0 && (
           <div className="flex gap-1.5 px-3 py-2 border-b border-border dark:border-slate-800 overflow-x-auto">
@@ -1074,7 +1086,7 @@ export function LinkedInConversationView({
             {/* Disabled banner (shown for pending/accepted) */}
             {!chatEnabled && <ChatDisabledBanner conv={selectedConv} />}
 
-            {/* Manual follow-up composer — only when the connection is accepted
+            {/* Manual follow-up composer - only when the connection is accepted
                 and the conversation maps to a real campaign lead. Lets the user
                 send the follow-up themselves (AI or template) instead of waiting
                 for the automated cycle. Once sent, the chat unlocks. */}
@@ -1119,7 +1131,7 @@ export function LinkedInConversationView({
                       </p>
                     </>
                   ) : (
-                    <p>No messages yet — start the conversation!</p>
+                    <p>No messages yet - start the conversation!</p>
                   )}
                 </div>
               ) : (
@@ -1127,7 +1139,7 @@ export function LinkedInConversationView({
                   item.type === 'date' ? (
                     <DateSeparator key={item.key} date={item.date} variant="linkedin" />
                   ) : (
-                    <MessageBubble key={item.key} msg={item.msg} />
+                    <MessageBubble key={item.key} msg={item.msg} conversationId={selectedConv?.id} />
                   )
                 )
               )}
@@ -1159,7 +1171,7 @@ export function LinkedInConversationView({
                     </span>
                   </div>
                 )}
-                {/* Staged attachment from a template — removable before send */}
+                {/* Staged attachment from a template - removable before send */}
                 {pendingMedia && (
                   <div className="mb-2 inline-flex items-center gap-2 max-w-full rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 dark:bg-blue-950/40 dark:border-blue-800">
                     <MediaChipIcon type={pendingMedia.type} url={pendingMedia.url} filename={pendingMedia.filename} />
@@ -1383,8 +1395,8 @@ export function LinkedInConversationView({
                     </TooltipTrigger>
                     <TooltipContent side="top">
                       {agentEnabled
-                        ? 'AI auto-replies are ON — click to turn off'
-                        : 'AI auto-replies are OFF — click to turn on'}
+                        ? 'AI auto-replies are ON - click to turn off'
+                        : 'AI auto-replies are OFF - click to turn on'}
                     </TooltipContent>
                   </Tooltip>
 
@@ -1420,7 +1432,7 @@ export function LinkedInConversationView({
         )}
         </div>
 
-        {/* Right-side Contact Details panel — only when a conversation is open */}
+        {/* Right-side Contact Details panel - only when a conversation is open */}
         {selectedConv && contextPanelOpen && (
           <LinkedInContextPanel
             conversation={{

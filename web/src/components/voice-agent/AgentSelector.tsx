@@ -58,10 +58,10 @@ export function AgentSelector({
         <p className="text-sm text-muted-foreground ml-7">Select or create an agent</p>
       </div>
 
-      {/* Search and Action Buttons Row */}
-      <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 border-b border-border/30 dark:border-blue-950/40">
+      {/* Search and Action Buttons Section */}
+      <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 border-b border-border/30 dark:border-blue-950/40 space-y-3">
         {/* Search Bar */}
-        <div className="relative w-full mb-3 mx-1">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -85,35 +85,35 @@ export function AgentSelector({
           )}
         </div>
 
-        {/* Action Buttons Row */}
-        <div className="flex items-center gap-2 w-full">
+        {/* Action Buttons Section - Full Width & Center Aligned */}
+        <div className="flex flex-col gap-2 w-full">
           <Button
             onClick={() => onSelectAgent(null)}
             className={cn(
-              "justify-center gap-2 h-10 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 shadow-lg transition-all font-medium flex",
-              selectedAgentId === null && "gradient-primary shadow-lg scale-[1.02]"
+              "w-full justify-center items-center gap-2 h-10 px-4 text-center text-sm font-medium bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 shadow-md transition-all flex",
+              selectedAgentId === null && "gradient-primary shadow-lg scale-[1.01]"
             )}
             variant={selectedAgentId === null ? "default" : "outline"}
             size="sm"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap">New Agent</span>
           </Button>
           <Button
             onClick={onOpenPlayground}
             variant="outline"
             size="sm"
-            className="justify-center gap-2 h-10 font-medium flex-1 px-3 sm:px-4 border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50"
+            className="w-full justify-center items-center gap-2 h-10 px-4 text-center text-sm font-medium border-border/50 text-muted-foreground hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-800/50 flex"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap">VOAG Playground</span>
           </Button>
         </div>
       </div>
 
       {/* Agent List */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin pr-1">
-        <div className="space-y-2 p-3 md:p-4">
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="space-y-2 p-3 sm:p-4 md:p-5">
           {isLoading ? (
             // Loading skeletons
             Array.from({ length: 4 }).map((_, i) => (

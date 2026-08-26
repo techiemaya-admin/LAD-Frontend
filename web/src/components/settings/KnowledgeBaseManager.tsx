@@ -614,7 +614,7 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
         )}
       </div>
 
-      {/* WhatsApp grounding toggle — gates whether Knowledge Base folders
+      {/* WhatsApp grounding toggle - gates whether Knowledge Base folders
           flagged "Attached" are passed to the WABA AI as Gemini file_search
           sources at reply time. Only takes effect on tenants using a Gemini
           model in their WABA chat settings. */}

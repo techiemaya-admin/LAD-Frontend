@@ -1,4 +1,4 @@
-// lad-monitor (admin observability) SDK — API layer.
+// lad-monitor (admin observability) SDK - API layer.
 // All HTTP lives here. Calls the LAD Node backend via the shared apiClient,
 // which (in the browser) routes same-origin through the Next.js [feature]/[...path]
 // proxy → /api/admin/monitor/* on the backend. Super-admin gating is enforced
@@ -147,13 +147,13 @@ export async function reviewStrategy(
 }
 
 // ── Community signups ───────────────────────────────────────────────────────
-// NOTE: these live under /api/community, NOT /api/admin/monitor — the public
+// NOTE: these live under /api/community, NOT /api/admin/monitor - the public
 // POST and the admin reads share one feature router on the backend.
 
 export async function getCommunitySignups(
   status?: SignupStatus,
 ): Promise<CommunitySignupsResponse> {
-  // Not the module-level qs() helper — a plain suffix, named distinctly so it
+  // Not the module-level qs() helper - a plain suffix, named distinctly so it
   // doesn't shadow it.
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   const res = await apiGet<{ success: boolean } & CommunitySignupsResponse>(
@@ -172,7 +172,7 @@ export async function updateCommunitySignup(
 
 // ── LLM routing ─────────────────────────────────────────────────────────────
 // Per-tenant, per-feature provider chains. Writes replace a feature's WHOLE
-// chain (it is an ordered list — patching one hop at a time can leave two
+// chain (it is an ordered list - patching one hop at a time can leave two
 // entries sharing a priority).
 
 export async function getLlmRoutingMeta(): Promise<LlmRoutingMeta> {
@@ -212,7 +212,7 @@ export async function setLlmRoutingChain(
   return res.data.data;
 }
 
-/** Remove the tenant's rules for a feature — it reverts to the code default. */
+/** Remove the tenant's rules for a feature - it reverts to the code default. */
 export async function clearLlmRoutingChain(tenantId: string, featureKey: string): Promise<void> {
   await apiDelete(`${BASE}/llm-routing/${tenantId}/${featureKey}`);
 }

@@ -122,7 +122,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Fetch wrapper with automatic retry on transient network/5xx errors.
- * Does NOT retry 4xx (client errors) — those should surface immediately.
+ * Does NOT retry 4xx (client errors) - those should surface immediately.
  */
 async function fetchWithRetry(
   url: string,
@@ -252,7 +252,7 @@ export function AssignmentPanel({
 }: AssignmentPanelProps) {
   // ── State ────────────────────────────────────────────────────────────────
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  // Mirror of teamMembers readable inside callbacks without re-creating them —
+  // Mirror of teamMembers readable inside callbacks without re-creating them  - 
   // used to resolve assignee display names when normalising assignment data.
   const teamMembersRef = useRef<TeamMember[]>([]);
   useEffect(() => {
@@ -278,7 +278,7 @@ export function AssignmentPanel({
 
   /**
    * Loads the current assignment + history for this conversation.
-   * Errors are surfaced in `assignmentError` — the panel stays mounted
+   * Errors are surfaced in `assignmentError` - the panel stays mounted
    * and usable even when this call fails.
    */
   const loadAssignment = useCallback(async () => {
@@ -293,7 +293,7 @@ export function AssignmentPanel({
       );
 
       if (res.status === 404) {
-        // Conversation has no assignment yet — treat as empty, not an error
+        // Conversation has no assignment yet - treat as empty, not an error
         setAssignment({ current: null, history: [] });
         return;
       }
@@ -306,14 +306,14 @@ export function AssignmentPanel({
       }
 
       // Python returns flat { current, history } rows keyed by user ID rather
-      // than nested TeamMember objects — map them into the UI's shape.
+      // than nested TeamMember objects - map them into the UI's shape.
       const raw = await res.json();
       setAssignment(normalizeAssignmentHistory(raw, teamMembersRef.current));
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to load assignment";
 
-      // Don't surface network errors as blocking — the panel is still usable
+      // Don't surface network errors as blocking - the panel is still usable
       // for assigning even if history can't be fetched.
       setAssignmentError(msg);
 
@@ -601,7 +601,7 @@ export function AssignmentPanel({
                 )}
               </DropdownMenuLabel>
 
-              {/* Members error — non-blocking */}
+              {/* Members error - non-blocking */}
               {membersError && (
                 <div className="px-1 py-1">
                   <div className="flex items-center gap-1.5 rounded-lg border border-amber-200/80 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/30 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300">

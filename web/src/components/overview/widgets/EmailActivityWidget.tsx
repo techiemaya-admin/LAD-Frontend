@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * EmailActivityWidget — email channel activity.
+ * EmailActivityWidget - email channel activity.
  *
  * Connected senders + broadcast send/fail totals across recent runs, plus the
  * latest few broadcasts. Data: GET /api/campaigns/email/connected-senders and
@@ -21,13 +21,16 @@ interface Run {
   failed_count?: number;
 }
 interface EmailData {
-  senders: number;
-  runs: Run[];
-  sent: number;
-  failed: number;
+  /** `null` = that source did not load. NOT the same as "you have none". */
+  senders: number | null;
+  runs: Run[] | null;
+  sent: number | null;
+  failed: number | null;
+  /** Human-readable names of the sources that failed, for the degraded note. */
+  degraded: string[];
 }
 
-const num = (n: number) => n.toLocaleString();
+const num = (n: number | null) => (n == null ? '—' : n.toLocaleString());
 
 export const EmailActivityWidget: React.FC<{ id: string }> = ({ id }) => {
   const [data, setData] = useState<EmailData | null>(null);
@@ -44,11 +47,35 @@ export const EmailActivityWidget: React.FC<{ id: string }> = ({ id }) => {
       ]);
       const sJson = await sRes.json().catch(() => ({}));
       const rJson = await rRes.json().catch(() => ({}));
-      const senders = Array.isArray(sJson?.data) ? sJson.data.length : (Array.isArray(sJson) ? sJson.length : 0);
-      const runs: Run[] = Array.isArray(rJson?.runs) ? rJson.runs : (Array.isArray(rJson) ? rJson : []);
-      const sent = runs.reduce((a, r) => a + (r.sent_count || 0), 0);
-      const failed = runs.reduce((a, r) => a + (r.failed_count || 0), 0);
-      setData({ senders, runs, sent, failed });
+
+      // `fetch` does not throw on 4xx/5xx, and an error body is not an array,
+      // so every `Array.isArray` branch below used to fall through to 0 / [].
+      // That published "Senders 0 · Broadcasts 0 · Sent 0 · Failed 0" as fact
+      // for a tenant mid-outage — and because `data` was then set, the error
+      // state right below could never render. Check the status explicitly.
+      if (!sRes.ok && !rRes.ok) {
+        throw new Error(
+          sJson?.error || rJson?.error || `Request failed (${sRes.status})`,
+        );
+      }
+
+      // The two sources fail INDEPENDENTLY: senders comes from one endpoint,
+      // every send figure from the other. Keep whichever half loaded and say
+      // the other is unknown, rather than reporting zero sends because the
+      // broadcast history was unreachable.
+      const senders = sRes.ok
+        ? (Array.isArray(sJson?.data) ? sJson.data.length : (Array.isArray(sJson) ? sJson.length : 0))
+        : null;
+      const runs: Run[] | null = rRes.ok
+        ? (Array.isArray(rJson?.runs) ? rJson.runs : (Array.isArray(rJson) ? rJson : []))
+        : null;
+      const sent = runs ? runs.reduce((a, r) => a + (r.sent_count || 0), 0) : null;
+      const failed = runs ? runs.reduce((a, r) => a + (r.failed_count || 0), 0) : null;
+      const degraded = [
+        ...(sRes.ok ? [] : ['connected senders']),
+        ...(rRes.ok ? [] : ['broadcast history']),
+      ];
+      setData({ senders, runs, sent, failed, degraded });
     } catch (e: any) {
       setError(e?.message || 'Failed to load email activity');
     } finally {
@@ -67,7 +94,7 @@ export const EmailActivityWidget: React.FC<{ id: string }> = ({ id }) => {
   const tiles = data
     ? [
         { label: 'Senders', value: data.senders },
-        { label: 'Broadcasts', value: data.runs.length },
+        { label: 'Broadcasts', value: data.runs ? data.runs.length : null },
         { label: 'Sent', value: data.sent },
         { label: 'Failed', value: data.failed },
       ]
@@ -97,7 +124,13 @@ export const EmailActivityWidget: React.FC<{ id: string }> = ({ id }) => {
               </div>
             ))}
           </div>
-          {data && data.runs.length > 0 && (
+          {data && data.degraded.length > 0 && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
+              Couldn&apos;t read {data.degraded.join(' or ')} — the figures shown as
+              &quot;—&quot; aren&apos;t zero, they&apos;re unknown.
+            </p>
+          )}
+          {data && data.runs && data.runs.length > 0 && (
             <div>
               <p className="text-[11px] text-muted-foreground mb-1.5">Recent broadcasts</p>
               <div className="space-y-1.5">

@@ -6,7 +6,7 @@
  * Shown against the connection-request node, because that is the step that
  * puts a real message in front of a real person. Until now the only way to
  * find out was to launch and watch the leads arrive, which is a bad moment to
- * discover the targeting is wrong — connection requests cannot be unsent, and
+ * discover the targeting is wrong - connection requests cannot be unsent, and
  * a burst of badly-matched ones is what gets a LinkedIn account restricted.
  *
  * Reuses /api/ai-icp-assistant/prospect-search, the same endpoint (and so the
@@ -93,7 +93,7 @@ export default function LeadPreviewPanel({
         }));
 
       setLeads(rows);
-      // An empty result is a real answer, not an error — it usually means the
+      // An empty result is a real answer, not an error - it usually means the
       // targeting is too narrow, and saying so is more useful than a spinner
       // that finishes with nothing visible.
       if (!rows.length) setError('No one matched. Try widening the job titles or the location.');
@@ -174,7 +174,7 @@ export default function LeadPreviewPanel({
 
           <p className="text-[11px] text-muted-foreground inline-flex items-start gap-1">
             <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            Scores come from your ICP profile. Anything under 50% is a weak match — tighten the
+            Scores come from your ICP profile. Anything under 50% is a weak match - tighten the
             targeting on the source node if too many look wrong.
           </p>
         </div>

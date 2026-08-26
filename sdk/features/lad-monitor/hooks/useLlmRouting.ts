@@ -12,7 +12,7 @@ import type { LlmRoutingFeature, LlmRoutingMeta, LlmRoutingEntry } from '../type
  * Per-tenant, per-feature LLM routing for the admin console.
  *
  * `meta` (providers + which features are provider-locked) is fetched once and
- * kept across tenant switches — it does not vary by tenant, and refetching it
+ * kept across tenant switches - it does not vary by tenant, and refetching it
  * on every switch makes the picker flicker.
  *
  * Saving a chain returns the tenant's full routing set, so the caller does not

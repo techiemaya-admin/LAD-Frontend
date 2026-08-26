@@ -14,9 +14,9 @@ type SectionId =
 // The $39 "Broadcast" (No AI) plan is hidden from the public comparison.
 // Flip this back to true to bring it back: the plan card renders again and
 // cellGroup() stops dropping its column, so every <FRow> below keeps its
-// Broadcast value authored in place — nothing else needs editing.
+// Broadcast value authored in place - nothing else needs editing.
 const SHOW_BROADCAST_PLAN = false;
-/** Number of plan columns rendered — drives the CSS grid templates. */
+/** Number of plan columns rendered - drives the CSS grid templates. */
 const PLAN_COLUMNS = SHOW_BROADCAST_PLAN ? 5 : 4;
 
 export default function PricingPage() {
@@ -113,7 +113,7 @@ export default function PricingPage() {
 
               {/* ===== KEY FEATURES ===== */}
               <Section id="key" pillar="n" title="Key features"
-                bench={<>The whole funnel in one subscription. A comparable point-solution stack runs <b>$285–$700+/mo</b> across 4–6 separate tools.</>}
+                bench={<>The whole funnel in one subscription. A comparable point-solution stack runs <b>$285-$700+/mo</b> across 4-6 separate tools.</>}
                 isOpen={open['key']} onToggle={() => toggle('key')}>
                 <FRow name={<><b>Contacts / active prospects</b><span>Contacts you can store and message; prospects in live AI campaigns.</span></>}
                   cells={cellGroup(<Lim>2,000 contacts</Lim>, <Lim>500 prospects</Lim>, <Lim>2,500 prospects</Lim>, <Lim>10,000 prospects</Lim>, <Lim>Custom</Lim>)} />
@@ -135,7 +135,7 @@ export default function PricingPage() {
 
               {/* ===== OUTREACH : LINKEDIN ===== */}
               <Section id="linkedin" pillar="o" title="Outreach: LinkedIn"
-                bench={<>Standalone LinkedIn outreach tools run <b>$59–$199/seat/mo</b>. None of them research each prospect or hand conversations off to other channels.</>}
+                bench={<>Standalone LinkedIn outreach tools run <b>$59-$199/seat/mo</b>. None of them research each prospect or hand conversations off to other channels.</>}
                 isOpen={open['linkedin']} onToggle={() => toggle('linkedin')}>
                 <FRow name={<><b>ICP-based prospect discovery</b><span>Find prospects matching your Ideal Customer Profile automatically.</span></>}
                   cells={cellGroup(<No />, <Lim>250/mo</Lim>, <Lim>800/mo</Lim>, <Lim>2,000/mo</Lim>, <Lim>Custom</Lim>)} />
@@ -153,7 +153,7 @@ export default function PricingPage() {
 
               {/* ===== OUTREACH : EMAIL ===== */}
               <Section id="email" pillar="o" title="Outreach: Email"
-                bench={<>Standalone cold-email senders run <b>$37–$159/seat/mo</b>, billed per mailbox before warm-up and rotation add-ons.</>}
+                bench={<>Standalone cold-email senders run <b>$37-$159/seat/mo</b>, billed per mailbox before warm-up and rotation add-ons.</>}
                 isOpen={open['email']} onToggle={() => toggle('email')}>
                 <FRow name={<><b>Connected mailboxes</b><span>Sending mailboxes with warm-up and rotation.</span></>}
                   cells={cellGroup(<Lim>1</Lim>, <Lim>1</Lim>, <Lim>3</Lim>, <Lim>10</Lim>, <Lim>Custom</Lim>)} />
@@ -165,11 +165,11 @@ export default function PricingPage() {
 
               {/* ===== ENGAGE : BROADCASTING ===== */}
               <Section id="broadcast" pillar="e" title="Engage: Broadcasting (Email & WhatsApp)"
-                bench={<>Standalone broadcast platforms charge <b>$18–$60+/mo</b> and add a <b>20–60% markup</b> on every WhatsApp message you send. Mr LAD adds <b>0%</b>.</>}
+                bench={<>Standalone broadcast platforms charge <b>$18-$60+/mo</b> and add a <b>20-60% markup</b> on every WhatsApp message you send. Mr LAD adds <b>0%</b>.</>}
                 isOpen={open['broadcast']} onToggle={() => toggle('broadcast')}>
                 <FRow name={<><b>WhatsApp Business API (WABA)</b><span>Official Meta Cloud API connection with green-tick eligibility.</span></>}
                   cells={cellGroup(<Yes />, <No />, <Yes />, <Yes />, <Yes />)} />
-                <FRow name={<><b>Meta message fees,0% markup</b><span>Your card connects directly to Meta. We never touch your message billing.</span><Mkt>Other platforms mark up 20–60%</Mkt></>}
+                <FRow name={<><b>Meta message fees,0% markup</b><span>Your card connects directly to Meta. We never touch your message billing.</span><Mkt>Other platforms mark up 20-60%</Mkt></>}
                   cells={cellGroup(<Lim>Direct to Meta</Lim>, <No />, <Lim>Direct to Meta</Lim>, <Lim>Direct to Meta</Lim>, <Lim>Direct to Meta</Lim>)} />
                 <FRow name={<><b>WhatsApp broadcasts</b><span>Bulk template campaigns with scheduling, audience lists and delivery reports.</span></>}
                   cells={cellGroup(<Lim>Unlimited*</Lim>, <No />, <Lim>Unlimited*</Lim>, <Lim>Unlimited*</Lim>, <Lim>Unlimited*</Lim>)} />
@@ -201,7 +201,7 @@ export default function PricingPage() {
 
               {/* ===== ENGAGE : ADS ===== */}
               <Section id="ads" pillar="e" title="Engage: Meta Ads (managed)"
-                bench={<>Standalone ad-automation tools run <b>$44–$99+/mo</b> tiered by spend; agencies charge <b>10–20% of ad spend</b>. Mr LAD runs the ads <i>and</i> answers every lead they generate.</>}
+                bench={<>Standalone ad-automation tools run <b>$44-$99+/mo</b> tiered by spend; agencies charge <b>10-20% of ad spend</b>. Mr LAD runs the ads <i>and</i> answers every lead they generate.</>}
                 isOpen={open['ads']} onToggle={() => toggle('ads')}>
                 <FRow name={<><b>AI ad creation &amp; publishing</b><span>Upload a photo or video. Campaigns are created and published across Facebook, Instagram and WhatsApp.</span></>}
                   cells={cellGroup(<No />, <No />, <Road />, <Road />, <Road />)} />
@@ -229,7 +229,7 @@ export default function PricingPage() {
 
               {/* ===== CONVERT : VOICE ===== */}
               <Section id="voice" pillar="c" title="Convert: AI Voice agent"
-                bench={<>Standalone voice AI: typical all-in cost <b>$0.13–$0.31/min</b>; bundled platforms <b>$0.11–$0.14/min</b> plus $499/mo plans at volume.</>}
+                bench={<>Standalone voice AI: typical all-in cost <b>$0.13-$0.31/min</b>; bundled platforms <b>$0.11-$0.14/min</b> plus $499/mo plans at volume.</>}
                 isOpen={open['voice']} onToggle={() => toggle('voice')}>
                 <FRow name={<><b>Included voice minutes</b><span>Outbound follow-up and inbound answering, GCC numbers supported.</span></>}
                   cells={cellGroup(<No />, <No />, <Addon />, <Lim>1,500 min/mo</Lim>, <Lim>Custom</Lim>)} />
@@ -243,7 +243,7 @@ export default function PricingPage() {
 
               {/* ===== CONVERT : SCHEDULING + CRM ===== */}
               <Section id="crm" pillar="c" title="Convert: Scheduling, quotations & CRM"
-                bench={<>CRM seats run <b>$15–99/user/mo</b> elsewhere; Mr LAD is the lead store for solo tenants and syncs with your CRM when you have one.</>}
+                bench={<>CRM seats run <b>$15-99/user/mo</b> elsewhere; Mr LAD is the lead store for solo tenants and syncs with your CRM when you have one.</>}
                 isOpen={open['crm']} onToggle={() => toggle('crm')}>
                 <FRow name={<><b>Automated meeting scheduling</b><span>Agents book straight into your calendar with reminders.</span></>}
                   cells={cellGroup(<No />, <Yes />, <Yes />, <Yes />, <Yes />)} />
@@ -289,7 +289,7 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* ===== STACK COST CALCULATOR — Mr LAD vs standalone tools ===== */}
+          {/* ===== STACK COST CALCULATOR - Mr LAD vs standalone tools ===== */}
           <div className="scc-section">
             <h2 className="scc-h">What would this cost <span className="scc-dim">without Mr LAD?</span></h2>
             <p className="scc-sub">Set your monthly volume across the funnel. We price each capability on the leading standalone tools, then put it next to the Mr LAD plan that covers the same scope.</p>
@@ -394,7 +394,7 @@ export default function PricingPage() {
           .note { margin-top: 26px; background: var(--teal-soft); border: 1px solid #D7E1F1; border-radius: 12px; padding: 18px 20px; font-size: 13px; color: var(--ink); }
           .note :global(h4) { font-family: 'Space Grotesk', sans-serif; font-size: 14px; margin-bottom: 6px; }
 
-          /* ── Stack-cost calculator — typography sized to match the
+          /* ── Stack-cost calculator - typography sized to match the
              rest of the page: top-level h1 is 32px (header.page h1),
              section heads (.head h2) are 17px. The calculator h2 sits
              between at 22px so it reads as a major section break
@@ -405,10 +405,10 @@ export default function PricingPage() {
           .scc-sub { font-size: 13px; line-height: 1.55; color: var(--ink-soft); max-width: 640px; margin: 0 0 24px; }
           .scc-foot { color: var(--ink-soft); margin: 24px 0 0; font-size: 11.5px; line-height: 1.5; max-width: 820px; }
 
-          /* Controls row — volume presets on the left, currency toggle on
+          /* Controls row - volume presets on the left, currency toggle on
              the right of the same line. .scc-controls is rendered inside
              StackCostCalculator (a child component), so the rule needs
-             :global() to escape styled-jsx scoping — without it, the row
+             :global() to escape styled-jsx scoping - without it, the row
              would render as a plain block-level div and its two children
              would stack vertically. */
           .pricing-root :global(.scc-controls) { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 36px; }
@@ -417,7 +417,7 @@ export default function PricingPage() {
             .pricing-root :global(.scc-controls) { flex-direction: column; align-items: flex-start; gap: 14px; }
           }
           .pricing-root :global(.scc-plabel) { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2.5px; color: var(--ink-soft); margin-right: 4px; }
-          /* Pill buttons sized smaller — secondary controls; the stage labels
+          /* Pill buttons sized smaller - secondary controls; the stage labels
              below are the real visual landmarks of the calculator. */
           .pricing-root :global(.scc-preset) { font-family: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
           .pricing-root :global(.scc-preset:hover) { border-color: var(--teal); }
@@ -432,7 +432,7 @@ export default function PricingPage() {
           .pricing-root :global(.scc-stage) { margin-bottom: 40px; }
           .pricing-root :global(.scc-stage:last-child) { margin-bottom: 0; }
           .pricing-root :global(.scc-stage-head) { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
-          /* Stage labels are the calculator's visual landmarks — sized up so
+          /* Stage labels are the calculator's visual landmarks - sized up so
              they read clearly above each block of sliders. */
           .pricing-root :global(.scc-stage-num) { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
           .pricing-root :global(.scc-stage-outreach .scc-stage-num) { color: var(--outreach); }
@@ -449,7 +449,7 @@ export default function PricingPage() {
           .pricing-root :global(.scc-item-value) { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--ink-soft); transition: color .15s; font-variant-numeric: tabular-nums; }
           .pricing-root :global(.scc-item.active .scc-item-value) { color: var(--teal); }
 
-          /* Custom range slider — track + thumb in our teal accent */
+          /* Custom range slider - track + thumb in our teal accent */
           .pricing-root :global(.scc-slider) { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; cursor: pointer; }
           .pricing-root :global(.scc-slider::-webkit-slider-runnable-track) { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--teal) var(--fill, 0%), #D8DDE6 var(--fill, 0%)); }
           .pricing-root :global(.scc-slider::-webkit-slider-thumb) { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); margin-top: -7px; box-shadow: 0 1px 3px rgba(26, 63, 127, .35); transition: transform .1s; }
@@ -464,7 +464,7 @@ export default function PricingPage() {
           .pricing-root :global(.scc-tool-price) { margin-left: auto; font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
           .pricing-root :global(.scc-item.active .scc-tool-price) { color: var(--teal); }
 
-          /* Right panel — sticky on wide screens */
+          /* Right panel - sticky on wide screens */
           .pricing-root :global(.scc-panel) { position: sticky; top: 32px; display: flex; flex-direction: column; gap: 18px; }
           @media (max-width: 1080px) { .pricing-root :global(.scc-panel) { position: static; } }
 
@@ -485,7 +485,7 @@ export default function PricingPage() {
           .pricing-root :global(.scc-tlabel span) { font-size: 11.5px; color: var(--ink-soft); }
           .pricing-root :global(.scc-stack-total) { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -.3px; color: var(--ink-soft); line-height: 1; font-variant-numeric: tabular-nums; }
 
-          /* Mr LAD card — teal accent, big teal price, feature checklist, verdict pill */
+          /* Mr LAD card - teal accent, big teal price, feature checklist, verdict pill */
           .pricing-root :global(.scc-lad-card) { position: relative; background: var(--teal-soft); border: 2px solid var(--teal); border-radius: 16px; padding: 22px 24px 20px; }
           .pricing-root :global(.scc-lad-badge) { position: absolute; top: -12px; left: 22px; background: var(--teal); color: #fff; font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; padding: 5px 12px; border-radius: 999px; }
           .pricing-root :global(.scc-lad-head) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 6px 0 2px; }
@@ -499,7 +499,7 @@ export default function PricingPage() {
           .pricing-root :global(.scc-plan-features li) { display: flex; align-items: center; gap: 10px; }
           .pricing-root :global(.scc-plan-features svg) { flex: none; color: var(--teal); }
 
-          /* Verdict pill — idle (gray) when neutral, win (teal-tinted) when saving */
+          /* Verdict pill - idle (gray) when neutral, win (teal-tinted) when saving */
           .pricing-root :global(.scc-verdict) { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-size: 14.5px; line-height: 1.45; }
           .pricing-root :global(.scc-verdict.idle) { background: var(--card); border: 1px solid var(--line); color: var(--ink-soft); }
           .pricing-root :global(.scc-verdict.win)  { background: rgba(26, 63, 127, .08); border: 1px solid rgba(26, 63, 127, .3); color: var(--ink); }
@@ -730,7 +730,7 @@ function Yes({ children }: { children?: React.ReactNode }) {
   return <div className="cell"><span className="yes">{children ?? '✓'}</span></div>;
 }
 function No() {
-  return <div className="cell"><span className="no">–</span></div>;
+  return <div className="cell"><span className="no">-</span></div>;
 }
 function Lim({ children }: { children: React.ReactNode }) {
   return <div className="cell lim">{children}</div>;
@@ -763,7 +763,7 @@ interface StageItem {
   step: number;
   tool: string;
   vendors: string;
-  /** Flat monthly fee in USD — engages the moment the slider goes above 0. */
+  /** Flat monthly fee in USD - engages the moment the slider goes above 0. */
   flat?: number;
   /** Per-unit USD price (e.g. $0.50 per reveal). Mutually exclusive with `flat`. */
   perUnit?: number;
@@ -829,7 +829,7 @@ const PLANS: Plan[] = [
 /** Plan rank each stage requires once any item in it is active. */
 const STAGE_PLAN_RANK: Record<StageId, number> = { outreach: 0, engage: 1, convert: 2, analyse: 1 };
 
-/** Volume presets — picked so each tier maps cleanly to one Mr LAD plan:
+/** Volume presets - picked so each tier maps cleanly to one Mr LAD plan:
  *   Light   = outreach only                       → Starter ($99)
  *   Typical = outreach + engage + analyse         → Growth  ($199)
  *   Heavy   = all four stages incl. voice/convert → Scale   ($499)
@@ -973,7 +973,7 @@ function StackCostCalculator({ onCta }: { onCta: () => void }) {
 
         {/* ── Right column: receipt + Mr LAD card ────────────────────── */}
         <aside className="scc-panel">
-          {/* Receipt — line items per active tool */}
+          {/* Receipt - line items per active tool */}
           <div className="scc-receipt">
             <div className="scc-receipt-head">
               <h4 className="scc-receipt-title">THE STANDALONE STACK</h4>
@@ -1007,7 +1007,7 @@ function StackCostCalculator({ onCta }: { onCta: () => void }) {
             </div>
           </div>
 
-          {/* Mr LAD card — bordered, big plan price, AED conversion, feature checklist, verdict */}
+          {/* Mr LAD card - bordered, big plan price, AED conversion, feature checklist, verdict */}
           <div className="scc-lad-card">
             <div className="scc-lad-badge">SAME SCOPE, ONE AGENT</div>
             <div className="scc-lad-head">

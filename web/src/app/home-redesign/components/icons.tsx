@@ -201,7 +201,7 @@ export const Icon = {
 
 export type IconName = keyof typeof Icon;
 
-/** Brand mark — the square Mr LAD chat-bubble logo. */
+/** Brand mark - the square Mr LAD chat-bubble logo. */
 export function LadMark({ s = 40 }: { s?: number }) {
   return (
     <Image
@@ -214,7 +214,7 @@ export function LadMark({ s = 40 }: { s?: number }) {
   );
 }
 
-/** AI avatar — navy→cyan gradient circle with the white mark, as used in chat. */
+/** AI avatar - navy→cyan gradient circle with the white mark, as used in chat. */
 export function LadAvatar({ s = 36 }: { s?: number }) {
   const inner = Math.round(s * 0.56);
   return (

@@ -13,10 +13,21 @@
  * Routing strategy for POST (create):
  *   - Try Python BNI service first (full onboarding flow).
  *   - Fall back to Node backend if BNI returns 4xx/5xx.
+ *
+ * Tenant scoping: the tenant is resolved via utils/tenant-scope, so a client
+ * x-tenant-id (or the ?tenant_id= query param) that names a DIFFERENT tenant
+ * than the caller's token is honoured only for the super admin (admin tooling).
+ * Ordinary callers are pinned to their own tenant — this used to trust the raw
+ * header/query param, letting any user list or create another tenant's accounts.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getWhatsAppServiceUrl } from '../../utils/python-proxy';
 import { getBackendUrl } from '../../../utils/backend';
+import {
+  resolveAuthorizedTenantId,
+  callerClaims,
+  isSuperAdmin,
+} from '../../../utils/tenant-scope';
 
 interface WaAccount {
   id: string;
@@ -28,14 +39,13 @@ interface WaAccount {
 }
 
 /** Pull accounts from the Node backend (social_whatsapp_accounts). */
-async function fetchNodeAccounts(req: NextRequest): Promise<WaAccount[]> {
+async function fetchNodeAccounts(req: NextRequest, tenantId: string | null): Promise<WaAccount[]> {
   const backendUrl = getBackendUrl();
   const targetUrl = `${backendUrl}/api/whatsapp-conversations/admin/whatsapp-accounts`;
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const authHeader = req.headers.get('authorization');
   if (authHeader) headers['Authorization'] = authHeader;
-  const tenantId = req.headers.get('x-tenant-id');
   if (tenantId) headers['X-Tenant-ID'] = tenantId;
 
   try {
@@ -53,7 +63,7 @@ async function fetchNodeAccounts(req: NextRequest): Promise<WaAccount[]> {
 
 /** Pull accounts from the Python BNI conversation service.
  *  Uses a direct fetch (not proxyToPythonService) so ECONNREFUSED is swallowed
- *  silently — Python is optional; Node.js accounts are the primary source.
+ *  silently - Python is optional; Node.js accounts are the primary source.
  */
 async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): Promise<WaAccount[]> {
   const wabaBase = getWhatsAppServiceUrl();
@@ -66,8 +76,7 @@ async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): P
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const auth = req.headers.get('authorization');
     if (auth) headers['Authorization'] = auth;
-    const tid = req.headers.get('x-tenant-id');
-    if (tid) headers['X-Tenant-ID'] = tid;
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
 
     const resp = await fetch(targetUrl.toString(), {
       method: 'GET',
@@ -82,7 +91,7 @@ async function fetchPythonAccounts(req: NextRequest, tenantId: string | null): P
     if (Array.isArray(data)) return data;
     return [];
   } catch {
-    // Python service is optional — silently return empty when it's down
+    // Python service is optional - silently return empty when it's down
     return [];
   }
 }
@@ -109,48 +118,23 @@ function mergeAccounts(nodeAccounts: WaAccount[], pythonAccounts: WaAccount[]): 
   return merged;
 }
 
-async function callNodeBackend(
-  req: NextRequest,
-  method: string,
-  body?: unknown,
-): Promise<NextResponse> {
-  const backendUrl = getBackendUrl();
-  const targetUrl = `${backendUrl}/api/whatsapp-conversations/admin/whatsapp-accounts`;
-
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const authHeader = req.headers.get('authorization');
-  if (authHeader) headers['Authorization'] = authHeader;
-  const tenantId = req.headers.get('x-tenant-id');
-  if (tenantId) headers['X-Tenant-ID'] = tenantId;
-
-  const fetchOptions: RequestInit = { method, headers };
-  if (body !== undefined) {
-    fetchOptions.body = JSON.stringify(body);
-  }
-
-  try {
-    const resp = await fetch(targetUrl, fetchOptions);
-    const data = await resp.json();
-    return NextResponse.json(data, { status: resp.status });
-  } catch {
-    return NextResponse.json({ success: true, data: [], accounts: [] }, { status: 200 });
-  }
-}
-
 export async function GET(req: NextRequest) {
-  // Resolve the current tenant ID from the request.
-  // Try x-tenant-id header first, then fall back to ?tenant_id= query param so
-  // that direct admin-tool calls (e.g. curl ?tenant_id=xxx) also work.
+  // Resolve the tenant this caller is AUTHORISED to act on. x-tenant-id names a
+  // different tenant only for the super admin (utils/tenant-scope). We keep the
+  // ?tenant_id= query-param affordance for direct admin tooling (curl), but only
+  // for the super admin too — for anyone else it was a second way to override the
+  // tenant and read another workspace's accounts.
   const url = new URL(req.url);
-  const tenantId =
-    req.headers.get('x-tenant-id') ||
-    url.searchParams.get('tenant_id') ||
-    null;
+  let tenantId = resolveAuthorizedTenantId(req, { logLabel: 'admin-wa-accounts' });
+  if (isSuperAdmin(callerClaims(req)) && !req.headers.get('x-tenant-id')) {
+    const queryTenant = url.searchParams.get('tenant_id');
+    if (queryTenant) tenantId = queryTenant;
+  }
 
-  // Skip the Python call entirely when we have no tenant context — there is no
+  // Skip the Python call entirely when we have no tenant context - there is no
   // point making a round-trip that will just return [] and log a warning.
   const [nodeAccounts, pythonAccountsRaw] = await Promise.all([
-    fetchNodeAccounts(req),
+    fetchNodeAccounts(req, tenantId),
     tenantId ? fetchPythonAccounts(req, tenantId) : Promise.resolve([]),
   ]);
 
@@ -170,7 +154,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Create flow is owned exclusively by the Python WABA service — the Node
+  // Create flow is owned exclusively by the Python WABA service - the Node
   // backend has no POST handler for /admin/whatsapp-accounts and its catch-all
   // returns a misleading 404 ("Personal WhatsApp endpoints must be explicitly
   // defined."). Surface real errors from Python instead of swallowing them.
@@ -203,7 +187,8 @@ export async function POST(req: NextRequest) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const auth = req.headers.get('authorization');
   if (auth) headers['Authorization'] = auth;
-  const tid = req.headers.get('x-tenant-id');
+  // Create under the tenant the caller is authorised for — not a raw client header.
+  const tid = resolveAuthorizedTenantId(req, { logLabel: 'admin-wa-accounts' });
   if (tid) headers['X-Tenant-ID'] = tid;
 
   let bniResp: Response;

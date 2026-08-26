@@ -1,5 +1,5 @@
 'use client';
-// View switcher pill — sits below the stats cards and lets the user jump
+// View switcher pill - sits below the stats cards and lets the user jump
 // directly between Board / All / Prospects / Leads / Clients without going
 // through the stat cards.
 
@@ -41,12 +41,11 @@ export default function ViewPills({ view, onChange }: ViewPillsProps) {
               <button
                 key={v.k}
                 onClick={() => onChange(v.k)}
-                className={`h-7 px-2.5 rounded-full text-[11.5px] font-medium inline-flex items-center gap-1 ${
+                className={`h-7 px-2.5 rounded-full text-[11.5px] font-medium inline-flex items-center gap-1 transition-colors ${
                   active
-                    ? 'text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1a2a43]'
+                    ? 'text-white bg-[#0B1957] dark:bg-[#2563eb]'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0e1d4d]'
                 }`}
-                style={active ? { background: '#0B1957' } : undefined}
               >
                 <Icon className="w-3 h-3" /> {v.label}
               </button>

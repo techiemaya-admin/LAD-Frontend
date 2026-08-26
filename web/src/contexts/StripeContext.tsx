@@ -47,7 +47,7 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
         const config = await response.json();
         // Check if we have a valid publishable key
         if (!config.publishableKey) {
-          logger.info('Stripe disabled (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY not set) — billing UI will be hidden');
+          logger.info('Stripe disabled (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY not set) - billing UI will be hidden');
           setLoading(false);
           return;
         }

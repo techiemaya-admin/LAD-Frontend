@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 — Welcome step. Intentionally light — sets the tone for the
+// R8 Phase 3 - Welcome step. Intentionally light - sets the tone for the
 // wizard and primes the tenant for the ICP capture step that comes next.
 
 import * as React from 'react';
@@ -31,7 +31,7 @@ export default function WizardWelcomeStep({ onContinue }: WizardWelcomeStepProps
       <ul className="mt-8 max-w-md mx-auto text-left space-y-3">
         <Item n="1" title="Tell us about your company" desc="Name, industry, what you sell." />
         <Item n="2" title="Describe your ideal customer" desc="Industry, geography, titles, size." />
-        <Item n="3" title="Connect your channels" desc="LinkedIn, email, WhatsApp — pick any." />
+        <Item n="3" title="Connect your channels" desc="LinkedIn, email, WhatsApp: pick any." />
       </ul>
       <div className="mt-10">
         <button

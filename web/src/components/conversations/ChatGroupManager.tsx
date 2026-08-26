@@ -52,7 +52,7 @@ export interface ChatGroup {
   color: string;
   description: string | null;
   conversation_count: number;
-  /** Count of chat_group_members rows — what the backend's getChatGroups returns. */
+  /** Count of chat_group_members rows - what the backend's getChatGroups returns. */
   member_count?: number;
   created_at: string | null;
   /** Present for groups synced from native WhatsApp groups via Baileys */
@@ -121,7 +121,7 @@ async function createGroup(name: string, color: string, description?: string, ch
   if (data.success && data.data) return data.data;
   // Direct group object (id present = success)
   if (data.id) return data as ChatGroup;
-  // 409: group name already exists — fetch existing groups and return the match
+  // 409: group name already exists - fetch existing groups and return the match
   if (res.status === 409) {
     const listRes = await fetch(`${API_BASE}${channelParam}`, { headers: authHeaders() });
     const listData = await listRes.json();
@@ -157,7 +157,7 @@ interface SourceContact {
   name: string | null;
   phone: string | null;
   email: string | null;
-  channel?: string;          // 'personal' | 'waba' | 'crm' etc — saved with group membership
+  channel?: string;          // 'personal' | 'waba' | 'crm' etc - saved with group membership
   company_name?: string | null;
   profile_photo?: string | null;
 }
@@ -365,7 +365,7 @@ export function ChatGroupManager({
 
   // Groups list is bounded (typically <50 per tenant) so we keep this filter
   // client-side, but debounce the input so the .filter() doesn't run on every
-  // keystroke — matches the pattern used everywhere else.
+  // keystroke - matches the pattern used everywhere else.
   const debouncedSearch = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
   const filteredGroups = debouncedSearch
     ? groups.filter((g) => g.name.toLowerCase().includes(debouncedSearch))
@@ -523,7 +523,7 @@ export function ChatGroupManager({
         const refreshed = await fetchGroups(channel);
         setGroups(refreshed);
       } else {
-        setSyncMessage(data.error || 'Sync failed — is a WAPA account connected?');
+        setSyncMessage(data.error || 'Sync failed - is a WAPA account connected?');
       }
     } catch {
       setSyncMessage('Failed to reach the service. Check your connection.');
@@ -673,7 +673,7 @@ export function ChatGroupManager({
                 </div>
               </button>
 
-              {/* Sync WA Groups — Personal WhatsApp only */}
+              {/* Sync WA Groups - Personal WhatsApp only */}
               {channel === 'personal' && (
                 <div>
                   <button
@@ -899,7 +899,7 @@ export function ChatGroupManager({
                       ) : sourceContacts.length === 0 ? (
                         <div className={cn("text-center py-6 text-xs", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
                           {['google', 'microsoft', 'other'].includes(selectedSource)
-                            ? 'Coming soon — integration not yet configured.'
+                            ? 'Coming soon - integration not yet configured.'
                             : sourceSearch ? 'No contacts found.' : 'No contacts available.'}
                         </div>
                       ) : (
@@ -1281,7 +1281,7 @@ export function ChatGroupManager({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        {/* Sticky send-template bar — shown when groups are selected */}
+        {/* Sticky send-template bar - shown when groups are selected */}
         {isGroupSelectMode && selectedGroupIds.size > 0 && (
           <div className={cn(
             "px-4 py-3 flex items-center gap-3 flex-shrink-0 border-t",

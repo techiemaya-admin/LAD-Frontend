@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * EmailBroadcastPanel — focused, minimal UI for sending and tracking
+ * EmailBroadcastPanel - focused, minimal UI for sending and tracking
  * broadcasts via LAD-Email-Comms.
  *
  * Intentionally scoped narrow:
@@ -17,7 +17,7 @@
  *
  * Integration: render this component inside an EmailChannelView tab, or
  * mount it as its own /conversations/broadcast route. The hooks it uses
- * (useEmailBroadcast) are pure data-fetching — no global state needed.
+ * (useEmailBroadcast) are pure data-fetching - no global state needed.
  */
 import { useMemo, useState } from 'react';
 
@@ -187,7 +187,7 @@ function ComposeForm({
             <SelectContent>
               {activeAccounts.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
-                  No active accounts — connect Gmail / Outlook in Settings.
+                  No active accounts - connect Gmail / Outlook in Settings.
                 </div>
               ) : (
                 activeAccounts.map((a) => (

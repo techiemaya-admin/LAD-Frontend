@@ -6,7 +6,7 @@
  * chat all show the same "X / 14" indicator.
  *
  * Follows the raw useState/useEffect convention used by other hooks in
- * this SDK (see useActiveIcpDefinition.ts — TanStack Query is intentionally
+ * this SDK (see useActiveIcpDefinition.ts - TanStack Query is intentionally
  * NOT used here).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -34,7 +34,7 @@ export interface UseBusinessProfileResult {
   save: (partial: Partial<BusinessProfile>) => Promise<BusinessProfile>;
   /** Re-fetch from the server. */
   refetch: () => Promise<void>;
-  /** Shared completeness math — same source as the discovery drawer. */
+  /** Shared completeness math - same source as the discovery drawer. */
   completeness: BusinessProfileCompleteness;
 }
 
@@ -46,7 +46,7 @@ export function useBusinessProfile(): UseBusinessProfileResult {
 
   // Tracks the in-flight initial load so save() can wait for it. Without this a
   // caller that saves before the GET resolves merges its partial onto
-  // emptyBusinessProfile() — every canonical key set to '' — and the POST then
+  // emptyBusinessProfile() - every canonical key set to '' - and the POST then
   // overwrites the real stored values with blanks. The backend's all-empty
   // guard does not catch it, because the partial supplies at least one
   // non-blank field.
@@ -87,12 +87,12 @@ export function useBusinessProfile(): UseBusinessProfileResult {
 
   const save = useCallback(
     async (partial: Partial<BusinessProfile>): Promise<BusinessProfile> => {
-      // Never merge onto the empty defaults — wait for the initial load so the
+      // Never merge onto the empty defaults - wait for the initial load so the
       // POST carries the tenant's real stored values, not blanks.
       if (loadPromiseRef.current) await loadPromiseRef.current;
       if (!loadedRef.current) {
         // The load failed, so `profile` is still all-blank defaults. Saving now
-        // would write those blanks over the tenant's real data. Refuse — a
+        // would write those blanks over the tenant's real data. Refuse - a
         // visible "couldn't save" beats a silent wipe. One retry first, in case
         // the failure was transient.
         await load();
@@ -108,7 +108,7 @@ export function useBusinessProfile(): UseBusinessProfileResult {
       // The backend merges icp_data, but we still send a fully-merged object so
       // non-canonical extras (linkedinAudit, blogUrls) survive.
       //
-      // The snapshot comes from a ref, not from a functional setState — React
+      // The snapshot comes from a ref, not from a functional setState - React
       // does not guarantee the updater runs synchronously, so reading the merged
       // value straight after setProfile() could send the pre-merge object.
       const snapshot = profileRef.current;

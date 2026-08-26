@@ -66,8 +66,10 @@ export default function TopBar({
             </div>
           )}
           <button
-            className="w-8 h-8 grid place-items-center rounded-md hover:bg-slate-100 dark:hover:bg-[#1a2a43] text-slate-600 dark:text-slate-300"
+            disabled
+            className="w-8 h-8 grid place-items-center rounded-md text-slate-600 dark:text-slate-300 opacity-50 cursor-not-allowed"
             aria-label="Notifications"
+            title="Not available yet"
           >
             <Bell className="w-4 h-4" />
           </button>

@@ -15,7 +15,7 @@
  *   PATCH  /api/accounts/{id}     → update fields (ai_replies_enabled, etc.)
  *   DELETE /api/accounts/{id}     → soft-delete
  *
- * No backend changes needed — the create endpoint already accepts both
+ * No backend changes needed - the create endpoint already accepts both
  * provider credential shapes.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -129,7 +129,7 @@ async function createAccount(
   form: CreateAccountForm,
 ): Promise<{ success: boolean; account?: InstagramAccount; error?: string }> {
   // Build a body that only includes fields relevant to the chosen provider
-  // — keeps the backend free of empty-string noise that would otherwise
+  // - keeps the backend free of empty-string noise that would otherwise
   // override stored defaults during a re-connect.
   const body: Record<string, any> = {
     provider:           form.provider,
@@ -220,7 +220,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const [showSecrets, setShowSecrets] = useState(false);
-  // Instagram sign-in modal — same pattern as LinkedIn's connection modal.
+  // Instagram sign-in modal - same pattern as LinkedIn's connection modal.
   // When the operator finishes sign-in here we just stash the returned
   // connection id into the form's provider_account_id field; the outer
   // "Connect Instagram account" button does the actual upsert.
@@ -280,7 +280,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
 
   // Modal state for the "AI Likes unavailable on Meta" explanation. We open
   // this instead of toggling when an operator clicks AI Likes on a Meta
-  // account — Meta's official Graph API has no comment-like endpoint, so
+  // account - Meta's official Graph API has no comment-like endpoint, so
   // turning it on would just silently do nothing.
   const [likesUnavailableOpen, setLikesUnavailableOpen] = useState(false);
 
@@ -295,7 +295,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
       // Hard gate: AI Likes is unsupported on Meta-provider accounts because
       // Meta's Instagram Graph API exposes no comment-like endpoint. Show
       // the explainer modal and bail without touching the toggle. We only
-      // gate the ENABLE direction — turning a stuck-on toggle OFF still works.
+      // gate the ENABLE direction - turning a stuck-on toggle OFF still works.
       if (field === 'ai_likes_enabled' && next === true && account.provider === 'meta') {
         setLikesUnavailableOpen(true);
         return;
@@ -423,7 +423,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Per-account AI toggles — same shape as the AI Replies tab,
+                {/* Per-account AI toggles - same shape as the AI Replies tab,
                     just exposed here for quick scanning across accounts. */}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <AiToggleChip
@@ -441,7 +441,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     enabled={a.ai_likes_enabled}
                     onToggle={() => handleToggleAi(a, 'ai_likes_enabled')}
                     unavailable={a.provider === 'meta' && !a.ai_likes_enabled}
-                    unavailableTitle="AI Likes isn't supported via Meta's official API — only available with direct sign-in (Unipile)."
+                    unavailableTitle="AI Likes isn't supported via Meta's official API. It is only available with direct sign-in (Unipile)."
                   />
                 </div>
               </li>
@@ -457,7 +457,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Onboard new Instagram account</h2>
         </div>
         <p className="text-sm text-slate-600 mb-5 dark:text-slate-300">
-          Mirrors the WhatsApp tenant onboarding flow — connect a provider, link to an existing tenant or auto-create one.
+          Mirrors the WhatsApp tenant onboarding flow - connect a provider, link to an existing tenant or auto-create one.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -572,7 +572,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                   <Input
                     value={form.meta_verify_token}
                     onChange={(v) => setForm((f) => ({ ...f, meta_verify_token: v }))}
-                    placeholder="Choose any string — paste the same value into Meta webhooks setup"
+                    placeholder="Choose any string, then paste the same value into Meta webhooks setup"
                   />
                 </Field>
                 <Field label="Access Token" icon={MetaLogo} required>
@@ -608,7 +608,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                 <div className="flex items-center justify-between gap-3 rounded-md bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
                   <span className="inline-flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" />
-                    Signed in — account <span className="font-mono">{form.provider_account_id}</span> ready to connect.
+                    Signed in: account <span className="font-mono">{form.provider_account_id}</span> ready to connect.
                   </span>
                   <button
                     type="button"
@@ -637,7 +637,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                   <Input
                     value={form.provider_account_id}
                     onChange={(v) => setForm((f) => ({ ...f, provider_account_id: v }))}
-                    placeholder="e.g. WS_xxxxx — paste if you already have a connection id"
+                    placeholder="e.g. WS_xxxxx. Paste if you already have a connection ID."
                     mono
                   />
                 </Field>
@@ -690,7 +690,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
         </form>
       </section>
 
-      {/* Explainer modal — fires when an operator clicks "AI Likes" on a
+      {/* Explainer modal - fires when an operator clicks "AI Likes" on a
           Meta-connected account. Meta's Instagram Graph API has no comment-
           like endpoint; only Unipile-provider accounts can auto-like. */}
       {likesUnavailableOpen && (
@@ -699,7 +699,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
 
       {/* Edit-account modal. Opens when an operator clicks "Edit" on a row.
           Saves dirty fields via PATCH /api/accounts/{id}; secrets (app_secret,
-          access_token) are write-only — pre-populated as blank, sent only if
+          access_token) are write-only - pre-populated as blank, sent only if
           the operator types a replacement. */}
       {editingAccount && (
         <EditAccountModal
@@ -738,7 +738,7 @@ function LikesUnavailableModal({ onClose }: { onClose: () => void }): JSX.Elemen
         </div>
         <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
           Meta&apos;s official Instagram Graph API doesn&apos;t expose a way to
-          like comments on your posts — it&apos;s a documented limitation, not
+          like comments on your posts - it&apos;s a documented limitation, not
           something we can work around.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
@@ -779,7 +779,7 @@ function EditAccountModal({
   onError: (msg: string) => void;
 }): JSX.Element {
   // Pre-populate from the current row. Secrets aren't returned by GET, so they
-  // start blank — empty stays blank means "leave existing secret untouched".
+  // start blank - empty stays blank means "leave existing secret untouched".
   const [displayName, setDisplayName] = useState(account.display_name || '');
   const [username, setUsername] = useState(account.instagram_username || '');
   const [aiModel, setAiModel] = useState(account.ai_model || 'gemini-2.5-flash');
@@ -800,7 +800,7 @@ function EditAccountModal({
 
     // Build a diff. Only send fields that differ from the persisted row.
     // For secret rotates (app_secret, access_token) we send only when the
-    // operator has typed a non-empty value — empty means "don't touch".
+    // operator has typed a non-empty value - empty means "don't touch".
     const updates: Record<string, any> = {};
     const trimOrNull = (s: string) => (s.trim() === '' ? null : s.trim());
 
@@ -1324,7 +1324,7 @@ function InstagramSignInModal({
             </div>
           ) : (
             <>
-              {/* Method tabs — Credentials / Cookies, same as LinkedIn */}
+              {/* Method tabs - Credentials / Cookies, same as LinkedIn */}
               <div className="text-center">
                 <h4 className="mb-3 text-base font-semibold text-slate-900 dark:text-white">
                   Choose a method
@@ -1383,7 +1383,7 @@ function InstagramSignInModal({
                 <form className="space-y-3" onSubmit={handleSubmit}>
                   <p className="text-xs text-slate-600 dark:text-slate-300">
                     Paste your Instagram <span className="font-mono text-slate-700 dark:text-slate-200">sessionid</span> cookie from your browser
-                    — open <span className="font-mono">instagram.com</span>, DevTools → Application → Cookies.
+                    - open <span className="font-mono">instagram.com</span>, DevTools → Application → Cookies.
                   </p>
                   <input
                     type="text"

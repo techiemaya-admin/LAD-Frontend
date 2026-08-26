@@ -13,6 +13,6 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../whatsapp-c
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // channel param forwarded as-is — proxyToPythonService handles routing to personal or waba
+  // channel param forwarded as-is - proxyToPythonService handles routing to personal or waba
   return proxyToPythonService(req, getWhatsAppServiceUrl(), `/threads/${id}/unassign`);
 }

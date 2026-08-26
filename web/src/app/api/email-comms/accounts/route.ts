@@ -1,7 +1,7 @@
 /**
  * GET /api/email-comms/accounts  → LAD-Email-Comms GET /api/email-broadcast/accounts
  *
- * Returns { accounts: ConnectedAccount[] } — the connected Gmail / Outlook /
+ * Returns { accounts: ConnectedAccount[] } - the connected Gmail / Outlook /
  * custom SMTP accounts the tenant can send broadcasts from. Used by the
  * Compose dialog's "From" account picker.
  */

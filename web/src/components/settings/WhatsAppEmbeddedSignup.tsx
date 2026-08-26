@@ -5,7 +5,7 @@
  * ========================
  * The self-serve way to connect WhatsApp: the tenant clicks one button,
  * completes Meta's own hosted dialog, and lands with a working, webhook-
- * subscribed number — no credentials to find, paste, or get wrong.
+ * subscribed number - no credentials to find, paste, or get wrong.
  *
  * This sits ABOVE the legacy TenantOnboarding form, which stays as the
  * "bring your own Meta app" fallback for the tenants already provisioned that
@@ -65,9 +65,22 @@ export function WhatsAppEmbeddedSignup() {
 
   const handleDisconnect = async (account: WhatsAppAccount) => {
     const label = account.display_phone_number || account.display_name;
+
+    // The old copy described the effect on messages but omitted the two facts
+    // that actually catch people out: this is WORKSPACE-WIDE, and it destroys
+    // the stored credentials so reconnecting means going back through Meta.
+    //
+    // Both matter more now that a number can be assigned to a person. The
+    // settings screen shows it as theirs, so removing it reads like a personal
+    // action — and that is exactly how a shared number gets taken away from
+    // everyone by someone who thought they were tidying up their own.
     const ok = window.confirm(
-      `Disconnect ${label}?\n\nIncoming WhatsApp messages to this number will stop ` +
-      'reaching Mr LAD, and any running campaigns on this channel will stop sending.'
+      `Disconnect ${label}?\n\n` +
+      'This removes the number for EVERYONE in this workspace, not just you. ' +
+      'Incoming WhatsApp messages stop reaching Mr LAD and any running ' +
+      'campaigns on this channel stop sending.\n\n' +
+      'Reconnecting means signing in with Meta again — the saved credentials ' +
+      'are deleted and cannot be restored from a backup.'
     );
     if (!ok) return;
     await disconnect(account.id);
@@ -87,7 +100,7 @@ export function WhatsAppEmbeddedSignup() {
             </div>
             <p className="text-sm text-gray-500 dark:text-slate-300">
               Sign in with Meta to connect your WhatsApp Business number. We handle
-              the webhook setup and message registration for you — no access tokens
+              the webhook setup and message registration for you - no access tokens
               to copy.
             </p>
           </div>
@@ -120,7 +133,7 @@ export function WhatsAppEmbeddedSignup() {
         </div>
       </div>
 
-      {/* Environment not configured — explain rather than silently disable */}
+      {/* Environment not configured - explain rather than silently disable */}
       {!configLoading && !isConfigured && (
         <div className="mx-6 mt-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -190,7 +203,7 @@ export function WhatsAppEmbeddedSignup() {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40"
+                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60"
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
@@ -224,7 +237,7 @@ export function WhatsAppEmbeddedSignup() {
                   </button>
                 </div>
 
-                {/* Meta refused the one-time history import — the only place the
+                {/* Meta refused the one-time history import - the only place the
                     tenant can be told, since it happens after the handshake. */}
                 <CoexistenceHistoryNotice account={account} />
               </div>

@@ -237,7 +237,7 @@ async function logoutAccount(accountId: string, tenantId: string | null): Promis
  * Is the account still there after a disconnect?
  *
  * Disconnected used to be assumed the moment the request returned, so a logout
- * that changed nothing server-side still painted the UI as disconnected — and
+ * that changed nothing server-side still painted the UI as disconnected - and
  * the next page load, reading the same untouched state, showed Connected again.
  * Re-reading the account list is what turns that silent failure into a message.
  */
@@ -282,7 +282,7 @@ async function listAccounts(tenantId: string | null): Promise<PersonalAccount[]>
  * Why this exists alongside listAccounts(): when WhatsApp revokes the linked
  * device the service wipes the credentials, so the account DISAPPEARS from
  * /accounts entirely. An empty account list therefore looks identical to "never
- * connected", and the page just shows Disconnected with no explanation — which
+ * connected", and the page just shows Disconnected with no explanation - which
  * is how one tenant sat dead for three days without anyone realising the link
  * had been revoked rather than never set up. This endpoint reads the state that
  * survives the wipe, so we can say what actually happened and when.
@@ -358,7 +358,7 @@ export const WhatsAppIntegration: React.FC = () => {
     const members = await fetchTeamMembers(tenantId);
     setTeamMembers(members);
     if (members.length > 0 && (!bulkAssignUserId || bulkAssignUserId === 'ai_agent')) {
-      // Keep AI Agent as default — don't auto-select first team member
+      // Keep AI Agent as default - don't auto-select first team member
     }
     setTeamMembersLoading(false);
   }, [tenantId, bulkAssignUserId]);
@@ -501,7 +501,7 @@ export const WhatsAppIntegration: React.FC = () => {
         setQrImage(null);
         setPairingCode(null);
         setStatus('connected');
-        // The re-link the banner was asking for just happened — drop it now
+        // The re-link the banner was asking for just happened - drop it now
         // rather than waiting for a reload to refetch the state.
         setLinkState(null);
         // Load contacts after successful connection
@@ -526,14 +526,14 @@ export const WhatsAppIntegration: React.FC = () => {
     cleanup();
 
     // Confirm against the server rather than assuming. A disconnect that fails
-    // silently must not look identical to one that worked — that gap is what
+    // silently must not look identical to one that worked - that gap is what
     // made "disconnect, refresh, still connected" impossible to notice from the UI.
     const stillConnected = ok ? await isStillConnected(tenantId) : true;
 
     if (!ok || stillConnected) {
       setStatus('connected');
       setError(
-        'WhatsApp could not be disconnected — the connection is still active on the server. Please try again, and contact support if it persists.',
+        'WhatsApp could not be disconnected - the connection is still active on the server. Please try again, and contact support if it persists.',
       );
       setLoading(false);
       return;
@@ -670,7 +670,7 @@ export const WhatsAppIntegration: React.FC = () => {
           </div>
         )}
 
-        {/* Re-link required — WhatsApp revoked the device (or another client took
+        {/* Re-link required - WhatsApp revoked the device (or another client took
             it over). Nothing recovers this on its own. Suppressed once we're
             connected again; the banner itself no-ops for a deliberate logout. */}
         {status !== 'connected' && <WhatsAppRelinkBanner linkState={linkState} />}
@@ -1113,7 +1113,7 @@ export const WhatsAppIntegration: React.FC = () => {
                     {contactsTotal > 100 && (
                       <div className="flex items-center justify-between pt-2 text-xs font-medium text-slate-500 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/40">
                         <span>
-                          Showing {(contactsPage - 1) * 100 + 1}–{Math.min(contactsPage * 100, contactsTotal)} of {contactsTotal}
+                          Showing {(contactsPage - 1) * 100 + 1}-{Math.min(contactsPage * 100, contactsTotal)} of {contactsTotal}
                         </span>
                         <div className="flex gap-1.5">
                           <Button

@@ -20,7 +20,7 @@ export interface ComposerProps {
 }
 
 /**
- * Smart composer — the product's conversational entry point.
+ * Smart composer - the product's conversational entry point.
  * In-input combinable Tools, a model picker, voice input, and send.
  */
 export function Composer({

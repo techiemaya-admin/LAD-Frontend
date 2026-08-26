@@ -219,13 +219,13 @@ export default function ScheduleMeetingModal({
       <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{label}</label>
       <div className="relative">
         {value ? (
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-[#071131] border border-blue-200 dark:border-blue-950/40 rounded-xl">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
               {initials(value.name)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-800 truncate">{value.name}</p>
-              {value.company_name && <p className="text-xs text-slate-500 truncate">{value.company_name}</p>}
+              <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{value.name}</p>
+              {value.company_name && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{value.company_name}</p>}
             </div>
             <button onClick={() => { setId(''); setSearch('') }} className="text-slate-400 hover:text-red-500">
               <X className="w-4 h-4" />
@@ -238,14 +238,14 @@ export default function ScheduleMeetingModal({
               value={search}
               onChange={e => { setSearch(e.target.value); setShowDropdown(true) }}
               onFocus={() => setShowDropdown(true)}
-              className="pl-9"
+              className="pl-9 dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white"
             />
             <Users className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           </div>
         )}
 
         {showDropdown && !value && (
-          <div className="absolute z-50 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+          <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
             {loadingMembers ? (
               <div className="p-3 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading...
@@ -256,18 +256,18 @@ export default function ScheduleMeetingModal({
               filtered.map(m => (
                 <button
                   key={m.id}
-                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   onClick={() => { setId(m.id); setSearch(''); setShowDropdown(false) }}
                 >
-                  <div className="w-7 h-7 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                  <div className="w-7 h-7 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                     {initials(m.name)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{m.name}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{m.name}</p>
                     {m.company_name && <p className="text-xs text-slate-400 truncate">{m.company_name}</p>}
                   </div>
                   {m.designation && (
-                    <Badge variant="secondary" className="text-[10px] ml-auto shrink-0">{m.designation}</Badge>
+                    <Badge variant="secondary" className="text-[10px] ml-auto shrink-0 dark:bg-slate-800 dark:text-slate-300">{m.designation}</Badge>
                   )}
                 </button>
               ))
@@ -284,20 +284,20 @@ export default function ScheduleMeetingModal({
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto z-10">
+      <div className="relative bg-white dark:bg-[#000724] border border-slate-100 dark:border-blue-950/40 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto z-10">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-blue-950/40 dark:bg-[#081331]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-xl">
-              <CalendarDays className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/40 rounded-xl">
+              <CalendarDays className="w-5 h-5 text-blue-600 dark:text-sky-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Schedule 1-2-1</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Schedule 1-2-1</h2>
               <p className="text-xs text-slate-400">Conflicts are checked automatically</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
@@ -394,7 +394,7 @@ export default function ScheduleMeetingModal({
             {startTime && (
               <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                 <Clock className="w-3 h-3" />
-                {startTime} – {endTime}
+                {startTime} - {endTime}
               </p>
             )}
           </div>
@@ -486,7 +486,7 @@ export default function ScheduleMeetingModal({
           {memberAId && memberBId && !checkingConflicts && conflicts.length === 0 && (
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3">
               <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-              <span className="text-sm text-green-700 font-medium">No conflicts — ready to schedule</span>
+              <span className="text-sm text-green-700 font-medium">No conflicts - ready to schedule</span>
             </div>
           )}
         </div>

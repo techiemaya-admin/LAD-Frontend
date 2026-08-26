@@ -1,5 +1,5 @@
 /**
- * Meta Onboarding Feature — Hooks barrel export
+ * Meta Onboarding Feature - Hooks barrel export
  */
 export { useWhatsAppSignupConfig }   from './useWhatsAppSignupConfig';
 export { useWhatsAppAccounts }       from './useWhatsAppAccounts';

@@ -4,8 +4,8 @@
  * Strategy review queue.
  *
  * Tenants can publish a workflow playbook for other tenants to import. Approving
- * one here is what makes it visible platform-wide — the first peer-visible
- * cross-tenant surface on the platform — so the reviewer sees the full sanitized
+ * one here is what makes it visible platform-wide - the first peer-visible
+ * cross-tenant surface on the platform - so the reviewer sees the full sanitized
  * payload (message copy, targeting, node chain) before deciding.
  *
  * The private definition is never shown here because it is never sent: the
@@ -23,7 +23,7 @@ const TABS: { value: StrategyReviewStatus; label: string }[] = [
 ];
 
 function relativeTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (secs < 60) return `${Math.max(secs, 0)}s ago`;
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
@@ -60,7 +60,7 @@ export default function MonitorStrategiesPage() {
 
       <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
         Approving publishes a strategy to every tenant’s Community gallery. Account credentials,
-        delivery destinations and uploaded contacts are stripped before it reaches here — what you
+        delivery destinations and uploaded contacts are stripped before it reaches here - what you
         see below is exactly what other tenants would get.
       </p>
 
@@ -134,11 +134,11 @@ export default function MonitorStrategiesPage() {
                   {s.shared_definition?.requiresFile ? (
                     <div className="mb-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Starts from a file import — the importer supplies their own contact list.
+                      Starts from a file import - the importer supplies their own contact list.
                     </div>
                   ) : null}
                   <div className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
-                    {nodes.length} steps — full shared payload
+                    {nodes.length} steps - full shared payload
                   </div>
                   <pre className="max-h-80 overflow-auto rounded-lg bg-gray-50 p-2.5 text-[11px] leading-relaxed text-gray-800 dark:bg-gray-950 dark:text-gray-200">
                     {JSON.stringify(s.shared_definition, null, 2)}
@@ -151,7 +151,7 @@ export default function MonitorStrategiesPage() {
                   <input
                     value={noteFor[s.id] || ''}
                     onChange={(e) => setNoteFor((p) => ({ ...p, [s.id]: e.target.value }))}
-                    placeholder="Note (optional — shown to the author)"
+                    placeholder="Note (optional - shown to the author)"
                     className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                   />
                   <button

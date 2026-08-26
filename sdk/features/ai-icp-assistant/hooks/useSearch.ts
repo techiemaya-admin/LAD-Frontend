@@ -1,5 +1,5 @@
 /**
- * useSearch — fetch a single search audit row.
+ * useSearch - fetch a single search audit row.
  *
  * Pair with `useRunSearch({ async: true })` to drive a "running…" UI:
  * the mutation returns a `searchId`, then `useSearch(searchId, { pollMs: 3000 })`

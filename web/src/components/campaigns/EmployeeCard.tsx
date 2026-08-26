@@ -110,7 +110,7 @@ export default function EmployeeCard({
   const displayOfficialEmail = employee.enriched_official_email;
 
   // Detect free-mail (gmail/outlook/yahoo etc) to know whether the personal
-  // email is likely "personal-only" — in that case it makes sense to offer
+  // email is likely "personal-only" - in that case it makes sense to offer
   // an unlock for the official corporate address. Cheap client check; real
   // classification happens server-side via Fullenrich.
   const FREE_MAIL_DOMAINS = new Set([
@@ -346,7 +346,7 @@ export default function EmployeeCard({
               )}
             </div>
 
-            {/* Official email — same visual language as the phone/email rows
+            {/* Official email - same visual language as the phone/email rows
                 above: dark-navy mail circle + a compact lock-icon button on
                 the right. Only the icon changes between locked / revealed
                 (lock → check), keeping the row vertically aligned with the

@@ -79,14 +79,14 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 }
 
 function formatHours(h?: number) {
-  if (h === undefined || h === null) return '—';
+  if (h === undefined || h === null) return '-';
   if (h < 1) return `${Math.round(h * 60)}m`;
   if (h < 24) return `${h.toFixed(1)}h`;
   return `${(h / 24).toFixed(1)}d`;
 }
 
 function formatDate(iso?: string) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -341,28 +341,28 @@ export default function FollowUpsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label="Scheduled"
-            value={statusLoading ? '—' : (status?.scheduled_count ?? 0)}
+            value={statusLoading ? '-' : (status?.scheduled_count ?? 0)}
             icon={Calendar}
             color="bg-blue-50 text-blue-600"
             sub="Pending send"
           />
           <StatCard
             label="Sent (24h)"
-            value={statusLoading ? '—' : (status?.recent_sent_24h ?? 0)}
+            value={statusLoading ? '-' : (status?.recent_sent_24h ?? 0)}
             icon={CheckCircle}
             color="bg-green-50 text-green-600"
             sub="Last 24 hours"
           />
           <StatCard
             label="Eligible Leads"
-            value={statusLoading ? '—' : (status?.eligible_leads ?? 0)}
+            value={statusLoading ? '-' : (status?.eligible_leads ?? 0)}
             icon={Users}
             color="bg-orange-50 text-orange-600"
             sub="Need follow-up"
           />
           <StatCard
             label="Scheduler"
-            value={statusLoading ? '—' : (status?.scheduler_active ? 'Active' : 'Paused')}
+            value={statusLoading ? '-' : (status?.scheduler_active ? 'Active' : 'Paused')}
             icon={status?.scheduler_active ? Bell : AlertCircle}
             color={status?.scheduler_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
             sub={status?.business_hours ? 'Business hours' : 'Outside hours'}
@@ -585,7 +585,7 @@ export default function FollowUpsPage() {
                           onChange={(e) => updateConfig({ idle_hours: parseInt(e.target.value) || 1 })}
                           className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Hours of inactivity before sending (1–168)</p>
+                        <p className="text-xs text-gray-400 mt-1">Hours of inactivity before sending (1-168)</p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -599,7 +599,7 @@ export default function FollowUpsPage() {
                           onChange={(e) => updateConfig({ interval_minutes: parseInt(e.target.value) || 5 })}
                           className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Minutes between repeat messages (5–1440)</p>
+                        <p className="text-xs text-gray-400 mt-1">Minutes between repeat messages (5-1440)</p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -613,7 +613,7 @@ export default function FollowUpsPage() {
                           onChange={(e) => updateConfig({ max_attempts: parseInt(e.target.value) || 1 })}
                           className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Max follow-up messages per member (1–10)</p>
+                        <p className="text-xs text-gray-400 mt-1">Max follow-up messages per member (1-10)</p>
                       </div>
                     </div>
 

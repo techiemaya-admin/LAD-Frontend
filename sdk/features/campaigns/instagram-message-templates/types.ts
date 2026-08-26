@@ -73,6 +73,6 @@ export const INSTAGRAM_MESSAGE_VARIABLES = {
 /**
  * Instagram DM soft length guidance.
  * Instagram has no fixed template character cap (unlike LinkedIn's 300 for
- * connection requests), but very long DMs perform poorly — this is advisory.
+ * connection requests), but very long DMs perform poorly - this is advisory.
  */
 export const INSTAGRAM_DM_RECOMMENDED_MAX_LENGTH = 1000;

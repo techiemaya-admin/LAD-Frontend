@@ -1,5 +1,5 @@
 /**
- * Email Accounts Feature — Hooks barrel export
+ * Email Accounts Feature - Hooks barrel export
  */
 export { useGoogleEmailStatus }       from './useGoogleEmailStatus';
 export { useMicrosoftEmailStatus }    from './useMicrosoftEmailStatus';

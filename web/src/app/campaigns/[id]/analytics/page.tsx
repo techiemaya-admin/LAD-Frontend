@@ -72,7 +72,7 @@ export default function CampaignAnalyticsPage() {
   const [leadProgress, setLeadProgress] = useState<Array<{ id: string; name: string; status: 'pending' | 'sending' | 'done' | 'error'; message?: string; error?: string }>>([]);
   const [bulkDoneCount, setBulkDoneCount] = useState(0);
 
-  // ── All bulk follow-up hooks MUST live here — before any early returns ─────
+  // ── All bulk follow-up hooks MUST live here - before any early returns ─────
 
   // Channels used in this campaign (derived from step_analytics; safe when analytics is null)
   const campaignChannels = useMemo(() => {
@@ -172,7 +172,7 @@ export default function CampaignAnalyticsPage() {
     push({ title: 'Follow-up Complete', description: `Sent ${done} messages via ${bulkChannel}` });
   }, [selectedLeadIds, bulkChannel, selectableLeads, campaignId, push]);
 
-  // ── Error handler (also a hook — stays before early returns) ─────────────
+  // ── Error handler (also a hook - stays before early returns) ─────────────
   useEffect(() => {
     if (error) {
       push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
@@ -341,7 +341,7 @@ export default function CampaignAnalyticsPage() {
   // ── Chart data for AnalyticsCharts ─────────────────────────────────────────
   const extendedAnalytics = analytics as any;
 
-  // 1. Timeline — multi-series daily data
+  // 1. Timeline - multi-series daily data
   const chartTimeline: Array<{ date: string; sent?: number; delivered?: number; connected?: number; replied?: number }> =
     extendedAnalytics?.timeline?.length
       ? extendedAnalytics.timeline.map((t: any) => ({
@@ -590,7 +590,7 @@ export default function CampaignAnalyticsPage() {
 
       {/* ── Bulk Follow-up Panel ────────────────────────────────────────── */}
       <div className="mb-8">
-        {/* Collapsed header — always visible */}
+        {/* Collapsed header - always visible */}
         <div className="flex items-stretch gap-2">
           <button
             onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
@@ -750,7 +750,7 @@ export default function CampaignAnalyticsPage() {
                         <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{[lead.title, lead.company].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0 items-center">
-                        {/* has_* is authoritative — the status-substring fallbacks
+                        {/* has_* is authoritative - the status-substring fallbacks
                             badged "connection_sent" leads as Connected. */}
                         {lead.has_connected && (
                           <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">Connected</span>
@@ -761,7 +761,7 @@ export default function CampaignAnalyticsPage() {
                         {lead.has_sent && !lead.has_connected && (
                           <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400">Sent</span>
                         )}
-                        {/* Follow-up count badge — increments in real-time via leadProgress */}
+                        {/* Follow-up count badge - increments in real-time via leadProgress */}
                         {(() => {
                           const sentNow = leadProgress.find(p => p.id === lead.id && p.status === 'done') ? 1 : 0;
                           const total = (lead.manual_followup_count || 0) + sentNow;

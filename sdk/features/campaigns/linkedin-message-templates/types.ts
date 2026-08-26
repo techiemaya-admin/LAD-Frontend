@@ -67,9 +67,9 @@ export interface CreateTemplateRequest {
   content?: string;
   /** Template type. Defaults to 'linkedin_connection' server-side. */
   category?: string;
-  /** @deprecated use `content` — still accepted server-side as the body. */
+  /** @deprecated use `content` - still accepted server-side as the body. */
   connection_message?: string;
-  /** @deprecated use `content` — still accepted server-side as the body. */
+  /** @deprecated use `content` - still accepted server-side as the body. */
   followup_message?: string;
   tags?: string[];
   is_default?: boolean;
@@ -90,9 +90,9 @@ export interface UpdateTemplateRequest {
   content?: string;
   /** Template type. */
   category?: string;
-  /** @deprecated use `content` — still accepted server-side as the body. */
+  /** @deprecated use `content` - still accepted server-side as the body. */
   connection_message?: string;
-  /** @deprecated use `content` — still accepted server-side as the body. */
+  /** @deprecated use `content` - still accepted server-side as the body. */
   followup_message?: string;
   tags?: string[];
   is_default?: boolean;

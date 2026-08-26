@@ -1,5 +1,5 @@
 /**
- * Typed API error — carries the backend's HTTP status and machine-readable
+ * Typed API error - carries the backend's HTTP status and machine-readable
  * `code` through to the UI.
  *
  * Every HTTP client in this repo used to throw a bare `Error` whose only
@@ -49,6 +49,28 @@ export function apiErrorStatus(err: unknown): number | undefined {
 }
 
 /**
+ * FastAPI/Pydantic error bodies (LAD-Master-Agent) use `{detail: ...}`
+ * instead of Express's `{error, message}` (LAD_backend) — `detail` is either
+ * a plain string (raised HTTPException) or an array of validation-error
+ * objects (automatic query/body validation), e.g.
+ * `{detail: [{loc: [...], msg: "...", type: "..."}]}`. Without this, any
+ * Master-Agent 4xx/5xx with no `error`/`message` field fell through to the
+ * generic `HTTP {status}: {statusText}` fallback — and `statusText` is
+ * commonly empty over HTTP/2 (Cloud Run), producing a bare "HTTP 422:" with
+ * no information at all.
+ */
+function detailToMessage(detail: unknown): string | undefined {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (typeof d === 'string' ? d : d?.msg))
+      .filter((m): m is string => typeof m === 'string' && m.length > 0);
+    return msgs.length ? msgs.join('; ') : undefined;
+  }
+  return undefined;
+}
+
+/**
  * Build an ApiError from a failed `fetch` Response, reading the backend's
  * `error`/`message`/`code` out of the JSON body when there is one.
  *
@@ -71,11 +93,13 @@ export async function apiErrorFromResponse(
   try {
     body = await res.json();
   } catch {
-    // Non-JSON (HTML error page, empty body) — the fallback message stands.
+    // Non-JSON (HTML error page, empty body) - the fallback message stands.
   }
   const message =
     (prefer === 'message'
       ? body?.message || body?.error
-      : body?.error || body?.message) || fallback;
+      : body?.error || body?.message) ||
+    detailToMessage(body?.detail) ||
+    fallback;
   return new ApiError(message, res.status, body?.code, body);
 }

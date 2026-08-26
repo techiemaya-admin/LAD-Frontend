@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * useConversationAnalytics — shared client hook for the tenant Overview's
+ * useConversationAnalytics - shared client hook for the tenant Overview's
  * conversation analytics (funnel + daily-volume spike + unconverted-topic
  * segments), served by LAD-Master-Agent via /api/analytics/overview.
  *
@@ -59,6 +59,13 @@ export interface OverviewAnalytics {
   volume_spike: VolumeSpike;
   unconverted_topics: TopicSegment[];
   unconverted_total: number;
+  /**
+   * The topic labelling could not RUN (LLM unavailable / unconfigured), so
+   * `unconverted_topics` is empty because we could not compute it — not
+   * because the tenant has no unconverted demand. Optional: older Master Agent
+   * builds do not send it, and `undefined` correctly reads as "not degraded".
+   */
+  topics_degraded?: boolean;
 }
 
 interface State {

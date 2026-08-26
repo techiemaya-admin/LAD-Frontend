@@ -241,7 +241,7 @@ export interface LeadsFlowContext {
   delayBetween: number;
 }
 
-// ─── R8 — Tenant ICP Definitions ─────────────────────────────────────────────
+// ─── R8 - Tenant ICP Definitions ─────────────────────────────────────────────
 // Canonical schema for the active per-tenant ICP. See FIT_ENRICHMENT_DESIGN.md
 // §2.5 and SEARCH_DISPATCHER_DESIGN.md §3.
 
@@ -281,7 +281,7 @@ export interface IcpStructured {
     geo_match?: number;
     tech_stack_match?: number;
   };
-  /** Optional — routes the search dispatcher across Apollo / Sales Nav / ABM. */
+  /** Optional - routes the search dispatcher across Apollo / Sales Nav / ABM. */
   search_strategy?: SearchStrategy;
   metadata?: {
     captured_at?: string;
@@ -325,7 +325,7 @@ export interface SearchStrategy {
      * Order in which candidate identity fields are tried to derive a canonical
      * dedup key. apollo_id + linkedin_member_urn are last-resort fallbacks for
      * candidates whose cross-backend identity (linkedin_url / email / phone)
-     * isn't yet revealed — see D7 live-smoke fix.
+     * isn't yet revealed - see D7 live-smoke fix.
      */
     key_priority?: Array<
       'linkedin_url' | 'email' | 'phone_e164' | 'apollo_id' | 'linkedin_member_urn'
@@ -361,7 +361,7 @@ export interface IcpDefinition {
   deleted_at?: string | null;
 }
 
-/** A row from tenant_icp_searches — audit log of Apollo / Sales Nav runs. */
+/** A row from tenant_icp_searches - audit log of Apollo / Sales Nav runs. */
 export interface IcpSearch {
   id: string;
   tenant_id: string;

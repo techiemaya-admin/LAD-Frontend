@@ -249,7 +249,7 @@ export function usePlayground({
         );
       }, warningTime);
 
-      /* 45-min expiration — release and close */
+      /* 45-min expiration - release and close */
       forceTimerRef.current = setTimeout(async () => {
         await releaseHold(currentId);
         if (onClose) onClose();
@@ -579,7 +579,7 @@ export function usePlayground({
     advanceBuilderStep: async (userInput?: string | string[], action?: string) => {
       if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
 
-      console.warn(`[Playground] advanceBuilderStep — input: ${userInput}, action: ${action}`);
+      console.warn(`[Playground] advanceBuilderStep - input: ${userInput}, action: ${action}`);
 
       setStep("guided-journey"); // Show loading screen while waiting
 
@@ -613,7 +613,7 @@ export function usePlayground({
           return;
         }
 
-        // Set data and transition immediately — no timer
+        // Set data and transition immediately - no timer
         setBuilderData({
           question: data.question,
           description: data.description,

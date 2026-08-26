@@ -1,13 +1,13 @@
 /**
- * master-agent-proxy — forward Next.js /api/prospects/* requests to LAD-Master-Agent.
+ * master-agent-proxy - forward Next.js /api/prospects/* requests to LAD-Master-Agent.
  *
  * Auth model:
  *   * The user's JWT cookie/header is read to extract `tenant_id`.
  *   * tenant_id is appended as a query parameter (the Master Agent API expects
- *     it that way — see LAD-Master-Agent/api/prospects.py).
+ *     it that way - see LAD-Master-Agent/api/prospects.py).
  *   * The shared service token `LAD_MASTER_AGENT_SERVICE_TOKEN` is added as the
  *     `X-Service-Token` header. The user's JWT is NEVER forwarded to the
- *     Master Agent — it doesn't understand it.
+ *     Master Agent - it doesn't understand it.
  *
  * If LAD_MASTER_AGENT_SERVICE_TOKEN is missing from the env, every request 503s
  * with a clear message rather than 401'ing against the upstream silently.
@@ -26,21 +26,44 @@ function getServiceToken(): string | null {
   return process.env.LAD_MASTER_AGENT_SERVICE_TOKEN || null;
 }
 
-function extractTenantIdFromJwt(token: string): string | null {
+// Super-admin identity, matching the backend's authoritative gate
+// (requireSuperAdmin in features/admin/routes/provision.js): the JWT `email`
+// claim equals this address. Email is inside the SIGNED token, so unlike the
+// x-tenant-id header it cannot be forged by the client.
+const SUPER_ADMIN_EMAIL = (
+  process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com'
+).toLowerCase();
+
+function decodeJwtClaims(token: string): { tenantId: string | null; email: string | null } {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) return { tenantId: null, email: null };
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return (
-      payload.tenantId ||
-      payload.tenant_id ||
-      payload.organizationId ||
-      payload.orgId ||
-      null
-    );
+    return {
+      tenantId:
+        payload.tenantId ||
+        payload.tenant_id ||
+        payload.organizationId ||
+        payload.orgId ||
+        null,
+      email: typeof payload.email === 'string' ? payload.email : null,
+    };
   } catch {
-    return null;
+    return { tenantId: null, email: null };
   }
+}
+
+/** The caller's claims, from Authorization header then cookie. */
+function callerClaims(req: NextRequest): { tenantId: string | null; email: string | null } {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader) {
+    const c = decodeJwtClaims(authHeader.replace(/^Bearer\s+/i, ''));
+    if (c.tenantId || c.email) return c;
+  }
+  const cookieToken =
+    req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
+  if (cookieToken) return decodeJwtClaims(cookieToken);
+  return { tenantId: null, email: null };
 }
 
 function resolveTenantId(req: NextRequest): string | null {
@@ -54,27 +77,31 @@ function resolveTenantId(req: NextRequest): string | null {
     return process.env.DEV_TENANT_OVERRIDE;
   }
 
-  // 1. Explicit header from client (supports tenant switching)
+  const claims = callerClaims(req);
+  const jwtTenant = claims.tenantId;
+
+  // x-tenant-id lets a caller act on a DIFFERENT tenant than their token names.
+  // That is tenant switching, and it is a super-admin-only capability: honouring
+  // it for anyone (as this used to) let any authenticated user read any other
+  // tenant's data by setting one header. Gate it on the SIGNED email claim —
+  // the same identity the backend's requireSuperAdmin trusts — and never let it
+  // override an ordinary user's own tenant.
   const headerTenant = req.headers.get('x-tenant-id');
-  if (headerTenant) return headerTenant;
-
-  // 2. Authorization header
-  const authHeader = req.headers.get('authorization');
-  if (authHeader) {
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-    const fromAuth = extractTenantIdFromJwt(token);
-    if (fromAuth) return fromAuth;
+  if (headerTenant && headerTenant !== jwtTenant) {
+    const isSuperAdmin = !!claims.email && claims.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL;
+    if (isSuperAdmin) return headerTenant;
+    // Not authorised to switch — ignore the header, fall back to the token, and
+    // leave a trail. This is the attack path.
+    console.warn('[master-agent-proxy] ignoring x-tenant-id from non-super-admin caller', {
+      requested: headerTenant,
+      jwtTenant,
+      hasEmail: !!claims.email,
+    });
+    return jwtTenant;
   }
 
-  // 3. Cookie token
-  const cookieToken =
-    req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
-  if (cookieToken) {
-    const fromCookie = extractTenantIdFromJwt(cookieToken);
-    if (fromCookie) return fromCookie;
-  }
-
-  return null;
+  // Header absent or already equal to the token's tenant: use the token.
+  return jwtTenant;
 }
 
 /**
@@ -82,7 +109,7 @@ function resolveTenantId(req: NextRequest): string | null {
  *
  * @param req   The incoming Next.js request
  * @param path  The Master Agent path, e.g. "/prospects" or "/prospects/abc/events".
- *              Must NOT include the tenant_id query param — this helper adds it.
+ *              Must NOT include the tenant_id query param - this helper adds it.
  */
 export async function proxyToMasterAgent(
   req: NextRequest,

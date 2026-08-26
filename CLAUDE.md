@@ -1,20 +1,20 @@
 # LAD-Frontend
 
 npm workspaces monorepo. `web/` is the Next.js app; `sdk/` holds the feature clients.
-The only lockfile is at the repo root — `npm ci` runs there, not in `web/`.
+The only lockfile is at the repo root - `npm ci` runs there, not in `web/`.
 
 ## What CI will do to your PR
 
-`.github/workflows/` — on PRs to `develop`, `stage`, `main`:
+`.github/workflows/` - on PRs to `develop`, `stage`, `main`:
 
-- **ci.yml → lint: HARD GATE.** `npm run lint` in `web/`. No `continue-on-error` —
+- **ci.yml → lint: HARD GATE.** `npm run lint` in `web/`. No `continue-on-error`  - 
   an ESLint **error** blocks the merge. Warnings do not (the tree carries thousands).
 - **ci.yml → type-check: REPORT-ONLY.** `tsc --noEmit` against a baseline of **363**
   known errors. It never fails the build; it annotates the PR when you go above the
   baseline. It exists because `next build` does *not* type-check
   (`typescript.ignoreBuildErrors: true` in `next.config.mjs`), and missing-export bugs
   twice reached users as runtime crashes. Treat "more errors than baseline" as a real
-  finding — it usually means a bad import.
+  finding - it usually means a bad import.
 - **security.yml → gitleaks: HARD GATE on PRs.**
 - **guardrails.yml: warn only.** New `lad_dev.` literals (M3), new `organization_id` (M2).
 
@@ -28,7 +28,7 @@ cd web && npx eslint src/path/to/changed-file.tsx
 cd web && npx tsc --noEmit
 ```
 
-Lint the files you changed rather than the whole tree — ESLint errors are per-file, so
+Lint the files you changed rather than the whole tree - ESLint errors are per-file, so
 a changed-file run tells you what CI's full run will say, in seconds.
 
 **If `tsc` finishes in a few seconds and reports `TS2688: Cannot find type definition
@@ -41,8 +41,8 @@ re-run; a "0 errors" result from a tsc that aborted is not a pass.
 `sdk/features/<feature>/` holds `api.ts` (HTTP only), `types.ts`, `hooks.ts`, `index.ts`.
 `web/` is supposed to render UI and call SDK hooks, not `fetch()` directly.
 
-Note the gap between that rule and the tree: several large screens — notably
-`web/src/app/onboarding/advanced-search-ai/page.tsx` — call `fetch('/api/…')` inline.
+Note the gap between that rule and the tree: several large screens - notably
+`web/src/app/onboarding/advanced-search-ai/page.tsx` - call `fetch('/api/…')` inline.
 New code should go through the SDK. If you must add an inline `fetch` next to existing
 ones, match the surrounding file and say so, rather than pretending it's the standard.
 
@@ -53,7 +53,7 @@ needs no frontend plumbing.
 ## The local commit gate
 
 `.claude/hooks/ci-gate.sh` runs on `git commit` for every Claude session and every
-subagent working in this repo. It mirrors the workflows above exactly — it blocks on
+subagent working in this repo. It mirrors the workflows above exactly - it blocks on
 what CI blocks on, warns on what CI warns on, and invents no rules of its own. A
 staged secret always blocks, in every repo, CI or no CI.
 
@@ -65,7 +65,7 @@ Escape hatch, for when you are knowingly taking ownership of the CI failure:
 LAD_SKIP_CI_GATE=1 git commit ...
 ```
 
-If the gate is wrong, fix the gate — don't route around it.
+If the gate is wrong, fix the gate - don't route around it.
 
 ## Parallel agents
 
@@ -73,7 +73,7 @@ Several agents often work this tree at once, on unrelated branches with dirty tr
 
 - Treat any file you didn't just write as possible live WIP. Prefer a targeted edit
   over rewriting a file you haven't read.
-- Never `git checkout`, `git stash`, or `git reset` to "clean up" — that silently
+- Never `git checkout`, `git stash`, or `git reset` to "clean up" - that silently
   destroys someone else's uncommitted work.
 - Check `git branch --show-current` before you commit, and branch off rather than
   piling onto whatever happens to be checked out.

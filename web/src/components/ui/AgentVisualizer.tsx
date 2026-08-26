@@ -1,16 +1,16 @@
 'use client';
 /**
- * AgentVisualizer — animated LAD logo visualizer
+ * AgentVisualizer - animated LAD logo visualizer
  * Ported from lads-visualizer-demo.html
  *
  * States:
- *   idle        — dots sway gently side to side
- *   thinking    — dots bounce left→right (searching / processing)
- *   listening   — Newton's-cradle dots
- *   speaking    — bars pulse to audio
- *   connecting  — liquid rises and churns
- *   initializing— liquid fills
- *   disconnected— dots jitter/glitch
+ *   idle        - dots sway gently side to side
+ *   thinking    - dots bounce left→right (searching / processing)
+ *   listening   - Newton's-cradle dots
+ *   speaking    - bars pulse to audio
+ *   connecting  - liquid rises and churns
+ *   initializing -  liquid fills
+ *   disconnected -  dots jitter/glitch
  */
 import React, { useRef, useState, useEffect, useId } from 'react';
 
@@ -56,7 +56,7 @@ const CLIP_PATH =
   ' C 162.410156 166.558594 94.703125 161.332031 71.832031 129.640625' +
   ' C 72.855469 145.585938 84.34375 154.5 98.324219 160.398438 Z';
 
-// Solid logo path (no eye-dots — used as the static filled shape)
+// Solid logo path (no eye-dots - used as the static filled shape)
 const SOLID_PATH =
   'M 90.605469 187.71875 C 76.769531 183.199219 62.945312 195.695312 66.507812 210.113281' +
   ' C 71.101562 227.882812 90.164062 236.230469 108.925781 235.582031' +

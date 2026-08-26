@@ -14,9 +14,25 @@ export interface KanbanBoardProps {
   selectedLeadId: string | null;
   onSelectLead: (id: string) => void;
   onAddDeal?: (stageKey: LifecycleStage) => void;
+  /**
+   * The stage's real tenant-wide count. `leads` only ever holds the current
+   * 50-row page, so counting it gave a column header that looked authoritative
+   * but capped at the page size — a tenant with 550 "new" prospects read
+   * "New 38" directly beneath an "All Contacts 571" card. When a total is
+   * supplied the header shows it, and the subheader says how many of them are
+   * actually on this page.
+   */
+  stageTotals?: Partial<Record<LifecycleStage, number>>;
+  /**
+   * We could not load the pipeline at all. Without this the board falls back to
+   * counting `leads` — which during an outage is an empty array — and every
+   * column confidently reads 0, on the DEFAULT view, while the summary cards
+   * directly above correctly read "—".
+   */
+  unavailable?: boolean;
 }
 
-export default function KanbanBoard({ stages = [], leads = [], selectedLeadId, onSelectLead, onAddDeal }: KanbanBoardProps) {
+export default function KanbanBoard({ stages = [], leads = [], selectedLeadId, onSelectLead, onAddDeal, stageTotals, unavailable = false }: KanbanBoardProps) {
   return (
     <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pb-1">
       <div className="flex gap-3 min-w-max">
@@ -27,6 +43,16 @@ export default function KanbanBoard({ stages = [], leads = [], selectedLeadId, o
             return lStage === stageKey;
           });
           const pipelineValue = stageLeads.reduce((a, l) => a + (l.value || 0), 0);
+          // Deal value isn't tracked in prospect_state at all today, so every
+          // lead's `value` is undefined — summing undefineds trivially gives
+          // 0, which read as "these deals are worth nothing" rather than the
+          // true "we don't know yet".
+          const anyValueTracked = stageLeads.some((l) => l.value != null);
+          // `stageLeads` is this page's slice; `stageTotal` is the whole tenant.
+          const loaded = stageLeads.length;
+          const stageTotal = stageTotals?.[stageKey as LifecycleStage];
+          const headerCount = stageTotal ?? loaded;
+          const truncated = stageTotal != null && stageTotal > loaded;
 
           return (
             <div
@@ -46,21 +72,31 @@ export default function KanbanBoard({ stages = [], leads = [], selectedLeadId, o
                   <span
                     className="inline-flex dark:bg-[#2563eb] dark:text-white items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium tabular-nums"
                   >
-                    {stageLeads.length}
+                    {unavailable ? '—' : headerCount}
                   </span>
                 </div>
-                <button
-                  onClick={() => onAddDeal?.(stageKey)}
-                  className="w-6 h-6 grid place-items-center rounded-md text-slate-400 hover:bg-white dark:hover:bg-[#121c3b] hover:text-[#172560] dark:hover:text-white transition-colors"
-                  aria-label={`Add deal to ${s.label}`}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                {onAddDeal && (
+                  <button
+                    onClick={() => onAddDeal(stageKey)}
+                    className="w-6 h-6 grid place-items-center rounded-md text-slate-400 hover:bg-white dark:hover:bg-[#121c3b] hover:text-[#172560] dark:hover:text-white transition-colors"
+                    aria-label={`Add deal to ${s.label}`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Subheader */}
               <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1 mb-2">
-                {stageLeads.length > 0 ? `${fmtCurrency(pipelineValue)} pipeline` : 'AED 0 pipeline'}
+                {unavailable
+                  ? 'could not be loaded'
+                  : headerCount === 0
+                  ? 'AED 0 pipeline'
+                  : anyValueTracked
+                    ? `${fmtCurrency(pipelineValue)} pipeline`
+                    : truncated
+                      ? `${loaded} of ${headerCount} on this page · value not tracked`
+                      : `${headerCount} deal${headerCount === 1 ? '' : 's'} · value not tracked`}
               </p>
 
               {stageLeads.length > 0 ? (
@@ -81,10 +117,14 @@ export default function KanbanBoard({ stages = [], leads = [], selectedLeadId, o
                     <Inbox className="w-5 h-5 text-slate-400 dark:text-slate-400" />
                   </div>
                   <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    No deals here
+                    {unavailable ? 'Not loaded' : truncated ? 'None on this page' : 'No deals here'}
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-[180px] leading-tight mb-6">
-                    Add deals to move them to the next stage.
+                    {unavailable
+                      ? "We couldn't load this pipeline — this isn't an empty stage."
+                      : truncated
+                        ? `All ${headerCount} are on other pages — open this stage from the list view to see them.`
+                        : 'Add deals to move them to the next stage.'}
                   </p>
                 </div>
               )}

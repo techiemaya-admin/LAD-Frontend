@@ -258,7 +258,7 @@ export default function CampaignsTable({ campaigns, loading, onMenuOpen }: Campa
                       <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse w-20"></div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="h-6 w-6 bg-gray-200 dark:bg-slate-800 dark:bg-[#253456] rounded animate-pulse ml-auto"></div>

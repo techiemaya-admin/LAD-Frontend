@@ -21,11 +21,11 @@ Steps:
    unset GIT_INDEX_FILE
    ```
 
-2. Report the result exactly as the gate gives it — which gates ran, which passed,
+2. Report the result exactly as the gate gives it - which gates ran, which passed,
    which would block. Do not soften a blocker into a suggestion.
 
 3. If a gate is red, fix the underlying problem. If a gate could not run at all
-   (missing tool, broken `node_modules`, unreadable config), say so plainly — a gate
+   (missing tool, broken `node_modules`, unreadable config), say so plainly - a gate
    that didn't run is not a gate that passed.
 
 Never use `LAD_SKIP_CI_GATE=1` on the user's behalf.

@@ -44,9 +44,9 @@ interface EmailBlock {
 // "card". CARD_PADDING is the card's inner padding; the header banner and
 // footer use matching NEGATIVE margins to bleed edge-to-edge within the card
 // (clipped by the card's overflow:hidden + border-radius). Keep these in sync.
-const CARD_PADDING = 32;               // px — card inner padding
+const CARD_PADDING = 32;               // px - card inner padding
 const PAGE_BG_DEFAULT = '#eef1f6';     // page background behind the card
-const CARD_MAX_WIDTH = 600;            // px — content width (parser fingerprint)
+const CARD_MAX_WIDTH = 600;            // px - content width (parser fingerprint)
 
 // ── Default props per block type ──────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ function toDirectImageUrl(url: string): string {
     if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
     const idParam = u.searchParams.get('id');
     if (idParam) return `https://drive.google.com/uc?export=view&id=${idParam}`;
-  } catch { /* not a valid URL yet — leave as-is */ }
+  } catch { /* not a valid URL yet - leave as-is */ }
   return url;
 }
 
@@ -109,7 +109,7 @@ function blockToHtml(block: EmailBlock): string {
 
   switch (type) {
     case 'header': {
-      // Full-bleed banner image — negative margins counteract the card padding
+      // Full-bleed banner image - negative margins counteract the card padding
       // so the image spans edge-to-edge (clipped by the card's rounded corners).
       if (!props.src) return `<!-- header block (no src) -->`;
       const bleed = `margin:-${CARD_PADDING}px -${CARD_PADDING}px 20px -${CARD_PADDING}px;`;
@@ -157,7 +157,7 @@ function blockToHtml(block: EmailBlock): string {
         s.youtube   ? `<a href="${s.youtube}"   style="${_aStyle}"><img src="https://cdn-icons-png.flaticon.com/32/1384/1384060.png" width="28" height="28" alt="YouTube"   style="${_iStyle}"/></a>` : '',
         s.twitter   ? `<a href="${s.twitter}"   style="${_aStyle}"><img src="https://cdn-icons-png.flaticon.com/32/733/733579.png"  width="28" height="28" alt="Twitter"   style="${_iStyle}"/></a>` : '',
       ].filter(Boolean).join('');
-      // Full-bleed footer band — negative side/bottom margins reach the card
+      // Full-bleed footer band - negative side/bottom margins reach the card
       // edges (clipped by the card's rounded corners + overflow:hidden).
       const footerBleed = `margin:20px -${CARD_PADDING}px -${CARD_PADDING}px -${CARD_PADDING}px;`;
       return `<div style="background:${props.bgColor || '#f3f4f6'};padding:24px 20px;text-align:center;${footerBleed}">
@@ -210,7 +210,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
     const parser = new DOMParser();
     const doc    = parser.parseFromString(html, 'text/html');
 
-    // Must have our outer wrapper — bail if it doesn't
+    // Must have our outer wrapper - bail if it doesn't
     const wrapper = doc.querySelector('div[style*="max-width:600px"]');
     if (!wrapper) return null;
 
@@ -260,7 +260,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
         continue;
       }
 
-      // ── div — spacer / image / logo / button / footer / signature ────────────
+      // ── div - spacer / image / logo / button / footer / signature ────────────
       if (tag === 'div') {
 
         // Spacer: only a height style, no meaningful children
@@ -403,7 +403,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
           continue;
         }
       }
-      // unknown element — skip
+      // unknown element - skip
     }
 
     return blocks.length > 0 ? blocks : null;
@@ -650,7 +650,7 @@ function SignatureBlockEditor({ local, set, onCommit, inputCls, labelCls }: {
 
   return (
     <>
-      {/* Logo image — upload from device OR paste a URL / Google Drive link */}
+      {/* Logo image - upload from device OR paste a URL / Google Drive link */}
       <div>
         <label className={labelCls}>Logo image</label>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
@@ -832,7 +832,7 @@ function ImageBlockEditor({
           <div className="flex-1 border-t border-gray-200 dark:border-gray-800" />
         </div>
 
-        {/* URL input — auto-converts Google Drive share links to direct embed URLs */}
+        {/* URL input - auto-converts Google Drive share links to direct embed URLs */}
         <input
           type="text"
           placeholder="https://example.com/image.png  or Google Drive share link"
@@ -964,7 +964,7 @@ function RichTextEditor({
     setTimeout(sync, 0);
   };
 
-  // List insertion — falls back to insertHTML when execCommand list command fails
+  // List insertion - falls back to insertHTML when execCommand list command fails
   // (execCommand insertUnorderedList/insertOrderedList can silently fail if caret
   //  is inside a <div> with no block content before it)
   const insertList = (type: 'ul' | 'ol') => {
@@ -972,7 +972,7 @@ function RichTextEditor({
     const cmd = type === 'ul' ? 'insertUnorderedList' : 'insertOrderedList';
     const beforeHtml = editorRef.current?.innerHTML || '';
     document.execCommand(cmd, false, '');
-    // If innerHTML is unchanged the command did nothing — fall back to raw HTML insert
+    // If innerHTML is unchanged the command did nothing - fall back to raw HTML insert
     if (editorRef.current?.innerHTML === beforeHtml) {
       const sel = window.getSelection();
       const selected = sel?.toString() || '';
@@ -1006,7 +1006,7 @@ function RichTextEditor({
     setTimeout(sync, 0);
   };
 
-  // Link insertion — uses saved selection so focus loss doesn't break it
+  // Link insertion - uses saved selection so focus loss doesn't break it
   const insertLink = () => {
     saveSelection();
     const url = window.prompt('Enter URL:', 'https://');
@@ -1120,7 +1120,7 @@ function RichTextEditor({
         </Btn>
         <Sep />
 
-        {/* Variables — opens right-aligned so it stays inside the toolbar */}
+        {/* Variables - opens right-aligned so it stays inside the toolbar */}
         <VariablePicker onInsert={insertVariable} dropAlign="right" />
       </div>
 
@@ -1214,7 +1214,7 @@ function BlockEditor({
         </div>
       )}
 
-      {/* Header banner — full-width top image + optional link */}
+      {/* Header banner - full-width top image + optional link */}
       {block.type === 'header' && (
         <>
           <p className="text-xs text-gray-500 -mt-1">Spans the full width of the email, edge to edge at the top.</p>
@@ -1232,7 +1232,7 @@ function BlockEditor({
         <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
       )}
 
-      {/* Logo — upload + optional link + width */}
+      {/* Logo - upload + optional link + width */}
       {block.type === 'logo' && (
         <>
           <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />

@@ -1,9 +1,9 @@
 /**
- * Business Profile HTTP client — GET/POST /api/ai-playground.
+ * Business Profile HTTP client - GET/POST /api/ai-playground.
  *
  * The backend UPSERTs into `ai_icp_profiles.icp_data` (JSONB),
  * keyed by tenant_id + is_active=true + is_deleted=false. Tenant scoping
- * is enforced server-side from the session/JWT — clients never pass
+ * is enforced server-side from the session/JWT - clients never pass
  * tenant_id in the body.
  *
  * Mirrors the raw-fetch convention used by definitionsApi.ts.
@@ -90,13 +90,13 @@ export async function getBusinessProfile(): Promise<BusinessProfile | null> {
  * Replace the tenant's active business profile.
  *
  * IMPORTANT: the backend (`upsertIcpProfile` at routes/index.js:399) does a
- * FULL replace of `icp_data` JSONB — not a merge. Callers MUST send the
+ * FULL replace of `icp_data` JSONB - not a merge. Callers MUST send the
  * complete profile (including chat-only extras like `linkedinAudit`) or
  * those fields will be lost on save. The `useBusinessProfile` hook handles
  * this merge for you; reach for this raw API only if you have already
  * merged client-side.
  *
- * POST response is `{ success: true }` only — we echo back the input so the
+ * POST response is `{ success: true }` only - we echo back the input so the
  * caller has the canonical stored shape.
  */
 export async function saveBusinessProfile(
@@ -114,7 +114,7 @@ export async function saveBusinessProfile(
  *
  * Multipart POST to /api/ai-playground/company-logo. The backend stores the
  * image in GCS and merges the resulting public URL into `icp_data.companyLogoUrl`
- * itself, so callers only need to reflect the returned URL in local state —
+ * itself, so callers only need to reflect the returned URL in local state  - 
  * no follow-up saveBusinessProfile() call.
  *
  * Note: this bypasses `request()` because it must NOT set a JSON Content-Type;

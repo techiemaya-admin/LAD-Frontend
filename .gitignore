@@ -79,7 +79,7 @@ web/src/**/*.js.map
 web/src/**/*.d.ts
 web/src/**/*.d.ts.map
 
-# Never commit compiled TS output under src — a stale .js shadows its .ts sibling
+# Never commit compiled TS output under src - a stale .js shadows its .ts sibling
 # and breaks module resolution (caused the "et.proxyGet is not a function" crash).
 web/src/**/*.js
 web/src/**/*.js.map

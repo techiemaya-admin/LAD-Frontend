@@ -50,7 +50,7 @@ const SERVICES: ServiceMeta[] = [
     port: 3000,
     paths: 143,
     ops: 199,
-    desc: 'Next.js /api routes — mostly thin proxies to the three backends with cookie-based auth translation.',
+    desc: 'Next.js /api routes - mostly thin proxies to the three backends with cookie-based auth translation.',
   },
 ];
 
@@ -194,7 +194,7 @@ export default function SwaggerExplorer({
         .lad-swagger-back:hover { background: #f1f5f9; }
         .lad-swagger-crumb { color: #475569; }
         .lad-swagger-crumb strong { color: #0f172a; }
-        /* Hide swagger's own auth scheme bar — we manage from the topbar */
+        /* Hide swagger's own auth scheme bar - we manage from the topbar */
         .swagger-ui .scheme-container { display: none; }
         .lad-swagger-toast { position: fixed; bottom: 20px; right: 20px; background: #0f172a; color: #e2e8f0; padding: 10px 16px; border-radius: 6px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 200; }
       `}</style>
@@ -269,7 +269,7 @@ export default function SwaggerExplorer({
               <p className="lead">
                 Each card opens an interactive Swagger UI. Endpoints are grouped by tag. Click any
                 operation, hit <strong>Try it out</strong>, fill the parameters, and execute against
-                the running service — your bearer token (set in the top bar, pre-filled with your
+                the running service - your bearer token (set in the top bar, pre-filled with your
                 session) is sent automatically.
               </p>
               <div className="lad-swagger-grid">

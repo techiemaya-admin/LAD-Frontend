@@ -6,7 +6,7 @@ interface StatusBadgeProps {
 
 /**
  * Realistic typing animation.
- * - Types characters one-by-one with randomised 80–130 ms delays.
+ * - Types characters one-by-one with randomised 80-130 ms delays.
  * - Pauses 1.2 s at full text, then fades out briefly before restarting.
  * - The outer badge keeps a fixed min-width so it never resizes / "jumps".
  */
@@ -25,11 +25,11 @@ function TypingText({ text }: { text: string }) {
           setDisplayed(text.slice(0, displayed.length + 1));
         }, delay);
       } else {
-        // Full text shown — pause then start fade-out
+        // Full text shown - pause then start fade-out
         timeout = setTimeout(() => setFading(true), 1200);
       }
     } else {
-      // Fade-out period — clear text then start over
+      // Fade-out period - clear text then start over
       timeout = setTimeout(() => {
         setDisplayed("");
         setFading(false);

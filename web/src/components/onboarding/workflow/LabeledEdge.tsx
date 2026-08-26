@@ -2,7 +2,7 @@ import React from 'react';
 import { EdgeProps, getBezierPath, EdgeLabelRenderer } from 'reactflow';
 
 /**
- * Custom edge with a floating label pill — node-graph style
+ * Custom edge with a floating label pill - node-graph style
  * Shows condition labels like "✓ Accepted", "⏳ No Reply 7d", "✗ Rejected"
  */
 export default function LabeledEdge({
@@ -50,6 +50,7 @@ export default function LabeledEdge({
       {label && (
         <EdgeLabelRenderer>
           <div
+            className="bg-card dark:bg-[#1a2f6b]"
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
@@ -59,7 +60,6 @@ export default function LabeledEdge({
               gap: 4,
               padding: '3px 10px',
               borderRadius: 20,
-              background: '#fff',
               border: `1.5px solid ${color}`,
               boxShadow: `0 2px 8px ${color}25, 0 1px 3px rgba(0,0,0,0.08)`,
               fontSize: 10,

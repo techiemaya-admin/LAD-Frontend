@@ -106,16 +106,16 @@ const EMAIL_API = '/api/email-conversations';
 /**
  * Validate a single lead's optional fields.
  * Returns a map of field → error message. Empty object means valid.
- * All fields are optional — only validated when non-empty.
+ * All fields are optional - only validated when non-empty.
  */
 function validateLead(lead: LeadEntry): Record<string, string> {
   const errors: Record<string, string> = {};
 
-  // Phone: if provided, must contain 7–15 digits (no + requirement)
+  // Phone: if provided, must contain 7-15 digits (no + requirement)
   if (lead.phone.trim()) {
     const digits = lead.phone.trim().replace(/\D/g, '');
     if (digits.length < 7 || digits.length > 15) {
-      errors.phone = 'Must be 7–15 digits (e.g. 501234567 or +971501234567)';
+      errors.phone = 'Must be 7-15 digits (e.g. 501234567 or +971501234567)';
     }
   }
 
@@ -207,7 +207,7 @@ function autoFixPhone(phone: string, countryCode: string): string {
 }
 
 // Turn an API error body into a readable string. FastAPI validation errors
-// come back as `detail: [{ type, loc, msg, input, ctx }]` — rendering that
+// come back as `detail: [{ type, loc, msg, input, ctx }]` - rendering that
 // array/object directly as a React child throws "Objects are not valid as a
 // React child" (#31) and crashes the page. Flatten it to "field: message".
 function formatApiError(data: unknown): string {
@@ -513,7 +513,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
         // Normalise any cell value to a trimmed string. Excel auto-converts
         // emails/URLs to hyperlinks, so exceljs returns objects like
-        // { text, hyperlink } (also richText / formula { result }) — a plain
+        // { text, hyperlink } (also richText / formula { result }) - a plain
         // String() on those yields "[object Object]", which is why email
         // uploads were silently dropped. Unwrap them here.
         const cellText = (v: unknown): string => {
@@ -576,10 +576,10 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           setExcelError('No rows with a name were found.');
           return;
         }
-        // Email groups need an email per contact — surface it early rather
+        // Email groups need an email per contact - surface it early rather
         // than silently importing 0.
         if (isEmailMode && !parsedLeads.some((l) => l.email.trim())) {
-          setExcelError('None of the rows have an email address — email groups need an "email" column.');
+          setExcelError('None of the rows have an email address - email groups need an "email" column.');
         }
         setLeads(parsedLeads);
         setSelectedIds(new Set());
@@ -651,7 +651,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     }
   }, []);
 
-  // URL Scrape — pull contacts from a webpage and pre-fill the lead list
+  // URL Scrape - pull contacts from a webpage and pre-fill the lead list
   const handleScrapeUrl = useCallback(async () => {
     const url = scrapeUrl.trim();
     if (!url) {
@@ -711,7 +711,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
     }
   }, [scrapeUrl]);
 
-  // Import — blocked when there are validation errors
+  // Import - blocked when there are validation errors
   const handleImport = useCallback(async () => {
     const validLeads = isEmailMode
       ? leads.filter((l) => l.name.trim() && l.email.trim())
@@ -750,7 +750,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         if (cleaned.length === 0) {
           setImportResult({
             success: false, total: validLeads.length, imported: 0, conversations: 0,
-            errors: [{ name: 'Import', error: 'No valid email addresses after cleaning — check the email column.' }],
+            errors: [{ name: 'Import', error: 'No valid email addresses after cleaning - check the email column.' }],
             skipped: [], duplicates: [],
           });
           setImporting(false);
@@ -784,7 +784,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
         if (ok) {
           // For legacy provider, still need to add contacts to the group
-          // after import — LAD-Email-Comms already did it atomically.
+          // after import - LAD-Email-Comms already did it atomically.
           if (!isHosted && emailGroupId && inner?.contact_ids?.length > 0) {
             try {
               await fetch(`${EMAIL_API}/groups/${emailGroupId}/contacts`, {
@@ -1101,9 +1101,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-sm font-medium mb-0.5", isWhatsApp ? "text-zinc-900 dark:text-zinc-200" : "")}>Extract contacts from any webpage</p>
                   <p className={cn("text-xs", isWhatsApp ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
-                    Paste a URL — member directories, team pages, chapter listings, etc. We&apos;ll fetch the
-                    page (JavaScript-rendered pages supported) and use AI to pull out names, phones,
-                    emails, companies, and social profiles.
+                    Paste a URL. This can be a member directory, team page, chapter listing, or similar page. We&apos;ll fetch the page, including JavaScript-rendered pages, and use AI to extract names, phone numbers, emails, companies, and social profiles.
                   </p>
                 </div>
               </div>
@@ -1149,7 +1147,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
 
               {scraping && (
                 <div className="text-xs text-muted-foreground italic">
-                  Fetching the page and extracting contacts — this can take 20–45 seconds for
+                  Fetching the page and extracting contacts - this can take 20-45 seconds for
                   JavaScript-heavy pages.
                 </div>
               )}
@@ -1167,7 +1165,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   <span>
                     Extracted <strong>{scrapeStats.extracted}</strong> contact{scrapeStats.extracted !== 1 ? 's' : ''}
                     {scrapeStats.chars > 0 && ` from ${scrapeStats.chars.toLocaleString()} chars of page content`}.
-                    Switched to the Add Leads tab — review and edit before importing.
+                    Switched to the Add Leads tab - review and edit before importing.
                   </span>
                 </div>
               )}
@@ -1229,7 +1227,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
               )}>
                 <TriangleAlert className="h-4 w-4 shrink-0" />
                 <span className="text-xs font-medium">
-                  {invalidCount} record{invalidCount !== 1 ? 's' : ''} with invalid data — fix or delete before importing
+                  {invalidCount} record{invalidCount !== 1 ? 's' : ''} with invalid data - fix or delete before importing
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -1274,7 +1272,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     "rounded px-1 font-mono",
                     isWhatsApp ? "bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200" : "bg-amber-200 text-amber-900"
                   )}>{detectedCountryCode}</code>{' '}
-                  from existing records — apply to {phoneErrorLeadIds.size} number{phoneErrorLeadIds.size !== 1 ? 's' : ''}?
+                  from existing records - apply to {phoneErrorLeadIds.size} number{phoneErrorLeadIds.size !== 1 ? 's' : ''}?
                 </span>
                 <Button
                   size="sm"
@@ -1358,7 +1356,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     <span className="block">
                       <strong>{importResult.imported}</strong> of <strong>{importResult.total}</strong> lead{importResult.total !== 1 ? 's' : ''} imported
                       {importResult.conversations > 0 && (
-                        <> — <strong>{importResult.conversations}</strong> new conversation{importResult.conversations !== 1 ? 's' : ''} created</>
+                        <> - <strong>{importResult.conversations}</strong> new conversation{importResult.conversations !== 1 ? 's' : ''} created</>
                       )}
                       {importResult.duplicates.length > 0 && (
                         <>, <strong>{importResult.duplicates.length}</strong> linked to existing</>
@@ -1382,7 +1380,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                                   <span className="break-all">
                                     <strong>{s.name}</strong>
                                     {s.phone ? <span className="text-amber-700/80"> ({s.phone})</span> : null}
-                                    {' — '}{s.reason}
+                                    {' - '}{s.reason}
                                   </span>
                                 </li>
                               ))}
@@ -1401,7 +1399,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                                   <span className="break-all">
                                     <strong>{e.name}</strong>
                                     {e.phone ? <span className="text-red-600/80"> ({e.phone})</span> : null}
-                                    {' — '}{e.error}
+                                    {' - '}{e.error}
                                   </span>
                                 </li>
                               ))}
@@ -1414,7 +1412,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                     {importResult.duplicates.length > 0 && (
                       <details className="rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-800">
                         <summary className="cursor-pointer font-medium select-none">
-                          ℹ {importResult.duplicates.length} already existed — linked to existing conversation{importResult.duplicates.length !== 1 ? 's' : ''}
+                          ℹ {importResult.duplicates.length} already existed - linked to existing conversation{importResult.duplicates.length !== 1 ? 's' : ''}
                         </summary>
                         <ul className="mt-1 ml-3 space-y-0.5 max-h-32 overflow-y-auto">
                           {importResult.duplicates.map((d, i) => (
@@ -1574,7 +1572,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                             }
                             const newGroup = groupData.group || groupData.data || (groupData.id ? groupData : null);
                             if (!newGroup?.id) {
-                              setBroadcastCreateError('Group created but ID not returned — please refresh.');
+                              setBroadcastCreateError('Group created but ID not returned - please refresh.');
                               return;
                             }
                             // Add the imported leads as members
@@ -1641,7 +1639,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         )}>
           {!importResult?.success ? (
             <div className="flex flex-col w-full space-y-4">
-              {/* Run in background toggle — only shown when importing more than 1 lead */}
+              {/* Run in background toggle - only shown when importing more than 1 lead */}
               {validCount > 1 && !hasValidationErrors && (
                 <button
                   type="button"
@@ -1672,7 +1670,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
                   <RefreshCw className={cn('h-3.5 w-3.5 shrink-0', runInBackground && 'animate-spin')} />
                   <span>
                     <span className="font-medium">Run in background</span>
-                    {' '}— close this dialog and continue importing without waiting
+                    {' '}- close this dialog and continue importing without waiting
                   </span>
                 </button>
               )}
@@ -1939,7 +1937,7 @@ function LeadRow({ lead, index, errors, isSelected, onUpdate, onRemove, onToggle
         </div>
       )}
 
-      {/* Row 3: LinkedIn + Instagram — hidden in email mode */}
+      {/* Row 3: LinkedIn + Instagram - hidden in email mode */}
       {!isEmailMode && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="space-y-1">

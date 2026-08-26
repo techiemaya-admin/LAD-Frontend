@@ -14,7 +14,7 @@ export interface UseCampaignLeadsReturn {
   leads: CampaignLead[] | undefined; // Alias for backward compatibility
   /**
    * Leads matching the active filters across the whole campaign, ignoring
-   * pagination. Use this for any "N leads" label — `leads.length` is only the
+   * pagination. Use this for any "N leads" label - `leads.length` is only the
    * size of the loaded page and will understate large campaigns.
    */
   total: number;

@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 3 — Integrations step. Placeholder grid that links to the
+// R8 Phase 3 - Integrations step. Placeholder grid that links to the
 // channel-connection pages. The real connect flow lives outside the wizard
 // (LinkedIn / WhatsApp / Email each have their own pages), so this step just
 // surfaces the entry points and lets the tenant finish later.

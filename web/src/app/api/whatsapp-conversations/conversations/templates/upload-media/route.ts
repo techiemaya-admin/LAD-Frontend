@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Preserve multipart Content-Type (includes boundary — must not be overwritten)
+  // Preserve multipart Content-Type (includes boundary - must not be overwritten)
   const contentType = req.headers.get('content-type');
   if (contentType) headers['Content-Type'] = contentType;
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers,
       body: req.body,
-      // @ts-ignore — required for streaming body in Node.js fetch
+      // @ts-ignore - required for streaming body in Node.js fetch
       duplex: 'half',
     });
 

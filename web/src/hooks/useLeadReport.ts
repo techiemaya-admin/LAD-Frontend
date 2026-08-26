@@ -10,7 +10,7 @@
  * POLLING, AND WHY: `approval_status` changes without this app doing anything.
  * The approver clicks a link in an email or WhatsApp message, which settles the
  * report on the backend directly. There is no event pushed to the browser, so a
- * page sitting on `pending` has to ask. It polls ONLY while pending — an
+ * page sitting on `pending` has to ask. It polls ONLY while pending - an
  * approved or rejected report is terminal and asking again would be pure noise.
  */
 
@@ -51,6 +51,20 @@ export interface UseLeadReportResult {
   bundle: LeadReportBundle | null;
   isLoading: boolean;
   isError: boolean;
+  /**
+   * The bundle fetch left us with NOTHING to render, and why.
+   *
+   * `isError` alone is not enough for the caller to act on: it says a request
+   * failed, not that we are empty-handed (a retry that fails after a good
+   * response still has the good response). This is set only when `data` is
+   * actually undefined, so a caller can tell "we could not load this" apart
+   * from "this lead has no report", which look identical downstream.
+   *
+   * Read from `failureReason` as well as `error` — while retries are still in
+   * flight `error` is null, so the window where a caller would otherwise treat
+   * a live outage as an empty result is exactly the window this closes.
+   */
+  loadError: Error | null;
   /** The report card's render state, with the trigger's progress folded in. */
   state: ReportViewState;
   /** Set when generation was refused for want of grounding. */
@@ -66,7 +80,7 @@ export interface UseLeadReportResult {
 }
 
 /**
- * @param leadId the CRM prospect's `core_lead_id` — the id campaign_leads and
+ * @param leadId the CRM prospect's `core_lead_id` - the id campaign_leads and
  *               campaign_analytics are both keyed by. The Master Agent prospect
  *               id will not resolve.
  */
@@ -83,7 +97,7 @@ export function useLeadReport(leadId: string | null | undefined): UseLeadReportR
     queryFn: async () => readJson(await fetch(`${BASE}/by-lead/${leadId}`)) as Promise<LeadReportBundle>,
     enabled: Boolean(leadId),
     staleTime: 15_000,
-    // Only while a decision is outstanding — see the note at the top.
+    // Only while a decision is outstanding - see the note at the top.
     refetchInterval: (q) =>
       q.state.data?.report?.approval_status === 'pending' ? PENDING_POLL_MS : false,
     // The approver may settle it while the tab is in the background.
@@ -124,7 +138,7 @@ export function useLeadReport(leadId: string | null | undefined): UseLeadReportR
     },
     onSuccess: () => { void qc.invalidateQueries({ queryKey }); },
     onError: (err: unknown) => {
-      // 409 means the emailed link won the race. Not a failure — re-fetch and
+      // 409 means the emailed link won the race. Not a failure - re-fetch and
       // show whichever decision actually landed.
       if (err instanceof LeadReportError && err.code === 'ALREADY_SETTLED') {
         setSettledElsewhere(true);
@@ -165,6 +179,11 @@ export function useLeadReport(leadId: string | null | undefined): UseLeadReportR
     bundle: query.data ?? null,
     isLoading: query.isLoading,
     isError: query.isError,
+    // Only when we genuinely have nothing — see the doc-comment on the type.
+    loadError:
+      query.data === undefined
+        ? ((query.error ?? query.failureReason) as Error | null) ?? null
+        : null,
     state,
     refusalMessage,
     advance,

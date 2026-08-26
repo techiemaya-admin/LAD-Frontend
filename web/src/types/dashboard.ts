@@ -192,7 +192,7 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     id: 'conversation-funnel',
     type: 'conversation-funnel',
     title: 'Enquiries & Bookings',
-    description: 'Conversation funnel from first enquiry to booking — drop-off, conversion rate and daily volume',
+    description: 'Conversation funnel from first enquiry to booking, with drop-off, conversion rate, and daily volume.',
     category: 'analytics',
     icon: 'Users',
     defaultSize: { w: 6, h: 4 },
@@ -203,7 +203,7 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     id: 'reengage-topics',
     type: 'reengage-topics',
     title: 'Re-engage by Topic',
-    description: 'Customers who asked about a topic but didn’t book — broadcast a tailored offer to win them back',
+    description: 'Customers who asked about a topic but didn’t book can receive a tailored offer to win them back.',
     category: 'whatsapp',
     icon: 'Megaphone',
     defaultSize: { w: 6, h: 4 },
@@ -225,7 +225,7 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     id: 'linkedin-funnel',
     type: 'linkedin-funnel',
     title: 'LinkedIn Funnel',
-    description: 'Outbound LinkedIn funnel — sent, accepted, replied, accept/reply rates and weekly connection-limit usage',
+    description: 'Outbound LinkedIn funnel. Track sent, accepted, replied, acceptance/reply rates, and weekly connection-limit usage.',
     category: 'linkedin',
     icon: 'TrendingUp',
     defaultSize: { w: 6, h: 4 },
@@ -258,7 +258,7 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     id: 'combined-funnel',
     type: 'combined-funnel',
     title: 'Sales Funnel',
-    description: 'One cross-channel lead funnel — new leads to booked meeting (SAH) with overall + per-stage conversion',
+    description: 'One cross-channel lead funnel. Track new leads to booked meetings (SAH), with overall and per-stage conversion rates.',
     category: 'analytics',
     icon: 'Filter',
     defaultSize: { w: 12, h: 5 },
@@ -307,4 +307,4 @@ export const getWidgetTypeFromId = (id: string): WidgetType | null => {
 // Generate unique widget id
 export const generateWidgetId = (type: WidgetType): string => {
   return `${type}-${Date.now()}`;
-};
+};

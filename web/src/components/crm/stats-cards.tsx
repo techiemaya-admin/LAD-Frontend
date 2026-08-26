@@ -11,14 +11,27 @@ export type CrmView = 'board' | 'all' | 'prospects' | 'leads' | 'clients';
 interface StatCard {
   key: Exclude<CrmView, 'board'>;
   title: string;
-  value: number;
+  /** `null` = could not be loaded; renders "—". Matches `StatsCardsProps.counts`,
+   *  which has always been nullable — typing this `number` made every one of the
+   *  four assignments below a type error. */
+  value: number | null;
   Icon: LucideIcon;
   bg: string;
   ic: string;
 }
 
 export interface StatsCardsProps {
-  counts: { all: number; prospects: number; leads: number; clients: number };
+  /**
+   * `null` for a figure we could not load — NOT the same as a tenant that has
+   * none. During an outage these all rendered `0`, which told a tenant with 571
+   * contacts that their CRM was empty.
+   */
+  counts: {
+    all: number | null;
+    prospects: number | null;
+    leads: number | null;
+    clients: number | null;
+  };
   selected: CrmView;
   onSelect: (key: Exclude<CrmView, 'board'>) => void;
 }
@@ -33,42 +46,39 @@ export default function StatsCards({ counts, selected, onSelect }: StatsCardsPro
 
   return (
     <div className="flex gap-3 sm:gap-4 mb-5 flex-wrap items-stretch">
-  {cards.map((c) => {
-    const isSel = selected === c.key;
-    const Icon = c.Icon;
-    return (
-      <div key={c.key} className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
-        <button
-          onClick={() => onSelect(c.key)}
-          // CHANGED: Update dark:bg to #071131 for contrast.
-          // CHANGED: Use dark:border-slate-800 for a subtler look.
-          // CHANGED: Update isSel ring/border color to a teal/blue that pops in Dark Mode.
-          className={`bg-white dark:bg-[#071131] rounded-[20px] border-2 w-full text-left flex flex-col h-full min-h-[120px] transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 ${
-            isSel
-              ? 'border-[#0b1957] dark:border-[#2563eb] ring-2 ring-[#0b1957]/30'
-              : 'border-slate-200 dark:border-blue-950/40'
-          }`}
-        >
-          <div className="flex-1 flex flex-col p-4">
-            <div className="flex justify-end mb-2">
-              <div className={`${c.bg} w-12 h-12 rounded-full grid place-items-center`}>
-                <Icon className={`w-6 h-6 ${c.ic}`} />
+      {cards.map((c) => {
+        const isSel = selected === c.key;
+        const Icon = c.Icon;
+        return (
+          <div key={c.key} className="w-[calc(50%-8px)] md:w-[calc(25%-12px)]">
+            <button
+              onClick={() => onSelect(c.key)}
+              className={`bg-white dark:bg-[#071131] rounded-[20px] border w-full text-left flex flex-col h-full min-h-[120px] transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 ${
+                isSel
+                  ? 'border-[#0b1957] dark:border-[#2563eb] ring-2 ring-[#0b1957]/30'
+                  : 'border-slate-200 dark:border-blue-950/40'
+              }`}
+            >
+              <div className="flex-1 flex flex-col p-4">
+                <div className="flex justify-end mb-2">
+                  <div className={`${c.bg} w-12 h-12 rounded-full grid place-items-center`}>
+                    <Icon className={`w-6 h-6 ${c.ic}`} />
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <p className="text-[10px] sm:text-[12.5px] text-slate-500 dark:text-slate-400 mb-1">{c.title}</p>
+                  <h5
+                    className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums"
+                    style={{ fontFamily: '"Space Grotesk", system-ui' }}
+                  >
+                    {c.value}
+                  </h5>
+                </div>
               </div>
-            </div>
-            <div className="flex-1 flex flex-col justify-end">
-              <p className="text-[10px] sm:text-[12.5px] text-slate-500 dark:text-slate-400 mb-1">{c.title}</p>
-              <h5
-                className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums"
-                style={{ fontFamily: '"Space Grotesk", system-ui' }}
-              >
-                {c.value}
-              </h5>
-            </div>
+            </button>
           </div>
-        </button>
-      </div>
-    );
-  })}
-</div>
+        );
+      })}
+    </div>
   );
 }

@@ -848,7 +848,7 @@ export const renderActivityBreakdown = (campaign: Campaign): React.ReactElement 
   }
 
   if (rows.length === 0) {
-    return <span className="text-xs text-gray-400">—</span>;
+    return <span className="text-xs text-gray-400">-</span>;
   }
 
   return <div className="flex flex-col gap-1.5">{rows}</div>;

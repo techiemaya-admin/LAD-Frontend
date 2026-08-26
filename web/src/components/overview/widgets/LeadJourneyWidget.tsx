@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * LeadJourneyWidget — "Lead Journey".
+ * LeadJourneyWidget - "Lead Journey".
  *
  * Lists the tenant's leads across ALL their campaigns that reached one of three
  * milestones, split into tabs:
- *   • Accepted  — LinkedIn connection request accepted
- *   • Responded — the lead replied to the agent
- *   • SAH       — Sales-Accepted Handoff (meeting booked)
+ *   • Accepted  - LinkedIn connection request accepted
+ *   • Responded - the lead replied to the agent
+ *   • SAH       - Sales-Accepted Handoff (meeting booked)
  *
  * Data: LAD backend GET /api/campaigns/lead-journey (hybrid CORE + tenant conv DB).
  */
@@ -163,12 +163,12 @@ export const LeadJourneyWidget: React.FC<{ id: string }> = ({ id }) => {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
-                  {[r.company_name, r.industry].filter(Boolean).join(' · ') || '—'}
+                  {[r.company_name, r.industry].filter(Boolean).join(' · ') || '-'}
                 </p>
               </div>
               <div className="text-right whitespace-nowrap ml-3 shrink-0 max-w-[45%]">
                 <p className="text-xs font-medium truncate dark:text-[#E0E0E0]/90" title={r.campaign_name || ''}>
-                  {r.campaign_name || '—'}
+                  {r.campaign_name || '-'}
                 </p>
               </div>
             </div>
@@ -177,7 +177,7 @@ export const LeadJourneyWidget: React.FC<{ id: string }> = ({ id }) => {
           {rows.length > ITEMS_PER_PAGE && (
             <div className="flex items-center justify-between pt-1">
               <span className="text-xs text-muted-foreground">
-                {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, rows.length)} of {rows.length}
+                {(page - 1) * ITEMS_PER_PAGE + 1}-{Math.min(page * ITEMS_PER_PAGE, rows.length)} of {rows.length}
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>

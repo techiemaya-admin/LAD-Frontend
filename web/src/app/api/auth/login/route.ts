@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       logger.error('[/api/auth/login] Token missing from backend response');
       return NextResponse.json({ error: 'Token missing from backend response' }, { status: 502 });
     }
-    // The backend login response already includes `capabilities` — the extra
+    // The backend login response already includes `capabilities` - the extra
     // /api/user-capabilities round trip here doubled login latency for no new
     // data, so it was removed.
     const res = NextResponse.json({

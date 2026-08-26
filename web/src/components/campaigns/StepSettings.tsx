@@ -68,7 +68,7 @@ const getRequiredFields = (stepType: StepType): string[] => {
     linkedin_follow: [],
     start: [],
     end: [],
-    // Custom Workflow Builder macro nodes — expanded/stripped before execution.
+    // Custom Workflow Builder macro nodes - expanded/stripped before execution.
     media_generation: [],
     followup_sequence: [],
     analytics_report: [],
@@ -634,10 +634,10 @@ export default function StepSettings({
               }}
             >
               <SelectTrigger id="whatsapp-template-select" className="mt-1">
-                <SelectValue placeholder="None — write custom message below" />
+                <SelectValue placeholder="None: write custom message below" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None — custom message</SelectItem>
+                <SelectItem value="">None: custom message</SelectItem>
                 {whatsappTemplates.length === 0 && !loadingWa && (
                   <SelectItem value="__no_templates__" disabled>
                     No saved templates yet

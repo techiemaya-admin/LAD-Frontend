@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * /community — founding-group landing page.
+ * /community - founding-group landing page.
  *
  * The destination for the "reply 'in'" InMail and the PDF lead magnet: an
  * operator with a working outreach playbook applies to build it as a Mr LAD
- * strategy, run it for real, and — if it produces results — have it published
+ * strategy, run it for real, and - if it produces results - have it published
  * to the shared strategy gallery.
  *
  * Public route (see lib/routes.ts). The form posts to /api/community-signup,
@@ -33,7 +33,7 @@ interface Attribution {
  *
  * Read from the URL, then fall back to whatever we stored the first time they
  * arrived. FIRST touch wins on purpose: someone clicks the InMail link, reads,
- * leaves, then comes back later by typing the URL — without persistence that
+ * leaves, then comes back later by typing the URL - without persistence that
  * signup would be miscredited to "landing" and the InMail would look like it
  * did nothing.
  *
@@ -66,12 +66,12 @@ function resolveAttribution(): Attribution {
   if (source) {
     const attribution = { source, utm };
     try {
-      // First touch only — never overwrite an earlier, more meaningful visit.
+      // First touch only - never overwrite an earlier, more meaningful visit.
       if (!window.localStorage.getItem(ATTRIBUTION_KEY)) {
         window.localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(attribution));
       }
     } catch {
-      /* private browsing — attribution just won't survive the round trip */
+      /* private browsing - attribution just won't survive the round trip */
     }
     return attribution;
   }
@@ -102,7 +102,7 @@ const STAGES = [
   {
     n: '1',
     title: 'Build and submit your strategy',
-    body: 'We rebuild your existing playbook as a Mr LAD strategy with you — the sequence, the timing, the branching, your messaging. You run it for real against your own prospects, and when it holds up you submit it.',
+    body: 'We rebuild your existing playbook as a Mr LAD strategy with you - the sequence, the timing, the branching, your messaging. You run it for real against your own prospects, and when it holds up you submit it.',
     status: 'live' as const,
   },
   {
@@ -114,7 +114,7 @@ const STAGES = [
   {
     n: '3',
     title: 'It goes into the marketplace',
-    body: 'Approved strategies are listed in the shared gallery that every Mr LAD business can browse — described by what they achieve, credited as a proven play.',
+    body: 'Approved strategies are listed in the shared gallery that every Mr LAD business can browse - described by what they achieve, credited as a proven play.',
     status: 'live' as const,
   },
   {
@@ -126,7 +126,7 @@ const STAGES = [
   {
     n: '5',
     title: 'You get paid',
-    body: 'Every deployment of your strategy earns you a share. You are no longer billing for the hours it takes to set a playbook up — you are earning from the playbook itself, on clients you never had to win.',
+    body: 'Every deployment of your strategy earns you a share. You are no longer billing for the hours it takes to set a playbook up - you are earning from the playbook itself, on clients you never had to win.',
     status: 'design' as const,
   },
 ];
@@ -146,7 +146,7 @@ export default function CommunityPage() {
     linkedin_url: '',
     playbook: '',
     client_volume: '',
-    website: '', // honeypot — hidden from humans, bots fill it
+    website: '', // honeypot - hidden from humans, bots fill it
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -155,7 +155,7 @@ export default function CommunityPage() {
   const [attribution, setAttribution] = useState<Attribution>({ source: 'landing', utm: {} });
 
   // Resolved after mount so the server render stays identical for every
-  // visitor — attribution is per-visitor state, not page content.
+  // visitor - attribution is per-visitor state, not page content.
   useEffect(() => {
     setAttribution(resolveAttribution());
   }, []);
@@ -232,7 +232,7 @@ export default function CommunityPage() {
           </h2>
           <div className="mt-3 h-1 w-10 rounded bg-violet-600" />
           <p className="mt-5 text-[15px] leading-relaxed text-slate-600">
-            Five steps. The first four work in Mr LAD today — the fifth is what this founding group
+            Five steps. The first four work in Mr LAD today - the fifth is what this founding group
             is being formed to design.
           </p>
 
@@ -281,7 +281,7 @@ export default function CommunityPage() {
             <span className="font-semibold text-slate-900">Why step five is not live yet.</span>{' '}
             Paying contributors properly means pricing, payouts and tax handled correctly across
             borders. We would rather build that with the people it pays than guess at it and get it
-            wrong — which is exactly what the founding group is for.
+            wrong - which is exactly what the founding group is for.
           </p>
         </div>
       </section>
@@ -432,7 +432,7 @@ export default function CommunityPage() {
                     className={field}
                     value={form.client_volume}
                     onChange={set('client_volume')}
-                    placeholder="e.g. 8, or 'depends — maybe 5 to 10'"
+                    placeholder="e.g. 8, or 'depends - maybe 5 to 10'"
                   />
                 </div>
 

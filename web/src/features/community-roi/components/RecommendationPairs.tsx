@@ -128,7 +128,7 @@ const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 /**
  * Returns the Monday date label for week N.
  * If the API attached a stored `week_start_date` (anchored to when the batch
- * was generated), use that — that way the label doesn't shift forward as the
+ * was generated), use that - that way the label doesn't shift forward as the
  * calendar advances. Falls back to "next Monday from today" only when no
  * stored date is available (e.g. very old data, fresh generation in flight).
  */
@@ -261,7 +261,7 @@ export const RecommendationPairs: React.FC = () => {
             </div>
           )}
 
-          {/* Empty state — only after load completes and nothing found */}
+          {/* Empty state - only after load completes and nothing found */}
           {!isLoading && !isGenerating && (!data || !data.weeks?.length) && (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-3xl">🤝</div>
@@ -396,10 +396,26 @@ export const RecommendationPairs: React.FC = () => {
           onClose={() => setShowMessageSender(false)}
           onSuccess={(result) => {
             setShowMessageSender(false);
-            if ((result as any)?.broadcasting) {
-              const total = (result as any)?.total ?? '';
-              setBroadcastToast(`📤 Broadcasting to ${total} members in background...`);
+            const r = result as {
+              broadcasting?: boolean; broadcastComplete?: boolean;
+              total?: number; sent?: number; failed?: number; error?: string;
+            };
+            if (r?.broadcasting) {
+              setBroadcastToast(`📤 Broadcasting to ${r.total ?? ''} members in background...`);
               setTimeout(() => setBroadcastToast(null), 6000);
+              return;
+            }
+            // The toast above fires BEFORE the request, so without this a
+            // broadcast that failed — or partly failed — still read as sent.
+            if (r?.broadcastComplete) {
+              setBroadcastToast(
+                r.error
+                  ? `⚠️ Broadcast failed — ${r.error}. No messages were sent.`
+                  : (r.failed ?? 0) > 0
+                    ? `⚠️ Broadcast finished: ${r.sent ?? 0} sent, ${r.failed} failed.`
+                    : `✅ Broadcast finished: ${r.sent ?? 0} sent.`,
+              );
+              setTimeout(() => setBroadcastToast(null), 12000);
             }
           }}
         />

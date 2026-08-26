@@ -95,7 +95,7 @@ export default function MonitorLlmCostPage() {
             <DailyCostChart series={data!.series} />
           </div>
 
-          {/* Spikes detail — what spiked and whose */}
+          {/* Spikes detail - what spiked and whose */}
           {data!.spikes.length > 0 ? (
             <div className="mt-6">
               <div className="mb-2 flex items-center gap-2">

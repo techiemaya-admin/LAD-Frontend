@@ -6,7 +6,7 @@
  * WHY THIS EXISTS
  * A tenant who connects their existing WhatsApp Business number expects to see
  * the conversations they already have. Meta only sends that history if the
- * business has chat-history sync switched ON in the Business App — and it
+ * business has chat-history sync switched ON in the Business App - and it
  * reports the refusal over the WEBHOOK, minutes after Embedded Signup has
  * already told the UI "connected". So the failure lands where nobody is
  * looking: a WARNING line in LAD-WABA-Comms' logs.
@@ -18,7 +18,7 @@
  * The remedy is unusually strict and that is the point of spelling it out:
  * Meta runs the history sync ONCE per onboarding, so turning the setting on
  * afterwards changes nothing on its own. The number has to be disconnected
- * from inside the Business App — offboarding is not an API call we can make —
+ * from inside the Business App - offboarding is not an API call we can make  - 
  * and connected again.
  *
  * Kept separate from WhatsAppEmbeddedSignup so the wording can be read and

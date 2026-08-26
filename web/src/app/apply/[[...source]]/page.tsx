@@ -1,5 +1,5 @@
 /**
- * /apply — short, CTA-shaped entry point to the founding-group landing page.
+ * /apply - short, CTA-shaped entry point to the founding-group landing page.
  *
  * LinkedIn messages don't support anchor text: a URL in an InMail renders as
  * the raw URL, so the URL itself has to read like the call to action. This
@@ -7,13 +7,13 @@
  *     mrlads.com/community?src=inmail
  * into
  *     mrlads.com/apply/inmail
- * which carries identical attribution without looking like a tracking link —
+ * which carries identical attribution without looking like a tracking link  - 
  * query strings in cold outreach read as marketing automation and depress
  * click-through.
  *
  * Server component: the redirect happens before any HTML ships, so the visitor
  * never sees an intermediate page. Attribution is then resolved by /community
- * exactly as it is for a direct ?src= visit — one attribution path, not two.
+ * exactly as it is for a direct ?src= visit - one attribution path, not two.
  */
 import { redirect } from 'next/navigation';
 

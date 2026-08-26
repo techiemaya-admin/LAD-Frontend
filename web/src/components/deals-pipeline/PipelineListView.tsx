@@ -526,7 +526,7 @@ const PipelineListView: React.FC<PipelineListViewProps> = ({
   };
   const paginatedLeads = useMemo(() => {
     // When pagination is server-controlled, the `leads` prop already contains
-    // only the current page's data — skip client-side slicing to avoid returning
+    // only the current page's data - skip client-side slicing to avoid returning
     // an empty array (e.g. page 2: slice(20, 40) on a 20-item array → []).
     if (isControlledPagination) {
       return filteredAndSortedLeads;

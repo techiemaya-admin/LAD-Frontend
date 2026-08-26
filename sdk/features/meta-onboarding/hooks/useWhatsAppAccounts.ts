@@ -1,5 +1,5 @@
 /**
- * Meta Onboarding — useWhatsAppAccounts
+ * Meta Onboarding - useWhatsAppAccounts
  * Lists the tenant's connected WhatsApp accounts and exposes a disconnect action.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

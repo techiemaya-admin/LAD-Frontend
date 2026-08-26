@@ -9,7 +9,7 @@ import { safeStorage } from '@lad/shared/storage';
  * The single Add Credits popup for the whole app.
  *
  * Packages come from GET /api/wallet/packages (backend creditPackages.js),
- * never from a hardcoded list here — the backend is what actually grants the
+ * never from a hardcoded list here - the backend is what actually grants the
  * credits after payment, so anything hardcoded on this side can promise a
  * number the wallet won't honour. That drift is exactly how the old $999
  * option came to advertise 12,000 credits while granting 24,024.
@@ -33,9 +33,9 @@ interface AddCreditsModalProps {
   onClose: () => void;
 }
 
-/** "$0.033 / credit" — the comparison that makes the bigger packs legible. */
+/** "$0.033 / credit" - the comparison that makes the bigger packs legible. */
 function perCredit(pkg: CreditPackage): string {
-  if (!pkg.credits) return '—';
+  if (!pkg.credits) return '-';
   return `$${(pkg.price / pkg.credits).toFixed(3)} / credit`;
 }
 
@@ -49,7 +49,7 @@ export const AddCreditsModal: React.FC<AddCreditsModalProps> = ({ open, onClose 
   if (!open) return null;
 
   const list: CreditPackage[] = Array.isArray(packages) ? packages : [];
-  // Cheapest per credit last — the list reads as an upgrade path.
+  // Cheapest per credit last - the list reads as an upgrade path.
   const sorted = [...list].sort((a, b) => a.price - b.price);
 
   const handleBuy = (pkg: CreditPackage) => {
@@ -69,7 +69,7 @@ export const AddCreditsModal: React.FC<AddCreditsModalProps> = ({ open, onClose 
           amount: pkg.price,
           successUrl: `${origin}/settings?tab=credits&payment=success`,
           cancelUrl: `${origin}/settings?tab=credits&payment=cancelled`,
-          // Only the package id — the backend derives the credit count from
+          // Only the package id - the backend derives the credit count from
           // its own table and overrides anything we send here.
           metadata: { packageId: pkg.id },
         },

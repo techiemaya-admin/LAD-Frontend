@@ -62,7 +62,7 @@ export const CreditsSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Credits Modal — shared popup used by every credit CTA. */}
+      {/* Add Credits Modal - shared popup used by every credit CTA. */}
       <AddCreditsModal open={showAddCreditsModal} onClose={() => setShowAddCreditsModal(false)} />
 
       {/* Credits Information */}

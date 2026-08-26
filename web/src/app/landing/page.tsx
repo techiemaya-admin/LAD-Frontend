@@ -7,7 +7,7 @@ import MeetOurAgentSection from "@/components/landing/MeetOurAgentSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import ParallaxFeaturesSection from "@/components/landing/ParallaxFeaturesSection";
 import SocialProofSection from "@/components/landing/SocialProofSection";
-// Pricing components removed from the home page — see the dedicated /pricing
+// Pricing components removed from the home page - see the dedicated /pricing
 // route. PricingHero / StandardPlans / EnterprisePlans / PricingBreakdown /
 // InteractivePricingCalculator / PricingCTA imports dropped with them.
 import CTASection from "@/components/landing/CTASection";
@@ -42,7 +42,7 @@ export default function LAD3DShowcase() {
       {/* Social Proof Section */}
       <SocialProofSection />
 
-      {/* Pricing section removed — lives on the dedicated /pricing route. */}
+      {/* Pricing section removed - lives on the dedicated /pricing route. */}
 
       {/* CTA Section */}
       <CTASection />

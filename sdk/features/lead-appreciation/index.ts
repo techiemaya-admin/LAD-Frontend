@@ -1,5 +1,5 @@
 /**
- * Lead Appreciation Feature — Frontend SDK Exports.
+ * Lead Appreciation Feature - Frontend SDK Exports.
  *
  * Review queue + stats for appreciation DMs sent to accepted LinkedIn
  * connections when they post achievements. Backend:

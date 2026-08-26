@@ -1,5 +1,5 @@
 /**
- * Strategies feature — React Query hooks.
+ * Strategies feature - React Query hooks.
  */
 'use client';
 

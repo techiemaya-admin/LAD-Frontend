@@ -1,5 +1,5 @@
 /**
- * Prospects feature — useProspects hook.
+ * Prospects feature - useProspects hook.
  */
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 

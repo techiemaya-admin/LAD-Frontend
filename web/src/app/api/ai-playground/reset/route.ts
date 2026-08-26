@@ -3,7 +3,7 @@ import { getBackendUrl, getVoagHeaders } from '../../utils/backend';
 
 const BACKEND_PATH = '/api/ai-playground/reset';
 
-/** POST /api/ai-playground/reset — clear chat history */
+/** POST /api/ai-playground/reset - clear chat history */
 export async function POST(req: NextRequest) {
   try {
     const backend = getBackendUrl();

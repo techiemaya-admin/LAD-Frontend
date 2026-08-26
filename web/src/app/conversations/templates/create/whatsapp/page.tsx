@@ -8,6 +8,7 @@ import {
   ChevronDown, Phone, Globe, MessageSquare, Play,
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { useWhatsAppAccounts } from '@lad/frontend-features/meta-onboarding';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,6 +173,14 @@ export default function WhatsAppTemplateCreatePage() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [name,     setName]     = useState('');
+  // A template lives on a WABA, not on a workspace. With two connected numbers
+  // there are two separate libraries, and submitting without choosing sent every
+  // template to whichever number was connected FIRST.
+  const { accounts } = useWhatsAppAccounts();
+  const [accountId, setAccountId] = useState('');
+  const targetAccount = accounts.find(a => a.id === accountId) ?? accounts[0];
+  const effectiveAccountId = targetAccount?.id ?? '';
+
   const [language, setLanguage] = useState('en_US');
   const [category, setCategory] = useState<Category>('MARKETING');
 
@@ -271,7 +280,8 @@ export default function WhatsAppTemplateCreatePage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ file_base64: base64, filename: file.name, content_type: file.type }),
+          // Same number as the submission — a header handle is WABA-scoped.
+          body: JSON.stringify({ file_base64: base64, filename: file.name, content_type: file.type, account_id: effectiveAccountId }),
         }
       );
       const data = await res.json();
@@ -288,7 +298,9 @@ export default function WhatsAppTemplateCreatePage() {
       setUploadStatus('error');
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+    // effectiveAccountId is a real dependency: a handle uploaded against one
+    // number is rejected by Meta when the template is submitted to another.
+  }, [effectiveAccountId]);
 
   // ── Build Meta components ──────────────────────────────────────────────────
   const buildComponents = useCallback(() => {
@@ -354,12 +366,12 @@ export default function WhatsAppTemplateCreatePage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: safeName, language, category, components: buildComponents() }),
+          body: JSON.stringify({ name: safeName, language, category, components: buildComponents(), account_id: effectiveAccountId }),
         }
       );
       const data = await res.json();
       if (data.success) {
-        setResult({ success: true, message: `"${safeName}" submitted — status: ${data.status ?? 'PENDING'}` });
+        setResult({ success: true, message: `"${safeName}" submitted - status: ${data.status ?? 'PENDING'}` });
       } else {
         setResult({ success: false, message: data.error || 'Meta rejected the template.' });
       }
@@ -438,6 +450,39 @@ export default function WhatsAppTemplateCreatePage() {
               <h2 className="text-base font-semibold text-[#1E293B] dark:text-white">Template name and language</h2>
             </div>
             <div className="p-6 space-y-4">
+              {/* See CreateWabaTemplateModal: shown for one number too, because a
+                  template is bound to the number it was submitted against and the
+                  fallback is otherwise invisible. */}
+              {accounts.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">WhatsApp number</label>
+                  {accounts.length > 1 ? (
+                  <select
+                    value={effectiveAccountId}
+                    onChange={e => setAccountId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957] dark:focus:ring-blue-500/20 dark:focus:border-blue-500"
+                  >
+                    {accounts.map(a => (
+                      <option key={a.id} value={a.id} className="dark:bg-[#000724]">
+                        {a.display_phone_number || a.display_name || a.slug}
+                      </option>
+                    ))}
+                  </select>
+                  ) : (
+                    <div
+                      className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-[#F8FAFC] dark:bg-[#000724] text-[#1E293B] dark:text-white"
+                      data-testid="waba-template-single-account"
+                    >
+                      {targetAccount?.display_phone_number || targetAccount?.display_name || targetAccount?.slug}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-[#94A3B8] dark:text-gray-500 mt-1">
+                    Templates belong to one number. Meta reviews this one against{' '}
+                    {accounts.length > 1 ? 'the number you pick' : 'this number'}.
+                  </p>
+                </div>
+              )}
+
               {/* Name + Language row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -937,7 +982,7 @@ export default function WhatsAppTemplateCreatePage() {
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs text-[#94A3B8] dark:text-gray-500">Components</span>
                       <span className="text-xs text-[#1E293B] dark:text-white text-right">
-                    {buildComponents().map((c: any) => c.type).join(', ') || '—'}
+                    {buildComponents().map((c: any) => c.type).join(', ') || '-'}
                   </span>
                     </div>
                   </div>
@@ -1067,7 +1112,7 @@ export default function WhatsAppTemplateCreatePage() {
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs text-[#94A3B8] dark:text-gray-500">Components</span>
                   <span className="text-xs text-[#1E293B] dark:text-white text-right">
-                    {buildComponents().map((c: any) => c.type).join(', ') || '—'}
+                    {buildComponents().map((c: any) => c.type).join(', ') || '-'}
                   </span>
                 </div>
               </div>

@@ -1,12 +1,12 @@
 /**
- * Strategies feature — API functions.
+ * Strategies feature - API functions.
  *
  * All HTTP for saved/shared workflow playbooks lives here, not in the builder
  * component. Uses the shared apiClient for consistent auth + tenant headers.
  *
  * Backend routes: /api/campaigns/strategies/* (LAD_backend features/campaigns).
  * The Phase-2 (`/shared`, publish) endpoints 404 unless STRATEGY_SHARING_ENABLED
- * is set on the backend — callers should treat a 404 there as "sharing is off".
+ * is set on the backend - callers should treat a 404 there as "sharing is off".
  */
 import { apiClient } from '../../../shared/apiClient';
 import type {
@@ -61,7 +61,7 @@ export async function deleteStrategy(id: string): Promise<void> {
 
 /**
  * Dry run. Returns the exact payload that would become visible to other
- * tenants plus everything the sanitizer stripped. Changes nothing — this is
+ * tenants plus everything the sanitizer stripped. Changes nothing - this is
  * what the confirmation dialog renders before the tenant commits.
  */
 export async function getPublishPreview(id: string): Promise<PublishPreview> {

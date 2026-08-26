@@ -247,7 +247,7 @@ const CharacterSection = () => {
       animate="visible"
       className="relative w-full h-full flex items-center justify-center"
     >
-      {/* Video slot — reserves the same space whether or not the video has
+      {/* Video slot - reserves the same space whether or not the video has
           loaded so layout doesn't jump. */}
       <div className="w-70 h-180 relative z-10">
         <video
@@ -295,7 +295,7 @@ export default function NewHeroSection() {
         >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-4">
             Find Your Next Best{' '}
-            <span className="text-primary">Customer—Now</span>
+            <span className="text-primary">Customer, Now</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             AI prospecting that surfaces verified contacts and company insights in seconds.
@@ -345,7 +345,7 @@ export default function NewHeroSection() {
 
             {/* Description */}
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              One AI Sales Employee who finds your ideal customers, starts real conversations, follows up, and books meetings across LinkedIn, WhatsApp, Instagram, email, and voice — the output of an entire sales team, for the cost of a single hire.
+              One AI Sales Employee who finds your ideal customers, starts real conversations, follows up, and books meetings across LinkedIn, WhatsApp, Instagram, email, and voice. The output of an entire sales team, for the cost of a single hire.
             </p>
 
             {/* CTA Buttons */}

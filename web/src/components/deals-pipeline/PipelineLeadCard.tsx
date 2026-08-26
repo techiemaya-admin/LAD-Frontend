@@ -1535,7 +1535,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('note', note.id, note.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            ðŸ—‘ï¸
+                            ðŸ-‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1650,7 +1650,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('comment', comment.id, comment.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            ðŸ—‘ï¸
+                            ðŸ-‘ï¸
                           </Button>
                         )}
                       </div>

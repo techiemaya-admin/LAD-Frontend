@@ -165,7 +165,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
     await handleDelete();
   };
 
-  // Phone masking — per-viewer setting, shared with every other surface that
+  // Phone masking - per-viewer setting, shared with every other surface that
   // renders a contact number (conversation list, group members, starred
   // messages). Previously a private callback here, which is why this panel was
   // the ONLY place masking took effect.
@@ -177,9 +177,9 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
-  // Optional intent mapping — when set, the bot's intent classifier will
+  // Optional intent mapping - when set, the bot's intent classifier will
   // auto-apply this label on inbound messages classified as that intent.
-  // '' means "manual label only — never auto-applied".
+  // '' means "manual label only - never auto-applied".
   const [newLabelIntent, setNewLabelIntent] = useState<'' | 'book' | 'cancel' | 'reschedule' | 'info'>('');
   // Opt this label into the AI context-tag classifier. When true, the agent
   // may attach this label on any inbound message whose context matches the
@@ -187,7 +187,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   // (intent labels run on a separate, deterministic pipeline).
   const [newLabelAutoClassify, setNewLabelAutoClassify] = useState(false);
   // Description doubles as the prompt the LLM uses to decide whether to
-  // apply this label — operators write it like a rule ("customer asks about
+  // apply this label - operators write it like a rule ("customer asks about
   // pricing or discounts", "expresses frustration or complaint").
   const [newLabelDescription, setNewLabelDescription] = useState('');
 
@@ -357,13 +357,13 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
     // metadata is JSONB on the server. Only set keys the operator opted in
-    // to — leaving them absent (not "") keeps the row free of empty-string
+    // to - leaving them absent (not "") keeps the row free of empty-string
     // match conditions the auto-classifier would otherwise pick up.
     const metadata: Record<string, string> = {};
     if (newLabelIntent) {
       metadata.intent = newLabelIntent;
     } else if (newLabelAutoClassify) {
-      // Auto-classify and intent are mutually exclusive — intent runs on a
+      // Auto-classify and intent are mutually exclusive - intent runs on a
       // deterministic pipeline, auto-classify on the LLM context classifier.
       metadata.auto_classify = 'true';
     }
@@ -634,7 +634,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                     value={newLabelIntent}
                     onChange={(e) => {
                       setNewLabelIntent(e.target.value as typeof newLabelIntent);
-                      // Intent + auto-classify are mutually exclusive — selecting
+                      // Intent + auto-classify are mutually exclusive - selecting
                       // an intent disables the AI context classifier for this label.
                       if (e.target.value) setNewLabelAutoClassify(false);
                     }}
@@ -649,7 +649,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   </select>
                 </div>
 
-                {/* AI context classifier — operator-curated vocabulary the
+                {/* AI context classifier - operator-curated vocabulary the
                     Sonnet/Haiku-class classifier picks from on every inbound
                     message. The description is the prompt the LLM uses to
                     decide, so write it like a rule. */}
@@ -709,7 +709,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             </div>
           </div>
 
-          {/* Injury screening — staff gate that blocks the agent from showing
+          {/* Injury screening - staff gate that blocks the agent from showing
               class times / booking until a reported injury is reviewed.
               Self-hiding: renders nothing for tenants that don't screen for
               injuries, or when there's no injury and nothing is blocked. */}

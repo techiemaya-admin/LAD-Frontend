@@ -237,7 +237,10 @@ export default function CookiesPolicyPage() {
           <strong>Email:</strong> <a href="mailto:support@techiemaya.com">support@techiemaya.com</a>
         </li>
         <li>
-          <strong>TechieMaya FZE</strong> — IDS Business Center, Al Karama, Dubai, United Arab Emirates
+          <strong>Company:</strong> TechieMaya FZE
+        </li>
+        <li>
+          <strong>Address:</strong> IDS Business Center, Al Karama, Dubai, United Arab Emirates
         </li>
       </ul>
     </LegalPageLayout>

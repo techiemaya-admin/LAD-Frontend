@@ -121,10 +121,10 @@ export default function CampaignLeadsPage() {
         });
         refetch();
       } else if (response.success && response.status === 'pending') {
-        // Async path — request submitted to Apollo phone service, webhook delivers within 2-5 min
+        // Async path - request submitted to Apollo phone service, webhook delivers within 2-5 min
         push({
           title: 'Request Submitted',
-          description: response.message || 'Phone reveal submitted. The number will appear within 2–5 minutes — refresh to check.'
+          description: response.message || 'Phone reveal submitted. The number will appear within 2-5 minutes - refresh to check.'
         });
       } else {
         push({ title: 'Error', description: response.error || 'Failed to reveal phone number' });
@@ -361,10 +361,10 @@ export default function CampaignLeadsPage() {
           setConnectedSenders(data.data);
           setFollowupFromEmail(data.data[0].email);
         }
-      } catch { /* non-fatal — user will see "no account" error on send */ }
+      } catch { /* non-fatal - user will see "no account" error on send */ }
     }
 
-    // Use cached message if available — skip LLM call entirely
+    // Use cached message if available - skip LLM call entirely
     const cacheKey = `${lead.id}_${channel}`;
     const cached = followupCache.current.get(cacheKey);
     if (cached) {
@@ -373,7 +373,7 @@ export default function CampaignLeadsPage() {
       return;
     }
 
-    // No cache — generate via LLM
+    // No cache - generate via LLM
     setFollowupMessage('');
     setFollowupSubject('');
     setFollowupContext(null);
@@ -448,7 +448,7 @@ export default function CampaignLeadsPage() {
       setFollowupSending(false);
     }
   }, [followupLead, followupChannel, followupMessage, followupSubject, followupFromEmail, followupContext, campaignId, push, refetch]);
-  // The server already applied both the engagement filter and the search —
+  // The server already applied both the engagement filter and the search  - 
   // re-filtering here would only remove rows the server deliberately returned
   // (its search covers more fields than name/email/company/title).
   const filteredLeads = leads;
@@ -501,7 +501,7 @@ export default function CampaignLeadsPage() {
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                 filterParams === tab.key
                   ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
-                  : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white'
+                  : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
               }`}
             >
               {tab.label}
@@ -621,13 +621,13 @@ export default function CampaignLeadsPage() {
 
       {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
       <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-        <DialogContent className="max-w-2xl w-full">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#0b1957]">
+        <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-[#0b1957] dark:text-white">
               <Send className="w-5 h-5" />
               Manual Follow-up
               {followupContext?.leadName && (
-                <span className="text-slate-500 font-normal text-base ml-1">
+                <span className="text-slate-500 dark:text-slate-400 font-normal text-base ml-1">
                   → {followupContext.leadName}
                   {followupContext.company ? `, ${followupContext.company}` : ''}
                 </span>
@@ -635,172 +635,175 @@ export default function CampaignLeadsPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Channel Tabs */}
-          <div className="flex gap-2 border-b border-slate-200 pb-3">
-            {([
-              { key: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, color: 'bg-[#0b1957] text-white' },
-              { key: 'email',    label: 'Email',    icon: <Mail className="w-4 h-4" />,     color: 'bg-slate-700 text-white'  },
-              { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, color: 'bg-green-600 text-white' },
-            ] as const).map(ch => (
-              <button
-                key={ch.key}
-                onClick={() => {
-                  if (ch.key !== followupChannel) {
-                    setFollowupChannel(ch.key);
-                    if (followupLead) openFollowupDialog(followupLead, ch.key);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                  followupChannel === ch.key ? ch.color : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {ch.icon}
-                {ch.label}
-              </button>
-            ))}
-          </div>
+          {/* Scrollable Body Container */}
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-3">
+            {/* Channel Tabs */}
+            <div className="flex gap-2 border-b border-slate-200 dark:border-blue-950/40 px-4 sm:px-5 pb-3">
+              {([
+                { key: 'linkedin', label: 'LinkedIn', icon: <Linkedin className="w-4 h-4" /> },
+                { key: 'email',    label: 'Email',    icon: <Mail className="w-4 h-4" />     },
+                { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
+              ] as const).map(ch => (
+                <button
+                  key={ch.key}
+                  onClick={() => {
+                    if (ch.key !== followupChannel) {
+                      setFollowupChannel(ch.key);
+                      if (followupLead) openFollowupDialog(followupLead, ch.key);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    followupChannel === ch.key
+                      ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
+                      : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
+                  }`}
+                >
+                  {ch.icon}
+                  {ch.label}
+                </button>
+              ))}
+            </div>
 
-          {/* Email From + Subject */}
-          {followupChannel === 'email' && (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">From</label>
-                {connectedSenders.length > 0 ? (
-                  <select
-                    value={followupFromEmail}
-                    onChange={e => setFollowupFromEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]"
-                  >
-                    {connectedSenders.map(s => (
-                      <option key={s.email} value={s.email}>{s.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    No connected email account — connect Gmail or Outlook in Settings → Integrations.
-                  </p>
-                )}
+            {/* Email From + Subject */}
+            {followupChannel === 'email' && (
+              <div className="space-y-3 px-4 sm:px-5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 block">From</label>
+                  {connectedSenders.length > 0 ? (
+                    <select
+                      value={followupFromEmail}
+                      onChange={e => setFollowupFromEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700/80 rounded-md bg-white dark:bg-slate-800/80 text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:focus:ring-[#2B7CFF]"
+                    >
+                      {connectedSenders.map(s => (
+                        <option key={s.email} value={s.email}>{s.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-md px-3 py-2">
+                      No connected email account — connect Gmail or Outlook in Settings → Integrations.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 block">Subject</label>
+                  <Input
+                    placeholder="e.g. Quick follow-up from our conversation"
+                    value={followupSubject}
+                    onChange={e => setFollowupSubject(e.target.value)}
+                    className="text-sm dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Subject</label>
-                <Input
-                  placeholder="e.g. Quick follow-up from our conversation"
-                  value={followupSubject}
-                  onChange={e => setFollowupSubject(e.target.value)}
-                  className="text-sm"
+            )}
+
+            {/* Message area */}
+            <div className="px-4 sm:px-5">
+              <div className="flex items-center justify-between mb-1.5 px-1 py-1">
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Message
+                </label>
+                <button
+                  onClick={regenerateFollowup}
+                  disabled={followupPreviewing}
+                  className="flex items-center gap-1 text-xs text-[#0b1957] dark:text-[#2B7CFF] hover:underline disabled:opacity-50 font-medium"
+                >
+                  {followupPreviewing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  Regenerate
+                </button>
+              </div>
+
+              {followupPreviewing ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <div className="flex items-center gap-2 text-[#0b1957] dark:text-[#2B7CFF]">
+                    <Sparkles className="w-5 h-5 animate-pulse" />
+                    <span className="text-sm font-medium">Generating personalised message…</span>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-400">Reading web presence, recent posts &amp; past conversation</p>
+                </div>
+              ) : (
+                <Textarea
+                  value={followupMessage}
+                  onChange={e => setFollowupMessage(e.target.value)}
+                  rows={6}
+                  placeholder="Your follow-up message will appear here…"
+                  className="resize-y min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
                 />
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Message area */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Message
-              </label>
-              <button
-                onClick={regenerateFollowup}
-                disabled={followupPreviewing}
-                className="flex items-center gap-1 text-xs text-[#0b1957] hover:underline disabled:opacity-50"
-              >
-                {followupPreviewing ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3.5 h-3.5" />
+              {followupChannel === 'linkedin' && followupMessage.length > 0 && (
+                <p className={`text-right text-xs mt-1 ${followupMessage.length > 2000 ? 'text-red-500 font-semibold' : 'text-slate-400 dark:text-slate-400'}`}>
+                  {followupMessage.length} / 2000
+                </p>
+              )}
+            </div>
+
+            {/* Past conversation history (collapsible) */}
+            {followupContext && followupContext.pastMessageCount > 0 && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mx-4 sm:mx-5">
+                <button
+                  onClick={() => setFollowupHistoryOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors"
+                >
+                  <span>Conversation history ({followupContext.pastMessageCount} messages)</span>
+                  {followupHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {followupHistoryOpen && (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-52 overflow-y-auto">
+                    {followupContext.pastMessages.map((msg, i) => (
+                      <div key={i} className="px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold ${
+                            msg.channel === 'linkedin' ? 'bg-blue-50 text-blue-700 dark:!text-sky-400'
+                            : msg.channel === 'email'  ? 'bg-amber-50 text-amber-700 dark:!text-amber-300'
+                            : 'bg-green-50 text-green-700 dark:!text-emerald-400'
+                          }`}>
+                            {msg.channel}
+                          </span>
+                          <span className="text-xs text-slate-400">{msg.type}</span>
+                          <span className="text-xs text-slate-300 dark:text-slate-500 ml-auto">{new Date(msg.sentAt).toLocaleDateString()}</span>
+                        </div>
+                        {msg.subject && <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mb-0.5">📧 {msg.subject}</p>}
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">{msg.content}</p>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                Regenerate
-              </button>
-            </div>
-
-            {followupPreviewing ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2 text-[#0b1957]">
-                  <Sparkles className="w-5 h-5 animate-pulse" />
-                  <span className="text-sm font-medium">Generating personalised message…</span>
-                </div>
-                <p className="text-xs text-slate-400">Reading web presence, recent posts &amp; past conversation</p>
               </div>
-            ) : (
-              <Textarea
-                value={followupMessage}
-                onChange={e => setFollowupMessage(e.target.value)}
-                rows={7}
-                placeholder="Your follow-up message will appear here…"
-                className="resize-none text-sm leading-relaxed"
-              />
             )}
 
-            {followupChannel === 'linkedin' && followupMessage.length > 0 && (
-              <p className={`text-right text-xs mt-1 ${followupMessage.length > 2000 ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
-                {followupMessage.length} / 2000
-              </p>
+            {/* Context pills */}
+            {followupContext && (
+              <div className="flex flex-wrap gap-2 px-4 sm:px-5">
+                {followupContext.hasWebPresence && (
+                  <span className="text-xs bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2.5 py-1 rounded-full font-medium">
+                    ✓ Web presence used
+                  </span>
+                )}
+                {followupContext.postsUsed > 0 && (
+                  <span className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium">
+                    ✓ {followupContext.postsUsed} recent post{followupContext.postsUsed !== 1 ? 's' : ''} analysed
+                  </span>
+                )}
+                {followupContext.connectionMessage && (
+                  <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 px-2.5 py-1 rounded-full font-medium">
+                    ✓ Connection message context
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Past conversation history (collapsible) */}
-          {followupContext && followupContext.pastMessageCount > 0 && (
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <button
-                onClick={() => setFollowupHistoryOpen(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-600 transition-colors"
-              >
-                <span>Conversation history ({followupContext.pastMessageCount} messages)</span>
-                {followupHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              {followupHistoryOpen && (
-                <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
-                  {followupContext.pastMessages.map((msg, i) => (
-                    <div key={i} className="px-4 py-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold ${
-                          msg.channel === 'linkedin' ? 'bg-blue-50 text-blue-700 dark:!text-sky-400'
-                          : msg.channel === 'email'  ? 'bg-amber-50 text-amber-700 dark:!text-amber-300'
-                          : 'bg-green-50 text-green-700 dark:!text-emerald-400'
-                        }`}>
-                          {msg.channel}
-                        </span>
-                        <span className="text-xs text-slate-400">{msg.type}</span>
-                        <span className="text-xs text-slate-300 ml-auto">{new Date(msg.sentAt).toLocaleDateString()}</span>
-                      </div>
-                      {msg.subject && <p className="text-xs font-medium text-slate-700 mb-0.5">📧 {msg.subject}</p>}
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{msg.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Context pills */}
-          {followupContext && (
-            <div className="flex flex-wrap gap-2">
-              {followupContext.hasWebPresence && (
-                <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full font-medium">
-                  ✓ Web presence used
-                </span>
-              )}
-              {followupContext.postsUsed > 0 && (
-                <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
-                  ✓ {followupContext.postsUsed} recent post{followupContext.postsUsed !== 1 ? 's' : ''} analysed
-                </span>
-              )}
-              {followupContext.connectionMessage && (
-                <span className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-medium">
-                  ✓ Connection message context
-                </span>
-              )}
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setFollowupDialogOpen(false)}>
-              Cancel
-            </Button>
+          {/* Footer (Always Pinned to Bottom) */}
+          <DialogFooter className="shrink-0 pt-3 pb-4 px-4 sm:px-5 border-t border-slate-100 dark:border-blue-950/40">
             <Button
               onClick={sendFollowup}
               disabled={followupSending || followupPreviewing || !followupMessage.trim()}
-              className="bg-[#0b1957] hover:bg-[#1a2d8f] text-white gap-2"
+              className="bg-[#0b1957] dark:bg-blue-600 hover:bg-[#1a2d8f] dark:hover:bg-blue-500 text-white gap-2"
             >
               {followupSending ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>

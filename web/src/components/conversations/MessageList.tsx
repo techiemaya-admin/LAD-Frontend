@@ -118,7 +118,7 @@ export const MessageList = memo(function MessageList({
         for (const r of rows) map[String(r.message_id)] = r.rating;
         setFeedbackByMessage(map);
       })
-      .catch(() => { /* non-fatal — thumbs simply start unset */ });
+      .catch(() => { /* non-fatal - thumbs simply start unset */ });
     return () => { cancelled = true; };
   }, [conversationId]);
 

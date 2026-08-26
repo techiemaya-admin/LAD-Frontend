@@ -3,13 +3,13 @@
  * Strategy publish confirmation.
  *
  * Publishing sends a copy of a workflow to a gallery every other tenant can
- * browse — outward-facing and awkward to walk back once someone has imported
+ * browse - outward-facing and awkward to walk back once someone has imported
  * it. So this dialog is deliberately a *review* step, not a yes/no prompt: it
  * shows the exact sanitized payload that would leave the account and an
  * itemised list of everything stripped out, before any submit happens.
  *
  * The preview is computed server-side by the same sanitizer that runs on
- * publish, so what's shown here is what actually gets stored — not a
+ * publish, so what's shown here is what actually gets stored - not a
  * client-side approximation of it.
  */
 import { useState } from 'react';
@@ -102,12 +102,12 @@ export function StrategyPublishDialog({ strategyId, strategyName, onClose, onPub
                 <div className="text-[13px] font-semibold text-foreground mb-1">What gets shared</div>
                 <p className="text-[12.5px] text-muted-foreground leading-relaxed">
                   The pipeline structure and your message copy, subjects, AI instructions, targeting
-                  and timing — {preview.shared_definition?.nodes?.length ?? 0} steps in total. Anyone
+                  and timing - {preview.shared_definition?.nodes?.length ?? 0} steps in total. Anyone
                   who imports it gets their own editable copy.
                 </p>
               </div>
 
-              {/* Removals — the reassurance that matters most. */}
+              {/* Removals - the reassurance that matters most. */}
               <div>
                 <div className="text-[13px] font-semibold text-foreground mb-2">
                   Stays private ({preview.removed.length} {preview.removed.length === 1 ? 'field' : 'fields'} removed)
@@ -147,7 +147,7 @@ export function StrategyPublishDialog({ strategyId, strategyName, onClose, onPub
                   <ul className="space-y-1">
                     {preview.warnings.map((w, i) => (
                       <li key={i} className="text-[12.5px] text-amber-900/90 dark:text-amber-200/90">
-                        <strong className="font-semibold">{w.type}</strong> — {w.reason}
+                        <strong className="font-semibold">{w.type}</strong>: {w.reason}
                       </li>
                     ))}
                   </ul>
@@ -156,7 +156,7 @@ export function StrategyPublishDialog({ strategyId, strategyName, onClose, onPub
 
               {preview.shared_definition?.requiresFile && (
                 <p className="text-[12.5px] text-muted-foreground">
-                  This strategy starts from a file import. Your uploaded contacts are never included —
+                  This strategy starts from a file import. Your uploaded contacts are never included -
                   whoever imports it supplies their own list.
                 </p>
               )}

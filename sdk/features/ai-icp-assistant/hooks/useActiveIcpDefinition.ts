@@ -2,7 +2,7 @@
  * useActiveIcpDefinition
  *
  * Reads the tenant's active canonical ICP for a given variant. Returns null if
- * the tenant hasn't completed signup ICP capture yet — the caller should treat
+ * the tenant hasn't completed signup ICP capture yet - the caller should treat
  * null as "show the empty state / signup CTA," not as an error.
  *
  * Matches the raw-fetch + useState/useEffect convention used by other hooks in

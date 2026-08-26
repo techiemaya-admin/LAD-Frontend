@@ -1,5 +1,5 @@
 /**
- * SearchDispatcher client — wraps POST /api/ai-icp-assistant/search and the
+ * SearchDispatcher client - wraps POST /api/ai-icp-assistant/search and the
  * companion read endpoints (`/searches`, `/searches/:id`).
  *
  * Distinct from `definitionsApi.ts`:
@@ -13,10 +13,10 @@
  *   GET  /api/ai-icp-assistant/searches/:id          → D6 detail
  *
  * Companion files:
- *   - types.ts            — SearchRunResult, ProspectCandidate, RunSearchInput
- *   - hooks/useRunSearch.ts          — mutation hook
- *   - hooks/useSearch.ts             — single-row hook
- *   - hooks/useDispatchedSearches.ts — list hook
+ *   - types.ts            - SearchRunResult, ProspectCandidate, RunSearchInput
+ *   - hooks/useRunSearch.ts          - mutation hook
+ *   - hooks/useSearch.ts             - single-row hook
+ *   - hooks/useDispatchedSearches.ts - list hook
  */
 import type {
   IcpSearch,

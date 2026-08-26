@@ -22,13 +22,13 @@ const C = {
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2 text-xs">
-      {label && <p className="font-semibold text-slate-700 mb-1">{label}</p>}
+    <div className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-[#262831] rounded-xl shadow-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200">
+      {label && <p className="font-semibold text-slate-700 dark:text-slate-100 mb-1">{label}</p>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-1.5 mb-0.5">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-          <span className="text-slate-500 capitalize">{p.name}:</span>
-          <span className="font-semibold text-slate-800">{p.value?.toLocaleString()}</span>
+          <span className="text-slate-500 dark:text-slate-400 capitalize">{p.name}:</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{p.value?.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -106,7 +106,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
               const prev = i > 0 ? funnel[i - 1].count : null;
               const pct = prev && prev > 0
                 ? `${((stage.count / prev) * 100).toFixed(0)}%`
-                : i === 0 ? '100%' : '—';
+                : i === 0 ? '100%' : '-';
               const color = stage.color || [C.navy, C.indigo, C.cyan, C.green, C.amber][i % 5];
               return (
                 <FunnelRow
@@ -142,11 +142,10 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
                   layout="vertical"
                   margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-[#262831]" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} tickLine={false} axisLine={false} width={64}
-                         className="text-slate-500 dark:text-slate-300" />
-                  <Tooltip content={<ChartTooltip />} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#24364d" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 9, fill: '#7a8ba3' }} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#8fa1be' }} tickLine={false} axisLine={false} width={64} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.07)', className: 'dark:!fill-white/[0.07] !fill-slate-900/[0.04]' }} />
                   <Bar dataKey="Sent"      fill={C.navy}   radius={[0,3,3,0]} stackId="a" />
                   <Bar dataKey="Connected" fill={C.indigo} radius={[0,3,3,0]} stackId="b" />
                   <Bar dataKey="Replied"   fill={C.green}  radius={[0,3,3,0]} stackId="c" />
@@ -216,7 +215,7 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-[#262831]" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} className="dark:fill-[#7a8ba3]" tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.07)', className: 'dark:!fill-white/[0.07] !fill-slate-900/[0.04]' }} />
                 <Legend wrapperStyle={{ fontSize: 11, color: '#64748b' }} className="dark:text-slate-300" />
                 <Bar dataKey="sent"      name="Sent"      fill={C.navy}   radius={[4,4,0,0]} />
                 <Bar dataKey="connected" name="Connected" fill={C.indigo} radius={[4,4,0,0]} />

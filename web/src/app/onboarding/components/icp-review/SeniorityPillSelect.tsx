@@ -1,5 +1,5 @@
 'use client';
-// R8 Phase 5 — multi-select pills for seniority. Reflects Apollo's standard
+// R8 Phase 5 - multi-select pills for seniority. Reflects Apollo's standard
 // seniority levels so the search dispatcher can map directly.
 
 import * as React from 'react';
