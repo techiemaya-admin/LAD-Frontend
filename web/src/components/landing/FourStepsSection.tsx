@@ -20,7 +20,7 @@ export default function FourStepsSection() {
     {
       number: 1,
       title: 'Find Prospects',
-      subtitle: 'From LinkedIn & Sales Navigator',
+      subtitle: 'Across LinkedIn & professional networks',
       description: 'Find thousands of LinkedIn prospects in seconds. Connect your data sources and build your target list instantly.',
       icon: '📥',
       image: '/placeholder-step-1.png',
@@ -282,7 +282,7 @@ export default function FourStepsSection() {
                               <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28c840' }} />
                             </div>
                             <div className="flex-1 mx-3 rounded" style={{ background: 'rgba(255,255,255,0.08)', height: '16px', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>LAD — AI Prospect Search</span>
+                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px' }}>LAD - AI Prospect Search</span>
                             </div>
                           </div>
 
@@ -299,7 +299,7 @@ export default function FourStepsSection() {
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                               <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #06b6d4, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '7px', fontWeight: 'bold', color: '#fff' }}>AI</div>
                               <div style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', borderRadius: '3px 12px 12px 12px', padding: '6px 10px', fontSize: '10px' }}>
-                                Found <span style={{ color: '#22d3ee', fontWeight: 700 }}>30 verified leads</span> via Sales Navigator
+                                Found <span style={{ color: '#22d3ee', fontWeight: 700 }}>30 verified leads</span> across professional networks
                               </div>
                             </div>
 

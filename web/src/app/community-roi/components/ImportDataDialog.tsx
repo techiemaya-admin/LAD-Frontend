@@ -35,15 +35,8 @@ export function ImportDataDialog() {
 
     setUploading(true)
     try {
-      console.log('[ImportDataDialog] Starting upload with file:', { 
-        name: file.name, 
-        size: file.size, 
-        type: file.type 
-      })
-      
       const response = await contributionApi.importData(file)
-      
-      console.log('[ImportDataDialog] Upload successful:', response)
+
       setResult({ success: true, message: response.message || 'Data imported successfully' })
       // Invalidate queries to refresh dashboard data
       queryClient.invalidateQueries({ queryKey: ['community-roi'] })

@@ -121,4 +121,4 @@ export default function LeadDetailsSlot({ lead, onUpdate, readonly = false }: Le
       </CardContent>
     </Card>
   );
-}
+}

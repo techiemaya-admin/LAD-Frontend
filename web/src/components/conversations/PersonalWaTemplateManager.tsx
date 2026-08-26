@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,DialogDescription
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -37,6 +37,13 @@ interface PersonalWaTemplate {
   media_type?: 'image' | 'video' | 'document' | null;
   media_url?: string | null;
   media_filename?: string | null;
+  // Attached contact — sent as a follow-up vCard message when the template is
+  // used. Personal WA can't render WABA-style interactive buttons, so this is
+  // the equivalent UX (recipient gets tappable Message/Save actions).
+  attached_contact_name?: string | null;
+  attached_contact_phone?: string | null;
+  attached_contact_email?: string | null;
+  attached_contact_company?: string | null;
 }
 
 type MediaType = 'none' | 'image' | 'video' | 'document';
@@ -51,6 +58,10 @@ interface TemplateFormData {
   media_type: MediaType;
   media_url: string;
   media_filename: string;
+  attached_contact_name: string;
+  attached_contact_phone: string;
+  attached_contact_email: string;
+  attached_contact_company: string;
 }
 
 const EMPTY_FORM: TemplateFormData = {
@@ -63,6 +74,10 @@ const EMPTY_FORM: TemplateFormData = {
   media_type: 'none',
   media_url: '',
   media_filename: '',
+  attached_contact_name: '',
+  attached_contact_phone: '',
+  attached_contact_email: '',
+  attached_contact_company: '',
 };
 
 const API = '/api/whatsapp-conversations/conversations/templates';
@@ -148,7 +163,7 @@ function TemplateFormDialog({
         body: formData,
         credentials: 'include',
         headers: {
-          // Don't set Content-Type — browser sets multipart boundary automatically
+          // Don't set Content-Type - browser sets multipart boundary automatically
           ...(typeof window !== 'undefined' ? {
             Authorization: `Bearer ${document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')?.[1] || ''}`,
           } : {}),
@@ -182,105 +197,127 @@ function TemplateFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{initial.name ? 'Edit Template' : 'New Template'}</DialogTitle>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800/60 rounded-2xl shadow-2xl custom-scrollbar outline-none focus:outline-none max-md:w-[80vw] max-md:max-w-[80vw] max-md:max-h-[78vh] max-md:p-0">
+        <DialogHeader className="bg-slate-50 dark:bg-[#000724] px-5 md:px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl text-left shrink-0">
+          <div className="text-slate-900 dark:text-white font-bold text-base md:text-lg tracking-tight">
+            {initial.name ? 'Edit Template' : 'New Template'}
+          </div>
+          <div className="sr-only">Template Form configuration modal options view</div>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-6 md:space-y-5 px-5 md:px-4 py-5 md:py-2">
           {/* Name */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Template Name *</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Template Name *</label>
             <Input
               placeholder="e.g. Welcome Message"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
+              className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800/80 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
             />
           </div>
 
           {/* Header */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground">Header (optional)</label>
+            <div className="flex items-center justify-between text-[11px] font-semibold tracking-wider uppercase">
+              <label className="text-slate-700 md:text-slate-500 dark:text-slate-400">
+                <span className="hidden md:inline">Header (optional)</span>
+                <span className="inline md:hidden">Header (optional)</span>
+              </label>
+            </div>
             <Input
-              placeholder="Short header line"
+              placeholder="Short header text line"
               value={form.header_text}
               onChange={(e) => set('header_text', e.target.value)}
+              className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800/80 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
             />
           </div>
 
           {/* Body */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Message Body *</label>
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
+              <label className="text-slate-700 dark:text-slate-200">Message Body *</label>
+            </div>
+            <div className="md:border-none border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-[#00051d] md:bg-transparent">
             <Textarea
               placeholder={"Hi {{name}}, thanks for reaching out!\n\nUse {{variable}} for dynamic placeholders."}
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
               rows={5}
-              className="resize-none font-mono text-sm"
+              className="w-full resize-none font-mono text-sm bg-transparent md:bg-white dark:md:bg-[#00051d] border-none md:border md:border-slate-200 md:dark:border-slate-800/80 rounded-none md:rounded-xl text-slate-800 dark:text-white p-3 focus:ring-0 focus-visible:ring-0 outline-none"
             />
-            <p className="text-[11px] text-muted-foreground">
-              Use <code className="px-1 py-0.5 rounded bg-muted">{'{{name}}'}</code> for contact name,{' '}
+            <div className="text-[11px] text-slate-400 dark:text-slate-400/70 leading-normal">
+              <div className="hidden md:block">
+              Use <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">{'{{name}}'}</code> for contact name,{' '}
               <code className="px-1 py-0.5 rounded bg-muted">{'{{1}}'}</code> for custom variables.
               Variables are auto-corrected to double-brace format on save.
-            </p>
+            </div>
             {placeholders.length > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground hidden md:block">
                 Detected: {placeholders.map((p) => (
                   <code key={p} className="mx-0.5 px-1 py-0.5 rounded bg-muted text-xs">{`{{${p}}}`}</code>
                 ))}
               </p>
             )}
           </div>
+        </div>
+     </div>
 
           {/* Footer */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground">Footer (optional)</label>
+            <div className="flex items-center justify-between text-[11px] font-semibold tracking-wider uppercase">
+              <label className="text-slate-500 dark:text-slate-400">
+                <span className="hidden md:inline">Footer (optional)</span>
+                <span className="inline md:hidden">Footer(optional)</span>
+              </label>
+            </div>
             <Input
               placeholder="e.g. Reply STOP to unsubscribe"
               value={form.footer_text}
               onChange={(e) => set('footer_text', e.target.value)}
+              className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800/80 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
             />
           </div>
 
           {/* ── Media Attachment ─────────────────────────────────────── */}
-          <div className="space-y-2 border border-border rounded-lg p-3">
-            <label className="text-sm font-medium">Media Attachment (optional)</label>
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Media Attachment  (optional)</label>
 
             {/* Type selector */}
-            <div className="flex gap-2">
+            <div className="flex flex-row flex-nowrap gap-1 bg-slate-50/80 dark:bg-[#000724]/60 md:bg-transparent p-1 md:p-0 rounded-xl md:rounded-none border border-slate-100 dark:border-slate-800/60 md:border-none w-full overflow-x-hidden">
               {(['none', 'image', 'video', 'document'] as MediaType[]).map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => handleMediaTypeChange(type)}
                   className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-colors capitalize',
+                    'flex-1 md:flex-initial flex items-center justify-center gap-1 px-1 md:px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold border-none outline-none transition-all cursor-pointer capitalize shrink-0',
                     form.media_type === type
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                      ? 'bg-[#0B1957] md:bg-[#2563eb] text-white shadow-sm'
+                      : 'bg-white dark:bg-[#000724] md:bg-white md:dark:bg-[#000724] text-slate-600 dark:text-slate-400 md:border md:border-slate-200 md:dark:border-slate-800 hover:bg-slate-100'
                   )}
                 >
-                  {type !== 'none' && mediaTypeIcons[type]}
-                  {type === 'none' ? 'None' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type !== 'none' && <span className="scale-90 md:scale-100">{mediaTypeIcons[type]}</span>}
+                  <span>{type === 'none' ? 'None' : type === 'document' ? 'Doc' : type}</span>
                 </button>
               ))}
             </div>
 
-            {/* Upload area — shown when type is not none */}
+            {/* Upload area - shown when type is not none */}
             {form.media_type !== 'none' && (
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                 {hasMedia ? (
                   // Media preview + clear
-                  <div className="relative rounded-md border border-border bg-muted/30 p-2.5">
+                  <div className="relative rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#000724] p-3 shadow-sm">
                     <div className="flex items-center gap-2">
-                      {mediaTypeIcons[form.media_type]}
-                      <span className="text-xs text-muted-foreground flex-1 truncate">
+                      <span className="text-slate-400">{mediaTypeIcons[form.media_type]}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 flex-1 truncate font-medium">
                         {form.media_filename || form.media_url}
                       </span>
                       <button
                         type="button"
                         onClick={clearMedia}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                       >
                         <XCircle className="h-4 w-4" />
                       </button>
@@ -299,15 +336,15 @@ function TemplateFormDialog({
                   <div className="space-y-2">
                     {!urlMode ? (
                       <div
-                        className="flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-5 cursor-pointer bg-white dark:bg-[#000724] hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         {uploading ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                         ) : (
-                          <Upload className="h-5 w-5 text-muted-foreground" />
+                          <Upload className="h-5 w-5 text-slate-400" />
                         )}
-                        <p className="text-xs text-muted-foreground text-center">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold text-center">
                           {uploading
                             ? 'Uploading\u2026'
                             : `Click to upload ${form.media_type} file`}
@@ -328,7 +365,7 @@ function TemplateFormDialog({
                       <button
                         type="button"
                         onClick={() => setUrlMode((v) => !v)}
-                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                        className="text-xs text-slate-400 dark:text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer font-semibold"
                       >
                         <Link className="h-3 w-3" />
                         {urlMode ? 'Use file upload instead' : 'Or paste a URL'}
@@ -343,7 +380,7 @@ function TemplateFormDialog({
                           set('media_url', e.target.value);
                           set('media_filename', e.target.value.split('/').pop() || '');
                         }}
-                        className="text-sm"
+                        className="text-sm bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 rounded-xl h-10 text-white"
                       />
                     )}
 
@@ -356,43 +393,104 @@ function TemplateFormDialog({
             )}
           </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground">Description (optional)</label>
-            <Input
-              placeholder="Internal note about this template"
-              value={form.description}
-              onChange={(e) => set('description', e.target.value)}
-            />
+          {/* ── Attached Contact ────────────────────────────────────── */}
+          {/*
+            Personal WA can't render WABA-style interactive buttons, so we
+            offer an attached contact card instead: at send time WAPA fires
+            the template body first, then a native vCard message immediately
+            after. The recipient sees tappable Message/Save actions on the
+            card — closest to a "contact button" the Web protocol allows.
+            All four fields optional; leave phone empty to disable.
+          */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                Attached Contact (optional)
+              </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Sent as a follow-up contact card right after the template — recipient can tap Message / Save.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                placeholder="Contact name"
+                value={form.attached_contact_name}
+                onChange={(e) => set('attached_contact_name', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Phone e.g. +971501234567"
+                value={form.attached_contact_phone}
+                onChange={(e) => set('attached_contact_phone', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Email (optional)"
+                value={form.attached_contact_email}
+                onChange={(e) => set('attached_contact_email', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+              <Input
+                placeholder="Company (optional)"
+                value={form.attached_contact_company}
+                onChange={(e) => set('attached_contact_company', e.target.value)}
+                className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+              />
+            </div>
           </div>
 
-          {/* Default toggle */}
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Description(optional)
+            </label>
+            <div className="block md:hidden">
+          <textarea
+            placeholder="Internal note about this template..."
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            rows={3}
+            className="w-full resize-none text-sm bg-white dark:bg-[#00051d] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white p-3 outline-none"
+          />
+            </div>
+            <div className="hidden md:block">
+            <Input
+              placeholder="Internal notes"
+              value={form.description}
+              onChange={(e) => set('description', e.target.value)}
+              className="bg-white dark:bg-[#00051d] border-slate-200 dark:border-slate-800 text-sm rounded-xl h-11 text-slate-800 dark:text-white"
+            />
+            </div>
+
+          {/* Default Template checkbox element */}
+          <label className="flex items-center gap-2.5 cursor-pointer select-none group w-fit pt-1">
             <div
               className={cn(
                 'w-4 h-4 rounded border flex items-center justify-center transition-colors',
-                form.is_default ? 'bg-primary border-primary' : 'border-input'
+                form.is_default ? 'bg-[#2563eb] border-[#2563eb]' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-[#00051d]'
               )}
               onClick={() => set('is_default', !form.is_default)}
             >
-              {form.is_default && <Check className="w-3 h-3 text-primary-foreground" />}
+              {form.is_default && <Check className="w-3 h-3 text-white stroke-[3]" />}
             </div>
-            <span className="text-sm">Set as default template</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Set as default template</span>
           </label>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || uploading}>
-            Cancel
-          </Button>
+        </div>
+
+        {/* Action Buttons Footer Container */}
+        <DialogFooter className="bg-slate-50 dark:bg-[#000724] px-4 md:px-6 py-4 border-t border-slate-200 dark:border-slate-800/80 rounded-b-2xl mt-4 shrink-0 flex flex-row items-center justify-end">
           <Button
             onClick={() => onSave(form)}
             disabled={saving || uploading || !form.name.trim() || !form.content.trim()}
+            className="w-full sm:w-auto h-11 bg-[#2563eb] hover:bg-[#2563eb]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 text-white font-bold rounded-xl px-6 active:scale-[0.98] transition-all cursor-pointer shadow-md border-none"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Save Template
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
@@ -448,6 +546,10 @@ export function PersonalWaTemplateManager() {
       media_type: (t.media_type as MediaType) || 'none',
       media_url: t.media_url || '',
       media_filename: t.media_filename || '',
+      attached_contact_name:    t.attached_contact_name    || '',
+      attached_contact_phone:   t.attached_contact_phone   || '',
+      attached_contact_email:   t.attached_contact_email   || '',
+      attached_contact_company: t.attached_contact_company || '',
     });
     setFormOpen(true);
   }
@@ -470,6 +572,11 @@ export function PersonalWaTemplateManager() {
         media_type: data.media_type !== 'none' ? data.media_type : null,
         media_url: (data.media_url ?? '').trim() || null,
         media_filename: (data.media_filename ?? '').trim() || null,
+        // Attached contact — sent as follow-up vCard at template-send time
+        attached_contact_name:    (data.attached_contact_name    ?? '').trim() || null,
+        attached_contact_phone:   (data.attached_contact_phone   ?? '').trim() || null,
+        attached_contact_email:   (data.attached_contact_email   ?? '').trim() || null,
+        attached_contact_company: (data.attached_contact_company ?? '').trim() || null,
       };
 
       if (editingId) {
@@ -516,50 +623,63 @@ export function PersonalWaTemplateManager() {
 
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border shrink-0">
-        <h2 className="text-sm font-semibold">Personal WA Templates</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Saved messages — no Meta approval required
-        </p>
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-blue-950/40 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-blue-950/40">
+            <FileText className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
+              Saved messages — no Meta approval required
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search & Action Row */}
-      <div className="px-4 py-2 border-b border-border shrink-0 flex items-center gap-2">
+      <div className="px-5 py-3 border-b border-slate-100 dark:border-blue-950/40 shrink-0 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/50">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full">
+            <Search className="h-4 w-4 text-slate-400 dark:text-slate-400/80" />
+          </div>
           <Input
-            className="pl-8 h-8 text-sm"
-            placeholder="Search templates\u2026"
+            className="pl-11 h-10 text-sm bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 rounded-xl text-slate-900 dark:text-white focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
+            placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button size="sm" className="h-8 gap-1.5 shrink-0 px-2 sm:px-3" onClick={openCreate}>
-          <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">New Template</span>
+        <Button size="sm" className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+                onClick={openCreate}>
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span className="inline">New Template</span>
         </Button>
       </div>
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 px-2 outline-none focus:outline-none focus-visible:outline-none">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center h-48">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2 text-muted-foreground">
-            <FileText className="h-8 w-8 opacity-30" />
-            <p className="text-sm">{search ? 'No matching templates' : 'No templates yet'}</p>
+          <div className="flex flex-col items-center justify-center h-60 gap-3 text-slate-400 dark:text-slate-500">
+            <FileText className="h-10 w-10 text-slate-300 dark:text-slate-700" />
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+              {search ? 'No matching templates found' : 'No templates built yet'}</p>
             {!search && (
-              <Button variant="outline" size="sm" onClick={openCreate}>
+              <Button variant="outline" size="sm" onClick={openCreate}
+                      className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2 border-none cursor-pointer"
+              >
                 Create your first template
               </Button>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/40">
             {filtered.map((t) => (
               <TemplateRow
                 key={t.id}
@@ -582,27 +702,27 @@ export function PersonalWaTemplateManager() {
       />
 
       {/* Delete confirm */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete template?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <DialogContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800 max-w-sm rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-white font-bold text-lg">Delete template?</DialogTitle>
+            <DialogDescription className="text-slate-400 dark:text-slate-400 text-sm pt-1 leading-relaxed">
               &ldquo;{deleteTarget?.name}&rdquo; will be permanently deleted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 pt-4 flex sm:flex-row flex-col justify-end">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting} className="rounded-xl border border-slate-200 dark:border-slate-800 text-slate-300 hover:bg-slate-800 h-11 font-semibold">Cancel</Button>
+            <Button
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl h-11 px-4 cursor-pointer sm:ml-2"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -620,17 +740,17 @@ function TemplateRow({
   const placeholders = countPlaceholders(t.content);
 
   return (
-    <div className="group px-4 py-3 hover:bg-muted/40 transition-colors">
-      <div className="flex items-start justify-between gap-2">
+    <div className="group px-4 py-4 bg-white dark:bg-[#000724] hover:bg-slate-50 dark:hover:bg-[#000724]/60 border border-slate-100 dark:border-slate-800/50 rounded-xl shadow-sm transition-all my-2 mx-3">
+      <div className="flex items-start justify-between gap-3">
         {/* Left */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-sm font-medium truncate">{t.name}</span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">{t.name}</span>
             {t.is_default && (
-              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
+              <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
             )}
             {t.media_type && (
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 gap-0.5 flex items-center">
+              <Badge className="text-[10px] font-bold py-0.5 px-2 h-4.5 gap-1 flex items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-none">
                 {t.media_type === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
                 {t.media_type === 'video' && <Video className="h-2.5 w-2.5" />}
                 {t.media_type === 'document' && <FileIcon className="h-2.5 w-2.5" />}
@@ -639,22 +759,22 @@ function TemplateRow({
             )}
           </div>
           {t.header_text && (
-            <p className="text-xs text-muted-foreground font-medium mb-0.5 truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1 truncate">
               {t.header_text}
             </p>
           )}
-          <p className="text-xs text-muted-foreground line-clamp-2 whitespace-pre-wrap">
+          <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 whitespace-pre-wrap leading-relaxed">
             {t.content}
           </p>
           {t.footer_text && (
-            <p className="text-xs text-muted-foreground/70 mt-0.5 truncate italic">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate italic font-medium">
               {t.footer_text}
             </p>
           )}
           {placeholders.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
+            <div className="flex flex-wrap gap-1 mt-2">
               {placeholders.map((p) => (
-                <Badge key={p} variant="secondary" className="text-[10px] py-0 px-1.5 h-4">
+                <Badge key={p} variant="secondary" className="text-[10px] font-bold py-0 px-2 h-4.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border-none">
                   {p}
                 </Badge>
               ))}
@@ -663,11 +783,11 @@ function TemplateRow({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all shrink-0 bg-white dark:bg-[#00051d] border border-slate-100 dark:border-slate-800 rounded-xl p-0.5 shadow-sm">
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             onClick={onEdit}
             title="Edit template"
           >
@@ -676,7 +796,7 @@ function TemplateRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-destructive hover:text-destructive"
+            className="h-7 w-7 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
             onClick={onDelete}
             title="Delete template"
           >
@@ -685,10 +805,10 @@ function TemplateRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground/60">
+      <div className="flex items-center gap-2 mt-2 text-[10px] font-medium text-slate-400 dark:text-slate-500">
         {t.usage_count > 0 && <span>Used {t.usage_count}\xd7</span>}
         {!t.is_active && (
-          <Badge variant="outline" className="text-[10px] py-0 px-1 h-3.5 border-muted-foreground/30">
+          <Badge className="text-[10px] font-bold py-0 px-1.5 h-4 bg-transparent border border-slate-200 dark:border-slate-800 text-slate-400">
             Inactive
           </Badge>
         )}

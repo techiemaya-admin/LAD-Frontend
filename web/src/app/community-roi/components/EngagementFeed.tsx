@@ -39,7 +39,7 @@ export const EngagementFeed: React.FC<EngagementFeedProps> = ({ memberId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header — always visible */}
+      {/* Header - always visible */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Engagement Feed</h3>
         <div className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export const EngagementFeed: React.FC<EngagementFeedProps> = ({ memberId }) => {
         </div>
       </div>
 
-      {/* Feed items — hidden when collapsed */}
+      {/* Feed items - hidden when collapsed */}
       {!collapsed && (
         <div className="relative space-y-6 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
           {activity.map((item: any) => (

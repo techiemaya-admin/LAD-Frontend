@@ -144,21 +144,21 @@ export default function AIEmailGeneratorQuestionnaire({
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex justify-between mb-2">
-          <span className="text-sm font-medium text-gray-600">Step {step} of 5</span>
-          <span className="text-sm font-medium text-gray-600">{Math.round((step / 5) * 100)}%</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Step {step} of 5</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{Math.round((step / 5) * 100)}%</span>
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-blue-600 transition-all duration-300"
+            className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300"
             style={{ width: `${(step / 5) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Question Card */}
-      <div className="bg-white rounded-lg border border-gray-200 p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentQuestion?.title}</h2>
-        <p className="text-gray-600 mb-6">{currentQuestion?.description}</p>
+      <div className="bg-white dark:bg-[#000c3b] rounded-lg border border-gray-200 dark:border-gray-800 p-8 mb-8 shadow-sm">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{currentQuestion?.title}</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">{currentQuestion?.description}</p>
 
         {/* Single field question */}
         {'field' in currentQuestion! && currentQuestion?.type === 'textarea' && (
@@ -167,7 +167,7 @@ export default function AIEmailGeneratorQuestionnaire({
             onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
             placeholder={currentQuestion.placeholder}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         )}
 
@@ -175,10 +175,10 @@ export default function AIEmailGeneratorQuestionnaire({
           <select
             value={answers[currentQuestion.field as keyof QuestionnaireAnswers] as string}
             onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#000724] text-gray-900 dark:text-white"
           >
             {currentQuestion.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} className="dark:bg-[#000724]">
                 {opt.label}
               </option>
             ))}
@@ -190,7 +190,7 @@ export default function AIEmailGeneratorQuestionnaire({
           <div className="space-y-4">
             {currentQuestion.fields?.map((fieldConfig) => (
               <div key={fieldConfig.field}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {fieldConfig.label}
                 </label>
                 <input
@@ -198,7 +198,7 @@ export default function AIEmailGeneratorQuestionnaire({
                   value={answers[fieldConfig.field as keyof QuestionnaireAnswers] as string}
                   onChange={(e) => handleInputChange(fieldConfig.field, e.target.value)}
                   placeholder={fieldConfig.placeholder}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
             ))}
@@ -211,14 +211,14 @@ export default function AIEmailGeneratorQuestionnaire({
         <button
           onClick={handleBack}
           disabled={step === 1}
-          className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+          className="px-6 py-2.5 border border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-[#000c3b] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0b1957]/30 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all cursor-pointer"
         >
           ← Back
         </button>
         <button
           onClick={handleNext}
           disabled={!isStepValid()}
-          className="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all"
+          className="flex-1 px-6 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all cursor-pointer"
         >
           {step === 5 ? 'Generate Email Template' : 'Next Step →'}
         </button>

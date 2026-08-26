@@ -26,18 +26,29 @@ export const HeroParallax = ({
     offset: ["start start", "end start"],
   });
 
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const springConfig = { stiffness: 300, damping: 30, bounce: 100 };
 
   const translateX = useSpring(
-    useTransform(scrollYProgress, [0, 1], [0, 1000]),
+    useTransform(scrollYProgress, [0, 1], [0, isMobile ? 300 : 1000]),
     springConfig
   );
   const translateXReverse = useSpring(
-    useTransform(scrollYProgress, [0, 1], [0, -1000]),
+    useTransform(scrollYProgress, [0, 1], [0, isMobile ? -300 : -1000]),
     springConfig
   );
   const rotateX = useSpring(
-    useTransform(scrollYProgress, [0, 0.2], [15, 0]),
+    useTransform(scrollYProgress, [0, 0.2], [isMobile ? 5 : 15, 0]),
     springConfig
   );
   const opacity = useSpring(
@@ -45,11 +56,11 @@ export const HeroParallax = ({
     springConfig
   );
   const rotateZ = useSpring(
-    useTransform(scrollYProgress, [0, 0.2], [20, 0]),
+    useTransform(scrollYProgress, [0, 0.2], [isMobile ? 10 : 20, 0]),
     springConfig
   );
   const translateY = useSpring(
-    useTransform(scrollYProgress, [0, 0.2], [-700, 500]),
+    useTransform(scrollYProgress, [0, 0.2], [isMobile ? -300 : -700, 500]),
     springConfig
   );
 
@@ -68,7 +79,7 @@ export const HeroParallax = ({
         }}
         className=""
       >
-        <motion.div className="flex flex-row-reverse space-x-reverse space-x-20 mb-20">
+        <motion.div className="flex flex-row-reverse space-x-reverse space-x-10 md:space-x-20 mb-10 md:mb-20">
           {firstRow.map((product) => (
             <ProductCard
               product={product}
@@ -77,7 +88,7 @@ export const HeroParallax = ({
             />
           ))}
         </motion.div>
-        <motion.div className="flex flex-row  mb-20 space-x-20 ">
+        <motion.div className="flex flex-row mb-10 md:mb-20 space-x-10 md:space-x-20">
           {secondRow.map((product) => (
             <ProductCard
               product={product}
@@ -86,7 +97,7 @@ export const HeroParallax = ({
             />
           ))}
         </motion.div>
-        <motion.div className="flex flex-row-reverse space-x-reverse space-x-20">
+        <motion.div className="flex flex-row-reverse space-x-reverse space-x-10 md:space-x-20">
           {thirdRow.map((product) => (
             <ProductCard
               product={product}
@@ -104,10 +115,10 @@ export const Header = () => {
   return (
     <div className="max-w-7xl relative mx-auto py-20 md:py-40 px-4 w-full left-0 top-0">
       <h1 className="text-2xl md:text-7xl font-bold text-foreground">
-        24/7 AI Sales <br /> Automation
+        Mr LAD <br /> never clocks out
       </h1>
       <p className="max-w-2xl text-base md:text-xl mt-8 text-muted-foreground">
-        Automate your entire sales process with AI agents that work around the clock. Connect prospects, qualify leads, and close deals faster than ever before.
+        Put Mr LAD to work across every channel around the clock. He finds prospects, starts conversations, qualifies leads, and books meetings faster than ever before.
       </p>
     </div>
   );
@@ -124,6 +135,35 @@ export const ProductCard = ({
   };
   translate: MotionValue<number>;
 }) => {
+  // Cards without a real destination ('#' placeholder) render as a
+  // non-interactive figure so keyboard users don't hit dead tab stops and
+  // clicks don't snap the page back to the top.
+  const hasLink = !!product.link && product.link !== "#";
+
+  const inner = (
+    <>
+      {/* Image Background */}
+      <img
+        src={product.thumbnail}
+        alt={product.title}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover object-center rounded-3xl"
+        style={{ display: 'block' }}
+      />
+
+      {/* Dark overlay on hover / focus */}
+      <div className="absolute inset-0 rounded-3xl bg-black opacity-0 group-hover/product:opacity-70 group-focus-within/product:opacity-70 transition-opacity duration-200" />
+
+      {/* Title on hover / focus */}
+      <div className="absolute inset-0 flex items-end rounded-3xl opacity-0 group-hover/product:opacity-100 group-focus-within/product:opacity-100 transition-opacity duration-200">
+        <h2 className="text-white text-2xl font-bold p-6">
+          {product.title}
+        </h2>
+      </div>
+    </>
+  );
+
   return (
     <motion.div
       style={{
@@ -133,30 +173,20 @@ export const ProductCard = ({
         y: -20,
       }}
       key={product.title}
-      className="group/product h-96 w-[30rem] relative shrink-0"
+      className="group/product h-72 md:h-96 w-[18rem] md:w-[30rem] relative shrink-0"
     >
-      <a
-        href={product.link}
-        className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow"
-      >
-        {/* Image Background */}
-        <img
-          src={product.thumbnail}
-          alt={product.title}
-          className="w-full h-full object-cover object-center rounded-3xl"
-          style={{ display: 'block' }}
-        />
-
-        {/* Dark overlay on hover */}
-        <div className="absolute inset-0 rounded-3xl bg-black opacity-0 group-hover/product:opacity-70 transition-opacity duration-200" />
-
-        {/* Title on hover */}
-        <div className="absolute inset-0 flex items-end rounded-3xl opacity-0 group-hover/product:opacity-100 transition-opacity duration-200">
-          <h2 className="text-white text-2xl font-bold p-6">
-            {product.title}
-          </h2>
+      {hasLink ? (
+        <a
+          href={product.link}
+          className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {inner}
+        </a>
+      ) : (
+        <div className="block w-full h-full relative rounded-3xl overflow-hidden group-hover/product:shadow-2xl transition-shadow">
+          {inner}
         </div>
-      </a>
+      )}
     </motion.div>
   );
 };

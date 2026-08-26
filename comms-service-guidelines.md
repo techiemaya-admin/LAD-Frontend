@@ -1,4 +1,4 @@
-## BNI Conversation Service — Backend API Reference
+## BNI Conversation Service - Backend API Reference
 
 ### Service URL
 Production: https://bni-conversation-service-160078175457.us-central1.run.app
@@ -114,11 +114,11 @@ Role mapping: DB stores lead → API returns user, DB stores agent → API retur
 
 Message status values and their meaning:
 
-received — Incoming message from the user (role: user)
-sent — Outgoing message sent to WhatsApp API, awaiting delivery confirmation
-delivered — WhatsApp confirmed delivery to recipient's device
-read — Recipient opened and read the message (blue ticks)
-failed — Message failed to send
+received - Incoming message from the user (role: user)
+sent - Outgoing message sent to WhatsApp API, awaiting delivery confirmation
+delivered - WhatsApp confirmed delivery to recipient's device
+read - Recipient opened and read the message (blue ticks)
+failed - Message failed to send
 Status icon mapping for frontend:
 
 received → No icon needed (incoming messages)
@@ -201,8 +201,8 @@ PATCH /api/whatsapp-conversations/conversations/:id/status	PATCH /api/conversati
 PATCH /api/whatsapp-conversations/conversations/:id/ownership	PATCH /api/conversations/:id/ownership
 Proxy utility (web/src/app/api/whatsapp-conversations/utils/python-proxy.ts):
 
-getWhatsAppServiceUrl() — returns the BNI service URL from env var NEXT_PUBLIC_BNI_SERVICE_URL or BNI_SERVICE_URL
-proxyToPythonService(req, baseUrl, path) — forwards the request with query params, headers, and body
+getWhatsAppServiceUrl() - returns the BNI service URL from env var NEXT_PUBLIC_BNI_SERVICE_URL or BNI_SERVICE_URL
+proxyToPythonService(req, baseUrl, path) - forwards the request with query params, headers, and body
 SDK layer (sdk/features/conversations/api.ts):
 
 Uses proxyClient (relative fetch through Next.js) not direct backend calls

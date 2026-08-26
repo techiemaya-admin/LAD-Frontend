@@ -16,4 +16,4 @@ export const getFirstLetterOfFirstName = (fullName: string | null | undefined): 
   if (!fullName) return '?';
   const firstName = fullName.trim().split(' ')[0];
   return firstName.charAt(0).toUpperCase();
-};
+};

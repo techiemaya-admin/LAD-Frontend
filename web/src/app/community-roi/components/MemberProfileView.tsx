@@ -47,6 +47,7 @@ import {
 import { OutreachAnalysis } from './OutreachAnalysis'
 import { EngagementFeed } from './EngagementFeed'
 import { ActivityHeatmap } from './ActivityHeatmap'
+import { MemberMessageStatusCard } from './MemberMessageStatusCard'
 import { UUID } from '@lad/frontend-features/community-roi/types'
 import { formatDistanceToNow, format, parseISO } from 'date-fns'
 import { useMemo, useState, useEffect, useCallback } from 'react'
@@ -124,7 +125,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
           setMemberStats(json.data)
         }
       } catch {
-        // Stats are supplementary — silently degrade to member row data
+        // Stats are supplementary - silently degrade to member row data
       }
     }
     fetchStats()
@@ -249,7 +250,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
     }
   }, [])
 
-  // Calculate dynamic KPIs — prefer live stats over denormalized member totals
+  // Calculate dynamic KPIs - prefer live stats over denormalized member totals
   const kpis = useMemo(() => {
     if (!member) return null;
 
@@ -516,7 +517,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
               </>
             ) : (
               <>
-                <span className="text-2xl font-bold text-slate-300 leading-tight">—</span>
+                <span className="text-2xl font-bold text-slate-300 leading-tight">-</span>
                 <span className="text-[11px] font-medium text-slate-400 italic">No meetings yet</span>
               </>
             )}
@@ -587,6 +588,9 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
 
           {/* Outreach Analysis Component */}
           <OutreachAnalysis memberId={memberId} />
+
+          {/* Template Broadcast Delivery - sent / delivered / read / failed */}
+          <MemberMessageStatusCard memberName={member.name} memberPhone={member.phone} />
 
           {/* ── Member Intelligence Section ─────────────────────────────── */}
           <Card className="rounded-[2rem] border-slate-100 shadow-sm overflow-hidden bg-white">
@@ -748,7 +752,7 @@ export default function MemberProfileView({ memberId, onBack }: MemberProfileVie
                                   {i + 1}
                                 </div>
                                 <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-4">
-                                  "{String(text).slice(0, 280)}"
+                                  &quot;{String(text).slice(0, 280)}&quot;
                                 </p>
                               </div>
                             </div>

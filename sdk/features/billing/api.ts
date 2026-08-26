@@ -158,6 +158,53 @@ export async function rechargeWallet(params: {
   return response.data;
 }
 /**
+ * Recurring billing - monthly subscription + low-balance auto-recharge
+ */
+export interface RecurringPlan {
+  kind: 'monthly' | 'auto_recharge';
+  packageId: string;
+  priceUsd: number;
+  credits: number;
+  status: 'incomplete' | 'active' | 'past_due' | 'canceled';
+  thresholdCredits?: number | null;
+  currentPeriodEnd?: string | null;
+  lastChargedAt?: string | null;
+  lastError?: string | null;
+}
+export interface RecurringStatus {
+  monthly: RecurringPlan | null;
+  autoRecharge: RecurringPlan | null;
+}
+/** Start a hosted Checkout for a fixed MONTHLY subscription. */
+export async function subscribeMonthly(params: {
+  packageId: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ sessionUrl: string }> {
+  const response = await apiClient.post('/api/stripe/subscribe', params);
+  return response.data;
+}
+/** Start a hosted Checkout (setup mode) to save a card for low-balance auto-recharge. */
+export async function setupAutoRecharge(params: {
+  packageId: string;
+  thresholdCredits?: number;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ sessionUrl: string }> {
+  const response = await apiClient.post('/api/stripe/auto-recharge', params);
+  return response.data;
+}
+/** Current recurring arrangements (monthly + auto-recharge). */
+export async function getRecurring(): Promise<RecurringStatus> {
+  const response = await apiClient.get('/api/stripe/recurring');
+  return { monthly: response.data.monthly, autoRecharge: response.data.autoRecharge };
+}
+/** Cancel the monthly subscription (at period end) or disable auto-recharge. */
+export async function cancelRecurring(kind: 'monthly' | 'auto_recharge'): Promise<{ cancelled: boolean }> {
+  const response = await apiClient.post('/api/stripe/recurring/cancel', { kind });
+  return response.data;
+}
+/**
  * Get usage aggregation summary
  */
 export async function getUsageAggregation(params?: {
@@ -179,7 +226,13 @@ export async function listTransactions(params?: {
   limit?: number;
   offset?: number;
 }): Promise<any> {
-  const response = await apiClient.get('/api/billing/transactions', { params });
+  // The backend reads `fromDate`/`toDate` query params (not `from`/`to`), so map them  - 
+  // otherwise the date-range filter is silently ignored.
+  const { from, to, ...rest } = params || {};
+  const query: Record<string, any> = { ...rest };
+  if (from) query.fromDate = from;
+  if (to) query.toDate = to;
+  const response = await apiClient.get('/api/billing/transactions', { params: query });
   
   const creditsPerDollar: number = response.data.creditsPerDollar ?? (1000 / 99);
   const planTier: string = response.data.planTier ?? 'starter';
@@ -201,9 +254,10 @@ export async function listTransactions(params?: {
       balanceBefore: balanceBeforeUsd,
       balanceAfter: balanceAfterUsd,
       // Credits equivalents (converted using plan rate)
-      credits_amount: Math.round(Math.abs(amountUsd) * creditsPerDollar * 100) / 100,
-      credits_balance_after: balanceAfterUsd != null ? Math.round(balanceAfterUsd * creditsPerDollar * 100) / 100 : null,
-      credits_balance_before: balanceBeforeUsd != null ? Math.round(balanceBeforeUsd * creditsPerDollar * 100) / 100 : null,
+      // Ledger amounts are already CREDIT-denominated - do NOT multiply by creditsPerDollar.
+      credits_amount: Math.round(Math.abs(amountUsd) * 100) / 100,
+      credits_balance_after: balanceAfterUsd != null ? Math.round(balanceAfterUsd * 100) / 100 : null,
+      credits_balance_before: balanceBeforeUsd != null ? Math.round(balanceBeforeUsd * 100) / 100 : null,
       description: tx.description || '',
       reference_type: tx.reference_type,
       reference_id: tx.reference_id,

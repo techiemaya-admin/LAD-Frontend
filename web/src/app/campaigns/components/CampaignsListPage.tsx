@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useTransition } from "react";
 import { Plus, RadioTower, Gauge, Zap, Trophy, Activity, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/app-toaster";
@@ -26,10 +26,23 @@ import { Goal } from "lucide-react";
 
 export default function CampaignsListPage() {
   const router = useRouter();
+  // Template/Campaign/Custom Accelerator route.push to large client bundles
+  // (advanced-search-ai's page.tsx alone is ~14k lines) with zero loading
+  // feedback on the button. Measured: 7.3s from click to the URL actually
+  // changing on a first visit this session, during which the button looks
+  // completely inert -- not disabled, no spinner, nothing. A user has every
+  // reason to conclude it's broken and click again. useTransition's isPending
+  // doesn't make the navigation faster; it makes the wait visible.
+  const [isNavigating, startNavigation] = useTransition();
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const navigateTo = (path: string) => {
+    setNavigatingTo(path);
+    startNavigation(() => router.push(path));
+  };
   const searchParams = useSearchParams();
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  // Read ?status= from URL — synced every time URL changes
+  // Read ?status= from URL - synced every time URL changes
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") || "all",
   );
@@ -256,7 +269,7 @@ export default function CampaignsListPage() {
               Campaigns
             </h1>
           </div>
-          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-slate-300 ml-2">
             Manage your multi-channel outreach campaigns
           </p>
         </div>
@@ -266,7 +279,7 @@ export default function CampaignsListPage() {
             onClick={handleRefreshConnections}
             disabled={syncing}
             variant="outline"
-            className="rounded-xl font-semibold px-3 py-1.5 w-full sm:w-auto border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/10 hover:cursor-pointer disabled:opacity-60"
+            className="bg-[#0b1957] dark:bg-[#2563eb] text-white dark:hover:text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Refresh Connections"}
@@ -274,19 +287,44 @@ export default function CampaignsListPage() {
 
           <div className="flex gap-2 w-full sm:w-auto">
             <Button
-              onClick={() => router.push("/campaigns/templates/create")}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer"
+              onClick={() => navigateTo("/conversations/templates/create")}
+              disabled={isNavigating}
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              {isNavigating && navigatingTo === "/conversations/templates/create" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
               Template
             </Button>
 
             <Button
-              onClick={() => router.push("/onboarding/advanced-search-ai")}
-              className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]"
+              onClick={() => navigateTo("/onboarding/advanced-search-ai")}
+              disabled={isNavigating}
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              {isNavigating && navigatingTo === "/onboarding/advanced-search-ai" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
               Campaign
+            </Button>
+
+            {/* Custom Accelerator builder: source node → outreach nodes */}
+            <Button
+              onClick={() => navigateTo("/campaigns/workflow")}
+              disabled={isNavigating}
+              variant="outline"
+              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isNavigating && navigatingTo === "/campaigns/workflow" ? (
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1" />
+              )}
+              Custom Accelerator
             </Button>
           </div>
         </div>
@@ -298,7 +336,7 @@ export default function CampaignsListPage() {
       {(stats as any)?.linkedin_rate_limits && (() => {
         const linkedinStats = (stats as any).linkedin_rate_limits;
         return (
-        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0] dark:border-[#262831]">
+        <div className="mb-8 mt-8 pt-8 border-t border-[#E2E8F0] dark:border-blue-950/40">
           <div className="flex items-center gap-4 mb-6">
             <Avatar className="w-11 h-11 bg-[#0A66C2]/10 border border-[#0A66C2]/30 shadow-sm">
               <AvatarFallback>
@@ -309,7 +347,7 @@ export default function CampaignsListPage() {
               <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">
                 LinkedIn Rate Limits
               </h6>
-              <p className="text-sm text-[#64748B] dark:text-[#7a8ba3]">
+              <p className="text-sm text-[#64748B] dark:text-slate-300">
                 Weekly connection limits and usage tracking
               </p>
             </div>
@@ -321,7 +359,7 @@ export default function CampaignsListPage() {
           {/* Rate Limits Grid - 2x2 Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Daily Limit Card */}
-            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -334,7 +372,7 @@ export default function CampaignsListPage() {
                       <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                         Daily Limit
                       </p>
-                      <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
+                      <p className="text-xs text-[#64748B] dark:text-slate-300">
                         Per account maximum
                       </p>
                     </div>
@@ -346,8 +384,8 @@ export default function CampaignsListPage() {
                   </p>
                   <p className="text-sm text-[#64748B] dark:text-white">connections/day</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
-                  <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-blue-950/40">
+                  <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">
                     Total accounts:{" "}
                     {linkedinStats.daily.account_count}
                   </p>
@@ -360,7 +398,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Limit Card */}
-            <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -373,7 +411,7 @@ export default function CampaignsListPage() {
                       <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                         Weekly Limit
                       </p>
-                      <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
+                      <p className="text-xs text-[#64748B] dark:text-slate-300">
                         7-day rolling window
                       </p>
                     </div>
@@ -385,8 +423,8 @@ export default function CampaignsListPage() {
                   </p>
                   <p className="text-sm text-[#64748B] dark:text-white">connections/week</p>
                 </div>
-                <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#262831]">
-                  <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">
+                <div className="pt-4 border-t border-[#E2E8F0] dark:border-blue-950/40">
+                  <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">
                     Total capacity: {linkedinStats.weekly.total}
                   </p>
                   <p className="text-xs font-medium text-[#0b1957] dark:text-white">
@@ -398,7 +436,7 @@ export default function CampaignsListPage() {
             </Card>
 
             {/* Weekly Usage Chart */}
-            <Card className="bg-white dark:bg-[#000724] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl md:col-span-2 overflow-hidden">
+            <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl md:col-span-2 overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <Avatar className="w-10 h-10 bg-green-100">
@@ -410,7 +448,7 @@ export default function CampaignsListPage() {
                     <p className="text-sm font-semibold text-[#1E293B] dark:text-white">
                       7-Day Connection Activity
                     </p>
-                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">
+                    <p className="text-xs text-[#64748B] dark:text-slate-300">
                       Daily breakdown of sent connections
                     </p>
                   </div>
@@ -445,10 +483,10 @@ export default function CampaignsListPage() {
                           return (
                             <div key={idx} className="space-y-1">
                               <div className="flex justify-between items-center text-xs">
-                                <span className="text-[#64748B] dark:text-[#7a8ba3]">
+                                <span className="text-[#64748B] dark:text-slate-300">
                                   {dayName}
                                 </span>
-                                <span className="font-semibold text-[#0b1957]">
+                                <span className="font-semibold text-[#0b1957] dark:text-blue-400">
                                   {day.sent} sent
                                 </span>
                               </div>
@@ -466,29 +504,29 @@ export default function CampaignsListPage() {
                       );
                     })()
                   ) : (
-                    <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] py-4 text-center">
+                    <p className="text-sm text-[#64748B] dark:text-slate-300 py-4 text-center">
                       No activity in the last 7 days
                     </p>
                   )}
                 </div>
 
                 {/* Weekly Usage Summary */}
-                <div className="mt-6 pt-6 border-t border-[#E2E8F0] dark:border-[#262831] grid grid-cols-3 gap-4">
+                <div className="mt-6 pt-6 border-t border-[#E2E8F0] dark:border-blue-950/40 grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Total Sent</p>
+                    <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">Total Sent</p>
                     <p className="text-2xl font-bold text-green-600">
                       {linkedinStats?.usage?.sent_last_7_days ??
                         0}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Weekly Limit</p>
+                    <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">Weekly Limit</p>
                     <p className="text-2xl font-bold text-[#0b1957] dark:text-white">
                       {linkedinStats?.weekly?.total ?? 0}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mb-1">Capacity Used</p>
+                    <p className="text-xs text-[#64748B] dark:text-slate-300 mb-1">Capacity Used</p>
                     <p
                       className={`text-2xl font-bold ${
                         parseInt(
@@ -533,7 +571,7 @@ export default function CampaignsListPage() {
               setStatusFilter("all");
               router.push("/campaigns");
             }}
-            className="ml-auto text-xs text-slate-500 dark:text-[#7a8ba3] hover:text-red-500 underline"
+            className="ml-auto text-xs text-slate-500 dark:text-slate-300 hover:text-red-500 underline"
           >
             Clear filter
           </button>

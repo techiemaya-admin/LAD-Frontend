@@ -1,6 +1,6 @@
 'use client';
 /**
- * MrLadAvatar — Animated LAD ring visualizer avatar for AI chat messages.
+ * MrLadAvatar - Animated LAD ring visualizer avatar for AI chat messages.
  *
  * Extracted from AgentAudioVisualizerLads demo.
  * Renders an SVG wave animation inside the LAD logo clip shape.
@@ -73,7 +73,7 @@ export function MrLadAvatar({ size = 32, className = '' }: MrLadAvatarProps) {
     tRef.current += dt;
     const t = tRef.current;
 
-    // Idle state math — gentle breathing for bars
+    // Idle state math - gentle breathing for bars
     for (let e = 0; e < 3; e++) {
       const targetDx = 5 * Math.sin(1.8 * t + 0.18 * e);
       const targetDy = 1.5 * Math.sin(0.9 * t + 0.4 * e);

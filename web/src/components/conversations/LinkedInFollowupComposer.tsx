@@ -17,12 +17,20 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Sparkles, FileText, Send, RefreshCw, Loader2 } from 'lucide-react';
+import { Sparkles, FileText, Send, RefreshCw, Loader2, Film, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import TemplateSelector from '@/components/campaigns/linkedin-templates/TemplateSelector';
+import type { LinkedInMessageTemplate } from '@lad/frontend-features/campaigns';
 
 type Mode = 'ai' | 'template';
+
+interface SelectedMedia {
+  url: string;
+  type?: string | null;
+  filename?: string | null;
+}
 
 interface PreviewResp {
   success: boolean;
@@ -41,7 +49,7 @@ interface SendResp {
 
 interface Props {
   campaignId: string;
-  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id — backend accepts either
+  leadId: string;          // Either campaign_leads.id OR campaign_leads.lead_id - backend accepts either
   contactName?: string;
   /** Called after a successful send so the parent can refetch the conversation */
   onSent?: () => void;
@@ -55,6 +63,9 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [hasTemplate, setHasTemplate] = useState<boolean>(true); // assume yes until backend says otherwise
+  // Chosen library template (Template mode) + its media attachment.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(null);
 
   // ── Preview / regenerate ──────────────────────────────────────────────────
   const fetchPreview = useCallback(async (m: Mode) => {
@@ -82,7 +93,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
       setMessage(data.message || '');
       if (!data.message) {
         setInfo(m === 'ai'
-          ? 'AI returned an empty message — try regenerating.'
+          ? 'AI returned an empty message - try regenerating.'
           : 'Template is empty.');
       }
     } catch (e: any) {
@@ -104,6 +115,27 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
     fetchPreview(next);
   };
 
+  // ── Template library picker ────────────────────────────────────────────────
+  const handleTemplateSelect = (tpl: LinkedInMessageTemplate | null) => {
+    if (!tpl) {
+      // "Custom Messages" - drop the template + media, keep the current text so
+      // the user can type their own.
+      setSelectedTemplateId(null);
+      setSelectedMedia(null);
+      return;
+    }
+    setSelectedTemplateId(tpl.id);
+    setHasTemplate(true);
+    setError(null);
+    setInfo(null);
+    // Prefer the follow-up body; fall back to the connection message.
+    setMessage(tpl.followup_message || tpl.connection_message || '');
+    const meta = (tpl.metadata ?? {}) as Record<string, any>;
+    setSelectedMedia(meta.media_url
+      ? { url: meta.media_url, type: meta.media_type ?? null, filename: meta.media_filename ?? null }
+      : null);
+  };
+
   // ── Send ──────────────────────────────────────────────────────────────────
   const handleSend = useCallback(async () => {
     const trimmed = message.trim();
@@ -118,7 +150,18 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
       const resp = await fetch(`/api/campaigns/${campaignId}/leads/${leadId}/send-followup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel: 'linkedin', message: trimmed }),
+        body: JSON.stringify({
+          channel: 'linkedin',
+          message: trimmed,
+          // Attach the chosen library template + its media (Template mode). The
+          // backend re-resolves the template's stored media as the source of truth.
+          ...(mode === 'template' && selectedTemplateId ? { templateId: selectedTemplateId } : {}),
+          ...(mode === 'template' && selectedMedia ? {
+            mediaUrl: selectedMedia.url,
+            mediaType: selectedMedia.type || undefined,
+            mediaFilename: selectedMedia.filename || undefined,
+          } : {}),
+        }),
       });
       const data: SendResp = await resp.json().catch(() => ({ success: false }));
       if (!resp.ok || !data.success) {
@@ -133,21 +176,21 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
     } finally {
       setIsSending(false);
     }
-  }, [campaignId, leadId, message, contactName, onSent]);
+  }, [campaignId, leadId, message, contactName, onSent, mode, selectedTemplateId, selectedMedia]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="mx-4 my-3 rounded-lg border border-blue-200 bg-blue-50/40 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
+    <div className="mx-4 my-3 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/40">
         <div className="flex items-center gap-2">
-          <Send className="w-3.5 h-3.5 text-blue-600" />
-          <p className="text-xs font-semibold text-blue-900">
+          <Send className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
             Send follow-up now
           </p>
         </div>
 
         {/* Mode toggle */}
-        <div className="inline-flex rounded-md border border-blue-200 bg-white overflow-hidden text-[11px]">
+        <div className="inline-flex rounded-md border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 overflow-hidden text-[11px]">
           <button
             type="button"
             onClick={() => switchMode('ai')}
@@ -156,7 +199,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
               'inline-flex items-center gap-1 px-2 py-1 transition-colors',
               mode === 'ai'
                 ? 'bg-blue-600 text-white'
-                : 'text-slate-700 hover:bg-blue-50',
+                : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800',
             )}
             title="Generate a personalised follow-up using web presence + recent posts"
           >
@@ -168,10 +211,10 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
             onClick={() => switchMode('template')}
             disabled={isPreviewing || isSending}
             className={cn(
-              'inline-flex items-center gap-1 px-2 py-1 transition-colors border-l border-blue-200',
+              'inline-flex items-center gap-1 px-2 py-1 transition-colors border-l border-blue-200 dark:border-blue-800',
               mode === 'template'
                 ? 'bg-blue-600 text-white'
-                : 'text-slate-700 hover:bg-blue-50',
+                : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800',
             )}
             title="Use the campaign's static follow-up template"
           >
@@ -190,6 +233,35 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
           <p className="text-xs text-emerald-700">{info}</p>
         )}
 
+        {/* Template library picker (Template mode) */}
+        {mode === 'template' && (
+          <div className="space-y-2">
+            <TemplateSelector
+              selectedTemplateId={selectedTemplateId || undefined}
+              onTemplateSelect={handleTemplateSelect}
+              onManageClick={() => window.open('/conversations/templates', '_blank')}
+            />
+            {selectedMedia && (
+              <div className="flex items-center gap-2 p-2 rounded-md border border-blue-200 bg-white">
+                {selectedMedia.type === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedMedia.url} alt={selectedMedia.filename || 'attachment'} className="h-10 w-10 rounded object-cover border" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-blue-50 flex items-center justify-center text-blue-500">
+                    {selectedMedia.type === 'video' ? <Film className="h-4 w-4" />
+                      : selectedMedia.type === 'audio' ? <Music className="h-4 w-4" />
+                      : <FileText className="h-4 w-4" />}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-medium text-slate-700 truncate">{selectedMedia.filename || 'Attachment'}</p>
+                  <p className="text-[10px] text-slate-500 capitalize">{selectedMedia.type || 'file'} · sent with this follow-up</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Message editor */}
         <div className="relative">
           <Textarea
@@ -199,7 +271,7 @@ export function LinkedInFollowupComposer({ campaignId, leadId, contactName, onSe
               isPreviewing
                 ? mode === 'ai' ? 'Generating personalised follow-up…' : 'Loading template…'
                 : mode === 'template' && !hasTemplate
-                  ? 'No template configured for this campaign — switch to AI or add one in Edit Campaign.'
+                  ? 'No template configured for this campaign - switch to AI or add one in Edit Campaign.'
                   : 'Edit the follow-up message before sending…'
             }
             rows={5}

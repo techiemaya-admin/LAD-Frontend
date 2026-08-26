@@ -19,6 +19,7 @@ steps:
         echo "_API_URL            : ${_API_URL}"
         echo "_NEXT_PUBLIC_SOCKET_URL: ${_NEXT_PUBLIC_SOCKET_URL}"
         echo "_WABA_SERVICE_URL   : ${_WABA_SERVICE_URL}"
+        echo "_INSTAGRAM_SERVICE_URL: ${_INSTAGRAM_SERVICE_URL}"
         echo "Environment         : DEVELOPMENT"
         echo "==============================="
 
@@ -39,11 +40,13 @@ steps:
       '--build-arg', 'NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL',
       '--build-arg', 'NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL',
       '--build-arg', 'NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL',
+      '--build-arg', 'NEXT_PUBLIC_INSTAGRAM_API_URL=$_INSTAGRAM_SERVICE_URL',
       '--build-arg', 'NEXT_PUBLIC_PLAYGROUND_WORKER_URL=$_PLAYGROUND_WORKER_URL',
       '--build-arg', 'NEXT_PUBLIC_PLAYGROUND_TENANT_ID=$_PLAYGROUND_TENANT_ID',
       '--build-arg', 'NEXT_PUBLIC_PLAYGROUND_USER_ID=$_PLAYGROUND_USER_ID',
       '--build-arg', 'NEXT_PUBLIC_PLAYGROUND_TO_NUMBER=$_PLAYGROUND_TO_NUMBER',
       '--build-arg', 'NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER=$_PLAYGROUND_FROM_NUMBER',
+      '--build-arg', 'NEXT_PUBLIC_MAGE_API_URL=$_MAGE_API_URL',
       '--build-arg', 'NODE_ENV=development',
       '-f', 'Dockerfile',
       '.'
@@ -84,7 +87,8 @@ steps:
           --max-instances 10 \
           --concurrency 80 \
           --timeout 300 \
-          --set-env-vars "^@@^NODE_ENV=development@@ENVIRONMENT=development@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@API_BASE_URL=http://localhost:3000@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_PLAYGROUND_WORKER_URL=$_PLAYGROUND_WORKER_URL@@NEXT_PUBLIC_PLAYGROUND_TENANT_ID=$_PLAYGROUND_TENANT_ID@@NEXT_PUBLIC_PLAYGROUND_USER_ID=$_PLAYGROUND_USER_ID@@NEXT_PUBLIC_PLAYGROUND_TO_NUMBER=$_PLAYGROUND_TO_NUMBER@@NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER=$_PLAYGROUND_FROM_NUMBER" \
+          --set-env-vars "^@@^NODE_ENV=development@@ENVIRONMENT=development@@BRANCH=$BRANCH_NAME@@COMMIT_SHA=$SHORT_SHA@@BUILD_ID=$BUILD_ID@@NEXT_PUBLIC_BACKEND_URL=$_API_URL@@NEXT_PUBLIC_ICP_BACKEND_URL=$_API_URL@@BACKEND_INTERNAL_URL=$_API_URL@@API_BASE_URL=http://localhost:3000@@NEXT_PUBLIC_SOCKET_URL=$_NEXT_PUBLIC_SOCKET_URL@@NEXT_PUBLIC_DISABLE_VAPI=false@@NEXT_PUBLIC_WHATSAPP_API_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_BNI_SERVICE_URL=$_WABA_SERVICE_URL@@NEXT_PUBLIC_COMMS_SERVICE_URL=$_WABA_SERVICE_URL@@BNI_SERVICE_URL=$_WABA_SERVICE_URL@@WABA_SERVICE_URL=$_WABA_SERVICE_URL@@WHATSAPP_SERVICE_URL=$_WABA_SERVICE_URL@@INSTAGRAM_SERVICE_URL=$_INSTAGRAM_SERVICE_URL@@NEXT_PUBLIC_INSTAGRAM_API_URL=$_INSTAGRAM_SERVICE_URL@@NEXT_PUBLIC_PLAYGROUND_WORKER_URL=$_PLAYGROUND_WORKER_URL@@NEXT_PUBLIC_PLAYGROUND_TENANT_ID=$_PLAYGROUND_TENANT_ID@@NEXT_PUBLIC_PLAYGROUND_USER_ID=$_PLAYGROUND_USER_ID@@NEXT_PUBLIC_PLAYGROUND_TO_NUMBER=$_PLAYGROUND_TO_NUMBER@@NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER=$_PLAYGROUND_FROM_NUMBER@@WAPA_SERVICE_URL=$_WAPA_SERVICE_URL@@MASTER_AGENT_URL=$_MASTER_AGENT_URL@@NEXT_PUBLIC_MAGE_API_URL=$_MAGE_API_URL@@EMAIL_COMMS_SERVICE_URL=$_EMAIL_COMMS_SERVICE_URL" \
+          --set-secrets "LAD_MASTER_AGENT_SERVICE_TOKEN=lad-master-agent-service-token:latest" \
           --update-labels environment=development,branch=$${BRANCH_LOWER},commit-sha=$SHORT_SHA,managed-by=cloud-build
 
         echo "✅ Frontend deployment to $_SERVICE_NAME completed successfully"
@@ -111,13 +115,34 @@ substitutions:
   _ENV: 'development'
   _API_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
   _NEXT_PUBLIC_SOCKET_URL: 'https://lad-backend-develop-160078175457.us-central1.run.app'
-  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-160078175457.us-central1.run.app'
+  # NOTE: lad-waba-comms-develop runs in asia-south1 (not us-central1). The
+  # previous us-central1 URL pointed to a stale, abandoned revision (May 12)
+  # that lacks newer endpoints like /api/broadcasts/template-stats — the
+  # frontend's WhatsApp proxy was 404-ing because of it. The asia-south1
+  # service is the live develop deployment.
+  _WABA_SERVICE_URL: 'https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app'
+  # Instagram Comms service (asia-south1, same region as WABA)
+  _INSTAGRAM_SERVICE_URL: 'https://lad-instagram-comms-develop-asia-160078175457.asia-south1.run.app'
+  # WAPA Comms service (personal WhatsApp via Baileys, asia-south1). The proxy's
+  # personal-whatsapp *conversation* endpoints route here; without it the proxy
+  # falls back to localhost:18080 → ECONNREFUSED → 502.
+  _WAPA_SERVICE_URL: 'https://lad-wapa-comms-develop-asia-160078175457.asia-south1.run.app'
+  # LAD-Email-Comms (hosted-provider email broadcasts + groups/contacts) —
+  # proxied through Next at /api/email-comms/*. Read server-side as
+  # EMAIL_COMMS_SERVICE_URL; without it the proxy falls back to localhost:8000
+  # → unreachable from Cloud Run → 502 on every email-comms call.
+  _EMAIL_COMMS_SERVICE_URL: 'https://lad-email-comms-develop-asia-160078175457.asia-south1.run.app'
+  # Master Agent service (asia-south1) — backs the CRM /api/prospects proxy and
+  # the supervise hook. Paired with the LAD_MASTER_AGENT_SERVICE_TOKEN secret
+  # (--set-secrets above); the URL alone yields master_agent_service_token_missing.
+  _MASTER_AGENT_URL: 'https://lad-master-agent-develop-asia-160078175457.asia-south1.run.app'
   # Voice playground worker (Vapi/voice-agent dev environment)
   _PLAYGROUND_WORKER_URL: 'https://voag-dev-playground-worker-160078175457.asia-south1.run.app'
   _PLAYGROUND_TENANT_ID: '926070b5-189b-4682-9279-ea10ca090b84'
   _PLAYGROUND_USER_ID: 'fe9d6368-ff1b-4133-952a-525d60d06cbe'
   _PLAYGROUND_TO_NUMBER: '+15555555555'
   _PLAYGROUND_FROM_NUMBER: '+15555555555'
+  _MAGE_API_URL: ''
 
 # Cloud Build trigger configuration (set in Cloud Console):
 # - Source repository: LAD-Frontend

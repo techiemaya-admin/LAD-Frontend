@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { logger } from "@/lib/logger";
 import type { SortConfig } from "@/utils/sortingUtils";
+import { sortCallLogs } from "@/utils/sortingUtils";
 
 // SDK Imports
 import {
@@ -742,7 +743,6 @@ export default function CallLogsPage() {
   // Apply sorting to filtered results for consistent ordering across pages
   const sortedFiltered = useMemo(() => {
     if (!sortConfig) return filtered;
-    const { sortCallLogs } = require("@/utils/sortingUtils");
     return sortCallLogs(filtered, sortConfig);
   }, [filtered, sortConfig]);
 
@@ -896,6 +896,7 @@ export default function CallLogsPage() {
     // TODO: Implement bulk end API
     // await callLogsQuery.refetch();
     setSelected(new Set());
+    setSelectAllMode('none');
   }
 
   // End a single call using SDK
@@ -915,6 +916,7 @@ export default function CallLogsPage() {
       await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
       alert(`Retrying ${failedCallIds.length} failed calls`);
       setSelected(new Set());
+      setSelectAllMode('none');
     } catch (error) {
       logger.error("Error retrying calls", error);
       alert("Failed to retry calls. Please try again.");
@@ -995,7 +997,7 @@ export default function CallLogsPage() {
               onClick={endSelectedCalls}
               className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
             >
-              End Selected ({selected.size})
+              End Selected ({selectAllMode === 'all' ? totalRecords : selected.size})
             </button>
           </div>
         )}

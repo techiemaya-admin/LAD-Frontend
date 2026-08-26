@@ -224,6 +224,9 @@ const InfoCard = ({
 const CharacterSection = () => {
   const { isDark } = useTheme();
   const videoSrc = isDark ? "/hero-character-dark.mp4" : "/hero-character.mp4";
+  const posterSrc = isDark
+    ? "/hero-character-dark-poster.jpg"
+    : "/hero-character-poster.jpg";
 
   // Track whether the current theme's video has loaded enough to render its
   // first frame. While false we render nothing in the video slot so the
@@ -244,16 +247,18 @@ const CharacterSection = () => {
       animate="visible"
       className="relative w-full h-full flex items-center justify-center"
     >
-      {/* Video slot — reserves the same space whether or not the video has
+      {/* Video slot - reserves the same space whether or not the video has
           loaded so layout doesn't jump. */}
       <div className="w-70 h-180 relative z-10">
         <video
           key={videoSrc}
           src={videoSrc}
+          poster={posterSrc}
           autoPlay
           loop
           muted
           playsInline
+          preload="metadata"
           onLoadedData={() => setLoaded(true)}
           className={`w-full h-full object-cover transition-opacity duration-200 ${
             loaded ? "opacity-100" : "opacity-0"
@@ -290,7 +295,7 @@ export default function NewHeroSection() {
         >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-4">
             Find Your Next Best{' '}
-            <span className="text-primary">Customer—Now</span>
+            <span className="text-primary">Customer, Now</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             AI prospecting that surfaces verified contacts and company insights in seconds.
@@ -335,58 +340,64 @@ export default function NewHeroSection() {
           >
             {/* Main Heading */}
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-3 leading-tight">
-              Meet your AI sales co-pilot
+              Hire Mr LAD, your AI Sales Employee
             </h2>
 
             {/* Description */}
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              Automatically engage leads on LinkedIn, email, WhatsApp, and voice calls. More outreach, more conversations, more closed deals.
+              One AI Sales Employee who finds your ideal customers, starts real conversations, follows up, and books meetings across LinkedIn, WhatsApp, Instagram, email, and voice. The output of an entire sales team, for the cost of a single hire.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-row gap-3 mb-8">
               <Link href="/onboarding">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-shadow"
                 >
-                  Get Started
+                  Hire Mr LAD
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
               </Link>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 border border-border bg-background text-foreground rounded-lg font-semibold hover:bg-background/80 transition-colors"
-              >
-                Watch Demo
-              </motion.button>
+              <Link href="/contact">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 border border-border bg-background text-foreground rounded-lg font-semibold hover:bg-background/80 transition-colors"
+                >
+                  See him in action
+                </motion.button>
+              </Link>
             </div>
 
             {/* Stats */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">10x</p>
-                  <p className="text-sm text-muted-foreground">Faster Closures</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Target className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">95%</p>
-                  <p className="text-sm text-muted-foreground">Success Rate</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-foreground">24/7</p>
-                  <p className="text-sm text-muted-foreground">AI Availability</p>
-                </div>
-              </div>
+            <div className="pt-6 mt-2 border-t border-border/60 grid grid-cols-3 gap-4 sm:gap-6">
+              {[
+                { Icon: Zap, value: '10x', label: 'Faster Closures' },
+                { Icon: Target, value: '95%', label: 'Success Rate' },
+                { Icon: Clock, value: '24/7', label: 'AI Availability' },
+              ].map(({ Icon, value, label }, i) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1, duration: 0.5, ease: 'easeOut' }}
+                  className="group flex flex-col items-start gap-3"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15 transition-all duration-300 group-hover:bg-primary/15 group-hover:ring-primary/30 group-hover:scale-105">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none bg-gradient-to-br from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                      {value}
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wide">
+                      {label}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 

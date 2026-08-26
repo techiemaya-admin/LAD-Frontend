@@ -12,7 +12,7 @@ export type Channel = 'whatsapp' | 'linkedin' | 'gmail' | 'outlook' | 'instagram
 export type ConversationStatus = 'open' | 'resolved' | 'muted';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 export type ConversationOwner = 'AI' | 'human_agent';
-/** Context status from bni_conversation_manager — dynamic per tenant */
+/** Context status from bni_conversation_manager - dynamic per tenant */
 export type ConversationState = string;
 
 // ============================
@@ -49,6 +49,8 @@ export interface Message {
   humanAgentId?: string;
   /** Template name if this message was sent via a WhatsApp template */
   templateName?: string;
+  /** Whether the user has starred this message (persisted in message metadata). */
+  starred?: boolean;
 
   // ── Location message fields ──────────────────────────────────────────────
   /** GPS latitude for location messages */
@@ -96,7 +98,7 @@ export type RichMessageType =
 export interface RichMessagePayload {
   type: RichMessageType;
 
-  /** Plain text content — required for 'text', optional caption for media */
+  /** Plain text content - required for 'text', optional caption for media */
   content?: string;
 
   // ── Media (image / video / document / audio) ────────────────────────────
@@ -137,6 +139,9 @@ export interface Conversation {
   conversationState?: ConversationState;
   leadId?: string;
   messageCount?: number;
+  /** User-marked favourite, persisted in conversations.metadata.is_favorite. */
+  is_favorite?: boolean;
+  isFavorite?: boolean;
 }
 
 // ============================
@@ -145,7 +150,7 @@ export interface Conversation {
 
 /**
  * Sort modes accepted by the backend's GET /api/conversations endpoint.
- *  - 'date'           : Last activity, newest first (default — matches WhatsApp).
+ *  - 'date'           : Last activity, newest first (default - matches WhatsApp).
  *  - 'message_count'  : Most messages first.
  *  - 'name'           : Contact name A → Z, unnamed contacts last.
  */
@@ -161,6 +166,8 @@ export interface ConversationListFilters {
   hide_empty?: boolean;
   /** Server-side sort order. Defaults to 'date' on the backend if omitted. */
   sort_by?: ConversationSortBy;
+  /** Restrict to conversations carrying at least one of these label UUIDs. */
+  label_ids?: string[];
   limit?: number;
   offset?: number;
 }
@@ -179,7 +186,7 @@ export interface SendMessageRequest {
   channel?: 'personal' | 'waba';
   tenantId?: string;  // used for X-Tenant-ID header during multipart media pre-upload
 
-  // Rich payload — all fields from RichMessagePayload forwarded to backend
+  // Rich payload - all fields from RichMessagePayload forwarded to backend
   type?: RichMessageType;
   content?: string;
   fileBase64?: string;
@@ -223,6 +230,9 @@ export interface UseConversationsReturn {
   setContextStatusFilter: (filter: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  /** Currently selected label UUIDs - server returns only matching conversations. */
+  selectedLabelIds: string[];
+  setSelectedLabelIds: (ids: string[]) => void;
   /** When true, conversations with no messages yet are hidden from the list. */
   hideEmpty: boolean;
   setHideEmpty: (hide: boolean) => void;
@@ -235,9 +245,9 @@ export interface UseConversationsReturn {
     linkedin: number;
     gmail: number;
   };
-  sendMessage: (payload: RichMessagePayload) => void;
+  sendMessage: (payload: RichMessagePayload) => Promise<Message | void>;
   markAsResolved: (id: string) => void;
-  muteConversation: (id: string) => void;
+  muteConversation: (id?: string) => void;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;

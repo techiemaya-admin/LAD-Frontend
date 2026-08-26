@@ -26,6 +26,7 @@ export {
   getCampaignStats,
   createCampaign,
   updateCampaign,
+  updateCampaignSteps,
   deleteCampaign,
   startCampaign,
   pauseCampaign,
@@ -41,10 +42,12 @@ export {
   revealLeadPhone,
   revealLeadLinkedIn,
   retryConnection,
+  withdrawConnection,
   saveInboundLeads,
   getInboundLeads,
   cancelLeadBookingsForReNurturing,
 } from './api';
+export type { WithdrawConnectionResult } from './api';
 
 // ============================================================================
 // HOOKS
@@ -59,6 +62,16 @@ export { useLeadProfileSummary, useGenerateLeadProfileSummary } from './hooks/us
 export { useRevealLeadEmail, useRevealLeadPhone, useRevealLeadLinkedIn } from './hooks/useLeadReveal';
 export { useSaveInboundLeads, useInboundLeads } from './hooks/useInboundLeads';
 export { useCampaignActivityFeed } from './hooks/useCampaignActivityFeed';
+
+// ============================================================================
+// ERROR HELPERS
+// ============================================================================
+export {
+  CAMPAIGN_NAME_TAKEN,
+  isCampaignNameTaken,
+  campaignNameTakenMessage,
+  campaignSaveErrorMessage,
+} from './nameConflict';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -93,7 +106,13 @@ export {
   type TemplateFilters as LinkedInTemplateFilters,
   type PersonalizedTemplate as PersonalizedLinkedInTemplate,
   type TemplateCategory as LinkedInTemplateCategory,
+  type TemplateType as LinkedInTemplateType,
+  type TemplateMedia as LinkedInTemplateMedia,
+  type TemplateMediaType as LinkedInTemplateMediaType,
+  type TemplateMediaUploadResult as LinkedInTemplateMediaUploadResult,
   TEMPLATE_CATEGORIES as LINKEDIN_TEMPLATE_CATEGORIES,
+  TEMPLATE_TYPES as LINKEDIN_TEMPLATE_TYPES,
+  templateTypeLabel as linkedinTemplateTypeLabel,
   MESSAGE_VARIABLES as LINKEDIN_MESSAGE_VARIABLES,
   CONNECTION_MESSAGE_MAX_LENGTH as LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH,
   // Hooks
@@ -116,8 +135,46 @@ export {
   createMessageTemplate as createLinkedInMessageTemplate,
   updateMessageTemplate as updateLinkedInMessageTemplate,
   deleteMessageTemplate as deleteLinkedInMessageTemplate,
+  uploadTemplateMedia as uploadLinkedInTemplateMedia,
   saveTemplatesToLocalStorage as saveLinkedInTemplatesToLocalStorage,
   loadTemplatesFromLocalStorage as loadLinkedInTemplatesFromLocalStorage,
   clearTemplatesFromLocalStorage as clearLinkedInTemplatesFromLocalStorage,
 } from './linkedin-message-templates';
+
+// ============================================================================
+// INSTAGRAM MESSAGE TEMPLATES (Sub-Feature)
+// ============================================================================
+export {
+  // Types
+  type InstagramMessageTemplate,
+  type CreateInstagramTemplateRequest,
+  type UpdateInstagramTemplateRequest,
+  type InstagramTemplateFilters,
+  INSTAGRAM_MESSAGE_VARIABLES,
+  INSTAGRAM_DM_RECOMMENDED_MAX_LENGTH,
+  // Hooks
+  useMessageTemplates as useInstagramMessageTemplates,
+  useMessageTemplate as useInstagramMessageTemplate,
+  useDefaultMessageTemplate as useDefaultInstagramMessageTemplate,
+  useCreateMessageTemplate as useCreateInstagramMessageTemplate,
+  useUpdateMessageTemplate as useUpdateInstagramMessageTemplate,
+  useDeleteMessageTemplate as useDeleteInstagramMessageTemplate,
+  usePersonalizeMessage as usePersonalizeInstagramMessage,
+  // API Functions
+  instagramMessageTemplateKeys,
+  getMessageTemplates as getInstagramMessageTemplates,
+  getMessageTemplatesQueryOptions as getInstagramMessageTemplatesQueryOptions,
+  getMessageTemplateById as getInstagramMessageTemplateById,
+  getMessageTemplateByIdQueryOptions as getInstagramMessageTemplateByIdQueryOptions,
+  getDefaultMessageTemplate as getDefaultInstagramMessageTemplate,
+  getDefaultMessageTemplateQueryOptions as getDefaultInstagramMessageTemplateQueryOptions,
+  createMessageTemplate as createInstagramMessageTemplate,
+  updateMessageTemplate as updateInstagramMessageTemplate,
+  deleteMessageTemplate as deleteInstagramMessageTemplate,
+} from './instagram-message-templates';
+
+// ── Strategies (saved + shareable workflow playbooks) ────────────────────────
+// Exported wholesale rather than aliased: unlike the two message-template
+// sub-features, these names ("Strategy") don't collide with anything else here.
+export * from './strategies';
 

@@ -20,9 +20,6 @@ export default function CommunityROIPage() {
   const { isAuthenticated, token, user } = useAuth();
   const [showDebug, setShowDebug] = useState(true);
 
-  console.log('🔵🔵🔵 [CommunityROIPage] PAGE IS RENDERING NOW! 🔵🔵🔵');
-  console.log('[CommunityROIPage] Auth state:', { isAuthenticated, hasToken: !!token });
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       {/* Debug Panel */}

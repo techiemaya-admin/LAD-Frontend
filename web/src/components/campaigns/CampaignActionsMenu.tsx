@@ -1,6 +1,6 @@
 'use client';
-import React from 'react';
-import { Edit, Eye, Play, Pause, Square, Trash2, RotateCcw, PlayCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Edit, Eye, Play, Pause, Square, Trash2, RotateCcw, PlayCircle, UploadCloud, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
 import type { Campaign } from '@lad/frontend-features/campaigns';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+
+const ZOHO_API = '/api/social-integration/zoho';
 
 interface CampaignActionsMenuProps {
   anchorEl: HTMLElement | null;
@@ -35,6 +38,47 @@ export default function CampaignActionsMenu({
   onDelete,
 }: CampaignActionsMenuProps) {
   const router = useRouter();
+
+  // Zoho "Push to Zoho" - only shown when Zoho CRM is connected for this tenant.
+  const [zohoConnected, setZohoConnected] = useState(false);
+  const [pushingZoho, setPushingZoho] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchWithTenant(`${ZOHO_API}/status`);
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setZohoConnected(!!data?.data?.connected);
+        }
+      } catch { /* fail-closed: hide the action */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handlePushToZoho = async (campaignId: string) => {
+    setPushingZoho(true);
+    try {
+      const res = await fetchWithTenant(`${ZOHO_API}/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module: 'Leads', campaign_id: campaignId }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.success) {
+        const d = data.data;
+        alert(`Pushed campaign leads to Zoho: ${d.inserted} inserted, ${d.updated} updated${d.failed ? `, ${d.failed} failed` : ''}${d.skipped_no_email ? ` (${d.skipped_no_email} skipped - no email)` : ''}.`);
+      } else {
+        alert(`Push to Zoho failed: ${data?.error || 'unknown error'}`);
+      }
+    } catch {
+      alert('Push to Zoho failed.');
+    } finally {
+      setPushingZoho(false);
+    }
+  };
+
   if (!selectedCampaign) return null;
 
   const { status } = selectedCampaign;
@@ -48,12 +92,24 @@ export default function CampaignActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {/* Always visible */}
-        <DropdownMenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}/edit`); onClose(); }}>
-          <Edit className="mr-2 h-4 w-4" /> Edit Workflow
+        <DropdownMenuItem onClick={() => { router.push(`/onboarding/advanced-search-ai?campaignId=${selectedCampaign.id}`); onClose(); }}>
+          <Edit className="mr-2 h-4 w-4" /> Edit Accelerator
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => { router.push(`/campaigns/${selectedCampaign.id}/analytics`); onClose(); }}>
           <Eye className="mr-2 h-4 w-4" /> View Analytics
         </DropdownMenuItem>
+
+        {zohoConnected && (
+          <DropdownMenuItem
+            disabled={pushingZoho}
+            onSelect={(e) => { e.preventDefault(); handlePushToZoho(selectedCampaign.id); }}
+          >
+            {pushingZoho
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              : <UploadCloud className="mr-2 h-4 w-4" />}
+            Push Leads to Zoho
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 

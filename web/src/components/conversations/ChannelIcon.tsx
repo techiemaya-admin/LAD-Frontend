@@ -80,7 +80,7 @@ export const ChannelIcon = memo(function ChannelIcon({
         />
       );
     } else if (channel === 'business_whatsapp') {
-      // WhatsApp Business — WA icon with a small building overlay
+      // WhatsApp Business - WA icon with a small building overlay
       return (
         <div className="relative inline-flex">
           <FontAwesomeIcon
@@ -107,7 +107,7 @@ export const ChannelIcon = memo(function ChannelIcon({
         />
       );
     } else if (channel === 'custom_email') {
-      // Self-hosted SMTP — server icon makes the distinction obvious vs Gmail/Outlook
+      // Self-hosted SMTP - server icon makes the distinction obvious vs Gmail/Outlook
       return <Server size={size} style={{ color: iconColor }} />;
     } else if (channel === 'instagram') {
       return <Instagram size={size} style={{ color: iconColor }} />;

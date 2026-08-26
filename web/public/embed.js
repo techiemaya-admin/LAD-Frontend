@@ -406,16 +406,6 @@
       message: form.message.value,
     };
 
-    // Log form submission details
-    console.log('📝 Contact Form Submitted:', {
-      timestamp: new Date().toISOString(),
-      source: 'Embed Script (External Website)',
-      formData: formData,
-      sourceUrl: window.location.href,
-      userAgent: navigator.userAgent,
-      embedUrl: EMBED_URL,
-    });
-
     try {
       const response = await fetch(EMBED_URL + '/api/contact', {
         method: 'POST',
@@ -428,12 +418,6 @@
       if (!response.ok) {
         throw new Error(data.message || 'Failed to submit form');
       }
-
-      console.log('✅ Form submission successful:', {
-        submissionId: data.data?.id,
-        timestamp: data.data?.createdAt,
-        response: data,
-      });
 
       showFeedback('success', '✅ Thank you! We received your message and will get back to you shortly.');
       resetForm();
@@ -466,5 +450,4 @@
   // Handle button click
   button.addEventListener('click', openModal);
 
-  console.log('LAD Contact Form embed loaded. Use window.LADContact.open() to trigger.');
 })();

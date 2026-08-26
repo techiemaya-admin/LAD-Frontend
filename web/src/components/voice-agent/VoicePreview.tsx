@@ -79,11 +79,11 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
             setIsPlaying(true);
           } catch (e) {
             // Fallback to Web Speech API
-            useFallbackPreview();
+            playFallbackPreview();
           }
         } else {
           // Fallback to Web Speech API when no sample URL
-          useFallbackPreview();
+          playFallbackPreview();
         }
       }
     } catch (e) {
@@ -91,7 +91,7 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
     }
   };
 
-  const useFallbackPreview = () => {
+  const playFallbackPreview = () => {
     setIsPlaying(true);
     
     // Use Web Speech API for demo preview
@@ -123,8 +123,8 @@ export function VoicePreview({ language, gender, disabled = false, voice_sample_
       onClick={handlePreview}
       disabled={isDisabled}
       className={cn(
-        "gap-2 transition-all duration-300",
-        isPlaying && "bg-primary/10 border-primary text-primary"
+        "gap-2 transition-all duration-300 dark:border-blue-950/60 dark:hover:bg-blue-900/40 dark:hover:text-white",
+        isPlaying && "bg-primary/10 border-primary text-primary dark:bg-blue-600/20 dark:text-blue-400"
       )}
     >
       <div className={cn(

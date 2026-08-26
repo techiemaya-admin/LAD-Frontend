@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useSaveMsBookingConfig
+ * Email Accounts - useSaveMsBookingConfig
  * Mutation hook for saving Microsoft Bookings configuration.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';

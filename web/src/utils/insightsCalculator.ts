@@ -440,4 +440,4 @@ export default {
   analyzeSentiment,
   predictConversion,
   generateRecommendations
-};
+};

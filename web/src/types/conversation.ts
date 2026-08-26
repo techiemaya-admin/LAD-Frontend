@@ -6,7 +6,7 @@
  */
 
 /**
- * WhatsApp sub-channel type — used in the sidebar only.
+ * WhatsApp sub-channel type - used in the sidebar only.
  * personal_whatsapp → routes to LAD_backend (Baileys)
  * business_whatsapp  → routes to LAD-WABA-Comms (Meta Business API)
  */

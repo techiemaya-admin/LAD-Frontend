@@ -356,7 +356,7 @@ const PipelineStageColumn: React.FC<PipelineStageColumnProps> = ({
 
           <div className="px-8 py-6">
             <p className="text-sm text-gray-600 leading-relaxed">
-              Are you sure you want to delete the stage <span className="font-bold text-gray-900">"{stage.name || stage.label}"</span>? This action cannot be undone.
+              Are you sure you want to delete the stage <span className="font-bold text-gray-900">&quot;{stage.name || stage.label}&quot;</span>? This action cannot be undone.
             </p>
           </div>
 

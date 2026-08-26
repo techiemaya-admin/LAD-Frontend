@@ -27,7 +27,7 @@ function extractToken(req: NextRequest): string | null {
   );
 }
 
-/** GET — fetch form metadata (feature keys, capabilities, etc.) */
+/** GET - fetch form metadata (feature keys, capabilities, etc.) */
 export async function GET(req: NextRequest) {
   try {
     const token = extractToken(req);
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST — provision a new tenant */
+/** POST - provision a new tenant */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));

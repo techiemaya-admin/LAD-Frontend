@@ -8,14 +8,25 @@ import { logger } from '@/lib/logger';
  */
 
 const getCommunityROIBackend = () => {
-  // Try environment variable first
+  // Explicit override - used when community-roi runs on its own service.
   const envUrl = process.env.NEXT_PUBLIC_COMMUNITY_API_URL;
   if (envUrl) {
     return envUrl;
   }
 
-  // Fallback to alternate Cloud Run service
-  return '';
+  // Fallback: community-roi is served by the main LAD backend in every
+  // environment today (see LAD_backend/features/community-roi/routes/).
+  // Mirror the URL resolution used by python-proxy.ts so the proxy still
+  // works even when the explicit override isn't configured - which is
+  // exactly what was breaking the broadcast wizard's "Map Parameters"
+  // preview in deployed develop / stage. Returning '' here produced a
+  // relative URL that server-side fetch (undici) can't parse, and the
+  // client-side `.catch(() => {})` silently swallowed the failure.
+  return (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    'http://localhost:3004'
+  );
 };
 
 interface RouteParams {

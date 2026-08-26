@@ -30,31 +30,15 @@ export async function POST(req: NextRequest) {
       logger.error('[/api/auth/login] Token missing from backend response');
       return NextResponse.json({ error: 'Token missing from backend response' }, { status: 502 });
     }
-    // Fetch user capabilities
-    let capabilities = [];
-    try {
-      const capabilitiesResponse = await fetch(`${backend}/api/user-capabilities/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (capabilitiesResponse.ok) {
-        const capabilitiesData = await capabilitiesResponse.json();
-        capabilities = capabilitiesData.capabilities || [];
-        logger.debug('Fetched user capabilities', { capabilities });
-      } else {
-        logger.warn('Failed to fetch user capabilities', { status: capabilitiesResponse.status });
-      }
-    } catch (error) {
-      logger.error('Error fetching user capabilities', error);
-    }
-    const res = NextResponse.json({ 
+    // The backend login response already includes `capabilities` - the extra
+    // /api/user-capabilities round trip here doubled login latency for no new
+    // data, so it was removed.
+    const res = NextResponse.json({
       user: {
         ...user,
-        capabilities
-      }, 
-      token 
+        capabilities: user?.capabilities || [],
+      },
+      token
     });
     // Set cookie with production-safe settings
     const isProduction = process.env.NODE_ENV === 'production';

@@ -65,8 +65,8 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
         </div>
       }
     >
-      <div className="h-full flex flex-col border rounded-lg p-4 bg-card">
-        <p className="text-xs text-muted-foreground mb-4">{chartRangeLabel}</p>
+      <div className="h-full flex flex-col border rounded-lg p-4 bg-white dark:bg-[#071131] border-slate-200 dark:border-[#262831]">
+        <p className="text-xs text-slate-500 dark:text-slate-300 mb-4">{chartRangeLabel}</p>
         <div className="flex-1 min-h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
@@ -77,11 +77,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#e5e7eb"
-                vertical={false}
-              />
+              <CartesianGrid vertical={false} stroke="#1e2e4a" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -95,13 +91,19 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
                 width={30}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/60 rounded-lg p-2.5 shadow-md">
+                        <p className="text-xs font-semibold text-slate-800 dark:text-white">{label}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
+                          calls : <span className="font-bold">{payload[0].value}</span>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
                 }}
-                labelStyle={{ color: '#111827' }}
               />
               <Area
                 type="monotone"

@@ -167,10 +167,10 @@ const EnhancedAddStageDialog: React.FC<EnhancedAddStageDialogProps> = ({
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           <SelectItem value="before">
-                            Before "{stages.find(s => s.key === positionStageId)?.label || ''}"
+                            Before &quot;{stages.find(s => s.key === positionStageId)?.label || ''}&quot;
                           </SelectItem>
                           <SelectItem value="after">
-                            After "{stages.find(s => s.key === positionStageId)?.label || ''}"
+                            After &quot;{stages.find(s => s.key === positionStageId)?.label || ''}&quot;
                           </SelectItem>
                         </SelectContent>
                       </Select>

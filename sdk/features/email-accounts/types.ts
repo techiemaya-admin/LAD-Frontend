@@ -1,5 +1,5 @@
 /**
- * Email Accounts Feature — Types
+ * Email Accounts Feature - Types
  * Type definitions for Gmail and Microsoft/Outlook OAuth account integration.
  */
 

@@ -29,12 +29,12 @@ export default function RelationshipsTestPanel() {
   const [activeTab, setActiveTab] = useState<'score' | 'member' | 'top'>('score');
 
   const { data: members } = useListMembers({ tenantId: typeof window !== 'undefined' ? localStorage.getItem('tenantId') as any : null });
-  const { data: relationshipScore, isLoading: isLoadingScore } = member1Id && member2Id && member1Id !== member2Id
-    ? useRelationshipScore(member1Id, member2Id)
-    : { data: null, isLoading: false };
-  const { data: memberRelationships, isLoading: isLoadingMemberRels } = selectedMemberId
-    ? useMemberRelationships(selectedMemberId)
-    : { data: null, isLoading: false };
+  const scoreEnabled = !!member1Id && !!member2Id && member1Id !== member2Id;
+  const { data: relationshipScore, isLoading: isLoadingScore } = useRelationshipScore(
+    scoreEnabled ? member1Id : '',
+    scoreEnabled ? member2Id : ''
+  );
+  const { data: memberRelationships, isLoading: isLoadingMemberRels } = useMemberRelationships(selectedMemberId);
   const { data: topRelationships, isLoading: isLoadingTop } = useTopRelationships(10);
 
   return (

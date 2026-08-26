@@ -24,6 +24,35 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../../utils/backend';
+import { getWAPAServiceUrl } from '../../whatsapp-conversations/utils/python-proxy';
+
+/**
+ * Per-feature backend resolver (Phase 5+ - Personal WhatsApp lives in
+ * LAD-WAPA-Comms now, NOT LAD_backend).
+ *   personal-whatsapp                          → LAD-WAPA-Comms
+ *   whatsapp-conversations  + channel=personal → LAD-WAPA-Comms
+ *   whatsapp-conversations  + other channels   → LAD_backend (legacy fallthrough)
+ *   everything else                            → LAD_backend
+ *
+ * The whatsapp-conversations case exists because some frontend calls hit
+ * `/api/whatsapp-conversations/<sub>/<path>` (e.g. /conversations/bulk/send-template)
+ * that have NO dedicated route.ts file - they fall through to this catch-all.
+ * For channel=personal those need to go to WAPA, not LAD_backend (whose explicit
+ * mount is now disabled by PERSONAL_WHATSAPP_LOCAL=false).
+ *
+ * Add more entries here when other features get extracted into their own
+ * Cloud Run services.
+ */
+function getServiceUrlForFeature(feature: string, req: NextRequest): string {
+  if (feature === 'personal-whatsapp') return getWAPAServiceUrl();
+  if (feature === 'whatsapp-conversations') {
+    const channel =
+      req.nextUrl.searchParams.get('channel') ||
+      req.headers.get('x-whatsapp-channel');
+    if (channel === 'personal') return getWAPAServiceUrl();
+  }
+  return getBackendUrl();
+}
 function isMultipart(contentType: string | null | undefined): boolean {
   return Boolean(contentType && contentType.toLowerCase().includes('multipart/form-data'));
 }
@@ -37,7 +66,7 @@ async function handler(
   const resolvedParams = await params;
   const { feature, path } = resolvedParams;
   try {
-    const backend = getBackendUrl();
+    const backend = getServiceUrlForFeature(feature, req);
     // Build backend URL
     const pathSegments = path || [];
     const fullPath = pathSegments.join('/');
@@ -85,7 +114,7 @@ async function handler(
     // Forward request to backend
     // Use redirect:'manual' so OAuth callback 302s are passed through to the browser
     // instead of being silently followed by fetch() (which would break OAuth flows).
-    console.log(`[PROXY] Forwarding ${req.method} to: ${url}`);
+    console.warn(`[PROXY] Forwarding ${req.method} to: ${url}`);
     const response = await fetch(url, {
       method: req.method,
       headers,

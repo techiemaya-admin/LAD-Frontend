@@ -9,7 +9,7 @@ export default function PricingBreakdown() {
       emoji: "📞",
       credits: "3",
       unit: "credits per minute",
-      subtitle: "(Cartesia TTS)",
+      subtitle: "(Standard voice)",
       examples: [
         { duration: "5 mins", cost: "15 cr" },
         { duration: "10 mins", cost: "30 cr" },
@@ -25,7 +25,7 @@ export default function PricingBreakdown() {
       emoji: "🎙️",
       credits: "4",
       unit: "credits per minute",
-      subtitle: "(ElevenLabs TTS)",
+      subtitle: "(Premium voice)",
       examples: [
         { duration: "5 mins", cost: "20 cr" },
         { duration: "10 mins", cost: "40 cr" },
@@ -39,11 +39,10 @@ export default function PricingBreakdown() {
     {
       title: "Lead Enrichment",
       emoji: "🎯",
-      credits: "1-10",
+      credits: "2-10",
       unit: "credits per lead",
       examples: [
-        { duration: "Email + LinkedIn URL", cost: "2 credits" },
-        { duration: "LinkedIn Connection", cost: "1 credit" },
+        { duration: "Email", cost: "2 credits" },
         { duration: "Each Template Message", cost: "5 credits" },
         { duration: "Phone Reveal", cost: "10 credits" }
       ],
@@ -59,6 +58,8 @@ export default function PricingBreakdown() {
       unit: "credits per month",
       examples: [
         { duration: "LinkedIn", cost: "50 cr/mo" },
+        { duration: "WhatsApp", cost: "50 cr/mo" },
+        { duration: "Instagram", cost: "50 cr/mo" },
         { duration: "Google", cost: "20 cr/mo" },
         { duration: "Outlook", cost: "20 cr/mo" }
       ],
@@ -88,7 +89,7 @@ export default function PricingBreakdown() {
       scale: 1,
       transition: {
         duration: 0.6,
-        type: "spring" as "spring",
+        type: "spring" as const,
         stiffness: 100
       }
     }

@@ -38,7 +38,7 @@ interface CreateAccountForm {
   display_name: string;
   slug: string;
   database_url: string;
-  tenant_id: string;         // Optional — leave blank to auto-create a new tenant
+  tenant_id: string;         // Optional - leave blank to auto-create a new tenant
   phone_number_id: string;
   access_token: string;
   business_account_id: string;
@@ -70,7 +70,7 @@ async function fetchAccounts(): Promise<WhatsAppAccount[]> {
 
 async function createAccount(form: CreateAccountForm): Promise<{ success: boolean; data?: any; error?: string }> {
   const body: Record<string, any> = { ...form };
-  // Remove empty optional fields (including tenant_id — blank = auto-create new tenant)
+  // Remove empty optional fields (including tenant_id - blank = auto-create new tenant)
   for (const key of ['tenant_id', 'phone_number_id', 'access_token', 'business_account_id', 'verify_token', 'app_id', 'app_secret', 'ai_api_key', 'escalation_phone']) {
     if (!body[key]) delete body[key];
   }
@@ -229,42 +229,44 @@ export function TenantOnboarding() {
     }
   };
 
+  const autofillClasses = "autofill:shadow-[0_0_0_1000px_#1f2937_inset] dark:autofill:shadow-[0_0_0_1000px_#1f2937_inset] [webkit-text-fill-color:#111827_!important] dark:[webkit-text-fill-color:#f3f4f6_!important] transition-[background-color] duration-[99999s] ease-in-out";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        <Loader2 className="h-5 w-5 animate-spin text-gray-400 dark:text-slate-300" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div className="bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Globe className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-gray-900">WhatsApp Accounts</h2>
+              <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">WhatsApp Accounts</h2>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-slate-300">
               Manage tenant WhatsApp accounts. Each account gets its own database, prompts, and conversation flow.
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={loadAccounts}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-50"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 dark:hover:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
               title="Refresh accounts"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-5 w-5" />
             </button>
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
                 New Account
               </button>
             )}
@@ -274,74 +276,74 @@ export function TenantOnboarding() {
 
       {/* Create form */}
       {showForm && (
-        <div className="p-6 border-b border-gray-100 bg-indigo-50/30">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Onboard New Tenant</h3>
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-indigo-50/30 dark:bg-indigo-950/10">
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Onboard New Tenant</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Display Name */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Display Name *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name *</label>
               <input
                 type="text"
                 value={form.display_name}
                 onChange={(e) => handleDisplayNameChange(e.target.value)}
                 placeholder="e.g. Acme Real Estate"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
                 autoFocus
               />
             </div>
 
             {/* Slug */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Slug * (webhook URL path)</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Slug * (webhook URL path)</label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">/webhook/</span>
+                <span className="text-xs text-gray-400 dark:text-slate-300">/webhook/</span>
                 <input
                   type="text"
                   value={form.slug}
                   onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                   placeholder="acme-real-estate"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
                 />
               </div>
             </div>
 
             {/* Database URL */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Database URL *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Database URL *</label>
               <input
                 type="text"
                 value={form.database_url}
                 onChange={(e) => setForm((prev) => ({ ...prev, database_url: e.target.value }))}
                 placeholder="postgresql://user:pass@host:5432/dbname"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
-            {/* Tenant ID (optional — link to existing LAD tenant) */}
+            {/* Tenant ID (optional - link to existing LAD tenant) */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Tenant ID <span className="text-gray-400 font-normal">(optional — leave blank to create a new tenant, or paste an existing LAD tenant UUID to link this account)</span>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tenant ID <span className="text-gray-400 dark:text-slate-300 font-normal">(optional: leave blank to create a new tenant, or paste an existing LAD tenant UUID to link this account)</span>
               </label>
               <input
                 type="text"
                 value={form.tenant_id}
                 onChange={(e) => setForm((prev) => ({ ...prev, tenant_id: e.target.value.trim() }))}
                 placeholder="e.g. e0a3e9ca-3f46-4bb0-ac10-a91b5c1d20b5"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* Flow Template */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Conversation Flow</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Conversation Flow</label>
               <select
                 value={form.conversation_flow_template}
                 onChange={(e) => setForm((prev) => ({ ...prev, conversation_flow_template: e.target.value }))}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 bg-white"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               >
                 {FLOW_TEMPLATES.map((ft) => (
-                  <option key={ft.id} value={ft.id}>
-                    {ft.label} — {ft.description}
+                  <option key={ft.id} value={ft.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    {ft.label}: {ft.description}
                   </option>
                 ))}
               </select>
@@ -349,47 +351,47 @@ export function TenantOnboarding() {
 
             {/* AI Model */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">AI Model</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">AI Model</label>
               <select
                 value={form.ai_model}
                 onChange={(e) => setForm((prev) => ({ ...prev, ai_model: e.target.value }))}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 bg-white"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               >
                 {AI_MODELS.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
+                  <option key={m.id} value={m.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{m.label}</option>
                 ))}
               </select>
             </div>
 
             {/* Timezone */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Timezone</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Timezone</label>
               <select
                 value={form.timezone}
                 onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 bg-white"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               >
                 {TIMEZONES.map((tz) => (
-                  <option key={tz} value={tz}>{tz}</option>
+                  <option key={tz} value={tz} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{tz}</option>
                 ))}
               </select>
             </div>
 
             {/* AI API Key */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">AI API Key (optional)</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">AI API Key (optional)</label>
               <input
                 type="password"
                 value={form.ai_api_key}
                 onChange={(e) => setForm((prev) => ({ ...prev, ai_api_key: e.target.value }))}
                 placeholder="Falls back to server env var"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* WhatsApp Phone Number ID */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <Smartphone className="inline h-3 w-3 mr-1" />
                 Phone Number ID
               </label>
@@ -398,90 +400,90 @@ export function TenantOnboarding() {
                 value={form.phone_number_id}
                 onChange={(e) => setForm((prev) => ({ ...prev, phone_number_id: e.target.value }))}
                 placeholder="Meta phone number ID"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* Access Token */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Access Token</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Token</label>
               <input
                 type="password"
                 value={form.access_token}
                 onChange={(e) => setForm((prev) => ({ ...prev, access_token: e.target.value }))}
                 placeholder="WhatsApp Cloud API access token"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* Business Account ID */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Business Account ID</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Business Account ID</label>
               <input
                 type="text"
                 value={form.business_account_id}
                 onChange={(e) => setForm((prev) => ({ ...prev, business_account_id: e.target.value }))}
                 placeholder="WhatsApp Business Account ID"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* Verify Token */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Verify Token</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Verify Token</label>
               <input
                 type="text"
                 value={form.verify_token}
                 onChange={(e) => setForm((prev) => ({ ...prev, verify_token: e.target.value }))}
                 placeholder="Webhook verification token"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* App ID */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                App ID <span className="text-gray-400 font-normal">(Facebook App ID — required for template media uploads)</span>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                App ID <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App ID, required for template media uploads)</span>
               </label>
               <input
                 type="text"
                 value={form.app_id}
                 onChange={(e) => setForm((prev) => ({ ...prev, app_id: e.target.value.trim() }))}
                 placeholder="e.g. 1618644592164501"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
             {/* App Secret */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                App Secret <span className="text-gray-400 font-normal">(Facebook App Secret — for webhook payload verification)</span>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                App Secret <span className="text-gray-400 dark:text-slate-300 font-normal">(Facebook App Secret, used for webhook payload verification)</span>
               </label>
               <input
                 type="password"
                 value={form.app_secret}
                 onChange={(e) => setForm((prev) => ({ ...prev, app_secret: e.target.value }))}
                 placeholder="Facebook App Secret"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
             </div>
 
-            {/* Human-Escalation Phone — tenant's own agent number for AI hand-offs */}
+            {/* Human-Escalation Phone - tenant's own agent number for AI hand-offs */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Human Escalation Phone
-                <span className="text-gray-400 font-normal"> (WhatsApp number to notify when the AI hands off a customer to a human)</span>
+                <span className="text-gray-400 dark:text-slate-300 font-normal"> (WhatsApp number to notify when the AI hands off a customer to a human)</span>
               </label>
               <input
                 type="tel"
                 value={form.escalation_phone}
                 onChange={(e) => setForm((prev) => ({ ...prev, escalation_phone: e.target.value.trim() }))}
                 placeholder="+971501234567"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-mono"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Used when Aria says "someone from my team will contact you". E.164 format
-                (e.g. <code className="bg-gray-100 px-1 rounded">+971501234567</code>). If empty,
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Used when Aria says &quot;someone from my team will contact you&quot;. E.164 format
+                (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">+971501234567</code>). If empty,
                 escalations fall back to the platform support number.
               </p>
             </div>
@@ -491,7 +493,8 @@ export function TenantOnboarding() {
             <button
               onClick={handleCreate}
               disabled={creating || !form.display_name.trim() || !form.slug.trim() || !form.database_url.trim()}
-              className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              // className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md shadow-sm transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 outline-none cursor-pointer"
             >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Create Account
@@ -501,9 +504,9 @@ export function TenantOnboarding() {
       )}
 
       {/* Accounts list */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {accounts.length === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-400">
+          <div className="px-6 py-12 text-center text-gray-400 dark:text-slate-300">
             <Globe className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">No WhatsApp accounts configured</p>
             <p className="text-xs mt-1">Create one to get started</p>
@@ -517,33 +520,33 @@ export function TenantOnboarding() {
               <div key={account.slug} className="group">
                 {/* Account header row */}
                 <div
-                  className="flex items-center gap-3 px-6 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 px-6 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                   onClick={() => setExpandedAccount(isExpanded ? null : account.slug)}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-300 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-300 flex-shrink-0" />
                   )}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-800 truncate">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                         {account.display_name}
                       </span>
                       <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                        isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        isActive ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400'
                       }`}>
                         {isActive ? 'Active' : 'Inactive'}
                       </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-700">
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
                         {account.conversation_flow_template}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 font-mono mt-0.5">/webhook/{account.slug}</p>
+                    <p className="text-[11px] text-gray-400 dark:text-slate-300 font-mono mt-0.5">/webhook/{account.slug}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-300">
                     <span className="flex items-center gap-1">
                       <Bot className="h-3 w-3" />
                       {account.ai_model}
@@ -560,7 +563,7 @@ export function TenantOnboarding() {
                       className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1"
                       title="Deactivate account"
                     >
-                      <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600" />
+                      <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-400" />
                     </button>
                   )}
                 </div>
@@ -568,41 +571,29 @@ export function TenantOnboarding() {
                 {/* Expanded details */}
                 {isExpanded && (
                   <div className="px-6 pb-4 ml-7">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm bg-gray-50 dark:bg-[#030a21]/60 p-4 rounded-lg">
                       <div>
-                        <span className="text-xs text-gray-400">Tenant ID</span>
-                        <p className="font-mono text-xs text-gray-600 break-all">{account.tenant_id}</p>
+                        <span className="text-xs text-gray-400 dark:text-slate-300">Tenant ID</span>
+                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{account.tenant_id}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-400">Account ID</span>
-                        <p className="font-mono text-xs text-gray-600 break-all">{account.id}</p>
+                        <span className="text-xs text-gray-400 dark:text-slate-300">Account ID</span>
+                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{account.id}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-400">Phone Number ID</span>
-                        <p className="font-mono text-xs text-gray-600">{account.phone_number_id || '—'}</p>
+                        <span className="text-xs text-gray-400 dark:text-slate-300">Webhook URL</span>
+                        <p className="font-mono text-xs text-indigo-600 dark:text-indigo-400">/webhook/{account.slug}</p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-400">Business Account ID</span>
-                        <p className="font-mono text-xs text-gray-600">{account.business_account_id || '—'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-400">App ID</span>
-                        <p className="font-mono text-xs text-gray-600">{(account as any).app_id || '—'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-400">Webhook URL</span>
-                        <p className="font-mono text-xs text-indigo-600">/webhook/{account.slug}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-400">Flow Template</span>
-                        <p className="text-xs text-gray-600">
+                        <span className="text-xs text-gray-400 dark:text-slate-300">Flow Template</span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {FLOW_TEMPLATES.find((f) => f.id === account.conversation_flow_template)?.label || account.conversation_flow_template}
                         </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-400">Human Escalation Phone</span>
-                        <p className="font-mono text-xs text-gray-600">
-                          {((account as any).metadata?.escalation_phone as string) || '—'}
+                        <span className="text-xs text-gray-400 dark:text-slate-300">Human Escalation Phone</span>
+                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
+                          {((account as any).metadata?.escalation_phone as string) || '-'}
                         </p>
                       </div>
                     </div>

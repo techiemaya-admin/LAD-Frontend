@@ -245,7 +245,7 @@ function getCompletedPlatforms(allCollectedAnswers: Record<string, any>): string
  * Get completed delay platforms based on delay configuration
  */
 function getCompletedDelayPlatforms(allCollectedAnswers: Record<string, any>, currentIntentKey: string): string[] {
-  let completedDelayPlatforms: string[] = Array.isArray(allCollectedAnswers.completed_delay_platforms)
+  const completedDelayPlatforms: string[] = Array.isArray(allCollectedAnswers.completed_delay_platforms)
     ? [...allCollectedAnswers.completed_delay_platforms]
     : [];
   // Check if current answer is a platform-specific delay (e.g., linkedin_delay)

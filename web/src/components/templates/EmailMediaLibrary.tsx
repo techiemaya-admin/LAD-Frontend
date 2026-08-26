@@ -161,21 +161,21 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
     <div className="flex flex-col gap-3">
       {/* Panel header */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
           📂 Media Library
         </h3>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
           Drag thumbnails into the editor, or click to insert
         </p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-2">
+          <p className="text-xs text-red-700 dark:text-red-400">{error}</p>
           <button
             type="button"
             onClick={() => setError('')}
-            className="text-xs text-red-500 underline mt-1"
+            className="text-xs text-red-500 dark:text-red-400 underline mt-1"
           >
             Dismiss
           </button>
@@ -185,21 +185,21 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
       {MEDIA_SECTIONS.map((section) => (
         <div
           key={section.key}
-          className="border border-gray-200 rounded-lg overflow-hidden"
+          className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden"
         >
           {/* Section header */}
-          <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-start justify-between gap-2">
+          <div className="bg-gray-50 dark:bg-[#000c3b] px-3 py-2 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-800 leading-tight">
+              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-tight">
                 {section.icon} {section.label}
               </p>
-              <p className="text-xs text-gray-500 leading-tight">{section.description}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{section.description}</p>
             </div>
             <button
               type="button"
               onClick={() => fileRefs.current[section.key]?.click()}
               disabled={uploading === section.key}
-              className="flex-shrink-0 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap font-medium"
+              className="flex-shrink-0 px-2 py-1 text-xs bg-primary dark:bg-blue-500 text-white rounded hover:bg-primary/90 active:bg-primary/80 dark:hover:bg-blue-600 dark:active:bg-blue-700 disabled:opacity-50 whitespace-nowrap font-medium transition-all active:scale-95 cursor-pointer"
             >
               {uploading === section.key ? '⏳' : '+ Upload'}
             </button>
@@ -213,9 +213,9 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
           </div>
 
           {/* Thumbnails */}
-          <div className="p-2 min-h-[56px]">
+          <div className="p-2 min-h-[56px] bg-white dark:bg-[#000724]">
             {images[section.key].length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-3 italic">
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3 italic">
                 No images yet
               </p>
             ) : (
@@ -223,7 +223,7 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
                 {images[section.key].map((img) => (
                   <div
                     key={img.url}
-                    className="relative group rounded border border-gray-200 overflow-hidden cursor-grab active:cursor-grabbing"
+                    className="relative group rounded border border-gray-200 dark:border-gray-800 overflow-hidden cursor-grab active:cursor-grabbing"
                     draggable
                     onDragStart={(e) => {
                       const html = buildHtml(section.key, img.url, img.name);
@@ -246,7 +246,7 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
                         const el = e.target as HTMLImageElement;
                         el.src = '';
                         el.alt = '?';
-                        el.className = 'w-full h-16 flex items-center justify-center text-gray-400 bg-gray-100';
+                        el.className = 'w-full h-16 flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800';
                       }}
                     />
 

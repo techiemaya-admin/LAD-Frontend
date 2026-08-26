@@ -1,6 +1,6 @@
 /**
- * Email Senders — SDK Types
- * LAD Architecture: SDK Layer — shared TypeScript contracts
+ * Email Senders - SDK Types
+ * LAD Architecture: SDK Layer - shared TypeScript contracts
  */
 
 export type EmailProvider = 'google' | 'microsoft';

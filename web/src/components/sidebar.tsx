@@ -23,6 +23,11 @@ import {
   Goal,
   LayoutTemplate,
   Palette,
+  Pin,
+  PinOff,
+  Contact,
+  Gauge,
+  SlidersHorizontal,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -36,6 +41,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
+
+// Internal observability console is super-admin only - gated by email, matching
+// the backend `requireSuperAdmin` gate on /api/admin/monitor.
+const SUPER_ADMIN_EMAIL = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'admin@techiemaya.com').toLowerCase();
+
 type RootState = {
   auth: {
     user: {
@@ -88,6 +98,12 @@ type NavItem = {
   details: string;
   requiredCapability?: string;
   requiredFeature?: string; // For feature-flag based access
+  /**
+   * Show only for a workspace on a vertical snapshot. Used instead of
+   * `requiredFeature` because the snapshot's feature key is vertical-specific
+   * (`wellness.snapshot`, …) and this list needs a static predicate.
+   */
+  requiresCuratedWorkspace?: boolean;
   children?: Omit<NavItem, 'children'>[];
 };
 export function Sidebar() {
@@ -95,7 +111,7 @@ export function Sidebar() {
   const router = useRouter();
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
-  const { hasFeature, user: authUser } = useAuth();
+  const { hasFeature, user: authUser, isCuratedWorkspace } = useAuth();
   const { tenant, setTenantById, tenants } = useTenant();
   const { isDark } = useTheme();
   const reduxUser = useSelector((state: RootState) => state.auth.user);
@@ -105,12 +121,63 @@ export function Sidebar() {
   // AuthContext when present and overlay Redux fields as a fallback.
   const user = useMemo(() => ({ ...(reduxUser || {}), ...(authUser || {}) }), [authUser, reduxUser]);
   const companyLogo = useSelector((state: RootState) => state.settings.companyLogo);
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Hover-expand state. Suppressed when `isPinned` is true (then we stay
+  // expanded regardless of cursor position).
+  const [isHovered,   setIsHovered]   = useState(false);
+  // Persisted user preference - when true, the sidebar stays expanded
+  // permanently and the hover behaviour is disabled.
+  const [isPinned,    setIsPinned]    = useState(false);
+  // Effective expanded flag the rest of the file already consumes.
+  const isExpanded = isPinned || isHovered;
   const [displayName, setDisplayName] = useState("User");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeConversationChannel, setActiveConversationChannel] = useState<string | null>(null);
+
+  // Listen for channel changes broadcasted from ConversationsPage
+  useEffect(() => {
+    const handleChannelChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setActiveConversationChannel(detail?.channel ?? null);
+    };
+    window.addEventListener('conversations:channel-changed', handleChannelChange);
+    return () => window.removeEventListener('conversations:channel-changed', handleChannelChange);
+  }, []);
+
+  const isBlackGrayChannel =
+    pathname.startsWith('/conversations') &&
+    activeConversationChannel !== null &&
+    activeConversationChannel !== 'linkedin';
+
+  // Load + persist pin preference (localStorage). Runs after hydration so
+  // SSR HTML matches the initial client render (always unpinned on first
+  // paint) and then upgrades to the saved value.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('sidebar.pinned');
+      if (saved === '1') setIsPinned(true);
+    } catch { /* localStorage blocked - fine, default is unpinned */ }
+  }, []);
+  const togglePinned = () => {
+    setIsPinned(prev => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('sidebar.pinned', next ? '1' : '0');
+        // Notify the app-shell (or any other listener) so the main content
+        // can reflow to ml-64 (pinned) vs ml-16 (collapsed default).
+        window.dispatchEvent(new CustomEvent('sidebar:pinned-changed', { detail: { pinned: next } }));
+      } catch { /* ignore */ }
+      // Also drop the hover state when unpinning so the sidebar collapses
+      // immediately rather than waiting for the mouse to leave.
+      if (!next) setIsHovered(false);
+      return next;
+    });
+  };
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(true);
+  // Closed by default: the point of the dropdown is that the tenant list costs
+  // one row until somebody wants to switch.
+  const [isTenantListOpen, setIsTenantListOpen] = useState(false);
   // Education vertical context
   const isEducation = hasFeature("education_vertical");
   // Hydration check
@@ -147,6 +214,16 @@ export function Sidebar() {
       requiredCapability: "view_overview",
       requiredFeature: "overview",
     },
+    // Curated workspaces only. Sits high because for a snapshot tenant this IS
+    // the home screen - it replaces the workflow builder as the place they go
+    // to decide what Mr LAD is doing.
+    {
+      href: "/pipelines",
+      label: "Pipelines",
+      icon: SlidersHorizontal,
+      details: "Switch the pipelines built for your industry on and off.",
+      requiresCuratedWorkspace: true,
+    },
     {
       href: "/onboarding/advanced-search-ai",
       label: "AI Assistant",
@@ -163,16 +240,6 @@ export function Sidebar() {
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",
       requiredFeature: "campaigns",
-      children: [
-        {
-          href: "/campaigns/templates",
-          label: "Templates",
-          icon: LayoutTemplate,
-          details: "Create and manage email templates for your campaigns.",
-          requiredCapability: "view_campaigns",
-          requiredFeature: "campaigns",
-        },
-      ],
     },
     {
       href: "/conversations",
@@ -181,6 +248,16 @@ export function Sidebar() {
       details: "View and manage your social media conversations.",
       requiredCapability: "view_conversations",
       requiredFeature: "conversations",
+      children: [
+        {
+          href: "/conversations/templates",
+          label: "Templates",
+          icon: LayoutTemplate,
+          details: "Create and manage message templates for conversations and broadcasts.",
+          requiredCapability: "view_conversations",
+          requiredFeature: "conversations",
+        },
+      ],
     },
     {
       href: "/community-roi",
@@ -219,6 +296,13 @@ export function Sidebar() {
       requiredFeature: "deals-pipeline",
     },
     {
+      href: "/crm",
+      label: "Contacts Funnel",
+      icon: Contact,
+      details: "Unified cross-channel prospects, leads and clients from the Master Agent.",
+      requiredCapability: "view_pipeline",
+    },
+    {
       href: "/follow-ups",
       label: "Follow-ups",
       icon: GitFork,
@@ -230,36 +314,67 @@ export function Sidebar() {
   ];
 
   // Helper: does the user have access to this nav item?
-  // An item is visible when ANY of the following matches:
-  //   • Admin / owner role → always
-  //   • requiredCapability is in user.capabilities[]
-  //   • requiredFeature    is in user.tenantFeatures[] (i.e. hasFeature)
+  // Tenant feature flag is the hard gate - if the tenant doesn't have the
+  // feature enabled, NO user of that tenant sees it (including owner/admin).
+  // Within an enabled feature, owner/admin see it automatically; other roles
+  // additionally need the matching capability.
   // Items without any required* field are public (always shown).
   const hasNavAccess = (item: NavItem): boolean => {
+    // Snapshot gate - checked before the early return below, because an item
+    // scoped to a curated workspace may carry no capability or feature key of
+    // its own and would otherwise read as public.
+    if (item.requiresCuratedWorkspace && !isCuratedWorkspace) return false;
+
     if (!item.requiredCapability && !item.requiredFeature) return true;
+
+    // Tenant feature gate - applies to every role, no bypass.
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
+
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
     if (isAdminOrOwner) return true;
     const caps = user?.capabilities || [];
-    const capOk = !!item.requiredCapability && caps.includes(item.requiredCapability);
-    const featOk = !!item.requiredFeature    && hasFeature(item.requiredFeature);
-    return capOk || featOk;
+    return !!item.requiredCapability && caps.includes(item.requiredCapability);
   };
 
   // Filter navigation strictly. Previously we showed every item when the
   // user had no capabilities, which leaked admin-only features (Overview,
   // Pipeline, Make a Call, …) to fresh accounts on first login. Now an
-  // unassigned user sees an empty sidebar — the right signal to assign
+  // unassigned user sees an empty sidebar - the right signal to assign
   // them features in Settings → Team.
-  const nav = isHydrated
+  const baseNav = isHydrated
     ? allNavItems.filter(hasNavAccess).map(item => ({
         ...item,
         children: item.children?.filter(hasNavAccess),
       }))
     : []; // Empty during SSR to prevent hydration mismatch
+
+  // Super-admin-only entry to the internal observability console. Appended
+  // (not part of allNavItems) so it's strictly email-gated and never leaks to
+  // tenant users. The backend independently enforces the same gate.
+  const isSuperAdmin =
+    isHydrated && (user?.email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
+  const nav: NavItem[] = isSuperAdmin
+    ? [
+        ...baseNav,
+        {
+          href: '/admin/monitor',
+          label: 'Platform Monitor',
+          icon: Gauge,
+          details: 'Internal cross-tenant observability (super-admin).',
+        },
+      ]
+    : baseNav;
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-[60] bg-sidebar/95 backdrop-blur-2xl border-b border-sidebar-border flex items-center justify-between px-3">
+      <div
+        className={cn(
+          "md:hidden fixed top-0 left-0 right-0 h-14 z-[60] backdrop-blur-2xl border-b flex items-center justify-between px-3 transition-colors duration-300",
+          isBlackGrayChannel
+            ? "border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900"
+            : "border-sidebar-border bg-sidebar/95"
+        )}
+      >
         <button
           aria-label="Open menu"
           className="p-2 rounded-lg hover:bg-white/10 active:scale-95 transition"
@@ -285,7 +400,10 @@ export function Sidebar() {
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 w-1/2 bg-sidebar/95 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl z-[70] flex flex-col",
+          "md:hidden fixed inset-y-0 left-0 w-[50%] backdrop-blur-2xl border-r shadow-2xl z-[70] flex flex-col transition-colors duration-300",
+          isBlackGrayChannel
+            ? "border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-[#171717]"
+            : "border-sidebar-border bg-sidebar/95",
           "transition-transform duration-300 ease-out",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -313,35 +431,68 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2 overflow-y-auto">
-          {nav.map((n) => {
-            const Icon = n.icon;
-            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
-            const hasChildren = n.children && n.children.length > 0;
-            
+          {(() => {
+            // Build the set of every URL claimed as a "child" anywhere in the
+            // nav tree so a top-level item never lights up when the current
+            // pathname is actually owned by another section. Guards against a
+            // top-level item greedily prefix-matching a child route that lives
+            // under its URL space (e.g. a child at /parent/child/... should
+            // highlight the child, not the /parent top-level item).
+            const ownedChildHrefs = new Set<string>(
+              nav.flatMap(p => p.children?.map(c => c.href) ?? [])
+            );
+            const pathBelongsToChild = (href: string) =>
+              Array.from(ownedChildHrefs).some(c =>
+                href === c || href.startsWith(c + '/')
+              );
+            return nav.map((n) => {
+              const Icon = n.icon;
+              const ownChildHrefs = new Set((n.children ?? []).map(c => c.href));
+              const matchesOwnRoute = pathname === n.href || pathname.startsWith(n.href + '/');
+              // If the current path is claimed by a child of a DIFFERENT
+              // parent, don't treat this item as self-active.
+              const pathOwnedByOtherChild = pathBelongsToChild(pathname) &&
+                !Array.from(ownChildHrefs).some(c =>
+                  pathname === c || pathname.startsWith(c + '/')
+                );
+              const selfActive = matchesOwnRoute && !pathOwnedByOtherChild;
+              const hasChildren = n.children && n.children.length > 0;
+              const childOnPath = hasChildren && n.children!.some(c =>
+                pathname === c.href || pathname.startsWith(c.href + '/')
+              );
+            // `selfActive` = this row IS the current page; `childOnPath` =
+            // a sub-item is current. They drive different styling now, so we
+            // no longer combine them into one boolean.
+
             return (
               <div key={n.href} className="relative group/mob">
                 <NavLink
                   href={n.href}
                   className={cn(
                     "relative flex items-center rounded-xl overflow-visible px-3 h-12",
-                    isActive
+                    selfActive
                       ? "bg-primary/90 text-white shadow-lg"
-                      : "hover:bg-white/10 text-sidebar-foreground",
+                      : childOnPath
+                        ? "bg-primary/10 text-sidebar-foreground"  // softer "section-active" hint, visible on light & dark
+                        : "hover:bg-white/10 text-sidebar-foreground",
                   )}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      isActive ? "text-white" : "text-sidebar-foreground",
+                      // Only the fully-active parent gets the white icon  - 
+                      // section-active keeps dark icon for legibility on
+                      // light-background sidebars.
+                      selfActive ? "text-white" : "text-sidebar-foreground",
                     )}
                   />
                   <span className="ml-3 text-sm font-medium">{n.label}</span>
                 </NavLink>
-                
+
                 {hasChildren && (
-                  <div className="pl-10 space-y-0.5 mt-1">
-                    {n.children.map((child) => {
+                  <div className="pl-10 space-y-0.5 mt-1 border-l-2 border-white/10 ml-4">
+                    {n.children!.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
                       return (
@@ -349,9 +500,9 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "flex items-center rounded-xl px-3 h-10 transition-all",
+                            "relative flex items-center rounded-xl px-3 h-10 transition-all ml-1",
                             childActive
-                              ? "bg-primary/80 text-white"
+                              ? "bg-primary/80 text-white shadow-md before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:-translate-x-[18px] before:h-5 before:w-0.5 before:bg-primary before:rounded-full"
                               : "hover:bg-white/10 text-sidebar-foreground/70",
                           )}
                           onClick={() => setIsMobileMenuOpen(false)}
@@ -365,10 +516,11 @@ export function Sidebar() {
                 )}
               </div>
             );
-          })}
+          });
+          })()}
         </nav>
         {/* Mobile User/Settings/Pricing/Logout */}
-        <div className="border-t border-sidebar-border p-3 space-y-2 mt-auto">
+        <div className={cn("border-t p-3 space-y-2 mt-auto border-sidebar-border", isBlackGrayChannel && "dark:border-zinc-800")}>
           {/* Tenant Selector */}
           <div className="mb-2">
             <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 font-bold px-3">Tenant</span>
@@ -394,7 +546,7 @@ export function Sidebar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 px-3 py-2 border-t border-sidebar-border/30">
+          <div className="flex items-center gap-3 px-2 py-2 border-t border-sidebar-border/30">
             {isHydrated && user?.avatar ? (
               <img
                 src={user.avatar}
@@ -452,14 +604,17 @@ export function Sidebar() {
       )}
       <aside
         className={cn(
-          "hidden md:flex flex-col shrink-0 h-screen border-r border-sidebar-border shadow-2xl",
-          "bg-white dark:bg-[#000724]",
+          "hidden md:flex flex-col shrink-0 h-screen border-r",
+          "bg-white border-gray-200",
+          isBlackGrayChannel
+            ? "dark:bg-[#171717] dark:border-zinc-800"
+            : "dark:bg-[#000724] dark:border-[#1a2a43]",
           "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
-          "overflow-hidden fixed left-0 top-0 z-50",
-          isExpanded ? "w-64" : "w-16",
+          "overflow-hidden fixed left-0 top-0 z-[5000]",
+          isExpanded ? "w-64 shadow-2xl" : "w-16",
         )}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => { if (!isPinned) setIsHovered(false); }}
       >
         {/* Logo */}
         <div
@@ -475,7 +630,7 @@ export function Sidebar() {
             fetchPriority="high"
             decoding="async"
             className={cn(
-              "object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.45)] transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
+              "object-contain transition-all duration-500 ease-[cubic-bezier(.19,1,.22,1)]",
               isExpanded ? "w-45 h-45" : "w-30 h-30",
             )}
             onError={(e) => {
@@ -483,16 +638,70 @@ export function Sidebar() {
             }}
           />
         </div>
+
+        {/* Pin toggle - keeps the sidebar permanently expanded.
+            Only shown when the sidebar is expanded (otherwise it would
+            overflow the 16px-wide rail) and only on md+ (mobile uses the
+            burger menu and doesn't need a pin). */}
+        {isExpanded && (
+          <button
+            type="button"
+            onClick={togglePinned}
+            aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+            title={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+            className={cn(
+              "absolute top-3 right-3 z-20 rounded-full p-1.5",
+              "transition-all duration-200 ease-out",
+              "hover:scale-110 active:scale-95",
+              isPinned
+                ? "bg-primary/90 text-white shadow-md hover:bg-primary"
+                : "bg-white/70 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 border border-slate-200/70 dark:border-white/10",
+            )}
+          >
+            {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </button>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 flex flex-col px-2 space-y-1 py-2">
-          {nav.map((n) => {
-            const Icon = n.icon;
-            const isActive = pathname === n.href || pathname.startsWith(n.href + '/');
-            const hasChildren = n.children && n.children.length > 0;
+          {(() => {
+            // Set of every URL claimed as a child anywhere in the nav tree  - 
+            // prevents a top-level item from greedily lighting up when the
+            // current pathname belongs to another section's sub-item.
+            const ownedChildHrefs = new Set<string>(
+              nav.flatMap(p => p.children?.map(c => c.href) ?? [])
+            );
+            const pathBelongsToChild = (href: string) =>
+              Array.from(ownedChildHrefs).some(c =>
+                href === c || href.startsWith(c + '/')
+              );
+            return nav.map((n) => {
+              const Icon = n.icon;
+              const ownChildHrefs = new Set((n.children ?? []).map(c => c.href));
+              const matchesOwnRoute = pathname === n.href || pathname.startsWith(n.href + '/');
+              const pathOwnedByOtherChild = pathBelongsToChild(pathname) &&
+                !Array.from(ownChildHrefs).some(c =>
+                  pathname === c || pathname.startsWith(c + '/')
+                );
+              const selfActive = matchesOwnRoute && !pathOwnedByOtherChild;
+              const hasChildren = n.children && n.children.length > 0;
+              const childOnPath = hasChildren && n.children!.some(c =>
+                pathname === c.href || pathname.startsWith(c.href + '/')
+              );
+            // `selfActive` = this row IS the current page; `childOnPath` =
+            // a sub-item is current. They drive different styling now, so we
+            // no longer combine them into one boolean.
             return (
               <div key={n.href} className="relative group">
                 <NavLink
                   href={n.href}
+                  // Collapsed, this renders as a bare 48px icon — the label
+                  // span below is gated on isExpanded, so without these the
+                  // link has NO accessible name and screen readers announce
+                  // eight identical "link"s. The title also gives sighted
+                  // users a hover tooltip telling them where each icon goes.
+                  aria-label={n.label}
+                  title={!isExpanded ? n.label : undefined}
                   className={cn(
                     "relative flex items-center rounded-2xl overflow-visible",
                     "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
@@ -502,14 +711,16 @@ export function Sidebar() {
                       : "h-12 w-12 mx-auto justify-center",
                   )}
                 >
-                  {/* Active / hover glass background */}
+                  {/* Active / section-active / hover glass background */}
                   <div
                     className={cn(
                       "absolute inset-0 z-0 rounded-2xl",
                       "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
-                      isActive
-                        ? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-                        : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]",
+                      selfActive
+                        ? "bg-primary/95"
+                        : childOnPath
+                          ? "bg-primary/10 backdrop-blur-sm"  // soft tint - works on light & dark
+                          : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]",
                     )}
                   />
                   {/* Icon wrapper */}
@@ -527,12 +738,15 @@ export function Sidebar() {
                     <Icon
                       className={cn(
                         "h-5 w-5 transition-colors duration-300 relative z-10",
-                        isActive
+                        // Only flip to white when this row is THE active page.
+                        // section-active (childOnPath) keeps the dark icon so
+                        // the parent label stays legible on light themes.
+                        selfActive
                           ? "text-white"
                           : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
                       style={
-                        !isActive ? { color: undefined } : undefined
+                        !selfActive ? { color: undefined } : undefined
                       }
                     />
                   </div>
@@ -542,7 +756,7 @@ export function Sidebar() {
                       className={cn(
                         "relative z-10 text-sm font-medium whitespace-nowrap ml-3",
                         "transition-all duration-500 ease-[cubic-bezier(.4,0,.2,1)]",
-                        isActive
+                        selfActive
                           ? "text-white group-hover:text-white"
                           : "text-gray-900 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white",
                       )}
@@ -599,8 +813,18 @@ export function Sidebar() {
                     )}
                   </div>
                 ) : hasChildren ? (
-                  /* Expanded sidebar: children slide in below parent on hover */
-                  <div className="overflow-hidden max-h-0 group-hover:max-h-40 transition-all duration-300 ease-in-out pl-10 pr-2 mt-0.5 space-y-0.5">
+                  /* Expanded sidebar: children slide in below parent on hover.
+                     If a child is the current route, force the section open so
+                     the active sub-item stays visible without hovering. */
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out pr-2 mt-0.5 space-y-0.5",
+                      "pl-7 ml-3 border-l-2 border-white/10",  // vertical guide rail
+                      childOnPath
+                        ? "max-h-40"
+                        : "max-h-0 group-hover:max-h-40",
+                    )}
+                  >
                     {n.children!.map((child) => {
                       const ChildIcon = child.icon;
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
@@ -609,10 +833,10 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "relative flex items-center rounded-xl h-10 px-3",
+                            "relative flex items-center rounded-xl h-10 px-3 ml-1",
                             "transition-all duration-200",
                             childActive
-                              ? "bg-primary/90 text-white"
+                              ? "bg-primary/90 text-white shadow-md before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:-translate-x-[18px] before:h-5 before:w-0.5 before:bg-primary before:rounded-full"
                               : "hover:bg-white/10 dark:hover:bg-white/5 text-gray-900 dark:text-gray-300",
                           )}
                         >
@@ -629,11 +853,12 @@ export function Sidebar() {
                 ) : null}
               </div>
             );
-          })}
+          });
+          })()}
         </nav>
         {/* User Profile Inline Section */}
-        <div className="border-t border-sidebar-border mt-auto">
-          {/* Avatar / profile row — click to toggle inline panel */}
+        <div className={cn("border-t mt-auto border-sidebar-border", isBlackGrayChannel && "dark:border-zinc-800")}>
+          {/* Avatar / profile row - click to toggle inline panel */}
           <div
             onClick={() => setIsUserPanelOpen((v) => !v)}
             className={cn(
@@ -674,7 +899,7 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* Inline user panel — shown when isUserPanelOpen */}
+          {/* Inline user panel - shown when isUserPanelOpen */}
           <div
             className={cn(
               "overflow-hidden transition-all duration-300 ease-in-out",
@@ -682,33 +907,65 @@ export function Sidebar() {
             )}
           >
             <div className="px-2 pb-2 space-y-1">
-              {/* Tenant section — only if multiple tenants */}
+              {/* Tenant section - only if multiple tenants.
+                  A dropdown rather than an inline list: this panel is capped at
+                  max-h-96, so one row per tenant pushes Settings, Pricing and
+                  Logout past the clip and out of reach for anyone in enough
+                  workspaces. Closed, it costs one row whatever the count. */}
               {tenants.length > 1 && (
                 <div className="px-2 pt-1 pb-0.5">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold">Tenant</span>
-                  <div className="mt-1 space-y-0.5">
-                    {tenants.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTenantById(t.id)}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
-                          tenant.id === t.id
-                            ? "bg-primary/20 text-primary font-semibold"
-                            : "text-muted-foreground hover:bg-white/5",
-                        )}
-                      >
-                        <span className="truncate">{t.name}</span>
-                        {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsTenantListOpen((open) => !open)}
+                    aria-expanded={isTenantListOpen}
+                    // The current tenant is the label, so the closed state still
+                    // answers "which workspace am I in?" without opening it.
+                    className="mt-1 w-full flex items-center justify-between gap-2 px-2 py-1 rounded-lg text-xs
+                               text-foreground/90 hover:bg-white/5 transition active:scale-95 select-none"
+                  >
+                    <span className="truncate font-semibold">{tenant.name}</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-3 w-3 flex-shrink-0 text-muted-foreground/60 transition-transform duration-200",
+                        isTenantListOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {isTenantListOpen && (
+                    // Scrolls rather than growing without bound — the parent
+                    // clips, so an unbounded list would hide its own options.
+                    <div className="mt-0.5 space-y-0.5 max-h-40 overflow-y-auto">
+                      {tenants.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTenantById(t.id);
+                            setIsTenantListOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs transition active:scale-95 select-none",
+                            tenant.id === t.id
+                              ? "bg-primary/20 text-primary font-semibold"
+                              : "text-muted-foreground hover:bg-white/5",
+                          )}
+                        >
+                          <span className="truncate">{t.name}</span>
+                          {tenant.id === t.id && <span className="text-primary text-[10px]">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Settings */}
               <NavLink
                 href="/settings"
+                // Collapsed, the label span is not rendered, so the link would
+                // have no accessible name at all — see the nav items above.
+                aria-label="Settings"
+                title={!isExpanded ? "Settings" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all",
                   "text-gray-700 dark:text-gray-300 hover:bg-white/5 dark:hover:bg-white/10 active:scale-95 select-none",
@@ -730,7 +987,7 @@ export function Sidebar() {
                 {/* Group the leading icon + label together so the layout
                     mirrors the Settings row above and the Logout row below.
                     When the sidebar collapses, only the ThemeToggle remains
-                    visible (centered) — the leading Palette icon hides to
+                    visible (centered) - the leading Palette icon hides to
                     avoid two icons in a 40px-wide column. */}
                 {isExpanded && (
                   <div className="flex items-center gap-2">
@@ -744,6 +1001,8 @@ export function Sidebar() {
               {/* Logout */}
               <button
                 onClick={handleLogout}
+                aria-label="Logout"
+                title="Logout"
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-all w-full",
                   "text-red-500 hover:bg-red-500/10 active:scale-95 select-none",

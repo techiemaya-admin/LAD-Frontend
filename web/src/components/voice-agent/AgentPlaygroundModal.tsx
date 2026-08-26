@@ -26,7 +26,7 @@ export function AgentPlaygroundModal({
 }: AgentPlaygroundModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[800px] p-0 border-0 overflow-hidden bg-transparent shadow-none" showCloseButton={false}>
+      <DialogContent className="sm:max-w-[800px] p-0 border-0 overflow-hidden bg-transparent  dark:!bg-transparent shadow-none dark:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 outline-none" showCloseButton={false}>
         <DialogTitle className="sr-only">Voice Agent Playground</DialogTitle>
         <DialogDescription className="sr-only">
           An isolated sandbox environment for testing the AI voice agent capabilities.

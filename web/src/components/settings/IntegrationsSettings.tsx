@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Settings2, Linkedin, Smartphone, Bot, Clock, Lock, Server, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X, Power, Loader2, FolderOpen } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
@@ -11,9 +12,13 @@ import { WhatsAppIntegration } from './WhatsAppIntegration';
 import { PersonalWaTemplateManager } from '../conversations/PersonalWaTemplateManager';
 import { LinkedInIntegration } from './LinkedInIntegration';
 import { TenantOnboarding } from './TenantOnboarding';
+import { WhatsAppEmbeddedSignup } from './WhatsAppEmbeddedSignup';
 import { GoHighLevelIntegration } from './GoHighLevelIntegration';
+import { ZohoIntegration } from './ZohoIntegration';
+import { MageSettings } from './MageSettings';
 import { useTenant } from '@/contexts/TenantContext';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { safeStorage } from '@lad/shared/storage';
 
 type IntegrationView = 'grid' | string;
 
@@ -25,6 +30,10 @@ interface IntegrationCard {
   iconBg: string;
   category: string;
   comingSoon?: boolean;
+  // When set, clicking the card navigates to this URL instead of
+  // setActiveView(id). Used for integrations that own a dedicated page
+  // (e.g. Instagram has its own /instagram management surface).
+  route?: string;
 }
 
 const CREDIT_GATED_IDS = new Set(['linkedin', 'whatsapp-ai', 'whatsapp-personal', 'google', 'microsoft']);
@@ -59,6 +68,40 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Messaging',
   },
   {
+    id: 'instagram',
+    name: 'Instagram',
+    description: 'Connect Instagram for AI-powered DMs, comments, and lead capture.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6">
+        <defs>
+          <radialGradient id="ig-grad" cx="0.3" cy="1.1" r="1">
+            <stop offset="0" stopColor="#fdf497" />
+            <stop offset="0.05" stopColor="#fdf497" />
+            <stop offset="0.45" stopColor="#fd5949" />
+            <stop offset="0.6" stopColor="#d6249f" />
+            <stop offset="0.9" stopColor="#285AEB" />
+          </radialGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ig-grad)" />
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.6" />
+        <circle cx="17.6" cy="6.4" r="1.1" fill="#fff" />
+      </svg>
+    ),
+    iconBg: 'bg-pink-50',
+    category: 'Social',
+    // Land on the Accounts tab - same parity as clicking the WhatsApp tile
+    // which opens the tenant onboarding form right away.
+    route: '/instagram/settings?tab=accounts',
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
+    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
+    iconBg: 'bg-blue-50',
+    category: 'Social',
+  },
+  {
     id: 'google',
     name: 'Google',
     description: 'Connect Google Calendar, Drive, Sheets, Gmail, and Analytics.',
@@ -89,20 +132,23 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'Email & Calendar',
   },
   {
+    // Not an OAuth connection — we provision a Drive folder on our own account
+    // and share it with the user, so this asks nothing of their Google account.
+    // Distinct from the 'google' card above, which is their own Google sign-in.
+    id: 'brand-assets',
+    name: 'Media Generation Engine',
+    description: 'Brand DNA, reference imagery, generated media, and the shorthand the media agent understands.',
+    icon: <FolderOpen className="h-6 w-6 text-indigo-600" />,
+    iconBg: 'bg-indigo-50',
+    category: 'Content',
+  },
+  {
     id: 'custom-email',
     name: 'Custom Email (SMTP)',
     description: 'Connect Roundcube, cPanel mail, Zoho, Yandex, Fastmail, or any self-hosted webmail.',
     icon: <Server className="h-6 w-6 text-emerald-600" />,
     iconBg: 'bg-emerald-50',
     category: 'Email & Calendar',
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    description: 'Connect LinkedIn to sync leads and manage outreach campaigns.',
-    icon: <Linkedin className="h-6 w-6 text-blue-700" />,
-    iconBg: 'bg-blue-50',
-    category: 'Social',
   },
   {
     id: 'gohighlevel',
@@ -125,6 +171,16 @@ const INTEGRATIONS: IntegrationCard[] = [
     category: 'CRM',
   },
   {
+    id: 'zoho',
+    name: 'Zoho CRM',
+    description: 'Connect Zoho CRM to sync Contacts, Leads, and Deals - and push Mr LAD leads back into Zoho.',
+    icon: (
+      <span className="text-lg font-bold text-red-600 select-none leading-none" aria-label="Zoho">Z</span>
+    ),
+    iconBg: 'bg-red-50',
+    category: 'CRM',
+  },
+  {
     id: 'mindbody',
     name: 'MindBody',
     description: 'Connect MindBody to automate trial class booking via WhatsApp AI.',
@@ -132,6 +188,15 @@ const INTEGRATIONS: IntegrationCard[] = [
       <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
     ),
     iconBg: 'bg-teal-50',
+    category: 'CRM',
+    comingSoon: false,
+  },
+  {
+    id: 'routemagic',
+    name: 'Route Magic',
+    description: 'Connect Route Magic ERP to sync customers as leads and create sale orders from WhatsApp.',
+    icon: <Truck className="h-6 w-6 text-emerald-700" />,
+    iconBg: 'bg-emerald-50',
     category: 'CRM',
     comingSoon: false,
   },
@@ -156,6 +221,7 @@ const INTEGRATIONS: IntegrationCard[] = [
 type ConnectionStatus = 'connected' | 'disconnected' | 'loading';
 
 export const IntegrationsSettings: React.FC = () => {
+  const router = useRouter();
   const { tenantId } = useTenant();
   const { data: creditsData } = useCreditsBalance();
   const availableCredits = creditsData?.availableBalance ?? creditsData?.balance ?? null;
@@ -164,6 +230,23 @@ export const IntegrationsSettings: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<IntegrationView>('grid');
   const [statusMap, setStatusMap] = useState<Record<string, ConnectionStatus>>({});
+
+  // ── WhatsApp "AI Replies" master switch (tenant/channel-level) ─────────────
+  // One flag per channel (chat_settings.ai_enabled), rendered as a pill on each
+  // connected WhatsApp card. null = not loaded yet → pill shows the default (ON) and
+  // is disabled until we know the real value. Mirrors the LinkedIn/Instagram
+  // connected-account AI-Replies toggles.
+  const [wabaAiEnabled, setWabaAiEnabled] = useState<boolean | null>(null);
+  const [wapaAiEnabled, setWapaAiEnabled] = useState<boolean | null>(null);
+  const [wabaAiSaving, setWabaAiSaving] = useState(false);
+  const [wapaAiSaving, setWapaAiSaving] = useState(false);
+  const [aiToggleToast, setAiToggleToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null);
+  // Auto-dismiss the AI-Replies toast after a few seconds (mirrors LinkedIn/Instagram).
+  useEffect(() => {
+    if (!aiToggleToast) return;
+    const t = setTimeout(() => setAiToggleToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [aiToggleToast]);
 
   const [showMindBodyModal, setShowMindBodyModal] = useState(false);
   const [mindBodyForm, setMindBodyForm] = useState({
@@ -193,6 +276,42 @@ export const IntegrationsSettings: React.FC = () => {
   const [connectedClassFetchError, setConnectedClassFetchError] = useState<string | null>(null);
   const [updatingClasses, setUpdatingClasses] = useState(false);
 
+  // ── Route Magic state ─────────────────────────────────────────────────────
+  const [showRouteMagicModal, setShowRouteMagicModal] = useState(false);
+  const [routeMagicForm, setRouteMagicForm] = useState({
+    rm_tenant_id: '',
+    display_name: '',
+    api_key: '',
+    base_url: 'https://staging-api.routemagic.co.uk',
+  });
+  const [routeMagicConnecting, setRouteMagicConnecting] = useState(false);
+  const [routeMagicError, setRouteMagicError] = useState<string | null>(null);
+  const [routeMagicStatusData, setRouteMagicStatusData] = useState<{
+    rm_tenant_id: string | null;
+    display_name: string | null;
+    base_url: string | null;
+    last_verified_at: string | null;
+    last_sync_at: string | null;
+  } | null>(null);
+  const [routeMagicDisconnecting, setRouteMagicDisconnecting] = useState(false);
+  const [routeMagicSyncing, setRouteMagicSyncing] = useState(false);
+  const [routeMagicSyncResult, setRouteMagicSyncResult] = useState<{
+    fetched: number;
+    inserted: number;
+    skipped: number;
+    errors: number;
+  } | null>(null);
+
+  const routeMagicFormReset = () => {
+    setRouteMagicForm({
+      rm_tenant_id: '',
+      display_name: '',
+      api_key: '',
+      base_url: 'https://staging-api.routemagic.co.uk',
+    });
+    setRouteMagicError(null);
+  };
+
   const setStatus = useCallback((id: string, status: ConnectionStatus) => {
     setStatusMap((prev) => ({ ...prev, [id]: status }));
   }, []);
@@ -209,7 +328,20 @@ export const IntegrationsSettings: React.FC = () => {
           const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
           const connected = accounts.some((a: any) => a.status === 'connected');
           setStatus('whatsapp-personal', connected ? 'connected' : 'disconnected');
-          if (connected) try { localStorage.setItem('whatsappChannel', 'personal'); } catch {}
+          // NOTE: do NOT write localStorage.whatsappChannel here - it globally biased
+          // proxyClient routing to 'personal' for every unspecified call (sending WABA
+          // requests to the personal/WAPA service). Channel is now per-request/explicit.
+          // Load the WAPA "AI Replies" master switch for the connected-account pill.
+          // WAPA returns { success, settings: { ai_enabled, ... } }. Default ON.
+          if (connected) {
+            try {
+              const cs = await fetchWithTenant('/api/whatsapp-conversations/chat-settings');
+              if (cs.ok) {
+                const csData = await cs.json();
+                setWapaAiEnabled(csData?.settings?.ai_enabled !== false);
+              }
+            } catch { /* non-fatal - pill stays at its default (ON) */ }
+          }
         }
       } catch { setStatus('whatsapp-personal', 'disconnected'); }
 
@@ -223,6 +355,18 @@ export const IntegrationsSettings: React.FC = () => {
           const accounts = Array.isArray(data) ? data : (Array.isArray(data?.accounts) ? data.accounts : []);
           const active = accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
           setStatus('whatsapp-ai', active ? 'connected' : 'disconnected');
+          // Load the WABA "AI Replies" master switch for the connected-account pill.
+          // WABA (?channel=waba) returns the settings dict directly with a top-level
+          // ai_enabled. Default ON.
+          if (active) {
+            try {
+              const cs = await fetchWithTenant('/api/whatsapp-conversations/chat-settings?channel=waba');
+              if (cs.ok) {
+                const csData = await cs.json();
+                setWabaAiEnabled(csData?.ai_enabled !== false);
+              }
+            } catch { /* non-fatal - pill stays at its default (ON) */ }
+          }
         }
       } catch { setStatus('whatsapp-ai', 'disconnected'); }
 
@@ -255,6 +399,23 @@ export const IntegrationsSettings: React.FC = () => {
         }
       } catch { setStatus('microsoft', 'disconnected'); }
 
+      // Instagram - hits the standalone LAD-Instagram-Comms service via
+      // the Next.js proxy. "Connected" = at least one active (non-deleted)
+      // account row, regardless of provider (meta or unipile).
+      setStatus('instagram', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/instagram-conversations/accounts');
+        if (!res.ok) { setStatus('instagram', 'disconnected'); }
+        else {
+          const data = await res.json();
+          const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+          const connected = accounts.some(
+            (a: any) => (a.status ?? 'active') !== 'inactive' && !a.is_deleted,
+          );
+          setStatus('instagram', connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('instagram', 'disconnected'); }
+
       // LinkedIn
       setStatus('linkedin', 'loading');
       try {
@@ -279,6 +440,17 @@ export const IntegrationsSettings: React.FC = () => {
         }
       } catch { setStatus('gohighlevel', 'disconnected'); }
 
+      // Zoho CRM
+      setStatus('zoho', 'loading');
+      try {
+        const res = await fetchWithTenant('/api/social-integration/zoho/status');
+        if (!res.ok) { setStatus('zoho', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('zoho', data?.data?.connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('zoho', 'disconnected'); }
+
       // MindBody
       try {
         setStatus('mindbody', 'loading');
@@ -295,6 +467,50 @@ export const IntegrationsSettings: React.FC = () => {
       } catch {
         setStatus('mindbody', 'disconnected');
       }
+
+      // Route Magic
+      try {
+        setStatus('routemagic', 'loading');
+        const r = await fetchWithTenant('/api/social-integration/routemagic/status');
+        const data = await r.json();
+        setStatus('routemagic', data?.connected ? 'connected' : 'disconnected');
+        if (data?.connected) {
+          setRouteMagicStatusData({
+            rm_tenant_id: data.rm_tenant_id ?? null,
+            display_name: data.display_name ?? null,
+            base_url: data.base_url ?? null,
+            last_verified_at: data.last_verified_at ?? null,
+            last_sync_at: data.last_sync_at ?? null,
+          });
+        }
+      } catch {
+        setStatus('routemagic', 'disconnected');
+      }
+
+      // Brand Assets folder — served by the playground worker, not the Next.js
+      // API, so this goes direct with the JWT rather than via fetchWithTenant.
+      //
+      // Deliberately last in this chain. Every other check hits our own API,
+      // but this one hits a Cloud Run service in asia-south1 that has no
+      // minScale, so a first visit after an idle period pays a cold start.
+      // Anywhere earlier and every integration below it waits behind that.
+      // Being last also means the timeout can be generous: ConnectionStatus has
+      // no "unknown", so timing out has to claim 'disconnected', and a short
+      // fuse would mislabel a connected folder whenever the worker was cold.
+      setStatus('brand-assets', 'loading');
+      try {
+        const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+        const token = safeStorage.getItem('token');
+        const res = await fetch(`${workerUrl}/brand-assets/status`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) { setStatus('brand-assets', 'disconnected'); }
+        else {
+          const data = await res.json();
+          setStatus('brand-assets', data?.asset_count > 0 || data?.drive_connected ? 'connected' : 'disconnected');
+        }
+      } catch { setStatus('brand-assets', 'disconnected'); }
     };
     checkAll();
   }, [setStatus]);
@@ -302,6 +518,66 @@ export const IntegrationsSettings: React.FC = () => {
   useEffect(() => {
     refreshStatuses();
   }, [tenantId, refreshStatuses]);
+
+  // Returning from the Zoho OAuth redirect (/settings?tab=integrations&zoho=...)
+  // → open the Zoho detail view so its success/error banner + status show.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const zoho = new URLSearchParams(window.location.search).get('zoho');
+    if (zoho) setActiveView('zoho');
+  }, []);
+
+  // Flip a WhatsApp channel's tenant-level "AI Replies" master switch. Optimistic UI;
+  // revert + toast on failure. Both calls go through the shared chat-settings proxy:
+  //   WABA → PATCH /api/settings           (?channel=waba), echoes top-level ai_enabled
+  //   WAPA → PUT /api/personal-whatsapp/chat-settings, echoes { settings: { ai_enabled } }
+  // Mirrors the LinkedIn/Instagram connected-account AI-Replies toggle.
+  const toggleWabaAi = useCallback(async () => {
+    if (wabaAiSaving) return;
+    const previous = wabaAiEnabled ?? true;
+    const next = !previous;
+    setWabaAiEnabled(next); // optimistic
+    setWabaAiSaving(true);
+    try {
+      const res = await fetchWithTenant('/api/whatsapp-conversations/chat-settings?channel=waba', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ai_enabled: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || data?.error || 'Failed to update AI Replies');
+      if (typeof data?.ai_enabled === 'boolean') setWabaAiEnabled(data.ai_enabled); // reconcile
+    } catch (err) {
+      setWabaAiEnabled(previous); // revert
+      setAiToggleToast({ kind: 'err', message: err instanceof Error ? err.message : 'Could not update AI Replies.' });
+    } finally {
+      setWabaAiSaving(false);
+    }
+  }, [wabaAiEnabled, wabaAiSaving]);
+
+  const toggleWapaAi = useCallback(async () => {
+    if (wapaAiSaving) return;
+    const previous = wapaAiEnabled ?? true;
+    const next = !previous;
+    setWapaAiEnabled(next); // optimistic
+    setWapaAiSaving(true);
+    try {
+      const res = await fetchWithTenant('/api/whatsapp-conversations/chat-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ai_enabled: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) throw new Error(data?.error || data?.message || 'Failed to update AI Replies');
+      const serverVal = data?.settings?.ai_enabled;
+      if (typeof serverVal === 'boolean') setWapaAiEnabled(serverVal); // reconcile
+    } catch (err) {
+      setWapaAiEnabled(previous); // revert
+      setAiToggleToast({ kind: 'err', message: err instanceof Error ? err.message : 'Could not update AI Replies.' });
+    } finally {
+      setWapaAiSaving(false);
+    }
+  }, [wapaAiEnabled, wapaAiSaving]);
 
   const fetchAvailableClasses = async () => {
     setFetchingClasses(true);
@@ -351,16 +627,23 @@ export const IntegrationsSettings: React.FC = () => {
               setActiveView('grid');
               refreshStatuses();
             }}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors dark:text-slate-300"
           >
             &larr; Back to Integrations
           </button>
 
-          {activeView === 'whatsapp-ai' && <TenantOnboarding />}
+          {activeView === 'whatsapp-ai' && (
+            <div className="space-y-6">
+              {/* Self-serve path - Meta Embedded Signup via our Tech Provider app. */}
+              <WhatsAppEmbeddedSignup />
+              {/* Fallback - bring-your-own Meta app, for tenants provisioned that way. */}
+              <TenantOnboarding />
+            </div>
+          )}
           {activeView === 'whatsapp-personal' && (
             <div className="space-y-6">
               <WhatsAppIntegration />
-              <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ minHeight: 400 }}>
+              <div className="text-card-foreground flex flex-col gap-6 py-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#071131]" style={{ minHeight: 400 }}>
                 <PersonalWaTemplateManager />
               </div>
             </div>
@@ -374,47 +657,51 @@ export const IntegrationsSettings: React.FC = () => {
               }
             />
           )}
+          {activeView === 'brand-assets' && <MageSettings />}
           {activeView === 'linkedin' && <LinkedInIntegration />}
           {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
+          {activeView === 'zoho' && <ZohoIntegration />}
           {activeView === 'slack' && (
             <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
               Slack integration coming soon.
             </div>
           )}
           {activeView === 'mindbody' && (
-            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-900/60 bg-white dark:bg-[#000319] p-5 sm:p-6 space-y-6 shadow-sm overflow-hidden">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+                <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 flex items-center justify-center">
                   <span className="text-2xl leading-none select-none" aria-label="MindBody">🧘</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base text-foreground">MindBody</h3>
-                  <p className="text-xs text-muted-foreground">Automate trial class booking via WhatsApp AI</p>
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-white leading-tight">MindBody</h3>
+                  <p className="text-sm text-slate-400 dark:text-slate-400 mt-1 font-medium leading-relaxed">Automate trial class booking via WhatsApp AI</p>
                 </div>
               </div>
 
               {statusMap['mindbody'] === 'connected' ? (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                <div className="space-y-4 animate-in fade-in duration-200">
+
+                  <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-[#00051d]/40 p-4 space-y-3 text-sm font-semibold">
                     {mindBodyStatusData?.display_name && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Display Name</span>
-                        <span className="font-medium text-foreground">{mindBodyStatusData.display_name}</span>
+                      <div className="flex justify-between items-center border-b border-slate-100/60 dark:border-slate-800/40 pb-2">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium">Display Name</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-bold">{mindBodyStatusData.display_name}</span>
                       </div>
                     )}
                     {mindBodyStatusData?.site_id && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Site ID</span>
-                        <span className="font-medium text-foreground">{mindBodyStatusData.site_id}</span>
+                      <div className="flex justify-between items-center border-b border-slate-100/60 dark:border-slate-800/40 pb-2">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium">Site ID</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono text-xs bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded">{mindBodyStatusData.site_id}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-start gap-4">
-                      <span className="text-muted-foreground flex-shrink-0">Target Classes</span>
+                    <div className="flex justify-between items-start gap-4 pt-0.5">
+                      <span className="text-slate-400 dark:text-slate-500 font-medium flex-shrink-0">Target Classes</span>
                       <div className="flex items-start gap-2 min-w-0">
-                        <span className="font-medium text-foreground text-right break-words">
+                        <span className="text-slate-700 dark:text-slate-300 text-right break-words font-bold">
+
                           {mindBodyStatusData?.target_classes?.length
                             ? mindBodyStatusData.target_classes.join(', ')
-                            : <span className="text-muted-foreground italic">None selected</span>}
+                            : <span className="text-slate-400 dark:text-slate-500 italic font-medium">None selected</span>}
                         </span>
                         {!editingClasses && (
                           <button
@@ -438,7 +725,7 @@ export const IntegrationsSettings: React.FC = () => {
                                 setConnectedFetchingClasses(false);
                               }
                             }}
-                            className="text-[11px] font-medium text-primary hover:underline flex-shrink-0 mt-0.5"
+                            className="text-xs font-bold text-blue-500 hover:underline flex-shrink-0 mt-0.5 cursor-pointer"
                           >
                             Edit
                           </button>
@@ -448,9 +735,9 @@ export const IntegrationsSettings: React.FC = () => {
                   </div>
 
                   {editingClasses && (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-950/10 p-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-foreground">Select Target Classes</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Select Target Classes</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -458,29 +745,29 @@ export const IntegrationsSettings: React.FC = () => {
                             setConnectedAvailableClasses([]);
                             setConnectedClassFetchError(null);
                           }}
-                          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer"
                         >
                           ✕ Cancel
                         </button>
                       </div>
 
                       {connectedFetchingClasses && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="inline-block h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-slate-500 py-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                           Loading available classes…
                         </div>
                       )}
 
                       {connectedClassFetchError && (
-                        <p className="text-xs text-destructive">{connectedClassFetchError}</p>
+                        <p className="text-xs font-semibold text-red-500 leading-relaxed">{connectedClassFetchError}</p>
                       )}
 
                       {!connectedFetchingClasses && connectedAvailableClasses.length > 0 && (
-                        <div className="rounded-lg border border-border bg-background divide-y divide-border max-h-44 overflow-y-auto">
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#00051d] divide-y divide-slate-100 dark:divide-slate-800/60 max-h-44 overflow-y-auto custom-scrollbar">
                           {connectedAvailableClasses.map((cls) => (
                             <label
                               key={cls}
-                              className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                              className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors select-none font-semibold text-sm text-slate-700 dark:text-slate-300"
                             >
                               <input
                                 type="checkbox"
@@ -490,9 +777,9 @@ export const IntegrationsSettings: React.FC = () => {
                                     e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
                                   );
                                 }}
-                                className="h-3.5 w-3.5 rounded accent-primary flex-shrink-0"
+                                className="h-4 w-4 rounded accent-[#0b1957] dark:accent-[#2563eb] flex-shrink-0 cursor-pointer"
                               />
-                              <span className="text-sm text-foreground">{cls}</span>
+                              <span className="truncate">{cls}</span>
                             </label>
                           ))}
                         </div>
@@ -526,7 +813,7 @@ export const IntegrationsSettings: React.FC = () => {
                             setUpdatingClasses(false);
                           }
                         }}
-                        className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full h-11 px-4 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border-none"
                       >
                         {updatingClasses ? 'Saving…' : 'Save Target Classes'}
                       </button>
@@ -543,14 +830,14 @@ export const IntegrationsSettings: React.FC = () => {
                         setConnectedAvailableClasses([]);
                       } catch {}
                     }}
-                    className="text-sm font-medium text-destructive border border-destructive/30 rounded-lg px-4 py-2 hover:bg-destructive/5 transition-colors"
+                    className="w-full sm:w-auto h-11 px-5 rounded-xl text-sm font-bold border border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Disconnect MindBody
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <p className="text-sm font-medium text-slate-400 dark:text-slate-400 leading-relaxed">
                     Connect your MindBody account to enable automated trial class booking workflows through the WhatsApp AI agent.
                   </p>
                   <button
@@ -558,10 +845,140 @@ export const IntegrationsSettings: React.FC = () => {
                       mindBodyFormReset();
                       setShowMindBodyModal(true);
                     }}
-                    className="flex items-center gap-1.5 text-sm font-medium text-primary border border-border rounded-lg px-4 py-2 hover:bg-primary/5 transition-colors"
+                    className="w-full sm:w-auto h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99] cursor-pointer border-none"
                   >
-                    <Settings2 className="h-3.5 w-3.5" />
+                    <Settings2 className="h-4 w-4 shrink-0 stroke-[2.5]" />
                     Connect to MindBody
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {activeView === 'routemagic' && (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-900/60 bg-white dark:bg-[#000319] p-5 sm:p-6 space-y-6 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-center">
+                  <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-white leading-tight">Route Magic</h3>
+                  <p className="text-sm text-slate-400 dark:text-slate-400 mt-1 font-medium leading-relaxed">Sync customers as leads · create sale orders from WhatsApp</p>
+                </div>
+              </div>
+
+              {statusMap['routemagic'] === 'connected' ? (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-[#00051d]/40 p-4 space-y-3 text-sm font-semibold">
+                    {routeMagicStatusData?.display_name && (
+                      <div className="flex justify-between items-center border-b border-slate-100/60 dark:border-slate-800/40 pb-2">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium">Display Name</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-bold">{routeMagicStatusData.display_name}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.rm_tenant_id && (
+                      <div className="flex justify-between items-center border-b border-slate-100/60 dark:border-slate-800/40 pb-2">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium">Route Magic Tenant</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono text-xs bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded">{routeMagicStatusData.rm_tenant_id}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.base_url && (
+                      <div className="flex justify-between items-start gap-4 border-b border-slate-100/60 dark:border-slate-800/40 pb-2">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium flex-shrink-0">Base URL</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono text-xs text-right break-all max-w-[70%]">{routeMagicStatusData.base_url}</span>
+                      </div>
+                    )}
+                    {routeMagicStatusData?.last_sync_at && (
+                      <div className="flex justify-between items-center pt-0.5">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium">Last Customer Sync</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-bold text-xs">{new Date(routeMagicStatusData.last_sync_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {!routeMagicStatusData?.last_sync_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Customer Sync</span>
+                        <span className="text-muted-foreground italic text-xs">Never synced</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {routeMagicSyncResult && (
+                    <div className="rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/40 dark:bg-emerald-950/10 p-3.5 text-xs font-semibold space-y-2">
+                      <div className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider text-[10px]">Last sync result</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-700 dark:text-slate-300">
+                    <div className="bg-white dark:bg-[#000319]/40 rounded-lg p-2 border border-slate-100 dark:border-slate-900/40"><span className="text-slate-400 dark:text-slate-500 font-medium block mb-0.5">Fetched:</span> <span className="font-bold text-sm text-blue-500">{routeMagicSyncResult.fetched}</span></div>
+                        <div className="bg-white dark:bg-[#000319]/40 rounded-lg p-2 border border-slate-100 dark:border-slate-900/40"><span className="text-slate-400 dark:text-slate-500 font-medium block mb-0.5">Inserted:</span> <span className="font-bold text-sm text-emerald-500">{routeMagicSyncResult.inserted}</span></div>
+                        <div className="bg-white dark:bg-[#000319]/40 rounded-lg p-2 border border-slate-100 dark:border-slate-900/40"><span className="text-slate-400 dark:text-slate-500 font-medium block mb-0.5">Skipped:</span> <span className="font-bold text-sm text-slate-500">{routeMagicSyncResult.skipped}</span></div>
+                    <div className="bg-white dark:bg-[#000319]/40 rounded-lg p-2 border border-slate-100 dark:border-slate-900/40"><span className="text-slate-400 dark:text-slate-500 font-medium block mb-0.5">Errors:</span> <span className="font-bold text-sm text-red-500">{routeMagicSyncResult.errors}</span></div>
+                      </div>
+                    </div>
+                  )}
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      disabled={routeMagicSyncing}
+                      onClick={async () => {
+                        setRouteMagicSyncing(true);
+                        setRouteMagicSyncResult(null);
+                        try {
+                          const r = await fetchWithTenant('/api/social-integration/routemagic/customers/sync', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ size: 100 }),
+                          });
+                          const data = await r.json();
+                          if (r.ok && data?.success) {
+                            setRouteMagicSyncResult({
+                              fetched: data.fetched ?? 0,
+                              inserted: data.inserted ?? 0,
+                              skipped: data.skipped ?? 0,
+                              errors: Array.isArray(data.errors) ? data.errors.length : 0,
+                            });
+                            setRouteMagicStatusData((prev) => prev ? { ...prev, last_sync_at: new Date().toISOString() } : prev);
+                          }
+                        } catch {} finally {
+                          setRouteMagicSyncing(false);
+                        }
+                      }}
+                      className="w-full sm:w-auto h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border-none"
+                    >
+                      {routeMagicSyncing ? 'Syncing…' : 'Sync customers as leads'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={routeMagicDisconnecting}
+                      onClick={async () => {
+                        if (!confirm('Disconnect Route Magic? Sale-order history and customer sync watermarks remain in the DB.')) return;
+                        setRouteMagicDisconnecting(true);
+                        try {
+                          await fetchWithTenant('/api/social-integration/routemagic/disconnect', { method: 'POST' });
+                          setStatus('routemagic', 'disconnected');
+                          setRouteMagicStatusData(null);
+                          setRouteMagicSyncResult(null);
+                        } catch {} finally {
+                          setRouteMagicDisconnecting(false);
+                        }
+                      }}
+                      className="w-full sm:w-auto h-11 px-5 rounded-xl text-sm font-bold border border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                    >
+                      {routeMagicDisconnecting ? 'Disconnecting…' : 'Disconnect Route Magic'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <p className="text-sm font-medium text-slate-400 dark:text-slate-400 leading-relaxed">
+                    Connect Route Magic so Maya can look up customers, share product info, and place sale orders straight from WhatsApp conversations.
+                  </p>
+                  <button
+                    onClick={() => {
+                      routeMagicFormReset();
+                      setShowRouteMagicModal(true);
+                    }}
+                    className="w-full sm:w-auto h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99] cursor-pointer border-none"
+                  >
+                    <Settings2 className="h-4 w-4 shrink-0 stroke-[2.5]" />
+                    Connect to Route Magic
                   </button>
                 </div>
               )}
@@ -571,9 +988,11 @@ export const IntegrationsSettings: React.FC = () => {
       ) : (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Integrations</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
+            <div className="pl-6 pr-4 sm:px-8 pt-4 pb-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+                Integrations
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
                 Connect your tools to automate workflows and sync data.
               </p>
             </div>
@@ -588,7 +1007,18 @@ export const IntegrationsSettings: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* AI-Replies toggle feedback - only surfaces on failure (mirrors LinkedIn). */}
+          {aiToggleToast && (
+            <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
+              aiToggleToast.kind === 'ok'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+                : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
+            }`}>
+              {aiToggleToast.message}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4 sm:px-0">
             {filtered.map((integration) => {
               const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
               const isAlreadyConnected = statusMap[integration.id] === 'connected';
@@ -598,18 +1028,23 @@ export const IntegrationsSettings: React.FC = () => {
               return (
                 <div
                   key={integration.id}
-                  className={`group relative flex flex-col rounded-xl border border-border bg-card p-5 transition-all ${
+                  className={`group relative flex flex-col rounded-xl border border-border bg-card dark:bg-[#071131] dark:border-blue-950/40 p-5 transition-all ${
                     integration.comingSoon || isLocked
                       ? 'opacity-75 cursor-default'
                       : 'hover:border-primary/30 hover:shadow-md cursor-pointer'
                   }`}
                   onClick={() => {
-                    if (!integration.comingSoon && !isLocked) setActiveView(integration.id);
+                    if (integration.comingSoon || isLocked) return;
+                    if (integration.route) {
+                      router.push(integration.route);
+                    } else {
+                      setActiveView(integration.id);
+                    }
                   }}
                 >
                   {integration.comingSoon && (
                     <div className="absolute top-3 right-3">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/50">
                         <Clock className="h-2.5 w-2.5" />
                         Coming Soon
                       </span>
@@ -618,7 +1053,7 @@ export const IntegrationsSettings: React.FC = () => {
 
                   {!integration.comingSoon && isLocked && (
                     <div className="absolute top-3 right-3">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/50">
                         <Lock className="h-2.5 w-2.5" />
                         Requires Credits
                       </span>
@@ -629,11 +1064,11 @@ export const IntegrationsSettings: React.FC = () => {
                     <div className="absolute top-3 right-3">
                       <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
                         status === 'connected'
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-gray-50 text-gray-500 border border-gray-200'
+                          ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700/60'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          status === 'connected' ? 'bg-green-500' : 'bg-gray-400'
+                          status === 'connected' ? 'bg-green-500 dark:bg-emerald-400' : 'bg-gray-400 dark:bg-slate-400'
                         }`} />
                         {status === 'connected' ? 'Connected' : 'Disconnected'}
                       </span>
@@ -646,19 +1081,42 @@ export const IntegrationsSettings: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-medium text-sm text-foreground leading-tight">{integration.name}</h3>
-                      <span className="text-[11px] text-muted-foreground">{integration.category}</span>
+                      <span className="text-[11px] text-muted-foreground dark:text-slate-300">{integration.category}</span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-4 flex-1 leading-relaxed">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-4 flex-1 leading-relaxed dark:text-slate-300">
                     {integration.description}
                   </p>
+
+                  {/* AI Replies master switch - only on a CONNECTED WhatsApp card.
+                      Tenant/channel-level kill switch (chat_settings.ai_enabled): off
+                      stops AI replies for ALL chats on this account (messages still
+                      land in the inbox); on resumes. stopPropagation keeps a toggle
+                      click from triggering the card's navigate-on-click. */}
+                  {(integration.id === 'whatsapp-ai' || integration.id === 'whatsapp-personal') && status === 'connected' && (
+                    <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                      <AiToggleChip
+                        label="AI Replies"
+                        enabled={(integration.id === 'whatsapp-ai' ? wabaAiEnabled : wapaAiEnabled) ?? true}
+                        disabled={
+                          integration.id === 'whatsapp-ai'
+                            ? wabaAiEnabled === null || wabaAiSaving
+                            : wapaAiEnabled === null || wapaAiSaving
+                        }
+                        onToggle={integration.id === 'whatsapp-ai' ? toggleWabaAi : toggleWapaAi}
+                      />
+                      <p className="mt-1 text-[10px] text-muted-foreground leading-snug dark:text-slate-300">
+                        Applies to all chats on this account
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-auto">
                     {integration.comingSoon ? (
                       <button
                         disabled
-                        className="w-full py-2.5 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 text-xs font-bold uppercase tracking-wider cursor-not-allowed border border-dashed border-gray-200"
+                        className="w-full py-2.5 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 text-xs font-bold uppercase tracking-wider cursor-not-allowed border border-dashed border-gray-200 dark:text-slate-300"
                       >
                         Coming Soon
                       </button>
@@ -672,10 +1130,10 @@ export const IntegrationsSettings: React.FC = () => {
                       </button>
                     ) : (
                       <button
-                        className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
+                        className={`w-full h-11 px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 outline-none cursor-pointer border-none shadow-sm ${
                           status === 'connected'
-                            ? 'bg-gray-50 dark:bg-gray-800 text-gray-600 hover:bg-gray-100 border border-gray-200'
-                            : 'bg-primary text-primary-foreground hover:shadow-lg'
+                            ? 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 dark:bg-[#1a2a43]/40 dark:text-slate-300 dark:hover:bg-[#1a2a43]/60 dark:border-blue-500/30'
+                            : 'bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 shadow-md'
                         }`}
                       >
                         {status === 'connected' ? 'Manage Settings' : 'Connect Now'}
@@ -692,25 +1150,30 @@ export const IntegrationsSettings: React.FC = () => {
       {/* MindBody Connect Modal - Standardized */}
       {showMindBodyModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-[#000724] border border-gray-200 dark:border-[#262831] rounded-[2rem] shadow-2xl w-full sm:max-w-5xl sm:w-[90vw] overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#000319] border border-slate-200 dark:border-slate-900/60 rounded-2xl shadow-2xl w-full sm:max-w-5xl sm:w-[90vw] overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-900/40">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-teal-50 text-teal-600">
-                  <span className="text-xl">🧘</span>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 shrink-0">
+                  <span className="text-xl select-none">🧘</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Connect MindBody</h3>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">Connect MindBody</h3>
               </div>
               <button
                 onClick={() => {
                   setShowMindBodyModal(false);
                   mindBodyFormReset();
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-[#253456] rounded-xl transition-colors"
+                className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900/60 rounded-xl transition-colors cursor-pointer"
               >
-                <X className="h-5 w-5 text-gray-400" />
+                <X className="h-5 w-5 text-slate-400 dark:text-slate-500" />
               </button>
             </div>
 
+              {(() => {
+                const modalInputClass =
+                    'w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#00051d_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#00051d_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
+
+        return (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -753,70 +1216,70 @@ export const IntegrationsSettings: React.FC = () => {
                   setMindBodyConnecting(false);
                 }
               }}
-              className="p-8 space-y-6"
+              className="p-6 sm:p-8 space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Site ID <span className="text-destructive">*</span></label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Site ID <span className="text-destructive">*</span></label>
                   <Input
                     required
                     placeholder="e.g. -99"
                     value={mindBodyForm.site_id}
                     onChange={(e) => setMindBodyForm((f) => ({ ...f, site_id: e.target.value }))}
-                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                    className={modalInputClass}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Display Name</label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Display Name</label>
                   <Input
                     placeholder="e.g. My Yoga Studio"
                     value={mindBodyForm.display_name}
                     onChange={(e) => setMindBodyForm((f) => ({ ...f, display_name: e.target.value }))}
-                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                    className={modalInputClass}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Username <span className="text-destructive">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username <span className="text-destructive">*</span></label>
                   <Input
                     required
                     placeholder="MindBody username"
                     value={mindBodyForm.username}
                     onChange={(e) => setMindBodyForm((f) => ({ ...f, username: e.target.value }))}
-                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                    className={modalInputClass}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">API Key <span className="text-destructive">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">API Key <span className="text-destructive">*</span></label>
                   <Input
                     required
                     placeholder="MindBody API key"
                     value={mindBodyForm.api_key}
                     onChange={(e) => setMindBodyForm((f) => ({ ...f, api_key: e.target.value }))}
-                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                    className={modalInputClass}
                   />
                 </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Password <span className="text-destructive">*</span></label>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Password *</label>
                   <Input
                     required
                     type="password"
                     placeholder="MindBody password"
                     value={mindBodyForm.password}
                     onChange={(e) => setMindBodyForm((f) => ({ ...f, password: e.target.value }))}
-                    className="h-12 bg-gray-50 dark:bg-[#1a2a43] border-gray-200 dark:border-[#262831] rounded-xl"
+                    className={modalInputClass}
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-700 dark:text-[#7a8ba3] uppercase tracking-wider ml-1">Target Classes</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Classes</label>
                   {mindBodyForm.site_id && mindBodyForm.api_key && (
                     <button
                       type="button"
                       onClick={fetchAvailableClasses}
                       disabled={fetchingClasses}
-                      className="flex items-center gap-1.5 text-[11px] font-bold text-primary uppercase tracking-widest border border-primary/30 rounded-lg px-4 py-1.5 hover:bg-primary/5 transition-all disabled:opacity-60"
+                      className="rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 h-9 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {fetchingClasses ? 'Fetching...' : 'Fetch Classes'}
                     </button>
@@ -824,11 +1287,11 @@ export const IntegrationsSettings: React.FC = () => {
                 </div>
 
                 {availableClasses.length > 0 && (
-                  <div className="rounded-2xl border border-gray-200 dark:border-[#262831] bg-gray-50/50 dark:bg-[#1a2a43]/30 divide-y divide-gray-100 dark:divide-[#262831] max-h-48 overflow-y-auto p-2">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#00051d]/40 divide-y divide-slate-100 dark:divide-slate-800/60 max-h-48 overflow-y-auto p-2 custom-scrollbar">
                     {availableClasses.map((cls) => (
                       <label
                         key={cls}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white dark:hover:bg-[#1a2a43] rounded-xl transition-all"
+                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white dark:hover:bg-[#00051d] rounded-xl transition-all select-none font-semibold text-sm text-slate-700 dark:text-slate-300"
                       >
                         <input
                           type="checkbox"
@@ -838,38 +1301,237 @@ export const IntegrationsSettings: React.FC = () => {
                               e.target.checked ? [...prev, cls] : prev.filter((c) => c !== cls)
                             );
                           }}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="h-4 w-4 rounded accent-[#0b1957] dark:accent-[#2563eb] flex-shrink-0 cursor-pointer"
                         />
-                        <span className="text-sm font-medium text-gray-700 dark:text-white">{cls}</span>
+                        <span className="truncate">{cls}</span>
                       </label>
                     ))}
                   </div>
                 )}
 
                 {classFetchError && (
-                  <p className="text-sm text-destructive font-medium px-2">{classFetchError}</p>
+                  <p className="text-xs font-semibold text-red-500 leading-relaxed">{classFetchError}</p>
                 )}
               </div>
 
               {mindBodyError && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-rose-600 dark:text-rose-400 text-sm font-medium">
-                  {mindBodyError}
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-xl text-rose-700 dark:text-rose-400 text-xs font-semibold leading-relaxed animate-in fade-in duration-200">
+                            <div className="flex items-start gap-2.5">
+                 {mindBodyError}
+              </div>
                 </div>
               )}
 
-              <div className="pt-4">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/40">
                 <button
                   type="submit"
                   disabled={mindBodyConnecting}
-                  className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-[#0b1957] dark:disabled:hover:bg-[#2563eb] disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer border-none"
                 >
-                  {mindBodyConnecting ? 'Connecting...' : 'Connect MindBody Account'}
+                  {mindBodyConnecting ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Connecting MindBody Account...
+                              </>
+                          ) : (
+                              'Connect MindBody Account'
+                          )}
                 </button>
               </div>
             </form>
+        );
+      })()}
+          </div>
+        </div>
+      )}
+
+      {/* Route Magic Connect Modal */}
+      {showRouteMagicModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#000319] border border-slate-200 dark:border-slate-900/60 rounded-2xl shadow-2xl w-full sm:max-w-3xl sm:w-[90vw] overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 shrink-0">
+                  <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">Connect Route Magic</h3>
+                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">Provided by your Route Magic admin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRouteMagicModal(false);
+                  routeMagicFormReset();
+                }}
+                className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900/60 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+              </button>
+            </div>
+
+              {(() => {
+                const modalInputClass =
+                    'w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#00051d_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#00051d_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
+
+        return (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setRouteMagicConnecting(true);
+                setRouteMagicError(null);
+                try {
+                  const payload = {
+                    rm_tenant_id: routeMagicForm.rm_tenant_id.trim(),
+                    display_name: routeMagicForm.display_name.trim() || undefined,
+                    api_key: routeMagicForm.api_key.trim(),
+                    base_url: routeMagicForm.base_url.trim() || undefined,
+                  };
+                  const r = await fetchWithTenant('/api/social-integration/routemagic/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  const data = await r.json();
+                  if (r.ok && data?.connected) {
+                    setStatus('routemagic', 'connected');
+                    setRouteMagicStatusData({
+                      rm_tenant_id: data.rm_tenant_id ?? null,
+                      display_name: data.display_name ?? null,
+                      base_url: data.base_url ?? null,
+                      last_verified_at: data.last_verified_at ?? null,
+                      last_sync_at: data.last_sync_at ?? null,
+                    });
+                    setShowRouteMagicModal(false);
+                    routeMagicFormReset();
+                  } else {
+                    const errorMsg = data?.detail
+                      ? `${data.error}: ${data.detail}`
+                      : (data?.error || data?.message || 'Connection failed. Please verify your credentials.');
+                    setRouteMagicError(errorMsg);
+                  }
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : 'Unknown error';
+                  setRouteMagicError(`Failed to connect: ${msg}`);
+                } finally {
+                  setRouteMagicConnecting(false);
+                }
+              }}
+              className="p-6 sm:p-8 space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Route Magic Tenant ID <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    required
+                      type="text"
+                    placeholder="e.g. sunmeetdemo"
+                    value={routeMagicForm.rm_tenant_id}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, rm_tenant_id: e.target.value }))}
+                    className={modalInputClass}
+                  />
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                            Sent as <code className="font-mono text-slate-500 dark:text-slate-400 px-1 bg-slate-50 dark:bg-slate-900 rounded">RM-TENANT-ID</code> header
+                    </p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Display Name</label>
+                  <input
+                              type="text"
+                    placeholder="e.g. Sunmeet (Sandbox)"
+                    value={routeMagicForm.display_name}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, display_name: e.target.value }))}
+                    className={modalInputClass}
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    API Key <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    placeholder="Route Magic API key (UUID format)"
+                    value={routeMagicForm.api_key}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, api_key: e.target.value }))}
+                    className={`${modalInputClass} font-mono`}
+                  />
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                        Sent as <code className="font-mono text-slate-500 dark:text-slate-400 px-1 bg-slate-50 dark:bg-slate-900 rounded">RM-API-KEY</code> header
+                      </p>
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Base URL</label>
+                  <input type="text"
+                    placeholder="https://staging-api.routemagic.co.uk"
+                    value={routeMagicForm.base_url}
+                    onChange={(e) => setRouteMagicForm((f) => ({ ...f, base_url: e.target.value }))}
+                    className={`${modalInputClass} font-mono`}
+                  />
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                            Defaults to the sandbox endpoint. Switch to production when going live.</p>
+                </div>
+              </div>
+
+              {routeMagicError && (
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-xl text-rose-700 dark:text-rose-400 text-xs font-semibold leading-relaxed animate-in fade-in duration-200">
+                            <div className="flex items-start gap-2.5">
+                  {routeMagicError}
+              </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/40">
+                <button
+                  type="submit"
+                  disabled={routeMagicConnecting}
+                  className="w-full h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-[#0b1957] dark:disabled:hover:bg-[#2563eb] disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer border-none"
+                >
+                  {routeMagicConnecting ? 'Verifying & Connecting…' : 'Connect Route Magic Account'}
+                </button>
+                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-3 text-center">
+                  We&apos;ll call <code className="text-foreground">GET /customers</code> against Route Magic to verify before saving.
+                </p>
+              </div>
+            </form>
+        );
+      })()}
           </div>
         </div>
       )}
     </>
   );
 };
+
+// ── AI Replies chip ──────────────────────────────────────────────────────────
+// Green pill toggle mirroring the LinkedIn/Instagram connected-account cards
+// (web/src/components/settings/LinkedInIntegration.tsx → AiToggleChip).
+function AiToggleChip({
+  label,
+  enabled,
+  onToggle,
+  disabled,
+}: {
+  label: string;
+  enabled: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 ${
+        enabled
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20'
+          : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10'
+      }`}
+    >
+      <Power className="h-3 w-3" />
+      {label}: {enabled ? 'on' : 'off'}
+    </button>
+  );
+}

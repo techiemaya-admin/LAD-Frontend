@@ -250,7 +250,7 @@ export default function Screen2AutoWorkflow() {
           Your Auto-Generated Workflow
         </h1>
         <p className="text-sm text-[#64748B]">
-          Based on your requirements, we've created this automation workflow. Review it and make any changes if needed.
+          Based on your requirements, we&apos;ve created this automation workflow. Review it and make any changes if needed.
         </p>
       </div>
       {/* Workflow Steps */}

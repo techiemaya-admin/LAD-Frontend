@@ -62,7 +62,7 @@ export default function ContributionReport() {
 
         if (!response.ok) {
           // If API fails, use fallback values (component still renders with zeros)
-          console.log('⚠️ Contribution stats fetch returned status:', response.status);
+          console.warn('⚠️ Contribution stats fetch returned status:', response.status);
           setStats({
             uniqueMeetings: 0,
             uniqueReferrals: 0,

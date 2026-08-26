@@ -1,5 +1,5 @@
 // Widget types and configuration
-export type WidgetType = 
+export type WidgetType =
   | 'calls-today'
   | 'answer-rate'
   | 'calls-monthly'
@@ -9,13 +9,25 @@ export type WidgetType =
   | 'calendar'
   | 'ai-insights'
   | 'voice-agents'
-  | 'quick-actions';
-export type WidgetCategory = 
+  | 'quick-actions'
+  | 'broadcast-performance'
+  | 'conversation-funnel'
+  | 'reengage-topics'
+  | 'lead-journey'
+  | 'linkedin-funnel'
+  | 'email-activity'
+  | 'instagram-activity'
+  | 'combined-funnel';
+export type WidgetCategory =
   | 'analytics'
   | 'voice-agent'
   | 'credits'
   | 'calendar'
-  | 'ai-insights';
+  | 'ai-insights'
+  | 'whatsapp'
+  | 'linkedin'
+  | 'email'
+  | 'instagram';
 export interface WidgetConfig {
   id: string;
   type: WidgetType;
@@ -165,6 +177,94 @@ export const WIDGET_CATALOG: Record<WidgetType, WidgetConfig> = {
     defaultSize: { w: 4, h: 2 },
     minSize: { w: 3, h: 2 },
   },
+  'broadcast-performance': {
+    id: 'broadcast-performance',
+    type: 'broadcast-performance',
+    title: 'Broadcast Performance',
+    description: 'Read / delivered / sent / failed breakdown per WhatsApp broadcast template',
+    category: 'whatsapp',
+    icon: 'MessageSquare',
+    defaultSize: { w: 12, h: 3 },
+    minSize: { w: 6, h: 3 },
+    maxSize: { w: 12, h: 5 },
+  },
+  'conversation-funnel': {
+    id: 'conversation-funnel',
+    type: 'conversation-funnel',
+    title: 'Enquiries & Bookings',
+    description: 'Conversation funnel from first enquiry to booking, with drop-off, conversion rate, and daily volume.',
+    category: 'analytics',
+    icon: 'Users',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 6 },
+  },
+  'reengage-topics': {
+    id: 'reengage-topics',
+    type: 'reengage-topics',
+    title: 'Re-engage by Topic',
+    description: 'Customers who asked about a topic but didn’t book can receive a tailored offer to win them back.',
+    category: 'whatsapp',
+    icon: 'Megaphone',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 6 },
+  },
+  'lead-journey': {
+    id: 'lead-journey',
+    type: 'lead-journey',
+    title: 'Lead Journey',
+    description: 'Leads who accepted the connection, replied to the agent, or booked a meeting (SAH) across all your campaigns',
+    category: 'analytics',
+    icon: 'Users',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 8 },
+  },
+  'linkedin-funnel': {
+    id: 'linkedin-funnel',
+    type: 'linkedin-funnel',
+    title: 'LinkedIn Funnel',
+    description: 'Outbound LinkedIn funnel. Track sent, accepted, replied, acceptance/reply rates, and weekly connection-limit usage.',
+    category: 'linkedin',
+    icon: 'TrendingUp',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 6 },
+  },
+  'email-activity': {
+    id: 'email-activity',
+    type: 'email-activity',
+    title: 'Email Activity',
+    description: 'Connected senders, broadcast send / fail totals and your most recent email broadcasts',
+    category: 'email',
+    icon: 'Mail',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 6 },
+  },
+  'instagram-activity': {
+    id: 'instagram-activity',
+    type: 'instagram-activity',
+    title: 'Instagram Activity',
+    description: 'Instagram DM threads, unread count and active connected accounts',
+    category: 'instagram',
+    icon: 'Instagram',
+    defaultSize: { w: 6, h: 3 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 5 },
+  },
+  'combined-funnel': {
+    id: 'combined-funnel',
+    type: 'combined-funnel',
+    title: 'Sales Funnel',
+    description: 'One cross-channel lead funnel. Track new leads to booked meetings (SAH), with overall and per-stage conversion rates.',
+    category: 'analytics',
+    icon: 'Filter',
+    defaultSize: { w: 12, h: 5 },
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 12, h: 7 },
+  },
 };
 // Widget categories for the library
 export const WIDGET_CATEGORIES: { id: WidgetCategory; label: string; icon: string }[] = [
@@ -173,17 +273,28 @@ export const WIDGET_CATEGORIES: { id: WidgetCategory; label: string; icon: strin
   { id: 'credits', label: 'Credits & Usage', icon: 'CreditCard' },
   { id: 'calendar', label: 'Calendar & Scheduling', icon: 'Calendar' },
   { id: 'ai-insights', label: 'AI Insights', icon: 'Brain' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: 'MessageSquare' },
+  { id: 'linkedin', label: 'LinkedIn', icon: 'TrendingUp' },
+  { id: 'email', label: 'Email', icon: 'Mail' },
+  { id: 'instagram', label: 'Instagram', icon: 'Instagram' },
 ];
 // Default dashboard layout
 export const DEFAULT_LAYOUT: WidgetLayoutItem[] = [
   { i: 'calls-today-1', x: 0, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
   { i: 'answer-rate-1', x: 4, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
   { i: 'calls-monthly-1', x: 8, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
-  { i: 'calls-chart-1', x: 0, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'voice-agents-1', x: 6, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'credits-overview-1', x: 0, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'latest-calls-1', x: 6, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-  { i: 'calendar-1', x: 0, y: 10, w: 12, h: 5, minW: 4, minH: 4 },
+  { i: 'combined-funnel-1', x: 0, y: 2, w: 12, h: 5, minW: 6, minH: 4 },
+  { i: 'linkedin-funnel-1', x: 0, y: 7, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'conversation-funnel-1', x: 6, y: 7, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'reengage-topics-1', x: 6, y: 2, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'email-activity-1', x: 0, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'instagram-activity-1', x: 6, y: 6, w: 6, h: 3, minW: 4, minH: 3 },
+  { i: 'broadcast-performance-1', x: 0, y: 6, w: 12, h: 3, minW: 6, minH: 3 },
+  { i: 'calls-chart-1', x: 0, y: 5, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'voice-agents-1', x: 6, y: 5, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'credits-overview-1', x: 0, y: 9, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'latest-calls-1', x: 6, y: 9, w: 6, h: 4, minW: 4, minH: 3 },
+  { i: 'calendar-1', x: 0, y: 13, w: 12, h: 5, minW: 4, minH: 4 },
 ];
 // Helper to extract widget type from layout item id
 export const getWidgetTypeFromId = (id: string): WidgetType | null => {

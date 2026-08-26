@@ -1,7 +1,7 @@
 /**
  * Safe Storage utilities for SDK
  * Uses cookies as primary storage with fallback to memory storage.
- * Token and auth data are stored in cookies only — never in localStorage.
+ * Token and auth data are stored in cookies only - never in localStorage.
  */
 import { cookieStorage } from './cookieStorage';
 

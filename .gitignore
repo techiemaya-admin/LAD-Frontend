@@ -64,4 +64,23 @@ next-env.d.ts
 # OS
 Thumbs.dbfrontend_1502.zip
 web/src/app/api/token/route.ts
-.claude/
+
+# Claude Code: share the CI gate + commands, keep per-machine state out.
+.claude/settings.local.json
+.claude/worktrees/
+.claude/launch.json
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# Compiled TS output must never be committed under src (shadows .ts, breaks module resolution)
+web/src/**/*.js
+web/src/**/*.js.map
+web/src/**/*.d.ts
+web/src/**/*.d.ts.map
+
+# Never commit compiled TS output under src - a stale .js shadows its .ts sibling
+# and breaks module resolution (caused the "et.proxyGet is not a function" crash).
+web/src/**/*.js
+web/src/**/*.js.map
+web/src/**/*.d.ts.map

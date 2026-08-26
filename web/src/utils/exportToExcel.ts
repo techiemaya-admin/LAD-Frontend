@@ -118,21 +118,21 @@ export function prepareExportData(
     
     return {
       callId: item.id?.slice(0, 12) || "N/A",
-      agent: item.assistant || "—",
-      leadName: item.lead_name || "—",
-      type: item.type || "—",
-      status: item.status || "—",
+      agent: item.assistant || "-",
+      leadName: item.lead_name || "-",
+      type: item.type || "-",
+      status: item.status || "-",
       startedAt: item.startedAt
         ? new Date(item.startedAt).toLocaleString()
-        : "—",
+        : "-",
       duration: item.duration
         ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(
             2,
             "0"
           )}`
-        : "—",
+        : "-",
       durationSeconds: item.duration || 0,
-      cost: item.cost || item.call_cost ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}` : "—",
+      cost: item.cost || item.call_cost ? `$${Number(item.cost || item.call_cost || 0).toFixed(2)}` : "-",
       tags: getLeadTag(item),
       recordingUrl: recordingUrl,
       recordingProxyUrl: convertToProxyUrl(recordingUrl),
@@ -177,10 +177,10 @@ export function exportToCSV(
     item.durationSeconds,
     item.cost,
     item.tags,
-    item.analysis || "—",
+    item.analysis || "-",
     item.recordingUrl,
     item.recordingProxyUrl,
-    item.batchId || "—",
+    item.batchId || "-",
   ]);
 
   // Create CSV content

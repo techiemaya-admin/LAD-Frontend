@@ -1,7 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore, WorkflowPreviewStep } from '@/store/onboardingStore';
-import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle } from 'lucide-react';
+import { X, Save, Linkedin, Mail, MessageCircle, Phone, Users, Clock, CheckCircle, Wand2, Loader2, Film, FileImage } from 'lucide-react';
+import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationModal';
+import { useMediaBuilder } from '@/hooks/voice-agent/useMediaBuilder';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 const headers = () => ({
@@ -59,13 +61,67 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
     delayDays: parsedDelay.days,
     delayHours: parsedDelay.hours,
     leadLimit: step.leadLimit || 10,
+    // AI Media step - permanent quadruple set after import-generated
+    mediaPrompt: step.mediaPrompt || '',
+    mediaUrl: step.mediaUrl || '',
+    mediaType: step.mediaType || '',
+    mediaFilename: step.mediaFilename || '',
+    mimeType: step.mimeType || '',
   });
+
+  // ── AI Media step state (media_generation only) ──────────────────────────
+  const [showMediaStudio, setShowMediaStudio] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [pasteUrl, setPasteUrl] = useState('');
+  const mediaBuilder = useMediaBuilder();
+
+  /** Coarse media category from a filename/URL extension. */
+  const mediaTypeFromName = (name: string): string => {
+    const ext = (name.split('?')[0].split('.').pop() || '').toLowerCase();
+    if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) return 'video';
+    if (['pdf', 'doc', 'docx'].includes(ext)) return 'document';
+    return 'image';
+  };
+
+  /** Re-home a generated asset (7-day signed URL) to the permanent campaign bucket. */
+  const importGenerated = async (sourceUrl: string) => {
+    if (!sourceUrl) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      const filename = decodeURIComponent(sourceUrl.split('?')[0].split('/').pop() || 'generated-media');
+      const res = await fetch(`${API_BASE}/api/campaigns/media/import-generated`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ source_url: sourceUrl, media_type: mediaTypeFromName(filename), filename }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d?.url) throw new Error(d?.error || `Import failed (${res.status})`);
+      setFormData(prev => ({
+        ...prev,
+        mediaUrl: d.url,
+        mediaType: d.media_type || mediaTypeFromName(d.filename || filename),
+        mediaFilename: d.filename || filename,
+        mimeType: d.mime_type || '',
+        description: prev.description || `Attach ${d.media_type || 'media'} to outreach`,
+      }));
+      setShowGallery(false);
+      setPasteUrl('');
+    } catch (e: any) {
+      setImportError(e?.message || 'Failed to import media');
+    } finally {
+      setImporting(false);
+    }
+  };
   const getStepIcon = () => {
     if (step.type.startsWith('linkedin_')) return <Linkedin className="w-5 h-5" />;
     if (step.type.startsWith('whatsapp_')) return <MessageCircle className="w-5 h-5" />;
     if (step.type.startsWith('email_')) return <Mail className="w-5 h-5" />;
     if (step.type.startsWith('voice_')) return <Phone className="w-5 h-5" />;
     if (step.type === 'lead_generation') return <Users className="w-5 h-5" />;
+    if (step.type === 'media_generation') return <Wand2 className="w-5 h-5" />;
     if (step.type === 'delay') return <Clock className="w-5 h-5" />;
     if (step.type === 'condition') return <CheckCircle className="w-5 h-5" />;
     return null;
@@ -76,6 +132,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
     if (step.type.startsWith('email_')) return 'bg-[#F59E0B]';
     if (step.type.startsWith('voice_')) return 'bg-[#8B5CF6]';
     if (step.type === 'lead_generation') return 'bg-orange-500';
+    if (step.type === 'media_generation') return 'bg-[#D946EF]';
     if (step.type === 'delay') return 'bg-gray-500';
     return 'bg-blue-500';
   };
@@ -125,7 +182,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
         });
 
         localStorage.setItem(key, JSON.stringify(updatedMessages));
-        console.log('[StepEditor] Updated buffered messages with lead generation changes', updates);
+        console.warn('[StepEditor] Updated buffered messages with lead generation changes', updates);
       }
 
       // For message templates, update the corresponding message data
@@ -261,7 +318,7 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
                 placeholder="10"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Number of leads to generate per day {dailyLimit !== null ? `(1–${dailyLimit})` : '(minimum 1)'}
+                Number of leads to generate per day {dailyLimit !== null ? `(1-${dailyLimit})` : '(minimum 1)'}
               </p>
             </div>
           </div>
@@ -445,6 +502,113 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
             </div>
           </div>
         );
+      case 'media_generation':
+        return (
+          <div className="space-y-4">
+            {/* Selected media preview */}
+            {formData.mediaUrl ? (
+              <div className="border border-fuchsia-200 bg-fuchsia-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2 text-sm font-medium text-fuchsia-700">
+                  {formData.mediaType === 'video' ? <Film className="w-4 h-4" /> : <FileImage className="w-4 h-4" />}
+                  Attached {formData.mediaType || 'media'}
+                  <button
+                    onClick={() => setFormData({ ...formData, mediaUrl: '', mediaType: '', mediaFilename: '', mimeType: '' })}
+                    className="ml-auto text-xs text-gray-500 hover:text-red-500">Remove</button>
+                </div>
+                {formData.mediaType === 'video' ? (
+                  <video src={formData.mediaUrl} controls className="w-full max-h-48 rounded-md bg-black" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={formData.mediaUrl} alt={formData.mediaFilename} className="w-full max-h-48 object-contain rounded-md" />
+                )}
+                <p className="mt-1 text-xs text-gray-500 truncate">{formData.mediaFilename}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Generate brand media in the AI Media Studio, then attach it here - it will be sent with this campaign&apos;s outreach messages.
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowMediaStudio(true)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#D946EF] text-white text-sm font-semibold hover:opacity-90">
+                <Wand2 className="w-4 h-4" /> Open AI Media Studio
+              </button>
+              <button
+                onClick={() => { setShowGallery(!showGallery); if (!showGallery) mediaBuilder.fetchGallery(); }}
+                className="flex-1 px-3 py-2.5 rounded-lg border border-fuchsia-300 text-fuchsia-700 text-sm font-semibold hover:bg-fuchsia-50">
+                {showGallery ? 'Hide generated media' : 'Pick from generated media'}
+              </button>
+            </div>
+
+            {/* Gallery picker */}
+            {showGallery && (
+              <div className="border border-gray-200 rounded-lg p-2 max-h-56 overflow-y-auto">
+                {mediaBuilder.loadingGallery ? (
+                  <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading your generated media…
+                  </div>
+                ) : (
+                  <>
+                    {(mediaBuilder.galleryImages?.length || 0) + (mediaBuilder.galleryVideos?.length || 0) === 0 ? (
+                      <p className="py-4 text-center text-sm text-gray-500">No generated media yet. Use the AI Media Studio first.</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {(mediaBuilder.galleryImages || []).map((it: any, i: number) => {
+                          const u = it?.url || it?.signed_url || (typeof it === 'string' ? it : '');
+                          return u ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={`gi-${i}`} src={u} alt="generated" onClick={() => importGenerated(u)}
+                              className="w-full h-20 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-fuchsia-400" />
+                          ) : null;
+                        })}
+                        {(mediaBuilder.galleryVideos || []).map((it: any, i: number) => {
+                          const u = it?.url || it?.signed_url || (typeof it === 'string' ? it : '');
+                          return u ? (
+                            <video key={`gv-${i}`} src={u} onClick={() => importGenerated(u)} muted
+                              className="w-full h-20 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-fuchsia-400" />
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Manual URL fallback (asset URL copied from the studio) */}
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={pasteUrl}
+                onChange={(e) => setPasteUrl(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500"
+                placeholder="…or paste a generated asset URL"
+              />
+              <button
+                onClick={() => importGenerated(pasteUrl)}
+                disabled={importing || !pasteUrl}
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50">
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Attach'}
+              </button>
+            </div>
+            {importing && <p className="text-xs text-gray-500">Saving a permanent copy of the asset…</p>}
+            {importError && <p className="text-xs text-red-500">{importError}</p>}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes / creative brief (optional)</label>
+              <textarea
+                value={formData.mediaPrompt}
+                onChange={(e) => setFormData({ ...formData, mediaPrompt: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 resize-none"
+                rows={2}
+                placeholder="e.g. Product hero image with brand colors, no text overlay"
+              />
+            </div>
+          </div>
+        );
       case 'delay':
         return (
           <div className="space-y-4">
@@ -529,6 +693,11 @@ export default function StepEditor({ step, onClose, campaignId }: StepEditorProp
           </button>
         </div>
       </div>
+
+      {/* Full AI Media Studio wizard (media_generation step only) */}
+      {step.type === 'media_generation' && (
+        <MediaGenerationModal isOpen={showMediaStudio} onClose={() => setShowMediaStudio(false)} />
+      )}
     </div>
   );
 }

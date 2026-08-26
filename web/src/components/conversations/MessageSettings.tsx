@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -67,10 +68,27 @@ export function useMessageSettings() {
   return { settings, updateSetting };
 }
 
-export function MessageSettings() {
+interface MessageSettingsProps {
+  /** Controlled open state. When provided, the dialog is controlled by the parent. */
+  open?: boolean;
+  /** Notified whenever the dialog wants to open/close (controlled or uncontrolled). */
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * Render the built-in gear trigger button. Set to false when opening from an
+   * external control (e.g. a dropdown menu item). Defaults to true so existing
+   * usages keep their gear button.
+   */
+  showTrigger?: boolean;
+}
+
+export function MessageSettings({
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = true,
+}: MessageSettingsProps = {}) {
   const { settings, updateSetting } = useMessageSettings();
 
-  // Per-tenant inbound debounce — persisted server-side via the WABA
+  // Per-tenant inbound debounce - persisted server-side via the WABA
   // chat-settings API (NOT localStorage), because it controls server
   // behaviour (asyncio.sleep before AI generation), not just UI behaviour.
   const [inboundDebounce, setInboundDebounce] = useState<number>(INBOUND_DEBOUNCE_DEFAULT);
@@ -78,7 +96,19 @@ export function MessageSettings() {
   const [debounceSaving, setDebounceSaving] = useState(false);
   const [debounceError, setDebounceError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [open, setOpen] = useState(false);
+
+  // Support both controlled usage (parent passes open/onOpenChange, e.g. opened
+  // from a menu item) and uncontrolled usage (the built-in gear trigger).
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next);
+      onOpenChange?.(next);
+    },
+    [isControlled, onOpenChange],
+  );
 
   // Fetch current value when the modal first opens, so we don't hit the API
   // on every conversation page load for users who never open the menu.
@@ -144,24 +174,37 @@ export function MessageSettings() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Message settings">
-          <Settings className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100 shadow-sm flex items-center justify-center w-10 h-10">
-              <Settings className="h-5 w-5" />
-            </div>
-            <DialogTitle>Message Settings</DialogTitle>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Message settings">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-md sm:w-auto rounded-2xl bg-white dark:bg-[#161717] border border-slate-200 dark:border-[#222d34] shadow-xl"
+      >
+        <DialogHeader className="px-5 py-4 bg-white dark:bg-[#161717] border-b border-slate-200 dark:border-[#222d34] rounded-t-2xl">
+          <div className="flex items-center justify-between gap-4 w-full">
+            <DialogTitle className="text-base font-semibold text-slate-900 dark:text-white">
+              Message Settings
+            </DialogTitle>
+            <DialogClose
+              className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-[#a2a2a2] dark:hover:bg-[#1e2a30] dark:hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </DialogClose>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+        <div className="space-y-5 px-5 py-5 flex-1 overflow-y-auto bg-white dark:bg-[#161717] rounded-b-2xl">
           <div className="flex items-center justify-between">
-            <Label htmlFor="mark-read" className="text-sm font-medium cursor-pointer">
+            <Label
+              htmlFor="mark-read"
+              className="text-sm font-medium text-slate-700 dark:text-[#d1d7db] cursor-pointer"
+            >
               Mark as read on open
             </Label>
             <Switch
@@ -172,7 +215,10 @@ export function MessageSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="confirm-send" className="text-sm font-medium cursor-pointer">
+            <Label
+              htmlFor="confirm-send"
+              className="text-sm font-medium text-slate-700 dark:text-[#d1d7db] cursor-pointer"
+            >
               Confirm before send
             </Label>
             <Switch
@@ -182,9 +228,12 @@ export function MessageSettings() {
             />
           </div>
 
-          <div className="space-y-3">
-            <Label htmlFor="msg-delay" className="text-sm font-medium">
-              Message delay: {settings.messageDelay}s
+          <div className="space-y-2">
+            <Label
+              htmlFor="msg-delay"
+              className="text-sm font-medium text-slate-700 dark:text-[#d1d7db]"
+            >
+              Message delay: <span className="font-semibold text-slate-900 dark:text-white">{settings.messageDelay}s</span>
             </Label>
             <input
               id="msg-delay"
@@ -196,20 +245,25 @@ export function MessageSettings() {
               onChange={(e) => updateSetting('messageDelay', Number(e.target.value))}
               className="w-full h-1.5 accent-primary cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="flex justify-between text-[10px] text-slate-500 dark:text-[#a2a2a2]">
               <span>0s (instant)</span>
               <span>5s</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="inbound-debounce" className="text-sm">
-              Inbound debounce: {inboundDebounce}s
+            <Label
+              htmlFor="inbound-debounce"
+              className="text-sm font-medium text-slate-700 dark:text-[#d1d7db] flex items-center"
+            >
+              <span>
+                Inbound debounce: <span className="font-semibold text-slate-900 dark:text-white">{inboundDebounce}s</span>
+              </span>
               {debounceSaving && (
-                <span className="ml-2 text-[10px] text-muted-foreground">saving…</span>
+                <span className="ml-2 text-[10px] text-slate-500 dark:text-[#a2a2a2]">saving…</span>
               )}
             </Label>
-            <p className="text-[11px] text-muted-foreground leading-snug">
+            <p className="text-[11px] text-slate-500 dark:text-[#a2a2a2] leading-snug">
               Time to wait after a customer message before generating a reply
               (helps coalesce typing bursts).
             </p>
@@ -222,14 +276,14 @@ export function MessageSettings() {
               value={inboundDebounce}
               disabled={!debounceLoaded}
               onChange={(e) => onInboundDebounceChange(Number(e.target.value))}
-              className="w-full h-1.5 accent-primary disabled:opacity-50"
+              className="w-full h-1.5 accent-primary disabled:opacity-50 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-slate-500 dark:text-[#a2a2a2]">
               <span>0s (off)</span>
               <span>{INBOUND_DEBOUNCE_MAX}s</span>
             </div>
             {debounceError && (
-              <p className="text-[10px] text-destructive">{debounceError}</p>
+              <p className="text-[10px] text-red-600 dark:text-red-400">{debounceError}</p>
             )}
           </div>
         </div>

@@ -346,7 +346,7 @@ const mockItem: Item = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
-describe('[Feature Name] SDK – API', () => {
+describe('[Feature Name] SDK-API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -453,7 +453,7 @@ const mockItem: Item = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
-describe('[Feature Name] SDK – Hooks', () => {
+describe('[Feature Name] SDK-Hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

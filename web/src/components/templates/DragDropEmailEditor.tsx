@@ -30,7 +30,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type BlockType = 'h1' | 'h2' | 'text' | 'image' | 'logo' | 'button' | 'divider' | 'spacer' | 'footer' | 'signature';
+type BlockType = 'header' | 'h1' | 'h2' | 'text' | 'image' | 'logo' | 'button' | 'divider' | 'spacer' | 'footer' | 'signature';
 type Align = 'left' | 'center' | 'right';
 
 interface EmailBlock {
@@ -39,9 +39,19 @@ interface EmailBlock {
   props: Record<string, any>;
 }
 
+// ── Branded email-shell constants ─────────────────────────────────────────────
+// blocksToHtml wraps content in a full-width page background + a centred white
+// "card". CARD_PADDING is the card's inner padding; the header banner and
+// footer use matching NEGATIVE margins to bleed edge-to-edge within the card
+// (clipped by the card's overflow:hidden + border-radius). Keep these in sync.
+const CARD_PADDING = 32;               // px - card inner padding
+const PAGE_BG_DEFAULT = '#eef1f6';     // page background behind the card
+const CARD_MAX_WIDTH = 600;            // px - content width (parser fingerprint)
+
 // ── Default props per block type ──────────────────────────────────────────────
 
 const DEFAULT_PROPS: Record<BlockType, Record<string, any>> = {
+  header:    { src: '', alt: 'Header banner', href: '' },
   h1:        { content: 'Heading 1', align: 'left', color: '#111827' },
   h2:        { content: 'Heading 2', align: 'left', color: '#374151' },
   text:      { content: 'Your email content goes here. Write something compelling...', align: 'left', color: '#374151' },
@@ -75,6 +85,22 @@ const DEFAULT_PROPS: Record<BlockType, Record<string, any>> = {
   },
 };
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+/** Convert Google Drive share links to direct-embed URLs; returns the URL
+ *  unchanged if it isn't a Drive link. Shared by the image + signature editors. */
+function toDirectImageUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'drive.google.com') return url;
+    const fileMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+    if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+    const idParam = u.searchParams.get('id');
+    if (idParam) return `https://drive.google.com/uc?export=view&id=${idParam}`;
+  } catch { /* not a valid URL yet - leave as-is */ }
+  return url;
+}
+
 // ── HTML generator ────────────────────────────────────────────────────────────
 
 function blockToHtml(block: EmailBlock): string {
@@ -82,6 +108,15 @@ function blockToHtml(block: EmailBlock): string {
   const { align = 'left', color } = props;
 
   switch (type) {
+    case 'header': {
+      // Full-bleed banner image - negative margins counteract the card padding
+      // so the image spans edge-to-edge (clipped by the card's rounded corners).
+      if (!props.src) return `<!-- header block (no src) -->`;
+      const bleed = `margin:-${CARD_PADDING}px -${CARD_PADDING}px 20px -${CARD_PADDING}px;`;
+      const imgTag = `<img src="${props.src}" alt="${props.alt || ''}" style="width:100%;height:auto;display:block;border:0;" />`;
+      const inner = props.href ? `<a href="${props.href}" style="text-decoration:none;">${imgTag}</a>` : imgTag;
+      return `<div style="${bleed}line-height:0;">${inner}</div>`;
+    }
     case 'h1':
       return `<h1 style="text-align:${align};color:${color};font-size:32px;font-weight:700;margin:0 0 16px;line-height:1.2;">${props.content}</h1>`;
     case 'h2':
@@ -122,7 +157,10 @@ function blockToHtml(block: EmailBlock): string {
         s.youtube   ? `<a href="${s.youtube}"   style="${_aStyle}"><img src="https://cdn-icons-png.flaticon.com/32/1384/1384060.png" width="28" height="28" alt="YouTube"   style="${_iStyle}"/></a>` : '',
         s.twitter   ? `<a href="${s.twitter}"   style="${_aStyle}"><img src="https://cdn-icons-png.flaticon.com/32/733/733579.png"  width="28" height="28" alt="Twitter"   style="${_iStyle}"/></a>` : '',
       ].filter(Boolean).join('');
-      return `<div style="background:${props.bgColor || '#f3f4f6'};padding:24px 20px;text-align:center;margin-top:20px;">
+      // Full-bleed footer band - negative side/bottom margins reach the card
+      // edges (clipped by the card's rounded corners + overflow:hidden).
+      const footerBleed = `margin:20px -${CARD_PADDING}px -${CARD_PADDING}px -${CARD_PADDING}px;`;
+      return `<div style="background:${props.bgColor || '#f3f4f6'};padding:24px 20px;text-align:center;${footerBleed}">
   ${socialLinks ? `<div style="display:block;line-height:1;margin-bottom:14px;font-size:0;">${socialLinks}</div>` : ''}
   ${props.companyName ? `<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${props.textColor || '#374151'};">${props.companyName}</p>` : ''}
   ${props.address ? `<p style="margin:0 0 10px;font-size:12px;color:${props.textColor || '#6b7280'};">${props.address}</p>` : ''}
@@ -152,7 +190,12 @@ function blockToHtml(block: EmailBlock): string {
 export function blocksToHtml(blocks: EmailBlock[]): string {
   if (!blocks.length) return '';
   const inner = blocks.map(blockToHtml).join('\n');
-  return `<div style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:24px 20px;">\n${inner}\n</div>`;
+  // Centred white "card". Keeps the max-width:600px fingerprint that the parser
+  // (htmlToBlocks) keys off, so round-tripping still works. overflow:hidden +
+  // border-radius clip the full-bleed header/footer bands to rounded corners.
+  const card = `<div style="max-width:${CARD_MAX_WIDTH}px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(16,24,40,0.08);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:${CARD_PADDING}px;">\n${inner}\n</div>`;
+  // Full-width page background behind the card (the "branded" backdrop).
+  return `<div style="background-color:${PAGE_BG_DEFAULT};margin:0;padding:32px 12px;width:100%;box-sizing:border-box;">\n${card}\n</div>`;
 }
 
 // ── HTML → Blocks parser (reverses blocksToHtml) ─────────────────────────────
@@ -167,7 +210,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
     const parser = new DOMParser();
     const doc    = parser.parseFromString(html, 'text/html');
 
-    // Must have our outer wrapper — bail if it doesn't
+    // Must have our outer wrapper - bail if it doesn't
     const wrapper = doc.querySelector('div[style*="max-width:600px"]');
     if (!wrapper) return null;
 
@@ -217,7 +260,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
         continue;
       }
 
-      // ── div — spacer / image / logo / button / footer / signature ────────────
+      // ── div - spacer / image / logo / button / footer / signature ────────────
       if (tag === 'div') {
 
         // Spacer: only a height style, no meaningful children
@@ -226,6 +269,21 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
             height: parseInt(cs.height) || 24,
           }});
           continue;
+        }
+
+        // Header banner: full-bleed image via negative margins (margin:-…).
+        // Must be checked BEFORE logo/image since it also contains an <img>.
+        if (styleStr.includes('margin:-')) {
+          const hAnchor = el.querySelector(':scope > a');
+          const hImg = (el.querySelector(':scope > img') || hAnchor?.querySelector('img')) as HTMLImageElement | null;
+          if (hImg) {
+            blocks.push({ id: uid(), type: 'header', props: {
+              src:  hImg.getAttribute('src') || '',
+              alt:  hImg.getAttribute('alt') || 'Header banner',
+              href: hAnchor?.getAttribute('href') || '',
+            }});
+            continue;
+          }
         }
 
         // Footer: padding:24px 20px + text-align:center fingerprint
@@ -345,7 +403,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
           continue;
         }
       }
-      // unknown element — skip
+      // unknown element - skip
     }
 
     return blocks.length > 0 ? blocks : null;
@@ -357,6 +415,7 @@ function htmlToBlocks(html: string): EmailBlock[] | null {
 // ── Block palette definitions ─────────────────────────────────────────────────
 
 const PALETTE: { type: BlockType; label: string; icon: React.ReactNode; desc: string }[] = [
+  { type: 'header',    label: 'Header banner', icon: <ImageIcon className="w-4 h-4" />,   desc: 'Full-width top image' },
   { type: 'h1',        label: 'Heading 1',  icon: <Heading1 className="w-4 h-4" />,       desc: 'Large title' },
   { type: 'h2',        label: 'Heading 2',  icon: <Heading2 className="w-4 h-4" />,       desc: 'Subtitle' },
   { type: 'text',      label: 'Text',       icon: <AlignLeft className="w-4 h-4" />,      desc: 'Paragraph' },
@@ -403,7 +462,7 @@ function VariablePicker({ onInsert, dropAlign = 'left' }: { onInsert: (v: string
         className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
           open
             ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-            : 'bg-white text-violet-600 border-violet-200 hover:bg-violet-50'
+            : 'bg-white dark:bg-[#000c3b] text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-900 hover:bg-violet-50 dark:hover:bg-violet-950/30'
         }`}
       >
         <Tags className="w-3.5 h-3.5" />
@@ -411,17 +470,17 @@ function VariablePicker({ onInsert, dropAlign = 'left' }: { onInsert: (v: string
       </button>
 
       {open && (
-        <div className={`absolute ${dropAlign === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 min-w-[180px]`}>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-3 pb-1.5">Insert variable</p>
+        <div className={`absolute ${dropAlign === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 bg-white dark:bg-[#000c3b] rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 py-1.5 min-w-[180px]`}>
+          <p className="text-[10px] font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wide px-3 pb-1.5">Insert variable</p>
           {VARIABLES.map(({ label, val }) => (
             <button
               key={val}
               type="button"
               onClick={() => { onInsert(val); setOpen(false); }}
-              className="w-full flex items-center justify-between gap-4 px-3 py-1.5 text-xs hover:bg-violet-50 transition-colors group"
+              className="w-full flex items-center justify-between gap-4 px-3 py-1.5 text-xs hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors group"
             >
-              <span className="text-gray-700 font-medium group-hover:text-violet-700">{label}</span>
-              <span className="font-mono text-[10px] text-gray-400 group-hover:text-violet-500">{val}</span>
+              <span className="text-gray-700 dark:text-gray-300 font-medium group-hover:text-violet-700 dark:group-hover:text-violet-400">{label}</span>
+              <span className="font-mono text-[10px] text-gray-400 dark:text-slate-300 group-hover:text-violet-500">{val}</span>
             </button>
           ))}
         </div>
@@ -484,14 +543,14 @@ function FooterBlockEditor({ local, set, inputCls, labelCls }: {
         <div>
           <label className={labelCls}>Background</label>
           <div className="flex items-center gap-2">
-            <input type="color" value={local.bgColor || '#f3f4f6'} onChange={(e) => set('bgColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 cursor-pointer flex-shrink-0" />
+            <input type="color" value={local.bgColor || '#f3f4f6'} onChange={(e) => set('bgColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 dark:border-gray-800 cursor-pointer flex-shrink-0" />
             <input type="text" value={local.bgColor || '#f3f4f6'} onChange={(e) => set('bgColor', e.target.value)} className={inputCls} />
           </div>
         </div>
         <div>
           <label className={labelCls}>Text Color</label>
           <div className="flex items-center gap-2">
-            <input type="color" value={local.textColor || '#6b7280'} onChange={(e) => set('textColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 cursor-pointer flex-shrink-0" />
+            <input type="color" value={local.textColor || '#6b7280'} onChange={(e) => set('textColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 dark:border-gray-800 cursor-pointer flex-shrink-0" />
             <input type="text" value={local.textColor || '#6b7280'} onChange={(e) => set('textColor', e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -521,7 +580,7 @@ function FooterBlockEditor({ local, set, inputCls, labelCls }: {
       {/* Live preview */}
       <div>
         <label className={labelCls}>Preview</label>
-        <div className="rounded-xl overflow-hidden border border-gray-200 text-center py-5 px-4" style={{ background: local.bgColor || '#f3f4f6' }}>
+        <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 text-center py-5 px-4" style={{ background: local.bgColor || '#f3f4f6' }}>
           {/* Social icons */}
           <div className="flex justify-center gap-2 mb-3">
             {SOCIAL_ICONS.filter(s => socials[s.key]).map(({ key, label, Icon, color }) => (
@@ -560,11 +619,15 @@ function SignatureBlockEditor({ local, set, onCommit, inputCls, labelCls }: {
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setUploadError('Please select an image file'); return; }
+    if (file.size > 5 * 1024 * 1024)    { setUploadError('Max file size is 5 MB'); return; }
     setUploading(true);
+    setUploadError('');
     try {
       const form = new FormData();
       form.append('file', file);
@@ -577,35 +640,58 @@ function SignatureBlockEditor({ local, set, onCommit, inputCls, labelCls }: {
         // Auto-commit so logo is saved without requiring the user to click ✓
         onCommit?.({ ...local, logoSrc: url });
       }
-    } catch { /* non-fatal */ }
-    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
   return (
     <>
-      {/* Logo */}
+      {/* Logo image - upload from device OR paste a URL / Google Drive link */}
       <div>
-        <label className={labelCls}>Logo</label>
+        <label className={labelCls}>Logo image</label>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-        {local.logoSrc ? (
-          <div className="relative inline-block">
-            <img src={local.logoSrc} alt="Logo" className="max-h-14 object-contain rounded border border-gray-200 bg-white p-1" />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-2 border-2 border-dashed border-blue-200 rounded-xl text-sm text-blue-600  dark:border-gray-800 bg-white dark:bg-[#000724] hover:bg-blue-50 hover:border-blue-400 transition-all disabled:opacity-60">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          {uploading ? 'Uploading…' : 'Upload from device'}
+        </button>
+
+        <div className="flex items-center gap-2 my-2">
+          <div className="flex-1 border-t border-gray-200" />
+          <span className="text-[11px] text-gray-400 font-medium">or paste URL / Google Drive link</span>
+          <div className="flex-1 border-t border-gray-200" />
+        </div>
+
+        <input type="text" placeholder="https://example.com/logo.png  or Google Drive share link"
+          value={local.logoSrc || ''}
+          onChange={(e) => set('logoSrc', toDirectImageUrl(e.target.value.trim()))}
+          className={inputCls} />
+
+        {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+
+        {local.logoSrc && (
+          <div className="relative inline-block mt-2">
+            <img src={local.logoSrc} alt="Logo" className="max-h-14 object-contain rounded border border-gray-200 bg-white p-1"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <button type="button" onClick={() => set('logoSrc', '')} className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white">
               <X className="w-3 h-3" />
             </button>
           </div>
-        ) : (
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-            className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-blue-200 rounded-xl text-xs text-blue-600 hover:bg-blue-50 transition-all">
-            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-            Upload logo
-          </button>
         )}
+
         {local.logoSrc && (
           <div className="flex items-center gap-2 mt-2">
-            <input type="range" min={40} max={300} step={10} value={local.logoWidth ?? 120}
+            <label className="text-xs text-gray-500 whitespace-nowrap">Width</label>
+            <input type="range" min={40} max={400} step={10} value={local.logoWidth ?? 120}
               onChange={(e) => set('logoWidth', Number(e.target.value))} className="flex-1 accent-blue-600" />
-            <span className="text-xs text-gray-600 w-14 text-right">{local.logoWidth ?? 120}px wide</span>
+            <input type="number" min={40} max={400} value={local.logoWidth ?? 120}
+              onChange={(e) => set('logoWidth', Math.max(40, Math.min(400, Number(e.target.value) || 120)))}
+              className="w-16 text-xs border border-gray-200 rounded px-2 py-1 text-right  dark:text-slate-300" />
+            <span className="text-xs text-gray-500  dark:text-slate-300">px</span>
           </div>
         )}
       </div>
@@ -646,7 +732,7 @@ function SignatureBlockEditor({ local, set, onCommit, inputCls, labelCls }: {
       <div>
         <label className={labelCls}>Accent Color</label>
         <div className="flex items-center gap-2">
-          <input type="color" value={local.accentColor || '#0b1957'} onChange={(e) => set('accentColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 cursor-pointer flex-shrink-0" />
+          <input type="color" value={local.accentColor || '#0b1957'} onChange={(e) => set('accentColor', e.target.value)} className="h-8 w-10 rounded border border-gray-200 dark:border-gray-800 cursor-pointer flex-shrink-0" />
           <input type="text" value={local.accentColor || '#0b1957'} onChange={(e) => set('accentColor', e.target.value)} className={inputCls} />
         </div>
       </div>
@@ -689,25 +775,6 @@ function ImageBlockEditor({
   const fileRef  = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-
-  /** Convert Google Drive share links to direct-embed URLs.
-   *  Handles:
-   *   - https://drive.google.com/file/d/FILE_ID/view?...
-   *   - https://drive.google.com/open?id=FILE_ID
-   *  Returns the URL unchanged if it's not a Drive link. */
-  function toDirectImageUrl(url: string): string {
-    try {
-      const u = new URL(url);
-      if (u.hostname !== 'drive.google.com') return url;
-      // /file/d/FILE_ID/...
-      const fileMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
-      if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
-      // ?id=FILE_ID
-      const idParam = u.searchParams.get('id');
-      if (idParam) return `https://drive.google.com/uc?export=view&id=${idParam}`;
-    } catch { /* not a valid URL yet — leave as-is */ }
-    return url;
-  }
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -752,7 +819,7 @@ function ImageBlockEditor({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-2 border-2 border-dashed border-blue-200 rounded-xl text-sm text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-400 transition-all disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-2 border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-[#000c3b] hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-blue-400 dark:hover:border-blue-500 transition-all disabled:opacity-60"
         >
           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
           {uploading ? 'Uploading…' : 'Upload from device'}
@@ -760,12 +827,12 @@ function ImageBlockEditor({
 
         {/* Divider */}
         <div className="flex items-center gap-2 my-2">
-          <div className="flex-1 border-t border-gray-200" />
-          <span className="text-[11px] text-gray-400 font-medium">or paste URL / Google Drive link</span>
-          <div className="flex-1 border-t border-gray-200" />
+          <div className="flex-1 border-t border-gray-200 dark:border-gray-800" />
+          <span className="text-[11px] text-gray-400 dark:text-slate-300 font-medium">or paste URL / Google Drive link</span>
+          <div className="flex-1 border-t border-gray-200 dark:border-gray-800" />
         </div>
 
-        {/* URL input — auto-converts Google Drive share links to direct embed URLs */}
+        {/* URL input - auto-converts Google Drive share links to direct embed URLs */}
         <input
           type="text"
           placeholder="https://example.com/image.png  or Google Drive share link"
@@ -784,7 +851,7 @@ function ImageBlockEditor({
 
       {/* Image preview */}
       {local.src && (
-        <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-white">
+        <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#000724]">
           <img
             src={local.src}
             alt={local.alt || 'Preview'}
@@ -794,7 +861,7 @@ function ImageBlockEditor({
           <button
             type="button"
             onClick={() => set('src', '')}
-            className="absolute top-2 right-2 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+            className="absolute top-2 right-2 w-6 h-6 bg-white dark:bg-[#000c3b] rounded-full shadow flex items-center justify-center text-gray-400 dark:text-slate-300 hover:text-red-500 transition-colors"
             title="Remove image"
           >
             <X className="w-3.5 h-3.5" />
@@ -827,7 +894,7 @@ function ImageBlockEditor({
             onChange={(e) => set('width', Number(e.target.value))}
             className="flex-1 accent-blue-600"
           />
-          <span className="text-sm font-semibold text-gray-700 w-10 text-right">{local.width ?? 100}%</span>
+          <span className="text-sm font-semibold text-gray-700 dark:text-slate-300 w-10 text-right">{local.width ?? 100}%</span>
         </div>
       </div>
     </>
@@ -897,7 +964,7 @@ function RichTextEditor({
     setTimeout(sync, 0);
   };
 
-  // List insertion — falls back to insertHTML when execCommand list command fails
+  // List insertion - falls back to insertHTML when execCommand list command fails
   // (execCommand insertUnorderedList/insertOrderedList can silently fail if caret
   //  is inside a <div> with no block content before it)
   const insertList = (type: 'ul' | 'ol') => {
@@ -905,7 +972,7 @@ function RichTextEditor({
     const cmd = type === 'ul' ? 'insertUnorderedList' : 'insertOrderedList';
     const beforeHtml = editorRef.current?.innerHTML || '';
     document.execCommand(cmd, false, '');
-    // If innerHTML is unchanged the command did nothing — fall back to raw HTML insert
+    // If innerHTML is unchanged the command did nothing - fall back to raw HTML insert
     if (editorRef.current?.innerHTML === beforeHtml) {
       const sel = window.getSelection();
       const selected = sel?.toString() || '';
@@ -939,7 +1006,7 @@ function RichTextEditor({
     setTimeout(sync, 0);
   };
 
-  // Link insertion — uses saved selection so focus loss doesn't break it
+  // Link insertion - uses saved selection so focus loss doesn't break it
   const insertLink = () => {
     saveSelection();
     const url = window.prompt('Enter URL:', 'https://');
@@ -964,19 +1031,19 @@ function RichTextEditor({
       type="button"
       title={title}
       onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-      className="p-1.5 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors flex items-center justify-center"
+      className="p-1.5 rounded text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center justify-center"
     >
       {children}
     </button>
   );
 
-  const Sep = () => <span className="w-px h-4 bg-gray-300 mx-0.5 flex-shrink-0" />;
+  const Sep = () => <span className="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-0.5 flex-shrink-0" />;
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-400 transition-shadow">
+    <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-400 transition-shadow">
 
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 dark:bg-[#000724] border-b border-gray-200 dark:border-gray-800">
 
         {/* Format */}
         <Btn title="Bold (Cmd+B)"      onClick={() => exec('bold')}         ><Bold          className="w-3.5 h-3.5" /></Btn>
@@ -996,11 +1063,11 @@ function RichTextEditor({
           onMouseDown={(e) => e.stopPropagation()}
           onFocus={saveSelection}
           onChange={(e) => { setFontSize(e.target.value); (e.target as HTMLSelectElement).value = ''; }}
-          className="text-xs border border-gray-200 rounded px-1 py-1 bg-white text-gray-600 focus:outline-none cursor-pointer"
+          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer"
           defaultValue=""
         >
-          <option value="" disabled>Size</option>
-          {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
+          <option value="" disabled className="dark:bg-[#000c3b]">Size</option>
+          {FONT_SIZES.map((s) => <option key={s} value={s} className="dark:bg-[#000c3b]">{s}px</option>)}
         </select>
 
         {/* Font family */}
@@ -1012,21 +1079,21 @@ function RichTextEditor({
             if (e.target.value) { restoreSelection(); exec('fontName', e.target.value); }
             (e.target as HTMLSelectElement).value = '';
           }}
-          className="text-xs border border-gray-200 rounded px-1 py-1 bg-white text-gray-600 focus:outline-none cursor-pointer max-w-[90px]"
+          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer max-w-[90px]"
           defaultValue=""
         >
-          <option value="" disabled>Font</option>
-          {FONT_FAMILIES.map(({ label, value }) => <option key={label} value={value}>{label}</option>)}
+          <option value="" disabled className="dark:bg-[#000c3b]">Font</option>
+          {FONT_FAMILIES.map(({ label, value }) => <option key={label} value={value} className="dark:bg-[#000c3b]">{label}</option>)}
         </select>
         <Sep />
 
         {/* Text colour */}
         <label
           title="Text colour"
-          className="flex items-center gap-0.5 p-1.5 rounded hover:bg-gray-200 cursor-pointer"
+          className="flex items-center gap-0.5 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer"
           onMouseDown={saveSelection}
         >
-          <span className="text-[13px] font-bold text-gray-700 select-none" style={{ textDecoration: 'underline wavy' }}>A</span>
+          <span className="text-[13px] font-bold text-gray-700 dark:text-gray-300 select-none" style={{ textDecoration: 'underline wavy' }}>A</span>
           <input
             ref={colorInputRef}
             type="color"
@@ -1035,7 +1102,7 @@ function RichTextEditor({
             onChange={(e) => { restoreSelection(); exec('foreColor', e.target.value); }}
           />
           <span
-            className="w-3 h-2 rounded-sm border border-gray-300 ml-0.5"
+            className="w-3 h-2 rounded-sm border border-gray-300 dark:border-gray-700 ml-0.5"
             style={{ background: '#000000' }}
             onClick={() => colorInputRef.current?.click()}
           />
@@ -1053,7 +1120,7 @@ function RichTextEditor({
         </Btn>
         <Sep />
 
-        {/* Variables — opens right-aligned so it stays inside the toolbar */}
+        {/* Variables - opens right-aligned so it stays inside the toolbar */}
         <VariablePicker onInsert={insertVariable} dropAlign="right" />
       </div>
 
@@ -1072,7 +1139,7 @@ function RichTextEditor({
           document.execCommand('insertText', false, text);
           setTimeout(sync, 0);
         }}
-        className="min-h-[140px] max-h-[300px] overflow-y-auto p-3 text-sm text-gray-800 focus:outline-none
+        className="min-h-[140px] max-h-[300px] overflow-y-auto p-3 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-[#000c3b] focus:outline-none
           [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1
           [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1
           [&_li]:my-0.5"
@@ -1113,11 +1180,11 @@ function BlockEditor({
     }
   };
 
-  const labelCls = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1';
-  const inputCls = 'w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
+  const labelCls = 'block text-[11px] font-semibold text-gray-500 dark:text-slate-300 uppercase tracking-wide mb-1';
+  const inputCls = 'w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white placeholder-gray-400';
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-2 space-y-3">
+    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/60 rounded-xl p-4 mt-2 space-y-3">
 
       {/* Rich text editor for text blocks */}
       {block.type === 'text' && (
@@ -1147,12 +1214,25 @@ function BlockEditor({
         </div>
       )}
 
+      {/* Header banner - full-width top image + optional link */}
+      {block.type === 'header' && (
+        <>
+          <p className="text-xs text-gray-500 -mt-1">Spans the full width of the email, edge to edge at the top.</p>
+          <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
+          <div>
+            <label className={labelCls}>Link URL (optional)</label>
+            <input type="text" placeholder="https://yoursite.com" value={local.href || ''}
+              onChange={(e) => set('href', e.target.value)} className={inputCls} />
+          </div>
+        </>
+      )}
+
       {/* Image src + upload + alt + width */}
       {block.type === 'image' && (
         <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
       )}
 
-      {/* Logo — upload + optional link + width */}
+      {/* Logo - upload + optional link + width */}
       {block.type === 'logo' && (
         <>
           <ImageBlockEditor local={local} set={set} onCommit={onUpdate} inputCls={inputCls} labelCls={labelCls} />
@@ -1182,14 +1262,14 @@ function BlockEditor({
             <div>
               <label className={labelCls}>Background</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={local.bgColor || '#0b1957'} onChange={(e) => set('bgColor', e.target.value)} className="h-8 w-12 rounded border border-gray-200 cursor-pointer" />
+                <input type="color" value={local.bgColor || '#0b1957'} onChange={(e) => set('bgColor', e.target.value)} className="h-8 w-12 rounded border border-gray-200 dark:border-gray-800 cursor-pointer" />
                 <input type="text" value={local.bgColor || '#0b1957'} onChange={(e) => set('bgColor', e.target.value)} className={inputCls} />
               </div>
             </div>
             <div>
               <label className={labelCls}>Text Color</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={local.textColor || '#ffffff'} onChange={(e) => set('textColor', e.target.value)} className="h-8 w-12 rounded border border-gray-200 cursor-pointer" />
+                <input type="color" value={local.textColor || '#ffffff'} onChange={(e) => set('textColor', e.target.value)} className="h-8 w-12 rounded border border-gray-200 dark:border-gray-800 cursor-pointer" />
                 <input type="text" value={local.textColor || '#ffffff'} onChange={(e) => set('textColor', e.target.value)} className={inputCls} />
               </div>
             </div>
@@ -1202,7 +1282,7 @@ function BlockEditor({
         <div>
           <label className={labelCls}>Color</label>
           <div className="flex items-center gap-2">
-            <input type="color" value={local.color || '#e5e7eb'} onChange={(e) => set('color', e.target.value)} className="h-8 w-12 rounded border border-gray-200 cursor-pointer" />
+            <input type="color" value={local.color || '#e5e7eb'} onChange={(e) => set('color', e.target.value)} className="h-8 w-12 rounded border border-gray-200 dark:border-gray-800 cursor-pointer" />
             <input type="text" value={local.color || '#e5e7eb'} onChange={(e) => set('color', e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -1225,7 +1305,7 @@ function BlockEditor({
               <button
                 key={a}
                 onClick={() => set('align', a)}
-                className={`flex-1 py-1.5 text-xs rounded-lg border font-medium capitalize transition ${local.align === a ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                className={`flex-1 py-1.5 text-xs rounded-lg border font-medium capitalize transition ${local.align === a ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 {a}
               </button>
@@ -1239,7 +1319,7 @@ function BlockEditor({
         <div>
           <label className={labelCls}>Color</label>
           <div className="flex items-center gap-2">
-            <input type="color" value={local.color || '#374151'} onChange={(e) => set('color', e.target.value)} className="h-8 w-12 rounded border border-gray-200 cursor-pointer" />
+            <input type="color" value={local.color || '#374151'} onChange={(e) => set('color', e.target.value)} className="h-8 w-12 rounded border border-gray-200 dark:border-gray-800 cursor-pointer" />
             <input type="text" value={local.color || '#374151'} onChange={(e) => set('color', e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -1297,15 +1377,19 @@ function SortableBlock({
   const Preview = () => {
     const { props, type } = block;
     switch (type) {
+      case 'header':
+        return props.src
+          ? <img src={props.src} alt="banner" className="h-8 object-contain rounded" />
+          : <span className="text-sm text-amber-500 italic  dark:text-slate-300">⚠ No banner image set</span>;
       case 'h1':
-        return <span className="text-base font-bold text-gray-800 truncate">{props.content}</span>;
+        return <span className="text-base font-bold text-gray-800 dark:text-gray-200 truncate">{props.content}</span>;
       case 'h2':
-        return <span className="text-sm font-semibold text-gray-700 truncate">{props.content}</span>;
+        return <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">{props.content}</span>;
       case 'text':
-        return <span className="text-sm text-gray-500 truncate">{props.content?.substring(0, 80)}{props.content?.length > 80 ? '…' : ''}</span>;
+        return <span className="text-sm text-gray-500 dark:text-slate-300 truncate">{props.content?.substring(0, 80)}{props.content?.length > 80 ? '…' : ''}</span>;
       case 'image':
         return props.src
-          ? <span className="text-sm text-blue-500 truncate">🖼 {props.src.substring(0, 50)}…</span>
+          ? <span className="text-sm text-blue-500 dark:text-blue-400 truncate">🖼 {props.src.substring(0, 50)}…</span>
           : <span className="text-sm text-amber-500 italic">⚠ No image URL set</span>;
       case 'logo':
         return props.src
@@ -1318,9 +1402,9 @@ function SortableBlock({
           </span>
         );
       case 'divider':
-        return <hr className="border-t border-gray-300 w-32" />;
+        return <hr className="border-t border-gray-300 dark:border-gray-700 w-32" />;
       case 'spacer':
-        return <span className="text-xs text-gray-400">{props.height}px gap</span>;
+        return <span className="text-xs text-gray-400 dark:text-slate-300">{props.height}px gap</span>;
       case 'footer': {
         const activeSocials = SOCIAL_ICONS.filter(s => props.socials?.[s.key]);
         return (
@@ -1330,7 +1414,7 @@ function SortableBlock({
                 <Icon className="w-2.5 h-2.5 text-white" />
               </div>
             ))}
-            <span className="text-xs text-gray-500 truncate">{props.companyName || 'Footer'} · {props.address || 'address'}</span>
+            <span className="text-xs text-gray-500 dark:text-slate-300 truncate">{props.companyName || 'Footer'} · {props.address || 'address'}</span>
           </div>
         );
       }
@@ -1339,7 +1423,7 @@ function SortableBlock({
           <div className="flex items-center gap-2">
             {props.logoSrc && <img src={props.logoSrc} alt="logo" className="h-5 object-contain" />}
             <span className="text-xs font-semibold truncate" style={{ color: props.accentColor || '#0b1957' }}>{props.name || 'Signature'}</span>
-            {props.title && <span className="text-xs text-gray-400 truncate">· {props.title}</span>}
+            {props.title && <span className="text-xs text-gray-400 dark:text-slate-300 truncate">· {props.title}</span>}
           </div>
         );
       default:
@@ -1349,25 +1433,25 @@ function SortableBlock({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div className={`group relative flex items-center gap-3 p-3 bg-white rounded-xl border-2 transition-all ${isEditing ? 'border-blue-400 shadow-md' : 'border-gray-100 hover:border-gray-300 hover:shadow-sm'}`}>
+      <div className={`group relative flex items-center gap-3 p-3 bg-white dark:bg-[#000c3b] rounded-xl border-2 transition-all ${isEditing ? 'border-blue-400 shadow-md' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm'}`}>
         {/* Drag handle */}
         <div
           {...attributes}
           {...listeners}
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors"
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
           title="Drag to reorder"
         >
           <GripVertical className="w-5 h-5" />
         </div>
 
         {/* Type badge */}
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-50 dark:bg-[#000724] border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-500">
           {typeIcon}
         </div>
 
         {/* Content preview */}
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide flex-shrink-0">{typeLabel}</span>
+          <span className="text-[10px] font-medium text-gray-400 dark:text-slate-300 uppercase tracking-wide flex-shrink-0">{typeLabel}</span>
           <div className="flex-1 min-w-0">
             <Preview />
           </div>
@@ -1377,14 +1461,14 @@ function SortableBlock({
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={isEditing ? onStopEdit : onStartEdit}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
             title="Edit"
           >
             {isEditing ? <X className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -1470,32 +1554,32 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-transparent">
       {/* Add block toolbar */}
       <div className="relative">
         <button
           onClick={() => setShowPalette((v) => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all w-full justify-center"
+          className="flex items-center gap-2 px-4 py-2.5 bg-transparent border border-transparent rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all w-full justify-center"
         >
           <Plus className="w-4 h-4" />
           Add Block
         </button>
 
         {showPalette && (
-          <div className="absolute top-full left-0 mt-2 z-30 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 w-full">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Choose a block type</p>
+          <div className="absolute top-full left-0 mt-2 z-30 bg-white dark:bg-[#000c3b] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-4 w-full">
+            <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wide mb-3">Choose a block type</p>
             <div className="grid grid-cols-4 gap-2">
               {PALETTE.map(({ type, label, icon, desc }) => (
                 <button
                   key={type}
                   onClick={() => addBlock(type)}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all group"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-gray-50 group-hover:bg-blue-100 flex items-center justify-center text-gray-500 group-hover:text-blue-600 transition-colors">
+                  <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-[#000724] group-hover:bg-blue-100 dark:group-hover:bg-blue-950/60 flex items-center justify-center text-gray-500 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {icon}
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">{label}</span>
-                  <span className="text-[10px] text-gray-400">{desc}</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-slate-300">{desc}</span>
                 </button>
               ))}
             </div>
@@ -1506,12 +1590,12 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
 
       {/* Empty state */}
       {blocks.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
-          <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-4">
-            <AlignLeft className="w-7 h-7 text-gray-300" />
+        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
+          <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 flex items-center justify-center mb-4">
+            <AlignLeft className="w-7 h-7 text-gray-300 dark:text-zinc-400" />
           </div>
-          <p className="text-sm font-semibold text-gray-700 mb-1">Your email is empty</p>
-          <p className="text-xs text-gray-400 mb-4">Click "Add Block" above to build your email</p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-zinc-200 mb-1">Your email is empty</p>
+          <p className="text-xs text-gray-400 dark:text-zinc-400 mb-4">Click &quot;Add Block&quot; above to build your email</p>
         </div>
       )}
 
@@ -1536,7 +1620,7 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
 
       {/* Block count */}
       {blocks.length > 0 && (
-        <p className="text-xs text-gray-400 text-center">
+        <p className="text-xs text-gray-400 dark:text-slate-300 text-center">
           {blocks.length} block{blocks.length !== 1 ? 's' : ''} · drag to reorder · click ✏ to edit
         </p>
       )}

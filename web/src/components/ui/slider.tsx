@@ -31,11 +31,11 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
           max={max}
           step={step}
           className={cn(
-            "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider",
+            "w-full h-2 rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background [&::-moz-range-thumb]:shadow-sm [&::-moz-range-thumb]:transition-all [&::-moz-range-thumb]:hover:scale-110",
             className
           )}
           style={{
-            background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((value || 0) - min) / (max - min) * 100}%, #E5E7EB ${((value || 0) - min) / (max - min) * 100}%, #E5E7EB 100%)`
+            background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${((value || 0) - min) / (max - min) * 100}%, var(--input) ${((value || 0) - min) / (max - min) * 100}%, var(--input) 100%)`
           }}
           {...props}
         />
@@ -44,4 +44,4 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
   }
 );
 Slider.displayName = 'Slider';
-export { Slider };
+export { Slider };

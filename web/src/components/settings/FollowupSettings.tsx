@@ -313,7 +313,7 @@ export function FollowupSettings() {
         <CardHeader>
           <CardTitle className="text-lg">Followup Configuration</CardTitle>
           <CardDescription>
-            Configure automatic followup messages for members who haven't completed ICP Discovery.
+            Configure automatic followup messages for members who haven&apos;t completed ICP Discovery.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -443,7 +443,7 @@ export function FollowupSettings() {
                   Template Message
                 </Label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Use {'{member_name}'} as a placeholder for the member's name
+                  Use {'{member_name}'} as a placeholder for the member&apos;s name
                 </p>
                 <Textarea
                   id="template_message"
@@ -460,7 +460,7 @@ export function FollowupSettings() {
                   Custom Message
                 </Label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Use {'{member_name}'} as a placeholder for the member's name
+                  Use {'{member_name}'} as a placeholder for the member&apos;s name
                 </p>
                 <Textarea
                   id="custom_message"
@@ -573,7 +573,7 @@ export function FollowupSettings() {
                     Template Parameters
                   </Label>
                   <p className="text-xs text-gray-500 mb-3">
-                    Use {'{member_name}'} to insert the member's name dynamically
+                    Use {'{member_name}'} to insert the member&apos;s name dynamically
                   </p>
                   <div className="space-y-2">
                     {templateParams.map((param, i) => (
@@ -666,7 +666,7 @@ export function FollowupSettings() {
                   ) : (
                     <Send className="w-4 h-4 mr-2" />
                   )}
-                  Send "{selectedTemplate.name}" to {selectedPhones.size} member
+                  Send &quot;{selectedTemplate.name}&quot; to {selectedPhones.size} member
                   {selectedPhones.size !== 1 ? 's' : ''}
                 </Button>
                 {templateSendResult && (
@@ -694,7 +694,7 @@ export function FollowupSettings() {
               <div>
                 <CardTitle className="text-lg">Members Pending ICP Completion</CardTitle>
                 <CardDescription>
-                  Members who haven't completed their Ideal Customer Profile
+                  Members who haven&apos;t completed their Ideal Customer Profile
                 </CardDescription>
               </div>
               <Button
@@ -812,7 +812,6 @@ export function FollowupSettings() {
                                   Send
                                 </Button>
                               </div>
-                            </div>
                           ) : (
                             <Button
                               size="sm"

@@ -394,7 +394,7 @@ export default function ScheduleMeetingModal({
             {startTime && (
               <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                 <Clock className="w-3 h-3" />
-                {startTime} – {endTime}
+                {startTime} - {endTime}
               </p>
             )}
           </div>
@@ -486,7 +486,7 @@ export default function ScheduleMeetingModal({
           {memberAId && memberBId && !checkingConflicts && conflicts.length === 0 && (
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3">
               <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-              <span className="text-sm text-green-700 font-medium">No conflicts — ready to schedule</span>
+              <span className="text-sm text-green-700 font-medium">No conflicts - ready to schedule</span>
             </div>
           )}
         </div>

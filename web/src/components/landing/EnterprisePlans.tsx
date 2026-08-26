@@ -76,7 +76,7 @@ export default function EnterprisePlans() {
       rotateX: 0,
       transition: {
         duration: 0.7,
-        type: "spring" as "spring",
+        type: "spring" as const,
         stiffness: 100
       }
     }

@@ -133,7 +133,7 @@ export default function CampaignsList() {
           <h1 className="text-2xl sm:text-4xl font-bold text-[#1E293B] dark:text-white mb-1">
             Campaigns
           </h1>
-          <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] ml-2">
+          <p className="text-sm text-[#64748B] dark:text-slate-300 ml-2">
             Manage your multi-channel outreach campaigns
           </p>
         </div>

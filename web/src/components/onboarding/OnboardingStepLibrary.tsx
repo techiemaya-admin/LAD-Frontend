@@ -94,7 +94,7 @@ const STEP_DEFINITIONS: StepDefinition[] = [
     type: 'whatsapp_followup',
     label: 'WhatsApp Follow-up',
     icon: 'whatsapp',
-    description: 'Send follow-up message',
+    description: 'Message sent when they accept',
     category: 'whatsapp',
     defaultData: { title: 'WhatsApp Follow-up' },
   },

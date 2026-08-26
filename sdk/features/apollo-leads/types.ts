@@ -128,16 +128,6 @@ export interface ApolloHealthResponse {
   client_id?: string;
 }
 // ============================================================================
-// FEATURE FLAG TYPES
-// ============================================================================
-export interface ApolloFeatureAccess {
-  enabled: boolean;
-  tier: 'free' | 'basic' | 'premium' | 'enterprise';
-  credits_available: number;
-  upgrade_required: boolean;
-  message?: string;
-}
-// ============================================================================
 // HOOK RETURN TYPES
 // ============================================================================
 export interface UseApolloLeadsReturn {
@@ -175,29 +165,6 @@ export interface ApolloLeadsServiceInterface {
   revealEmail(personId: string): Promise<string>;
   revealPhone(personId: string): Promise<string>;
   checkHealth(): Promise<ApolloHealthResponse>;
-}
-// ============================================================================
-// COMPONENT PROPS
-// ============================================================================
-export interface ApolloLeadsSearchProps {
-  onCompanySelect?: (company: ApolloCompany) => void;
-  onEmployeeSelect?: (employee: ApolloPerson) => void;
-  defaultParams?: Partial<ApolloSearchParams>;
-  showFilters?: boolean;
-  maxResults?: number;
-}
-export interface ApolloCompanyCardProps {
-  company: ApolloCompany;
-  onClick?: () => void;
-  showActions?: boolean;
-  showEmployees?: boolean;
-}
-export interface ApolloEmployeeListProps {
-  companyId?: string;
-  companyName?: string;
-  filters?: ApolloEmployeeSearchParams;
-  onEmployeeSelect?: (employee: ApolloPerson) => void;
-  showRevealActions?: boolean;
 }
 // ============================================================================
 // PHONE SERVICE TYPES

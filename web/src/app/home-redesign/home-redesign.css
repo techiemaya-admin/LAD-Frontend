@@ -1,0 +1,276 @@
+/*
+ * Scoped styles for the LAD home redesign.
+ * Ported from the Claude Design handoff (index.html <style>).
+ * Everything is namespaced under `.lad-home` so design tokens, the aurora
+ * field, gradient animations, and scrollbar styling never leak into the
+ * rest of the app's global CSS.
+ */
+
+.lad-home {
+  /* ---- design tokens ---- */
+  --lh-ink: #1f2937;
+  --lh-ink-strong: #111827;
+  --lh-navy: #0b1957;
+  --lh-brand: #0b1957;
+  --lh-brand-600: #172560;
+  --lh-accent-blue: #2563eb;
+  --lh-link: #0a66c2;
+  --lh-brand-soft: #e8ecfa;
+  --lh-brand-softer: #f0f3ff;
+  --lh-bg: #ffffff;
+  --lh-bg-tint: #f8faff;
+  --lh-card: #ffffff;
+  --lh-line: #e5e7eb;
+  --lh-line-2: #f0f0f0;
+  --lh-muted: #6b7280;
+  --lh-muted-2: #9ca3af;
+  --lh-gold: #d9a93a;
+  --lh-green: #10b981;
+  --lh-c-indigo: #4f46e5;
+  --lh-c-blue: #2563eb;
+  --lh-c-cyan: #06b6d4;
+  --lh-c-violet: #7c3aed;
+  --lh-c-pink: #db2777;
+  --lh-grad: linear-gradient(90deg, #0b1957, #4f46e5, #2563eb, #06b6d4, #7c3aed, #0b1957);
+  --lh-grad-bright: linear-gradient(120deg, #4f46e5, #2563eb, #06b6d4);
+  --lh-grad-text: linear-gradient(100deg, #0b1957 0%, #4f46e5 38%, #2563eb 64%, #06b6d4 100%);
+  --lh-shadow-sm: 0 1px 2px rgba(11, 25, 87, 0.05), 0 1px 3px rgba(11, 25, 87, 0.04);
+  --lh-shadow-md: 0 2px 12px rgba(11, 25, 87, 0.07), 0 2px 6px rgba(11, 25, 87, 0.04);
+  --lh-shadow-lg: 0 18px 50px rgba(79, 70, 229, 0.16), 0 6px 18px rgba(37, 99, 235, 0.1);
+  --lh-glow: 0 8px 30px rgba(79, 70, 229, 0.35);
+  --lh-r-sm: 10px;
+  --lh-r-md: 14px;
+  --lh-r-lg: 20px;
+  --lh-r-xl: 26px;
+
+  position: fixed;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  color: var(--lh-ink);
+  background: var(--lh-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+.lad-home *,
+.lad-home *::before,
+.lad-home *::after {
+  box-sizing: border-box;
+}
+
+.lad-home button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+.lad-home ::selection {
+  background: #cfd8ff;
+}
+
+/* ---- vibrant aurora field behind everything ---- */
+.lad-home .lh-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.lad-home .lh-aurora::before,
+.lad-home .lh-aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.32;
+}
+.lad-home .lh-aurora::before {
+  width: 620px;
+  height: 620px;
+  left: -140px;
+  top: -180px;
+  background: radial-gradient(circle at 30% 30%, #6366f1, transparent 70%);
+  animation: lh-floaty 16s ease-in-out infinite;
+}
+.lad-home .lh-aurora::after {
+  width: 680px;
+  height: 680px;
+  right: -180px;
+  top: 8%;
+  background: radial-gradient(circle at 60% 40%, #06b6d4, transparent 70%);
+  animation: lh-floaty 19s ease-in-out infinite reverse;
+}
+.lad-home .lh-aurora i {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  left: 38%;
+  bottom: -220px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.26;
+  background: radial-gradient(circle at 50% 50%, #7c3aed, transparent 70%);
+  animation: lh-floaty 22s ease-in-out infinite;
+}
+@keyframes lh-floaty {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(28px, -26px) scale(1.08);
+  }
+}
+
+/* app sits above the aurora */
+.lad-home .lh-root {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+/* ---- typography + gradient helpers ---- */
+.lad-home .lh-grotesk {
+  font-family: var(--font-grotesk), "Space Grotesk", system-ui, sans-serif;
+}
+.lad-home .lh-grad-text {
+  background: var(--lh-grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: lh-hue 6s linear infinite;
+}
+@keyframes lh-hue {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* ---- animated gradient border (the signature Mr LAD effect) ---- */
+@keyframes lh-borderMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+.lad-home .lh-grad-border {
+  position: relative;
+  z-index: 0;
+}
+.lad-home .lh-grad-border::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: var(--lh-grad);
+  background-size: 300% 100%;
+  animation: lh-borderMove 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+}
+.lad-home .lh-grad-border:hover::before,
+.lad-home .lh-grad-border.lh-gb-on::before {
+  opacity: 1;
+}
+.lad-home .lh-grad-border.lh-gb-fast::before {
+  animation-duration: 2s;
+}
+
+/* ---- misc animations ---- */
+.lad-home .lh-fade-in {
+  animation: lh-fade 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes lh-fade {
+  from {
+    transform: translateY(9px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes lh-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lh-popin {
+  from {
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes lh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes lh-ringpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+.lad-home .lh-ring-pulse {
+  animation: lh-ringpulse 1.4s ease-out infinite;
+}
+@keyframes lh-typing {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* ---- scrollbar ---- */
+.lad-home .lh-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.lad-home .lh-scroll::-webkit-scrollbar-thumb {
+  background: #dfe2ee;
+  border-radius: 20px;
+  border: 2px solid var(--lh-bg);
+}
+.lad-home .lh-scroll::-webkit-scrollbar-thumb:hover {
+  background: #cdd2e6;
+}
+
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .lad-home .lh-aurora::before,
+  .lad-home .lh-aurora::after,
+  .lad-home .lh-aurora i,
+  .lad-home .lh-grad-text,
+  .lad-home .lh-grad-border::before,
+  .lad-home .lh-fade-in,
+  .lad-home .lh-ring-pulse {
+    animation: none !important;
+  }
+}

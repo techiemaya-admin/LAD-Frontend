@@ -1,5 +1,5 @@
-/** GET /api/email-conversations/messages?contact_id=xxx  — fetch thread
- *  POST /api/email-conversations/messages                — save sent message */
+/** GET /api/email-conversations/messages?contact_id=xxx  - fetch thread
+ *  POST /api/email-conversations/messages                - save sent message */
 import { NextRequest } from 'next/server';
 import { proxyToWABA } from '../utils/proxy';
 

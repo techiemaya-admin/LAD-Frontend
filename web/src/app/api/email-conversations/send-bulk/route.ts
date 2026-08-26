@@ -1,4 +1,4 @@
-/** POST /api/email-conversations/send-bulk — send template email via Gmail/Outlook */
+/** POST /api/email-conversations/send-bulk - send template email via Gmail/Outlook */
 import { NextRequest } from 'next/server';
 import { proxyToBackend } from '../utils/proxy';
 

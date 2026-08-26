@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import {
   Dialog,
+  DialogActions,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -16,6 +17,7 @@ import {
   useLinkedInMessageTemplates,
   useUpdateLinkedInMessageTemplate,
   useDeleteLinkedInMessageTemplate,
+  linkedinTemplateTypeLabel,
 } from '@lad/frontend-features/campaigns';
 import {
   Settings2,
@@ -126,7 +128,7 @@ export default function TemplateManagerModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
       <DialogContent className="max-h-[80vh]">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -183,7 +185,7 @@ export default function TemplateManagerModal({
                       )}
                       {template.category && (
                         <Badge variant="outline" className="text-[10px] font-bold text-gray-500 border-gray-200">
-                          {template.category}
+                          {linkedinTemplateTypeLabel(template.category)}
                         </Badge>
                       )}
                       {!template.is_active && (
@@ -231,11 +233,10 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg h-8 w-8 p-0"
+                      className={`rounded-lg h-8 w-8 p-0 ${!template.is_active ? 'text-green-600' : ''}`}
                       onClick={() => handleToggleActive(template)}
                       disabled={updateMutation.isPending}
                       title={template.is_active ? 'Deactivate' : 'Activate'}
-                      className={!template.is_active ? 'text-green-600' : ''}
                     >
                       {template.is_active ? (
                         <EyeOff className="h-4 w-4" />
@@ -246,10 +247,9 @@ export default function TemplateManagerModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg h-8 w-8 p-0"
+                      className="rounded-lg h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                       onClick={() => handleDelete(template)}
                       disabled={deleteMutation.isPending}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       title="Delete Template"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -257,28 +257,25 @@ export default function TemplateManagerModal({
                   </div>
                 </div>
 
-                {/* Expandable Messages Preview */}
+                {/* Expandable Message Preview (single body) */}
                 {expandedId === template.id && (
                   <div className="space-y-2 pt-2 border-t border-gray-50">
-                    {template.connection_message && (
+                    {(template.content ?? template.connection_message ?? template.followup_message) ? (
                       <div className="space-y-1">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          Connection Message ({template.connection_message.length}/300)
+                          Message{template.category === 'linkedin_connection'
+                            ? ` (${(template.content ?? template.connection_message ?? '').length}/300)`
+                            : ''}
                         </p>
-                        <p className="text-xs text-gray-700 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                          {template.connection_message}
+                        <p className="text-xs text-gray-700 bg-gray-50/50 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap">
+                          {template.content ?? template.connection_message ?? template.followup_message}
                         </p>
                       </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No message text</p>
                     )}
-                    {template.followup_message && (
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          Followup Message
-                        </p>
-                        <p className="text-xs text-gray-700 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                          {template.followup_message}
-                        </p>
-                      </div>
+                    {(template.metadata as any)?.media_url && (
+                      <p className="text-[10px] font-medium text-gray-400">📎 Attachment included</p>
                     )}
                   </div>
                 )}

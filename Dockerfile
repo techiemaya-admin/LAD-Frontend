@@ -18,8 +18,11 @@ RUN npm ci --ignore-scripts
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# npm workspaces installs direct workspace deps under web/node_modules and
+# sdk/node_modules; only transitive deps hoist to root. All three must be copied.
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/sdk/node_modules ./sdk/node_modules
 
 # Copy source code
 COPY . .
@@ -40,15 +43,31 @@ ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_DISABLE_VAPI
 ARG NEXT_PUBLIC_WHATSAPP_API_URL
 ARG NEXT_PUBLIC_BNI_SERVICE_URL
+ARG NEXT_PUBLIC_PLAYGROUND_WORKER_URL
+ARG NEXT_PUBLIC_PLAYGROUND_TENANT_ID
+ARG NEXT_PUBLIC_PLAYGROUND_USER_ID
+ARG NEXT_PUBLIC_PLAYGROUND_TO_NUMBER
+ARG NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER
+ARG NEXT_PUBLIC_MAGE_API_URL
 
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
 ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
 ENV NEXT_PUBLIC_ICP_BACKEND_URL=${NEXT_PUBLIC_ICP_BACKEND_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
 ENV NEXT_PUBLIC_DISABLE_VAPI=${NEXT_PUBLIC_DISABLE_VAPI:-false}
-ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
-ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
-ENV NEXT_PUBLIC_WHATSAPP_API_URL=$NEXT_PUBLIC_WHATSAPP_API_URL
-ENV NEXT_PUBLIC_BNI_SERVICE_URL=$NEXT_PUBLIC_BNI_SERVICE_URL
+ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-http://localhost:3000}
+ENV NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL:-https://lad-backend-develop-160078175457.us-central1.run.app}
+ENV NEXT_PUBLIC_WHATSAPP_API_URL=${NEXT_PUBLIC_WHATSAPP_API_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV NEXT_PUBLIC_BNI_SERVICE_URL=${NEXT_PUBLIC_BNI_SERVICE_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV NEXT_PUBLIC_COMMS_SERVICE_URL=${NEXT_PUBLIC_COMMS_SERVICE_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV BNI_SERVICE_URL=${BNI_SERVICE_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV WABA_SERVICE_URL=${WABA_SERVICE_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV WHATSAPP_SERVICE_URL=${WHATSAPP_SERVICE_URL:-https://lad-waba-comms-develop-asia-160078175457.asia-south1.run.app}
+ENV NEXT_PUBLIC_PLAYGROUND_WORKER_URL=${NEXT_PUBLIC_PLAYGROUND_WORKER_URL:-https://voag-dev-playground-worker-160078175457.asia-south1.run.app}
+ENV NEXT_PUBLIC_PLAYGROUND_TENANT_ID=${NEXT_PUBLIC_PLAYGROUND_TENANT_ID:-926070b5-189b-4682-9279-ea10ca090b84}
+ENV NEXT_PUBLIC_PLAYGROUND_USER_ID=${NEXT_PUBLIC_PLAYGROUND_USER_ID:-fe9d6368-ff1b-4133-952a-525d60d06cbe}
+ENV NEXT_PUBLIC_PLAYGROUND_TO_NUMBER=${NEXT_PUBLIC_PLAYGROUND_TO_NUMBER:-+15555555555}
+ENV NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER=${NEXT_PUBLIC_PLAYGROUND_FROM_NUMBER:-+15555555555}
+ENV NEXT_PUBLIC_MAGE_API_URL=${NEXT_PUBLIC_MAGE_API_URL:-}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -58,6 +77,13 @@ RUN if [ -d "prisma" ]; then npx --yes prisma@6 generate; fi
 # Verify React Query package resolution
 RUN node -e "console.log('RQ:', require.resolve('@tanstack/react-query'))" \
  && node -e "console.log('QC:', require.resolve('@tanstack/query-core'))"
+
+# Next.js 15 production builds of this app exceed Node's default ~2 GB V8 heap
+# and OOM ("Reached heap limit Allocation failed"). The Cloud Build machine
+# (E2_HIGHCPU_8) has 8 GB RAM, so lift the old-space cap to 6 GB for the build.
+# Scoped to the builder stage — the runner stage starts FROM base, so this does
+# not affect the runtime server process.
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 
 RUN npm run build
 

@@ -67,4 +67,4 @@ export const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ id }) => {
       </div>
     </WidgetWrapper>
   );
-};
+};

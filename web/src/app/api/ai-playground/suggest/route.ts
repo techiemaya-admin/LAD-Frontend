@@ -3,7 +3,7 @@ import { getBackendUrl, getVoagHeaders } from '../../utils/backend';
 
 const BACKEND_PATH = '/api/ai-playground/suggest';
 
-/** POST /api/ai-playground/suggest — generate an AI suggestion for a card field */
+/** POST /api/ai-playground/suggest - generate an AI suggestion for a card field */
 export async function POST(req: NextRequest) {
   try {
     const backend = getBackendUrl();

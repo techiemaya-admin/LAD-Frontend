@@ -118,7 +118,7 @@ const TranscriptsTab = ({
 }: {
   segments: Array<{ time?: string; speaker?: string; text: string }>;
 }) => (
-  <ScrollArea className="h-full p-4">
+  <ScrollArea className="h-full p-4 bg-transparent">
     <div className="space-y-3">
       {segments.map((msg, i) => (
         <div
@@ -133,23 +133,23 @@ const TranscriptsTab = ({
         >
           {((msg.speaker || "").toLowerCase() === "assistant" ||
             (msg.speaker || "").toLowerCase() === "agent") && (
-              <Bot className="h-5 w-5 text-blue-500 mt-1" />
+              <Bot className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-1" />
             )}
           <div
             className={cn(
               "p-3 rounded-2xl max-w-xs shadow-md",
               (msg.speaker || "").toLowerCase() === "user"
-                ? "bg-linear-to-r from-orange-100 to-orange-200 text-orange-900"
-                : "bg-linear-to-r from-blue-100 to-blue-200 text-blue-900"
+                ? "bg-linear-to-r from-orange-100 to-orange-200 text-orange-900 dark:from-orange-950/40 dark:to-orange-900/40 dark:text-orange-200"
+                : "bg-linear-to-r from-blue-100 to-blue-200 text-blue-900 dark:from-blue-950/40 dark:to-blue-900/40 dark:text-blue-200"
             )}
           >
             <p className="text-sm font-medium wrap-break-word">{msg.text}</p>
-            <span className="text-[10px] text-muted-foreground block mt-1">
+            <span className="text-[10px] text-muted-foreground dark:text-gray-500 block mt-1">
               {formatTimestamp(msg.time)}
             </span>
           </div>
           {(msg.speaker || "").toLowerCase() === "user" && (
-            <User className="h-5 w-5 text-orange-500 mt-1" />
+            <User className="h-5 w-5 text-orange-500 dark:text-orange-400 mt-1" />
           )}
         </div>
       ))}
@@ -159,10 +159,10 @@ const TranscriptsTab = ({
 
 /* ----------------- Analysis Tab ------------------ */
 const StatBox = ({ label, value, subValue, colorClass }: { label: string; value: string; subValue?: string; colorClass?: string }) => (
-  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-1 min-w-[120px] flex-1">
-    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{label}</span>
-    <span className={cn("text-lg font-bold leading-tight", colorClass || "text-[#172560]")}>{value}</span>
-    {subValue && <span className="text-[10px] text-gray-400 font-medium truncate">{subValue}</span>}
+  <div className="bg-white dark:bg-[#000724] p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1 min-w-[120px] flex-1">
+    <span className="text-[10px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-wider">{label}</span>
+    <span className={cn("text-lg font-bold leading-tight", colorClass || "text-[#172560] dark:text-white")}>{value}</span>
+    {subValue && <span className="text-[10px] text-gray-400 dark:text-gray-400 truncate font-medium">{subValue}</span>}
   </div>
 );
 
@@ -264,7 +264,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
 
     // Red (proceed immediately) - Changed from Green as per user request
     if (compact.includes("proceed immediately") || noPunct.includes("proceedimmediately")) {
-      return { color: "bg-red-100 text-red-800 border-red-200", icon: () => null };
+      return { color: "bg-red-100 dark:bg-red-950/30 text-red-800 dark:text-red-400 border-red-200 dark:border-red-900/60", icon: () => null };
     }
 
     // Yellow (3-7 days)
@@ -279,7 +279,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
       noPunct.includes("37days") ||
       noPunct.includes("3to7days")
     ) {
-      return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
+      return { color: "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/60", icon: MinusCircle };
     }
 
     // Blue (don't pursue) - Changed from Red as per user request
@@ -294,24 +294,24 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
       noPunct.includes("dontpurse") ||
       noPunct.includes("donotpurse")
     ) {
-      return { color: "bg-blue-100 text-blue-800 border-blue-200", icon: AlertCircle };
+      return { color: "bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-400 border-blue-200 dark:border-blue-900/60", icon: AlertCircle };
     }
 
-    return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: MinusCircle };
+    return { color: "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/60", icon: MinusCircle };
   };
 
   const getScoreColor = (cat: string) => {
-    if (cat === "HOT") return { bar: "bg-red-100", dot: "bg-red-500", border: "border-red-500", text: "text-red-500", tick: "bg-red-300" };
-    if (cat === "COLD") return { bar: "bg-blue-100", dot: "bg-blue-500", border: "border-blue-500", text: "text-blue-500", tick: "bg-blue-300" };
-    return { bar: "bg-amber-100", dot: "bg-amber-500", border: "border-amber-500", text: "text-amber-500", tick: "bg-amber-300" };
+    if (cat === "HOT") return { bar: "bg-red-100 dark:bg-red-950/20", dot: "bg-red-500", border: "border-red-500", text: "text-red-500 dark:text-red-400", tick: "bg-red-300" };
+    if (cat === "COLD") return { bar: "bg-blue-100 dark:bg-blue-950/20", dot: "bg-blue-500", border: "border-blue-500", text: "text-blue-500 dark:text-blue-400", tick: "bg-blue-300" };
+    return { bar: "bg-amber-100 dark:bg-amber-950/20", dot: "bg-amber-500", border: "border-amber-500", text: "text-amber-500 dark:text-amber-400", tick: "bg-amber-300" };
   };
 
   const theme = getScoreColor(category);
 
   const getThemeGradient = (cat: string) => {
-    if (cat === "HOT") return "from-white to-red-50";
-    if (cat === "COLD") return "from-white to-blue-50";
-    return "from-white to-amber-50";
+    if (cat === "HOT") return "from-white to-red-50 dark:from-[#000c3b] dark:to-red-950/10";
+    if (cat === "COLD") return "from-white to-blue-50 dark:from-[#000c3b] dark:to-blue-950/10";
+    return "from-white to-amber-50 dark:from-[#000c3b] dark:to-amber-950/10";
   };
   const gradientClass = getThemeGradient(category);
 
@@ -339,16 +339,16 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
               return "Neutral";
             })()}
             subValue="Call mindset"
-            colorClass="text-purple-600"
+            colorClass="text-purple-600 dark:text-purple-400"
           />
-          <StatBox label="Stage Completion" value={`${completionPercent}%`} subValue={`${answeredCount}/${totalQuestions} answered`} colorClass="text-blue-600" />
+          <StatBox label="Stage Completion" value={`${completionPercent}%`} subValue={`${answeredCount}/${totalQuestions} answered`} colorClass="text-blue-600 dark:text-blue-400" />
         </div>
 
         {/* Scaling Indicator */}
-        <div className="p-6 space-y-8 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="p-6 space-y-8 bg-white dark:bg-[#000c3b] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
           {/* Scaling Indicator */}
           <div className="space-y-4">
-            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Scaling — Where this lead sits</h4>
+            <h4 className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Scaling - Where this lead sits</h4>
             <div className="relative h-6 flex items-center">
               {/* Background Line */}
               <div className={cn("h-1.5 w-full rounded-full", theme.bar)} />
@@ -358,14 +358,14 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
                 className="absolute transition-all duration-500 ease-out flex items-center justify-center translate-y-[0px]"
                 style={{ left: `${(score / 10) * 100}%`, transform: "translateX(-50%)" }}
               >
-                <div className={cn("w-5 h-5 rounded-full border-2 bg-white shadow-md flex items-center justify-center", theme.border)}>
+                <div className={cn("w-5 h-5 rounded-full border-2 bg-white dark:bg-[#000724] shadow-md flex items-center justify-center", theme.border)}>
                   <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
                 </div>
               </div>
             </div>
 
             {/* Scaling Labels */}
-            <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+            <div className="flex justify-between text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter mt-1">
               <span className="text-left">Cold / wrong contact</span>
               <span className="text-center">Nurture</span>
               <span className="text-center">Active pipeline</span>
@@ -375,39 +375,39 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
 
           {/* Scaling Note */}
           <div className={cn("border-l-4 p-4 rounded-r-xl",
-            category === "HOT" ? "bg-red-50 border-red-400" :
-              category === "COLD" ? "bg-blue-50 border-blue-400" :
-                "bg-amber-50 border-amber-400"
+            category === "HOT" ? "bg-red-50 dark:bg-red-950/20 border-red-400 dark:border-red-800" :
+              category === "COLD" ? "bg-blue-50 dark:bg-blue-950/20 border-blue-400 dark:border-blue-800" :
+                "bg-amber-50 dark:bg-amber-950/20 border-amber-400 dark:border-amber-800"
           )}>
             <h5 className={cn("text-[10px] font-bold uppercase mb-1",
-              category === "HOT" ? "text-red-800" :
-                category === "COLD" ? "text-blue-800" :
-                  "text-amber-800"
+              category === "HOT" ? "text-red-800 dark:text-red-400" :
+                category === "COLD" ? "text-blue-800 dark:text-blue-400" :
+                  "text-amber-800 dark:text-amber-400"
             )}>Scaling note</h5>
             <p className={cn("text-xs leading-relaxed font-medium",
-              category === "HOT" ? "text-red-700" :
-                category === "COLD" ? "text-blue-700" :
-                  "text-amber-700"
+              category === "HOT" ? "text-red-700 dark:text-red-300" :
+                category === "COLD" ? "text-blue-700 dark:text-blue-300" :
+                  "text-amber-700 dark:text-amber-300"
             )}>
               {analysis?.scaling_note || (score >= 8 ? (
                 "This lead is a high-priority prospect who showed immediate interest and buying signals. Focus on closing or scheduling the next concrete step."
               ) : score >= 5 ? (
                 "This lead is in the active pipeline but needs further nurturing to qualify fully. Check follow-up reasons in disposition."
               ) : (
-                "This lead sits in the lower-middle tier — above cold contacts but below qualified leads. One recovery call could shift this score significantly."
+                "This lead sits in the lower-middle tier - above cold contacts but below qualified leads. One recovery call could shift this score significantly."
               ))}
             </p>
           </div>
         </div>
 
         {/* Main Analysis Sections (Priority) */}
-        <div className={cn("p-6 space-y-6 bg-gradient-to-br rounded-2xl border border-gray-100 shadow-sm", gradientClass)}>
+        <div className={cn("p-6 space-y-6 bg-gradient-to-br rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm", gradientClass)}>
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Zap className={cn("h-5 w-5", theme.text === "text-amber-500" ? "text-amber-600" : theme.text)} />
-              <h3 className="font-bold text-xl text-gray-800">Call Summary</h3>
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Call Summary</h3>
             </div>
-            <p className="text-gray-600 leading-relaxed bg-white/50 p-4 rounded-xl border border-gray-100 wrap-break-word whitespace-pre-wrap">
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed bg-white/50 dark:bg-[#000724]/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 wrap-break-word whitespace-pre-wrap">
               {summaryText || "No summary available."}
             </p>
           </div>
@@ -415,7 +415,7 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <TrendingUp className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-              <h3 className="font-bold text-xl text-gray-800">Overall Sentiment</h3>
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Overall Sentiment</h3>
             </div>
             <Badge
               className={cn(
@@ -430,9 +430,9 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Clock className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-              <h3 className="font-bold text-xl text-gray-800">Disposition</h3>
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Disposition</h3>
             </div>
-            <p className="text-gray-600 bg-white/50 p-4 rounded-xl border border-gray-100">
+            <p className="text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-[#000724]/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
               {dispositionText || "No disposition available."}
             </p>
           </div>
@@ -440,20 +440,20 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Zap className={cn("h-5 w-5", category === "WARM" ? "text-amber-500" : theme.text)} />
-              <h3 className="font-bold text-xl text-gray-800">Actionable Recommendations</h3>
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Actionable Recommendations</h3>
             </div>
-            <div className="space-y-4 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
+            <div className="space-y-4 bg-white/60 dark:bg-[#000724]/60 p-5 rounded-2xl border border-white dark:border-gray-800 shadow-sm">
               {/* Current Lead Stage Information */}
               {(lead?.stage || lead?.stages) && (
-                <div className="flex flex-col gap-2 pb-3 border-b border-gray-100/50">
+                <div className="flex flex-col gap-2 pb-3 border-b border-gray-100/50 dark:border-gray-800">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Current Pipeline Stage</span>
-                      <span className="text-sm font-bold text-[#172560] capitalize">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Current Pipeline Stage</span>
+                      <span className="text-sm font-bold text-[#172560] dark:text-white capitalize">
                         {String(lead.stage || lead.stages).replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 font-bold px-3 py-1">
+                    <Badge variant="outline" className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1">
                       ACTIVE
                     </Badge>
                   </div>
@@ -469,13 +469,13 @@ const AnalysisTab = ({ analysis, log, leadData, segments }: { analysis: any | nu
                         <div className={cn("mt-1 flex-shrink-0", theme.text)}>
                           <CheckCircle className="h-4 w-4" />
                         </div>
-                        <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">
+                        <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                           {sentence.trim()}.
                         </span>
                       </div>
                     ))
                 ) : (
-                  <p className="text-gray-500 italic">No specific recommendations identified.</p>
+                  <p className="text-gray-500 dark:text-gray-500 italic">No specific recommendations identified.</p>
                 )}
               </div>
             </div>
@@ -495,68 +495,68 @@ const MessagesTab = ({ messages }: { messages: any | null }) => {
 
   return (
     <ScrollArea className="h-full p-4">
-      <Card className="border-orange-200 shadow-lg overflow-hidden">
-        <CardContent className="p-6 space-y-6 bg-linear-to-br from-white to-orange-50">
+      <Card className="border-orange-200 dark:border-gray-800 shadow-lg overflow-hidden bg-transparent">
+        <CardContent className="p-6 space-y-6 bg-linear-to-br from-white to-orange-50 dark:from-[#000c3b] dark:to-orange-950/10">
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <MessageSquare className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Prospect Questions</h3>
+              <MessageSquare className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Prospect Questions</h3>
             </div>
-            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
+            <div className="space-y-3 bg-white/60 dark:bg-[#000724]/60 p-5 rounded-2xl border border-white dark:border-gray-800 shadow-sm">
               {questions.length > 0 ? (
                 questions.map((q, i) => (
                   <div key={i} className="flex items-start gap-3 group">
-                    <div className="mt-1 flex-shrink-0 text-orange-500">
+                    <div className="mt-1 flex-shrink-0 text-orange-500 dark:text-orange-400">
                       <MessageSquare className="h-4 w-4" />
                     </div>
-                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{q}</span>
+                    <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{q}</span>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No prospect questions found.</p>
+                <p className="text-gray-500 dark:text-gray-500 italic">No prospect questions found.</p>
               )}
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Prospect Concerns</h3>
+              <AlertCircle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Prospect Concerns</h3>
             </div>
-            <div className="space-y-3 bg-white/60 p-5 rounded-2xl border border-white shadow-sm">
+            <div className="space-y-3 bg-white/60 dark:bg-[#000724]/60 p-5 rounded-2xl border border-white dark:border-gray-800 shadow-sm">
               {concerns.length > 0 ? (
                 concerns.map((c, i) => (
                   <div key={i} className="flex items-start gap-3 group">
-                    <div className="mt-1 flex-shrink-0 text-red-500">
+                    <div className="mt-1 flex-shrink-0 text-red-500 dark:text-red-400">
                       <AlertCircle className="h-4 w-4" />
                     </div>
-                    <span className="text-sm leading-relaxed text-gray-700 group-hover:text-gray-900 transition-colors">{c}</span>
+                    <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{c}</span>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No concerns found.</p>
+                <p className="text-gray-500 dark:text-gray-500 italic">No concerns found.</p>
               )}
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <Zap className="h-5 w-5 text-orange-500" />
-              <h3 className="font-bold text-xl text-gray-800">Key Phrases</h3>
+              <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+              <h3 className="font-bold text-xl text-gray-800 dark:text-white">Key Phrases</h3>
             </div>
-            <div className="flex flex-wrap gap-2 bg-white/50 p-4 rounded-xl border border-gray-200">
+            <div className="flex flex-wrap gap-2 bg-white/50 dark:bg-[#000724]/50 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
               {phrases.length > 0 ? (
                 phrases.map((p, i) => (
                   <Badge
                     key={i}
                     variant="outline"
-                    className="text-sm px-3 py-1 border-orange-300 text-orange-700 bg-orange-50"
+                    className="text-sm px-3 py-1 border-orange-300 dark:border-orange-900/60 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20"
                   >
                     {p}
                   </Badge>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No key phrases extracted.</p>
+                <p className="text-gray-500 dark:text-gray-500 italic">No key phrases extracted.</p>
               )}
             </div>
           </div>
@@ -623,21 +623,21 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
   return (
-    <Card className="border-orange-200 shadow-lg">
+    <Card className="border-orange-200 dark:border-gray-800 shadow-lg bg-transparent">
       <ChartStyle id={pieId} config={chartConfig} />
-      <div className="flex flex-col md:flex-row gap-6 p-6 bg-linear-to-r from-orange-50 to-amber-50">
+      <div className="flex flex-col md:flex-row gap-6 p-6 bg-linear-to-r from-orange-50 to-amber-50 dark:from-[#000c3b] dark:to-[#000724]">
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-gray-800">Total Cost</span>
+            <span className="text-lg font-semibold text-gray-800 dark:text-white">Total Cost</span>
             <Badge
               variant="secondary"
-              className="text-lg px-4 py-2 bg-green-100 text-green-800 border-green-200"
+              className="text-lg px-4 py-2 bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-400 border-green-200 dark:border-green-900/60"
             >
               {formatUSD(total)}
             </Badge>
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="space-y-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#000c3b] p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -645,11 +645,11 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
                   checked={includeCall}
                   onCheckedChange={(v) => setIncludeCall(!!v)}
                 />
-                <label htmlFor="include-call" className="text-sm font-medium text-gray-800">
+                <label htmlFor="include-call" className="text-sm font-medium text-gray-800 dark:text-gray-200">
                   Call Cost
                 </label>
               </div>
-              <span className="text-sm font-semibold">{formatUSD(callCost)}</span>
+              <span className="text-sm font-semibold dark:text-white">{formatUSD(callCost)}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -659,11 +659,11 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
                   checked={includeAnalysis}
                   onCheckedChange={(v) => setIncludeAnalysis(!!v)}
                 />
-                <label htmlFor="include-analysis" className="text-sm font-medium text-gray-800">
+                <label htmlFor="include-analysis" className="text-sm font-medium text-gray-800 dark:text-gray-200">
                   Analysis Cost
                 </label>
               </div>
-              <span className="text-sm font-semibold">{formatUSD(analysisCost)}</span>
+              <span className="text-sm font-semibold dark:text-white">{formatUSD(analysisCost)}</span>
             </div>
           </div>
         </div>
@@ -709,14 +709,14 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
                           <tspan
                             x={viewBox.cx}
                             y={viewBox.cy}
-                            className="fill-foreground text-xl font-bold"
+                            className="fill-foreground text-xl font-bold dark:fill-white"
                           >
                             {formatUSD(total)}
                           </tspan>
                           <tspan
                             x={viewBox.cx}
                             y={(viewBox.cy || 0) + 18}
-                            className="fill-muted-foreground text-[10px]"
+                            className="fill-muted-foreground text-[10px] dark:fill-gray-500"
                           >
                             Selected Total
                           </tspan>
@@ -751,10 +751,10 @@ const CallCostTab = ({ log, analysis }: { log: any | null; analysis: any | null 
 
 /* ----------------- Lead Tab ------------------ */
 const LeadField = ({ label, value }: { label: string; value?: any }) => (
-  <div className="bg-white/60 p-3 rounded-xl border border-gray-200">
-    <span className="text-xs text-gray-500 block mb-0.5 font-medium uppercase tracking-wide">{label}</span>
-    <span className="text-gray-900 font-medium text-sm break-all">
-      {value !== null && value !== undefined && value !== '' ? String(value) : '—'}
+  <div className="bg-white/60 dark:bg-[#000724]/60 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+    <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5 font-medium uppercase tracking-wide">{label}</span>
+    <span className="text-gray-900 dark:text-white font-medium text-sm break-all">
+      {value !== null && value !== undefined && value !== '' ? String(value) : '-'}
     </span>
   </div>
 );
@@ -779,7 +779,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
   if (!lead) {
     return (
       <ScrollArea className="h-full p-4">
-        <div className="flex flex-col items-center justify-center h-40 gap-3 text-gray-400">
+        <div className="flex flex-col items-center justify-center h-40 gap-3 text-gray-400 dark:text-gray-500">
           <User className="h-10 w-10 opacity-40" />
           <p className="text-sm">No lead data available for this call.</p>
         </div>
@@ -788,7 +788,7 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
   }
 
 
-  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—';
+  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '-';
   const phoneValue =
     lead.phone ??
     ([lead.country_code, lead.base_number].filter(Boolean).join('') || undefined);
@@ -832,8 +832,8 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
         {/* Contact Info */}
         {hasContact && (
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-              <User className="h-4 w-4 text-orange-500" /> Contact Information
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+              <User className="h-4 w-4 text-orange-500 dark:text-orange-400" /> Contact Information
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {contactFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
@@ -844,8 +844,8 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
         {/* Pipeline Info */}
         {hasPipeline && (
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-orange-500" /> Pipeline & CRM
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-orange-500 dark:text-orange-400" /> Pipeline & CRM
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {pipelineFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
@@ -855,8 +855,8 @@ const LeadTab = ({ leadData, isLoading }: { leadData: any | null; isLoading: boo
 
         {/* Meta */}
         <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-            <Info className="h-4 w-4 text-orange-500" /> Record Info
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+            <Info className="h-4 w-4 text-orange-500 dark:text-orange-400" /> Record Info
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {metaFields.map((f) => <LeadField key={f.label} label={f.label} value={f.value} />)}
@@ -1064,17 +1064,17 @@ export function CallLogModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden dark:bg-[#000c3b] dark:border-gray-800">
+        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-full bg-orange-50 border border-orange-100 shadow-sm">
-              <PhoneCall className="h-6 w-6 text-orange-600" />
+            <div className="p-3 rounded-full bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/60 shadow-sm">
+              <PhoneCall className="h-6 w-6 text-orange-600 dark:text-orange-400" />
             </div>
-            <DialogTitle>Call Logs</DialogTitle>
+            <DialogTitle className="dark:text-white">Call Logs</DialogTitle>
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col flex-1 overflow-hidden px-8 py-6 space-y-6">
+        <div className="flex flex-col flex-1 overflow-hidden px-4 py-4 sm:px-8 sm:py-6 space-y-4 sm:space-y-6">
           {logLoading ? (
             <div className="flex-1 flex flex-col space-y-4">
               <div className="flex gap-2">
@@ -1082,7 +1082,7 @@ export function CallLogModal({
                   <Skeleton key={i} className="h-9 flex-1 rounded-xl" />
                 ))}
               </div>
-              <div className="flex-1 border border-gray-200 rounded-2xl p-6 space-y-4">
+              <div className="flex-1 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4">
                 <div className="flex items-center space-x-3">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <div className="space-y-2">
@@ -1092,7 +1092,7 @@ export function CallLogModal({
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="space-y-2 p-4 rounded-xl border border-gray-100">
+                    <div key={i} className="space-y-2 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
                       <Skeleton className="h-3 w-20" />
                       <Skeleton className="h-4 w-full" />
                     </div>
@@ -1109,10 +1109,10 @@ export function CallLogModal({
               )}
 
               <Tabs defaultValue="lead" className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="flex items-center gap-1 bg-gray-50 rounded-2xl p-1 shadow-inner overflow-x-auto no-scrollbar w-full justify-start sm:justify-center">
+                <TabsList className="flex items-center gap-1 bg-gray-50 dark:bg-[#000724] rounded-2xl p-1 shadow-inner overflow-x-auto no-scrollbar w-full justify-start sm:justify-center">
                   <TabsTrigger
                     value="lead"
-                    className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
+                    className="flex-none whitespace-nowrap data-[state=active]:bg-white dark:data-[state=active]:bg-[#000c3b] data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400"
                   >
                     <User className="h-4 w-4 shrink-0" />
                     <span>Profile</span>
@@ -1120,7 +1120,7 @@ export function CallLogModal({
                   {hasTranscripts && (
                     <TabsTrigger
                       value="transcripts"
-                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white dark:data-[state=active]:bg-[#000c3b] data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400"
                     >
                       <Mic className="h-4 w-4 shrink-0" />
                       <span>Transcript</span>
@@ -1130,7 +1130,7 @@ export function CallLogModal({
                   {hasAnalysis && (
                     <TabsTrigger
                       value="analysis"
-                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white dark:data-[state=active]:bg-[#000c3b] data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400"
                     >
                       <Info className="h-4 w-4 shrink-0" />
                       <span>Analysis</span>
@@ -1140,7 +1140,7 @@ export function CallLogModal({
                   {hasAnalysis && (
                     <TabsTrigger
                       value="messages"
-                      className="flex-none whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2"
+                      className="flex-none whitespace-nowrap data-[state=active]:bg-white dark:data-[state=active]:bg-[#000c3b] data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400 data-[state=active]:shadow-md rounded-xl py-2 px-4 text-xs xs:text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400"
                     >
                       <MessageSquare className="h-4 w-4 shrink-0" />
                       <span>Messages</span>
@@ -1149,24 +1149,24 @@ export function CallLogModal({
 
                 </TabsList>
 
-                <TabsContent value="lead" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                <TabsContent value="lead" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 dark:border-gray-800 rounded-2xl">
                   <LeadTab leadData={leadData} isLoading={leadLoading} />
                 </TabsContent>
 
                 {hasTranscripts && (
-                  <TabsContent value="transcripts" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="transcripts" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 dark:border-gray-800 rounded-2xl">
                     <TranscriptsTab segments={segments} />
                   </TabsContent>
                 )}
 
                 {hasAnalysis && (
-                  <TabsContent value="analysis" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="analysis" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 dark:border-gray-800 rounded-2xl">
                     <AnalysisTab analysis={analysis} log={log} leadData={leadData} segments={segments} />
                   </TabsContent>
                 )}
 
                 {hasAnalysis && (
-                  <TabsContent value="messages" className="flex-1 overflow-hidden mt-4 border border-gray-200 rounded-2xl">
+                  <TabsContent value="messages" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 dark:border-gray-800 rounded-2xl">
                     <MessagesTab messages={messages} />
                   </TabsContent>
                 )}

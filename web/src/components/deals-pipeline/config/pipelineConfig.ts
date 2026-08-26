@@ -150,4 +150,4 @@ export function getPipelineConfig(vertical: string = 'default'): VerticalConfig 
 export function getSlots(vertical: string = 'default'): SlotConfig[] {
   const config = getPipelineConfig(vertical);
   return config.slots.sort((a, b) => a.order - b.order);
-}
+}

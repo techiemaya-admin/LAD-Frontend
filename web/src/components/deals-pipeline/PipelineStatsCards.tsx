@@ -77,7 +77,7 @@ const StatCard = ({ title, icon, bgColor, renderValue, onClick, isSelected }: St
             </Avatar>
           </div>
           <div className="flex-1 flex flex-col justify-end">
-            <p className="text-[10px] sm:text-sm text-slate-500 dark:text-[#7a8ba3] mb-1">
+            <p className="text-[10px] sm:text-sm text-slate-500 dark:text-slate-300 mb-1">
               {title}
             </p>
             <h5 className="text-2xl font-bold text-slate-800 dark:text-white">{renderValue()}</h5>

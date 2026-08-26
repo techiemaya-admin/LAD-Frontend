@@ -67,18 +67,18 @@ export default function ReadyToUseTemplates({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">Loading templates...</p>
+        <p className="text-gray-500 dark:text-gray-400">Loading templates...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-700 text-sm">{error}</p>
+      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4">
+        <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
         <button
           onClick={loadTemplates}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+          className="mt-2 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded hover:bg-red-700 dark:hover:bg-red-600 text-sm"
         >
           Retry
         </button>
@@ -89,7 +89,7 @@ export default function ReadyToUseTemplates({
   if (templates.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No templates available yet. Create one to get started!</p>
+        <p className="text-gray-500 dark:text-gray-400">No templates available yet. Create one to get started!</p>
       </div>
     );
   }
@@ -104,8 +104,8 @@ export default function ReadyToUseTemplates({
             onClick={() => setSelectedCategory(category)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === category
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary dark:bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-[#0b1957]/50'
             }`}
           >
             {category}
@@ -118,30 +118,30 @@ export default function ReadyToUseTemplates({
         {filteredTemplates.map((template) => (
           <div
             key={template.id}
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#000c3b] rounded-lg border border-gray-200 dark:border-gray-800 p-6 hover:shadow-lg dark:hover:shadow-[#0b1957]/10 transition-shadow"
           >
             <div className="mb-4">
-              <h3 className="font-semibold text-lg text-gray-900 mb-2">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
                 {template.name}
               </h3>
-              <p className="text-xs text-gray-500 bg-gray-100 inline-block px-2 py-1 rounded mb-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 inline-block px-2 py-1 rounded mb-3">
                 {template.category}
               </p>
-              <p className="text-sm text-gray-600">{template.description}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{template.description}</p>
             </div>
 
-            <div className="bg-gray-50 rounded p-3 mb-4 max-h-32 overflow-hidden">
-              <p className="text-xs font-mono text-gray-700 line-clamp-4">
+            <div className="bg-gray-50 dark:bg-[#000724] rounded p-3 mb-4 max-h-32 overflow-hidden">
+              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 line-clamp-4">
                 <strong>Subject:</strong> {template.subject}
               </p>
-              <p className="text-xs font-mono text-gray-600 mt-2 line-clamp-2">
+              <p className="text-xs font-mono text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
                 {template.body.substring(0, 150)}...
               </p>
             </div>
 
             <button
               onClick={() => onSelectTemplate(template)}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+              className="w-full px-4 py-2 bg-primary dark:bg-blue-500 text-white rounded-lg hover:bg-primary/90 dark:hover:bg-blue-600 font-medium text-sm cursor-pointer"
             >
               Use This Template
             </button>

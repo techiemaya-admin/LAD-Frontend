@@ -10,37 +10,85 @@
       "types": "./features/ai-icp-assistant/index.ts",
       "default": "./features/ai-icp-assistant/index.ts"
     },
-    "./campaigns": {
-      "types": "./features/campaigns/index.ts",
-      "default": "./features/campaigns/index.ts"
-    },
-    "./deals-pipeline": {
-      "types": "./features/deals-pipeline/features/deals-pipeline/index.ts",
-      "default": "./features/deals-pipeline/features/deals-pipeline/index.ts"
-    },
     "./apollo-leads": {
       "types": "./features/apollo-leads/index.ts",
       "default": "./features/apollo-leads/index.ts"
     },
-    "./voice-agent": {
-      "types": "./features/voice-agent/index.ts",
-      "default": "./features/voice-agent/index.ts"
+    "./billing": {
+      "types": "./features/billing/index.ts",
+      "default": "./features/billing/index.ts"
     },
-    "./social-integration": {
-      "types": "./features/social-integration/features/social-integration/index.ts",
-      "default": "./features/social-integration/features/social-integration/index.ts"
+    "./bookings": {
+      "types": "./features/bookings/index.ts",
+      "default": "./features/bookings/index.ts"
+    },
+    "./call-logs": {
+      "types": "./features/call-logs/index.ts",
+      "default": "./features/call-logs/index.ts"
+    },
+    "./campaigns": {
+      "types": "./features/campaigns/index.ts",
+      "default": "./features/campaigns/index.ts"
+    },
+    "./community-roi": {
+      "types": "./features/community-roi/index.ts",
+      "default": "./features/community-roi/index.ts"
+    },
+    "./conversations": {
+      "types": "./features/conversations/index.ts",
+      "default": "./features/conversations/index.ts"
     },
     "./dashboard": {
       "types": "./features/dashboard/index.ts",
       "default": "./features/dashboard/index.ts"
     },
+    "./deals-pipeline": {
+      "types": "./features/deals-pipeline/index.ts",
+      "default": "./features/deals-pipeline/index.ts"
+    },
+    "./email-accounts": {
+      "types": "./features/email-accounts/index.ts",
+      "default": "./features/email-accounts/index.ts"
+    },
+    "./email-senders": {
+      "types": "./features/email-senders/index.ts",
+      "default": "./features/email-senders/index.ts"
+    },
+    "./email-templates": {
+      "types": "./features/email-templates/index.ts",
+      "default": "./features/email-templates/index.ts"
+    },
+    "./meta-onboarding": {
+      "types": "./features/meta-onboarding/index.ts",
+      "default": "./features/meta-onboarding/index.ts"
+    },
+    "./lad-monitor": {
+      "types": "./features/lad-monitor/index.ts",
+      "default": "./features/lad-monitor/index.ts"
+    },
+    "./lead-appreciation": {
+      "types": "./features/lead-appreciation/index.ts",
+      "default": "./features/lead-appreciation/index.ts"
+    },
+    "./mindbody": {
+      "types": "./features/mindbody/index.ts",
+      "default": "./features/mindbody/index.ts"
+    },
     "./overview": {
       "types": "./features/overview/index.ts",
       "default": "./features/overview/index.ts"
     },
-    "./call-logs": {
-      "types": "./features/call-logs/index.ts",
-      "default": "./features/call-logs/index.ts"
+    "./prospects": {
+      "types": "./features/prospects/index.ts",
+      "default": "./features/prospects/index.ts"
+    },
+    "./settings": {
+      "types": "./features/settings/index.ts",
+      "default": "./features/settings/index.ts"
+    },
+    "./voice-agent": {
+      "types": "./features/voice-agent/index.ts",
+      "default": "./features/voice-agent/index.ts"
     }
   },
   "scripts": {

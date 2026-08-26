@@ -10,9 +10,6 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ||
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.debug('Request body received', {
-      keys: Object.keys(body)
-    });
     // Get auth token from cookie
     const token = request.cookies.get('access_token')?.value;
     // Forward request to ICP feature backend AI Assistant

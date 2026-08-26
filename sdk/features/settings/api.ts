@@ -1,5 +1,5 @@
 /**
- * Settings Feature — API Client
+ * Settings Feature - API Client
  * sdk/features/settings/api.ts
  *
  * NOTE on URL construction:
@@ -7,7 +7,7 @@
  * baseURL = "http://localhost:3004/api"  (no trailing slash)
  *
  * Because `new URL('/path', 'http://host/api')` treats a leading '/'
- * as absolute from the origin — it IGNORES the /api segment.
+ * as absolute from the origin - it IGNORES the /api segment.
  * So paths MUST include /api to produce the correct full URL:
  *   new URL('/api/settings/business-hours', 'http://localhost:3004/api')
  *   → http://localhost:3004/api/settings/business-hours  ✅

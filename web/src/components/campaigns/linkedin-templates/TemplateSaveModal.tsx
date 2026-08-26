@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,9 +15,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/app-toaster';
-import { useCreateLinkedInMessageTemplate } from '@lad/frontend-features/campaigns';
+import {
+  useCreateLinkedInMessageTemplate,
+  LINKEDIN_TEMPLATE_TYPES,
+  LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH,
+} from '@lad/frontend-features/campaigns';
 import { Loader2, Save, AlertCircle } from 'lucide-react';
 import type { CreateLinkedInTemplateRequest } from '@lad/frontend-features/campaigns';
+
+const CONNECTION_TYPE = 'linkedin_connection';
 
 interface TemplateSaveModalProps {
   open: boolean;
@@ -40,43 +46,58 @@ export default function TemplateSaveModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'sales' as const,
+    templateType: CONNECTION_TYPE as string,
     is_default: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const isConnection = formData.templateType === CONNECTION_TYPE;
+  // The single body saved is the composed message that matches the chosen type.
+  const body = isConnection ? connectionMessage : followupMessage;
+
+  // Preselect the type based on which message the builder actually has.
+  useEffect(() => {
+    if (!open) return;
+    const preferred = connectionMessage.trim()
+      ? CONNECTION_TYPE
+      : followupMessage.trim()
+        ? 'linkedin_followup'
+        : CONNECTION_TYPE;
+    setFormData((f) => ({ ...f, templateType: preferred }));
+  }, [open, connectionMessage, followupMessage]);
+
+  const reset = () => {
+    setFormData({ name: '', description: '', templateType: CONNECTION_TYPE, is_default: false });
+    setErrors({});
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name.trim()) {
       newErrors.name = 'Template name is required';
     }
-
-    if (!connectionMessage.trim() && !followupMessage.trim()) {
-      newErrors.messages = 'At least one message (connection or followup) must be provided';
+    if (!body.trim()) {
+      newErrors.messages = isConnection
+        ? 'A connection request message is required'
+        : 'A follow-up message is required';
     }
-
-    if (connectionMessage.length > 300) {
-      newErrors.connection = 'Connection message must be 300 characters or less';
+    if (isConnection && body.length > LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH) {
+      newErrors.connection = `Connection request message must be ${LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH} characters or less`;
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       const request: CreateLinkedInTemplateRequest = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        connection_message: connectionMessage.trim() || undefined,
-        followup_message: followupMessage.trim() || undefined,
-        category: formData.category,
+        category: formData.templateType,
+        content: body.trim() || undefined,
         is_default: formData.is_default,
         is_active: true,
       };
@@ -93,14 +114,7 @@ export default function TemplateSaveModal({
         onTemplateSaved(result.id);
       }
 
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        category: 'sales',
-        is_default: false,
-      });
-      setErrors({});
+      reset();
       onClose();
     } catch (error: any) {
       push({
@@ -112,18 +126,12 @@ export default function TemplateSaveModal({
   };
 
   const handleClose = () => {
-    setFormData({
-      name: '',
-      description: '',
-      category: 'sales',
-      is_default: false,
-    });
-    setErrors({});
+    reset();
     onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && handleClose()}>
       <DialogContent className="">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -131,7 +139,7 @@ export default function TemplateSaveModal({
             Save as Template
           </DialogTitle>
           <DialogDescription>
-            Save your LinkedIn messages as a reusable template
+            Save this LinkedIn message as a reusable template
           </DialogDescription>
         </DialogHeader>
 
@@ -168,46 +176,37 @@ export default function TemplateSaveModal({
             />
           </div>
 
-          {/* Category */}
+          {/* Template type */}
           <div className="space-y-2">
-            <Label htmlFor="template-category">Category</Label>
+            <Label htmlFor="template-type">Use this template for</Label>
             <select
-              id="template-category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+              id="template-type"
+              value={formData.templateType}
+              onChange={(e) => setFormData({ ...formData, templateType: e.target.value })}
               className="w-full h-9 px-3 py-2 text-sm border border-input rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="sales">Sales</option>
-              <option value="recruiting">Recruiting</option>
-              <option value="networking">Networking</option>
-              <option value="partnership">Partnership</option>
-              <option value="custom">Custom</option>
+              {LINKEDIN_TEMPLATE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
             </select>
           </div>
 
-          {/* Preview Messages */}
+          {/* Preview */}
           <div className="space-y-2 p-3 bg-gray-50 rounded-md border">
             <Label className="text-xs font-semibold text-gray-700">Template Preview:</Label>
-
-            {connectionMessage && (
+            {body ? (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-600">Connection Message:</p>
-                <p className="text-xs text-gray-800 bg-white p-2 rounded border">
-                  {connectionMessage}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {connectionMessage.length}/300 characters
-                </p>
+                <p className="text-xs text-gray-800 bg-white p-2 rounded border whitespace-pre-wrap">{body}</p>
+                {isConnection && (
+                  <p className="text-xs text-gray-500">
+                    {body.length}/{LINKEDIN_CONNECTION_MESSAGE_MAX_LENGTH} characters
+                  </p>
+                )}
               </div>
-            )}
-
-            {followupMessage && (
-              <div className="space-y-1 mt-2">
-                <p className="text-xs font-medium text-gray-600">Followup Message:</p>
-                <p className="text-xs text-gray-800 bg-white p-2 rounded border">
-                  {followupMessage}
-                </p>
-              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">
+                No {isConnection ? 'connection request' : 'follow-up'} message to save yet.
+              </p>
             )}
 
             {errors.messages && (
@@ -237,7 +236,7 @@ export default function TemplateSaveModal({
             <Switch
               id="is-default"
               checked={formData.is_default}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
+              onCheckedChange={(checked: boolean) => setFormData({ ...formData, is_default: checked })}
             />
           </div>
         </div>

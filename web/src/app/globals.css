@@ -23,6 +23,104 @@
   }
 }
 
+/* ------------------------------
+   LEGAL / POLICY PAGES PROSE
+   Readable typography for Privacy Policy, Terms of Service & Cookies Policy.
+------------------------------ */
+.legal-prose {
+  color: #374151; /* gray-700 */
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.dark .legal-prose {
+  color: #d1d5db; /* gray-300 */
+}
+.legal-prose > :first-child {
+  margin-top: 0;
+}
+.legal-prose h2 {
+  color: #0b1957;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  scroll-margin-top: 6rem;
+}
+.dark .legal-prose h2 {
+  color: #ffffff;
+}
+.legal-prose h3 {
+  color: #0b1957;
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+.dark .legal-prose h3 {
+  color: #e5e7eb; /* gray-200 */
+}
+.legal-prose p {
+  margin-bottom: 1.1rem;
+}
+.legal-prose ul,
+.legal-prose ol {
+  margin: 0 0 1.1rem 1.4rem;
+}
+.legal-prose ul {
+  list-style: disc;
+}
+.legal-prose ol {
+  list-style: decimal;
+}
+.legal-prose li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+.legal-prose a {
+  color: #2563eb; /* blue-600 */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark .legal-prose a {
+  color: #93c5fd; /* blue-300 */
+}
+.legal-prose a:hover {
+  opacity: 0.8;
+}
+.legal-prose strong {
+  color: #0b1957;
+  font-weight: 600;
+}
+.dark .legal-prose strong {
+  color: #ffffff;
+}
+.legal-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+.legal-prose th,
+.legal-prose td {
+  border: 1px solid #e5e7eb;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+.dark .legal-prose th,
+.dark .legal-prose td {
+  border-color: #374151;
+}
+.legal-prose th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #0b1957;
+}
+.dark .legal-prose th {
+  background: #1a2f6b;
+  color: #ffffff;
+}
+
   :root {
     --radius: 0.625rem;
 
@@ -69,7 +167,7 @@
     /* Borders & Inputs */
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: #0B1957;
 
     /* Channel Colors */
     --whatsapp: 142 70% 45%;
@@ -84,7 +182,7 @@
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-ring: #0B1957;
 
     /* Message Bubbles - WhatsApp Theme */
     --message-incoming: 0 0% 100%;
@@ -137,7 +235,7 @@
     @apply bg-[hsl(var(--gmail))]/10 text-[hsl(var(--gmail))] border-[hsl(var(--gmail))]/20;
   }
 
-  /* Message bubbles — WhatsApp styling */
+  /* Message bubbles - WhatsApp styling */
   .message-bubble-incoming {
     background: #ffffff;
     color: #111b21;
@@ -146,10 +244,10 @@
   }
 
   .message-bubble-outgoing {
-    background: #0b1957;
-    color: #ffffff;
+    background: #d9fdd3;
+    color: #111b21;
     border-radius: 8px 0 8px 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.13);
   }
 
   /* ── Chat window background ────────────────────────────────────────────── */
@@ -159,6 +257,16 @@
 
   .dark .whatsapp-chat-bg {
     background-color: #000724;
+  }
+
+  .dark .message-bubble-incoming {
+    background-color: #242626;
+    color: #e9edef;
+  }
+
+  .dark .message-bubble-outgoing {
+    background-color: #144d37;
+    color: #e9edef;
   }
 
   /* ── Chat message typography (WhatsApp-style) ──────────────────────────── */
@@ -209,8 +317,25 @@
   }
 
   /* Scrollbar styling */
-  .custom-scrollbar::-webkit-scrollbar {
+  ::-webkit-scrollbar {
     width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 3px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
@@ -218,7 +343,41 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full hover:bg-muted-foreground/30;
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb transparent;
+  }
+  
+  /* Global dark mode scrollbar - applies to ALL scrollable elements */
+  .dark *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .dark *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox dark mode scrollbar */
+  .dark * {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-width: thin;
   }
 
   /* Hide scrollbar completely */
@@ -285,6 +444,15 @@
     }
   }
 
+  @keyframes top-progress-slide {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
+  }
+
   .animate-fade-in-up {
     animation: fade-in-up 0.3s ease-out forwards;
   }
@@ -297,11 +465,16 @@
     animation: message-pop 0.2s ease-out forwards;
   }
 
+  .animate-top-progress {
+    animation: top-progress-slide 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in-up,
     .animate-slide-in-right,
-    .animate-message-pop {
+    .animate-message-pop,
+    .animate-top-progress {
       animation: none;
     }
   }
@@ -435,7 +608,7 @@
   /* Border & Input */
   --border: oklch(92% 0.013 255.508);
   --input: oklch(96% 0.007 247.896);
-  --ring: oklch(62% 0.194 149.214);
+  --ring: #0B1957;
 
   /* Muted */
   --muted: oklch(96% 0.007 247.896);
@@ -456,7 +629,7 @@
   --sidebar-accent: oklch(62% 0.194 149.214);
   --sidebar-accent-foreground: oklch(98% 0.014 180.72);
   --sidebar-border: oklch(92% 0.013 255.508);
-  --sidebar-ring: oklch(62% 0.194 149.214);
+  --sidebar-ring: #0B1957;
 }
 
 /* ------------------------------
@@ -477,9 +650,9 @@
   --secondary: #1A2A43;
   --secondary-foreground: #E0E0E0;
 
-  /* Accent - Neon Mint (Highlight) */
-  --accent: #2EE6A6;
-  --accent-foreground: #000724;
+  /* Accent - Light Blue (Highlight) */
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
 
   /* Neutral */
   --neutral: #1a2f6b;
@@ -514,7 +687,7 @@
   /* Border & Input - Electric Blue accent */
   --border: #2B7CFF;
   --input: #1A2A43;
-  --ring: #2EE6A6;
+  --ring: #2B7CFF;
 
   /* Muted */
   --muted: #2B7CFF;
@@ -532,10 +705,10 @@
   --sidebar-foreground: #E0E0E0;
   --sidebar-primary: #2B7CFF;
   --sidebar-primary-foreground: #000724;
-  --sidebar-accent: #2EE6A6;
-  --sidebar-accent-foreground: #000724;
+  --sidebar-accent: #2563eb;
+  --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1a2a43;
-  --sidebar-ring: #2EE6A6;
+  --sidebar-ring: #2B7CFF;
 }
 
 /* Background override */
@@ -663,21 +836,96 @@ body {
 
 /* Ensure the editor content looks professional and spacious */
 .ql-editor {
-    white-space: pre-wrap !important; /* Preserves your database newlines */
-    line-height: 1.6 !important;     /* Adds breathing room between lines */
-    font-family: 'Inter', sans-serif !important;
-    color: #374151 !important;        /* Professional dark grey, not pure black */
-    min-height: 200px;
-    font-size: 14px;
+  white-space: pre-wrap !important; /* Preserves your database newlines */
+  line-height: 1.6 !important;     /* Adds breathing room between lines */
+  font-family: 'Inter', sans-serif !important;
+  color: #374151 !important;        /* Professional dark grey, not pure black */
+  min-height: 200px;
+  font-size: 14px;
 }
 
 /* Fixes the "clumsy" look of images and links */
 .ql-editor p {
-    margin-bottom: 12px !important;
+  margin-bottom: 12px !important;
 }
 
-.ql-editor img {
-    max-width: 100%;
-    border-radius: 8px;
-    margin: 10px 0;
+/* -------------------------------------------------------------
+   GLOBAL DARK MODE DROPDOWN & SELECT STYLES
+   Ensures popovers use #071131 navy background with subtle #1c2c4e border,
+   and option hover/focused/active states use standard light blue (#2563eb).
+----------------------------------------------------------------- */
+.dark select {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+}
+
+.dark select option {
+  background-color: #071131 !important;
+  color: #ffffff !important;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:active,
+.dark select option:checked {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-content"],
+.dark [data-radix-select-content],
+.dark [role="menu"],
+.dark [role="listbox"] {
+  background-color: #071131 !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.dark [data-slot="select-item"]:focus,
+.dark [data-slot="select-item"][data-highlighted],
+.dark [data-slot="select-item"][data-state="checked"],
+.dark [role="option"]:focus,
+.dark [role="option"][data-highlighted],
+.dark [role="option"][aria-selected="true"],
+.dark [role="menuitem"]:focus,
+.dark [role="menuitem"][data-highlighted] {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
+.dark input:focus,
+.dark input:focus-visible,
+.dark textarea:focus:not(.adv-chat-ta),
+.dark textarea:focus-visible:not(.adv-chat-ta),
+.dark select:focus,
+.dark select:focus-visible,
+.dark [data-slot="input"]:focus,
+.dark [data-slot="input"]:focus-visible,
+.dark [data-slot="textarea"]:focus:not(.adv-chat-ta),
+.dark [data-slot="textarea"]:focus-visible:not(.adv-chat-ta),
+.dark [data-slot="select-trigger"]:focus,
+.dark [data-slot="select-trigger"]:focus-visible {
+  border-color: rgba(43, 124, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(43, 124, 255, 0.25) !important;
+  outline: none !important;
+}
+
+/* Specific override to strip focus ring on AI Assistant prompt textarea (.adv-chat-ta) */
+textarea.adv-chat-ta:focus,
+textarea.adv-chat-ta:focus-visible,
+textarea.adv-chat-ta:focus-within,
+.dark textarea.adv-chat-ta:focus,
+.dark textarea.adv-chat-ta:focus-visible,
+.dark textarea.adv-chat-ta:focus-within {
+  border-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  ring: 0 !important;
+  -webkit-ring-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
 }

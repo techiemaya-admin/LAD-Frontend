@@ -332,7 +332,7 @@ export default function OnboardNewMembersModal({
             <AlertDialogDescription>
               <div className="space-y-3 mt-4">
                 <p>
-                  You're about to add <span className="font-semibold">{confirmationData?.selectedCount}</span> new
+                  You&apos;re about to add <span className="font-semibold">{confirmationData?.selectedCount}</span> new
                   member{confirmationData?.selectedCount !== 1 ? 's' : ''} to your network.
                 </p>
                 {confirmationData?.sendTemplate && (

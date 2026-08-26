@@ -17,6 +17,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
     const savedTheme = localStorage.getItem('theme') as Theme | null;
+    // First visits use light; an explicitly saved "system" preference still
+    // follows the OS setting. This matches the pre-paint script in layout.tsx.
     return savedTheme || 'light';
   });
 

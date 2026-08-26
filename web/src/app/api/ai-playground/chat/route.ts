@@ -3,7 +3,7 @@ import { getBackendUrl, getVoagHeaders } from '../../utils/backend';
 
 const BACKEND_PATH = '/api/ai-playground/chat';
 
-/** POST /api/ai-playground/chat — one conversational turn */
+/** POST /api/ai-playground/chat - one conversational turn */
 export async function POST(req: NextRequest) {
   try {
     const backend = getBackendUrl();

@@ -3,50 +3,37 @@
 export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setCompanyName, setCompanyLogo } from '../../store/slices/settingsSlice';
+import { setCompanyName } from '../../store/slices/settingsSlice';
 import { IntegrationsSettings } from '../../components/settings/IntegrationsSettings';
 import { VoiceAgentSettings } from '../../components/voice-agent/VoiceAgentSettings';
 import { ChatSettings } from '../../components/settings/ChatSettings';
 import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
-import { CompanySettings } from '../../components/settings/CompanySettings';
+import { BusinessProfileSettings } from '../../components/settings/BusinessProfileSettings';
 import { TeamManagement } from '../../components/settings/TeamManagement';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { Concept } from '../../types/concept';
 import { cn } from '../../lib/utils';
-import { EmailTemplates, Template } from './EmailTemplates';
+import { Template } from './EmailTemplates';
 import { QuotationTemplates } from './QuotationTemplates';
-// Import the LeadRequirements component (ensure path is correct based on your project)
 import { LeadRequirements } from './LeadRequirements';
 import { RequirementConfig } from '../../types/requirement_config';
 import { ConceptManagement } from './ConceptManagement';
 import { PricingRules } from './PricingRules';
-import QuotationEmailTemplateEditor from '@/app/settings/QuotationEmailTemplateEditor';
-
 import {
-  Building2, Users, UserCircle, Globe, Plug,
-  Terminal, CreditCard, Coins, Upload, ClipboardCheck,
-  X, // Added ClipboardCheck icon
-  Sparkles,
-  Tag,
-  Settings,
-  DollarSign,
-  MessageSquare,
-  Mail,
-  FileText,
-  ChevronDown,
+  Building2, Users, Plug, Terminal, CreditCard, Coins,
+  MessageSquare, Target, Crosshair, Sparkles, Settings,
+  DollarSign, FileText, ChevronDown, X, ClipboardCheck,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { getApiBaseUrl, getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { PricingRule } from '@/types/pricing_rule';
-import { EmailTemplatesDragDrop } from './EmailTemplatesDragDrop';
 
-type ActiveTab = 'company' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
+type ActiveTab = 'businessprofile' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits' | 'proposal_settings';
 
 const SettingsPage: React.FC = () => {
   const router = useRouter();
@@ -54,30 +41,32 @@ const SettingsPage: React.FC = () => {
   const dispatch = useDispatch();
   const { tenant } = useTenant();
   const { user, isLoading: isAuthLoading } = useAuth();
-
+  
   const companyName = useSelector((state: any) => state.settings.companyName);
   const companyLogo = useSelector((state: any) => state.settings.companyLogo);
   const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [renewalDate, setRenewalDate] = useState<string>('');
   const [logoError, setLogoError] = useState(false);
+
+  // Proposal settings state
   const [requirementConfigs, setRequirementConfigs] = useState<RequirementConfig[]>([]);
-  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules'  | 'quotation-templates' | ''>('lead_config');
+  const [proposalSubTab, setProposalSubTab] = useState<'lead_config' | 'concepts' | 'pricing_rules' | 'quotation-templates' | ''>('lead_config');
   const [editingConfig, setEditingConfig] = useState<RequirementConfig | null>(null);
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false); // Move this HERE
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isConceptModalOpen, setIsConceptModalOpen] = useState(false);
   const [editingConcept, setEditingConcept] = useState<Concept | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
-  const [tenantId, setTenantId] = useState<string>("");
-  const [pricingModels, setpricingModels] = useState<{ value: string; label: string }[]>([]);
+  const [tenantId, setTenantId] = useState<string>('');
+  const [pricingModels, setPricingModels] = useState<{ id?: string; value: string; label: string }[]>([]);
   const [selectedConceptServices, setSelectedConceptServices] = useState<string[]>([]);
-  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
   const [placeholders, setPlaceholders] = useState<any[]>([]);
   const [quotationTemplates, setQuotationTemplates] = useState<any[]>([]);
-  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewQuotationUrl, setPreviewQuotationUrl] = useState<string | null>(null);
   const [isPreviewQuotationModalOpen, setIsPreviewQuotationModalOpen] = useState(false);
   const [concepts, setConcepts] = useState<Concept[]>([]);
+
   // Redirect if not authenticated and not loading
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -89,78 +78,94 @@ const SettingsPage: React.FC = () => {
   // Update company name from tenant or user profile
   useEffect(() => {
     if (!user) return;
-    const sessionName = (tenant?.name && tenant.name !== "Default")
-      ? tenant.name
-      : ((user as any)?.company_name || user?.name);
 
-    if (sessionName && sessionName !== companyName && sessionName !== "Default") {
+    const sessionName = (tenant?.name && tenant.name !== 'Default') 
+      ? tenant.name 
+      : ((user as any)?.company_name || user?.name);
+      
+    if (sessionName && sessionName !== companyName && sessionName !== 'Default') {
       dispatch(setCompanyName(sessionName));
     }
   }, [tenant?.name, user, companyName, dispatch]);
 
+  const fetchConfigs = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${tId}`);
+      const data = await res.json();
+      setRequirementConfigs(data);
+    } catch (error) {
+      logger.error('Failed to fetch lead requirement configs', error);
+    }
+  };
+
+  const fetchConcepts = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tId}`);
+      const data = await res.json();
+      setConcepts(data);
+    } catch (error) {
+      logger.error('Failed to fetch concepts', error);
+    }
+  };
+
+  const fetchPricingRules = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tId}`);
+      const data = await res.json();
+      setPricingRules(data);
+    } catch (error) {
+      logger.error('Failed to fetch pricing rules', error);
+    }
+  };
+
+  const fetchPricingModels = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-models/${tId}`);
+      const data = await res.json();
+      setPricingModels(data);
+    } catch (error) {
+      logger.error('Failed to fetch pricing models', error);
+    }
+  };
+
+  const fetchQuotationTemplates = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tId}`);
+      const data = await res.json();
+      setQuotationTemplates(data);
+    } catch (error) {
+      logger.error('Failed to fetch quotation templates', error);
+    }
+  };
+
+  const fetchPlaceholders = async (tId: string) => {
+    try {
+      const res = await fetch(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tId}`);
+      const data = await res.json();
+      setPlaceholders(data.data || []);
+    } catch (error) {
+      logger.error('Failed to fetch placeholders', error);
+    }
+  };
 
   const fetchProposalSettingDetails = async (targetTenantId?: string) => {
-    // Use the provided ID or fall back to the context tenant ID
     const idToUse = targetTenantId || tenant?.id;
-    console.log("Tenant id : " + idToUse)
-    if (!idToUse || idToUse === 'default') {
-      console.log("No valid tenant id found for proposal settings");
-      return;
-    }
+    if (!idToUse || idToUse === 'default') return;
 
     try {
       setTenantId(idToUse);
-      // Execute all fetches needed for this section
       await Promise.all([
         fetchConfigs(idToUse),
         fetchConcepts(idToUse),
         fetchPricingRules(idToUse),
-        fetchpricingModels(idToUse),
-        fetchEmailTemplates(idToUse),
+        fetchPricingModels(idToUse),
         fetchQuotationTemplates(idToUse),
-        fetchPlaceholders(idToUse)
+        fetchPlaceholders(idToUse),
       ]);
     } catch (error) {
-      logger.error("[Proposal Settings] Failed to fetch details", error);
+      logger.error('[Proposal Settings] Failed to fetch details', error);
     }
   };
-
-  // Source of truth for display: prioritize tenant/user data over Redux if they exist
-  const displayCompanyName = (tenant?.name && tenant.name !== "Default")
-    ? tenant.name
-    : ((user as any)?.company_name || user?.name || (companyName !== "My Organization" ? companyName : ""));
-
-  useEffect(() => {
-    if (!user) return;
-    // Initialize active tab from URL query param if present
-    const tabParam = (searchParams.get('tab') || '').toLowerCase();
-    const allowed: ActiveTab[] = ['company', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
-    if (allowed.includes(tabParam as ActiveTab)) {
-      const targetTab = tabParam as ActiveTab;
-      setActiveTab(tabParam as ActiveTab);
-      if (targetTab === 'proposal_settings' && tenant?.id) {
-        fetchProposalSettingDetails(tenant.id);
-      }
-    }
-    // Fetch subscription data to get renewal date
-    const fetchRenewalDate = async () => {
-      try {
-        // Calculate renewal date from current_period_end (15 days from now based on mock data)
-        const periodEnd = Date.now() + 86400 * 15 * 1000; // 15 days from now in milliseconds
-        const date = new Date(periodEnd);
-        const formattedDate = date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        });
-        setRenewalDate(formattedDate);
-      } catch (error) {
-        console.error('Error fetching renewal date:', error);
-        setRenewalDate('November 29th, 2025'); // Fallback
-      }
-    };
-    fetchRenewalDate();
-  }, [user, searchParams]);
 
   const handleDeleteConfig = async (id: string) => {
     if (confirm('Are you sure you want to delete this configuration?')) {
@@ -171,150 +176,9 @@ const SettingsPage: React.FC = () => {
       }
     }
   };
-  const fetchpricingModels = async (tenantId: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-models/${tenantId}`); // Your backend endpoint [cite: 238, 256]
-      const data = await res.json();
-      console.log('Fetched pricing modals:', data);
-      setpricingModels(data); // Expecting [{ value: 'per_person', label: 'Per Person (Event)' }, ...] [cite: 238]
-    } catch (error) {
-      logger.error("Failed to fetch pricing modals", error); // 
-    }
-  };
-
-
-  const fetchPlaceholders = async (tenantId: string) => {
-    try {
-      console.log("Fetching placeholder for tenant id : " + tenantId)
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tenantId}`); // Your backend endpoint [cite: 238, 256]
-      const data = await res.json();
-      console.log('Fetched placeholders :', data.data);
-      setPlaceholders(data.data);
-    } catch (error) {
-      logger.error("Failed to fetch placeholders ", error); // 
-    }
-  };
-
-
-  const fetchEmailTemplates = async (tenantId: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}`); // Your backend endpoint [cite: 238, 256]
-      const data = await res.json();
-      console.log('Fetched email templates:', data);
-      setEmailTemplates(data);
-    } catch (error) {
-      logger.error("Failed to fetch email templates", error); // 
-    }
-  };
-
-
-  const fetchQuotationTemplates = async (tenantId: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}`); // Your backend endpoint [cite: 238, 256]
-      const data = await res.json();
-      console.log('Fetched quotation templates:', data);
-      setQuotationTemplates(data);
-    } catch (error) {
-      logger.error("Failed to fetch quotation templates", error); // 
-    }
-  };
-
-
-  const fetchConfigs = async (tenantId: string) => {
-    try {
-      console.log("FEtch config >>> Tenant ID: " + tenantId);
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${tenantId}`);
-      console.log('Fetch lead configs response:', res);
-      const data = await res.json();
-      setRequirementConfigs(data);
-    } catch (error) {
-      logger.error("Failed to fetch lead requirement configs", error);
-    }
-  };
-
-  const fetchConcepts = async (tenantId: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tenantId}`);
-      const data = await res.json();
-      console.log('Fetched concepts:', data);
-      setConcepts(data);
-    } catch (error) {
-      logger.error("Failed to fetch concepts", error);
-
-    }
-  };
-
-
-  const fetchPricingRules = async (tenantId: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tenantId}`);
-      const data = await res.json();
-      console.log('Fetched pricing rules:', data);
-      setPricingRules(data);
-    } catch (error) {
-      logger.error("Failed to fetch pricing rules", error);
-    }
-  };
-
-  const handleUploadEmailTemplate = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
-    try {
-      console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
-      const formData = new FormData();
-      formData.append('template_name', template_name);
-      formData.append('is_default', String(isDefault));
-      formData.append('subject_line', subjectLine);
-      formData.append('file', file);
-
-      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/upload/${tenantId}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        toast.success('Email template uploaded and saved');
-        fetchEmailTemplates(tenantId);
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload email template');
-      }
-    } catch (error: any) {
-      console.error('Upload email template failed:', error);
-      toast.error(error.message || 'Failed to upload email template');
-    }
-  };
-
-
-  const handleSaveEmailTemplateDesign = async (template_name: string, subjectLine: string, isDefault: boolean, file: File) => {
-    try {
-      console.log('Uploading email template:', { template_name, subjectLine, isDefault, file });
-      const formData = new FormData();
-      formData.append('template_name', template_name);
-      formData.append('is_default', String(isDefault));
-      formData.append('subject_line', subjectLine);
-      formData.append('file', file);
-
-      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/upload/${tenantId}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        toast.success('Email template uploaded and saved');
-        fetchEmailTemplates(tenantId);
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload email template');
-      }
-    } catch (error: any) {
-      console.error('Upload email template failed:', error);
-      toast.error(error.message || 'Failed to upload email template');
-    }
-  };
-
 
   const handleUploadQuotationTemplate = async (template_name: string, isDefault: boolean, file: File) => {
     try {
-      console.log('Uploading Quotation template:', { template_name, isDefault, file });
       const formData = new FormData();
       formData.append('template_name', template_name);
       formData.append('is_default', String(isDefault));
@@ -322,7 +186,7 @@ const SettingsPage: React.FC = () => {
 
       const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/upload/${tenantId}`, {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       if (response.ok) {
@@ -337,83 +201,37 @@ const SettingsPage: React.FC = () => {
       toast.error(error.message || 'Failed to upload Quotation template');
     }
   };
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-
-  const handlePreviewTemplate = async (template: Template) => {
-    try {
-      // Fetch the file as a blob (binary data)
-      const response = await fetch(`${getApiBaseUrlForLocal()}/api/email-templates/${template.id}/preview`);
-
-      if (!response.ok) throw new Error("Failed to fetch preview");
-
-      const blob = await response.blob();
-
-      // Create a temporary URL for the PDF blob
-      const url = window.URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setIsPreviewModalOpen(true);
-
-    } catch (error) {
-      toast.error("Visual preview failed to load");
-      console.error(error);
-    }
-  };
-
-  const [previewQuotationUrl, setPreviewQuotationUrl] = useState<string | null>(null);
 
   const handlePreviewQuotationTemplate = async (template: Template) => {
     try {
-      // Fetch the file as a blob (binary data)
       const response = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${template.id}/preview`);
-
-      if (!response.ok) throw new Error("Failed to fetch Quotation preview");
-
+      if (!response.ok) throw new Error('Failed to fetch Quotation preview');
       const blob = await response.blob();
-
-      // Create a temporary URL for the PDF blob
       const url = window.URL.createObjectURL(blob);
       setPreviewQuotationUrl(url);
       setIsPreviewQuotationModalOpen(true);
-
     } catch (error) {
-      toast.error("Visual preview failed to load for quotation");
+      toast.error('Visual preview failed to load for quotation');
       console.error(error);
     }
   };
 
-  // Cleanup memory when modal closes
   const closePreview = () => {
     if (previewUrl) window.URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setIsPreviewModalOpen(false);
+    if (previewQuotationUrl) window.URL.revokeObjectURL(previewQuotationUrl);
     setPreviewQuotationUrl(null);
     setIsPreviewQuotationModalOpen(false);
-  };
-  const handleSetDefaultEmailTemplate = async (id: string) => {
-    try {
-      await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${tenantId}/set-default/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_default: true })
-      });
-
-      toast.success('Default email template updated');
-      fetchEmailTemplates(tenantId);
-    } catch (error) {
-      console.error('Set default email template failed:', error);
-    }
   };
 
   const handleSetDefaultQuotationTemplate = async (id: string) => {
     try {
-      console.log("tenant id : " + tenantId + " id : " + id)
       await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}/set-default/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_default: true })
+        body: JSON.stringify({ is_default: true }),
       });
-
       toast.success('Default quotation template updated');
       fetchQuotationTemplates(tenantId);
     } catch (error) {
@@ -421,27 +239,12 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteEmailTemplate = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this email template?')) return;
-    try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-email-template/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Email template deleted');
-        fetchEmailTemplates(tenantId);
-      }
-    } catch (error) {
-      console.error('Delete email template failed:', error);
-      toast.error('Failed to delete email template');
-    }
-  };
-
-
   const handleDeleteQuotationTemplate = async (id: string) => {
     if (!confirm('Are you sure you want to delete this quotation template?')) return;
     try {
       const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success('quotation template deleted');
+        toast.success('Quotation template deleted');
         fetchQuotationTemplates(tenantId);
       }
     } catch (error) {
@@ -453,8 +256,7 @@ const SettingsPage: React.FC = () => {
   const handleSavePricingRule = async (ruleData: Partial<PricingRule>) => {
     const url = ruleData.id ? `${getApiBaseUrlForLocal()}/api/pricing-rules/${ruleData.id}` : `${getApiBaseUrlForLocal()}/api/pricing-rules`;
     const method = ruleData.id ? 'PUT' : 'POST';
-    ruleData.tenant_id = tenantId; // Ensure tenant_id is included
-    console.log('Saving pricing rule:', ruleData);
+    ruleData.tenant_id = tenantId;
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
@@ -481,17 +283,15 @@ const SettingsPage: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const conceptData = {
-      tenant_id: tenantId, // Ensure this is populated
+      tenant_id: tenantId,
       name: formData.get('name'),
       pricing_type: formData.get('pricing_type'),
       minimum_cost: parseFloat(formData.get('minimum_cost') as string) || 0,
       description: formData.get('description'),
-      requirement_config_ids: selectedConceptServices // Assuming this is an array of selected requirement config IDs
+      requirement_config_ids: selectedConceptServices,
     };
-    console.log('Saving concept:', conceptData);
     const url = editingConcept ? `${getApiBaseUrlForLocal()}/api/concepts/${editingConcept.id}` : `${getApiBaseUrlForLocal()}/api/concepts`;
     const method = editingConcept ? 'PUT' : 'POST';
-    console.log('Concept API URL: ', url + " method: " + method);
 
     const res = await fetch(url, {
       method,
@@ -520,18 +320,14 @@ const SettingsPage: React.FC = () => {
   const handleSaveConfig = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-
-    // You must get the tenant_id from your auth state/context
     const configData = {
-      tenant_id: tenantId, // Ensure this is populated
+      tenant_id: tenantId,
       field_key: formData.get('field_key'),
       label: formData.get('label'),
       is_active: formData.get('is_active') === 'on',
       base_price: parseFloat(formData.get('base_price') as string) || 0,
-      pricing_model_id: formData.get('pricing_model_id') // Assuming this is a select input with pricing model IDs as values
+      pricing_model_id: formData.get('pricing_model_id'),
     };
-    console.log('Saving config:', configData);
-    // ... rest of your fetch logic [cite: 13, 20, 21]
 
     const url = editingConfig ? `${getApiBaseUrlForLocal()}/api/lead-requirement-config/${editingConfig.id}` : `${getApiBaseUrlForLocal()}/api/lead-requirement-config`;
     const method = editingConfig ? 'PUT' : 'POST';
@@ -550,6 +346,45 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  // Source of truth for display: prioritize tenant/user data over Redux if they exist
+  const displayCompanyName = (tenant?.name && tenant.name !== 'Default')
+    ? tenant.name
+    : ((user as any)?.company_name || user?.name || (companyName !== 'My Organization' ? companyName : ''));
+
+  useEffect(() => {
+    if (!user) return;
+    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    const allowed: ActiveTab[] = ['businessprofile', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits', 'proposal_settings'];
+    if (tabParam === 'company') {
+      const sp = new URLSearchParams(Array.from(searchParams.entries()));
+      sp.set('tab', 'businessprofile');
+      router.replace(`/settings?${sp.toString()}`);
+      setActiveTab('businessprofile');
+    } else if (allowed.includes(tabParam as ActiveTab)) {
+      setActiveTab(tabParam as ActiveTab);
+      if (tabParam === 'proposal_settings' && tenant?.id) {
+        fetchProposalSettingDetails(tenant.id);
+      }
+    }
+
+    const fetchRenewalDate = async () => {
+      try {
+        const periodEnd = Date.now() + 86400 * 15 * 1000;
+        const date = new Date(periodEnd);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        setRenewalDate(formattedDate);
+      } catch (error) {
+        console.error('Error fetching renewal date:', error);
+        setRenewalDate('November 29th, 2025');
+      }
+    };
+    fetchRenewalDate();
+  }, [user, searchParams, tenant?.id]);
+
   if (isAuthLoading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -560,10 +395,8 @@ const SettingsPage: React.FC = () => {
 
   if (!user) return null;
   const tabs = [
-    { id: 'company' as ActiveTab, label: 'Company', icon: Building2 },
+    { id: 'businessprofile' as ActiveTab, label: 'Business Profile', icon: Target },
     { id: 'team' as ActiveTab, label: 'Team', icon: Users },
-    // { id: 'accounts' as ActiveTab, label: 'Accounts', icon: UserCircle },
-    // { id: 'website' as ActiveTab, label: 'Website', icon: Globe },
     { id: 'integrations' as ActiveTab, label: 'Integrations', icon: Plug },
     { id: 'chat' as ActiveTab, label: 'Chat Settings', icon: MessageSquare },
     { id: 'api' as ActiveTab, label: 'Voice Settings', icon: Terminal },
@@ -571,17 +404,18 @@ const SettingsPage: React.FC = () => {
     { id: 'credits' as ActiveTab, label: 'Credits', icon: Coins },
     { id: 'proposal_settings' as ActiveTab, label: 'Proposal Settings', icon: ClipboardCheck },
   ];
+
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#000724] space-y-6 p-4 sm:p-6">
       {/* Combined Header with Logo, Company Name, Renewal Date, and Tabs */}
-      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-purple-950/30 dark:to-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
         {/* Top Section: Logo, Company Name, and Renewal */}
         <div className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-md flex items-center justify-center border-2 border-white">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-md flex items-center justify-center border-2 border-white dark:border-gray-700">
                 {logoError || !companyLogo ? (
-                  <Building2 className="w-8 h-8 text-gray-400" />
+                  <Building2 className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                 ) : (
                   <img
                     src={companyLogo}
@@ -592,8 +426,8 @@ const SettingsPage: React.FC = () => {
                 )}
               </div>
               <div>
-                <h1 className="text-gray-900 font-semibold text-xl">{displayCompanyName}</h1>
-                <p className="text-gray-600 text-sm">
+                <h1 className="text-gray-900 dark:text-gray-100 font-semibold text-xl">{displayCompanyName}</h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
                   Renews on {renewalDate || 'Loading...'}
                 </p>
               </div>
@@ -601,7 +435,7 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
         {/* Bottom Section: Tabs Navigation */}
-        <div className="border-t border-gray-200/50 bg-white/30 backdrop-blur-sm">
+        <div className="border-t border-gray-200/50 dark:border-gray-800/60 bg-white/30 dark:bg-black/20 backdrop-blur-sm">
           <div className="flex space-x-1 overflow-x-auto p-1">
             {tabs.map((tab) => (
               <button
@@ -616,441 +450,157 @@ const SettingsPage: React.FC = () => {
                   router.replace(`/settings?${sp.toString()}`);
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === tab.id
-                  ? 'bg-white text-[#0B1957] shadow-md font-semibold'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
-                  }`}
+                    ? 'bg-white dark:bg-gray-800 text-[#0B1957] dark:text-blue-400 shadow-md font-semibold'
+                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50'
+                }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             ))}
+            <button
+              onClick={() => router.push('/settings/icp-search-strategy')}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-800/50"
+            >
+              <Crosshair className="w-4 h-4" />
+              ICP Strategy
+            </button>
           </div>
         </div>
       </div>
+
       {/* Content */}
       <div className="space-y-6">
-        {activeTab === 'company' && (
-          <CompanySettings
-            companyName={displayCompanyName}
-            setCompanyName={(name: string) => dispatch(setCompanyName(name))}
-            companyLogo={companyLogo}
-            setCompanyLogo={(logo: string) => dispatch(setCompanyLogo(logo))}
-          />
-        )}
+        {activeTab === 'businessprofile' && <BusinessProfileSettings />}
         {activeTab === 'integrations' && <IntegrationsSettings />}
         {activeTab === 'chat' && <ChatSettings />}
         {activeTab === 'api' && <VoiceAgentSettings />}
-        {/* Placeholder for other tabs */}
         {activeTab === 'team' && <TeamManagement />}
-        {false && activeTab === 'accounts' && (
-          <div className="space-y-6">
-            {/* Enrichment Preferences */}
-            <div>
-              <h2 className="text-gray-900 text-xl font-semibold mb-4">Enrichment Preferences</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-6 border-2 border-blue-500 shadow-sm">
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-gray-100 p-3 rounded-lg">
-                      <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-gray-900 font-medium">Work emails + Premium database</h3>
-                      <p className="text-gray-600 text-sm mt-1">50 Credits per row</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-gray-100 p-3 rounded-lg">
-                      <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-gray-900 font-medium">Personal emails + Premium database</h3>
-                      <p className="text-gray-600 text-sm mt-1">100 Credits per row</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-                <span>Save Changes</span>
-              </button>
-            </div>
-            {/* Email Accounts */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-gray-900 text-xl font-semibold">Email Accounts</h2>
-                <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  <span>Add Account</span>
-                </button>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                          </svg>
-                          <span>Account</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>Name</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <span>Job title</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Status</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Sending limits</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span>Use this mailbox</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>Managed deliverability</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colSpan={8} className="text-center text-gray-500 py-12">
-                        No results.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {/* LinkedIn Accounts */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-gray-900 text-xl font-semibold">LinkedIn Accounts</h2>
-                <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  <span>Add Account</span>
-                </button>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>Account</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Status</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Sending limits</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span>Use this account</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colSpan={5} className="text-center text-gray-500 py-12">
-                        No results.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {/* Power Dialer Numbers */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-gray-900 text-xl font-semibold">Power Dialer Numbers</h2>
-                <div className="flex space-x-3">
-                  <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Add Existing Phone</span>
-                  </button>
-                  <button className="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    <span>Add Phone</span>
-                  </button>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                          <span>Phone number</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>Name</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Status</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Region</span>
-                        </div>
-                      </th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">Capability</th>
-                      <th className="text-left text-gray-600 text-sm font-medium px-6 py-4">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colSpan={6} className="text-center text-gray-500 py-12">
-                        No phone numbers configured.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-        {false && activeTab === 'website' && (
-          <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg p-8 border border-gray-200 shadow-sm">
-            <h2 className="text-gray-900 text-xl font-semibold mb-2">Website Settings</h2>
-            <p className="text-gray-600">Configure website tracking and integration options.</p>
-          </div>
-        )}
         {activeTab === 'billing' && <BillingSettings />}
         {activeTab === 'credits' && <CreditsSettings />}
-        {/* 4. Render LeadRequirements component when tab is active */}
+
+        {/* Proposal Settings Tab */}
         {activeTab === 'proposal_settings' && (
-            <div className="flex flex-col gap-4">
-              {[
-                { id: 'lead_config', label: 'Lead requirement', icon: Settings, count: `${requirementConfigs.length} fields configured` },
-                { id: 'concepts', label: 'Concept management', icon: Sparkles, count: `${concepts.length} concepts active` },
-                { id: 'pricing_rules', label: 'Pricing rules', icon: DollarSign, count: `${pricingRules.length} rules` },
-                { id: 'quotation-templates', label: 'Quotation template', icon: FileText, count: `${quotationTemplates.length} ${quotationTemplates.length === 1 ? 'template' : 'templates'}` },
-              ].map((sub) => {
-                  const isExpanded = proposalSubTab === sub.id;
-                  return (
-                      <div
-                          key={sub.id}
-                          className={cn(
-                              "bg-white rounded-2xl border transition-all overflow-hidden flex flex-col",
-                              isExpanded ? "border-slate-200 shadow-sm" : "border-slate-100 hover:border-slate-200"
-                          )}
-                      >
-                        <button
-                            onClick={() => setProposalSubTab(isExpanded ? '' as any : sub.id as any)}
-                            className="flex items-center justify-between p-6 w-full text-left transition-colors hover:bg-slate-50/50"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm",
-                                isExpanded ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400"
-                            )}>
-                              <sub.icon className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-900">{sub.label}</p>
-                              <p className="text-xs text-slate-400 font-medium">{sub.count}</p>
-                            </div>
-                          </div>
-                          <ChevronDown className={cn(
-                              "w-5 h-5 text-slate-400 transition-transform duration-300",
-                              isExpanded && "rotate-180"
-                          )} />
-                        </button>
-
-                        <AnimatePresence>
-                          {isExpanded && (
-                              <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                  className="border-t border-slate-50 bg-white"
-                              >
-                                <div className="p-8">
-                                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-50">
-                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                                      {sub.id === 'lead_config'}
-                                      {sub.id === 'concepts'}
-                                      {sub.id === 'pricing_rules'}
-                                      {sub.id === 'quotation-templates'}
-                                    </h3>
-                                  </div>
-
-                                  {sub.id === 'lead_config' && (
-                                      <LeadRequirements
-                                          requirementConfigs={requirementConfigs}
-                                          pricingModels={pricingModels}
-                                          onEdit={(config) => {
-                                            setEditingConfig(config);
-                                            setIsConfigModalOpen(true);
-                                          }}
-                                          onDelete={handleDeleteConfig}
-                                          onAdd={() => {
-                                            setEditingConfig(null);
-                                            setIsConfigModalOpen(true);
-                                          }}
-                                      />
-                                  )}
-
-                                  {sub.id === 'concepts' && (
-                                      <ConceptManagement
-                                          concepts={concepts}
-                                          tenantId={tenantId}
-                                          requirementConfigs={requirementConfigs}
-                                          onEdit={(concept) => {
-                                            setEditingConcept(concept);
-                                            const requirementConfigIds = concept.requirement_configs?.map(item => item.id) || [];
-                                            setSelectedConceptServices(requirementConfigIds);
-                                            setIsConceptModalOpen(true);
-                                          }}
-                                          onDelete={handleDeleteConcept}
-                                          onAdd={() => {
-                                            setEditingConcept(null);
-                                            setSelectedConceptServices([]);
-                                            setIsConceptModalOpen(true);
-                                          }}
-                                          afterSave={() => {
-                                            fetchConcepts(tenantId);
-                                            setIsConceptModalOpen(false);
-                                            setEditingConcept(null);
-                                          }}
-                                      />
-                                  )}
-
-                                    {sub.id === 'pricing_rules' && (
-                                      <PricingRules
-                                        pricingRules={pricingRules}
-                                        concepts={concepts}
-                                        tenantId={tenantId}
-                                        requirementConfigs={requirementConfigs}
-                                        onSave={handleSavePricingRule}
-                                        onDelete={handleDeletePricingRule}
-
-                                        afterSave={() => {
-                                          fetchPricingRules(tenantId);
-
-                                        }}
-                                      />
-                                  )}
-                                  {/*{sub.id === 'email_templates' && (*/}
-                                  {/*    <EmailTemplatesDragDrop*/}
-                                  {/*      templates={emailTemplates}*/}
-                                  {/*      placeholders={placeholders}*/}
-                                  {/*      tenantId={tenantId}*/}
-                                  {/*      onUpload={() => fetchEmailTemplates(tenantId)}*/}
-                                  {/*      onSaveDesign={handleSaveEmailTemplateDesign}*/}
-                                  {/*      onDelete={handleDeleteEmailTemplate}*/}
-                                  {/*      onPreview={handlePreviewTemplate}*/}
-                                  {/*      onSetDefault={handleSetDefaultEmailTemplate}*/}
-                                  {/*    />*/}
-                                  {/*  )}*/}
-                                {sub.id === 'quotation-templates' && (
-                                      <QuotationTemplates
-                                        templates={quotationTemplates}
-                                        onUpload={handleUploadQuotationTemplate}
-                                        onDelete={handleDeleteQuotationTemplate}
-                                        onPreview={handlePreviewQuotationTemplate}
-                                        onSetDefault={handleSetDefaultQuotationTemplate}
-                                        placeholderList={placeholders}
-                                      />
-                                    )}
-
-
+          <div className="flex flex-col gap-4">
+            {[
+              { id: 'lead_config', label: 'Lead requirement', icon: Settings, count: `${requirementConfigs.length} fields configured` },
+              { id: 'concepts', label: 'Concept management', icon: Sparkles, count: `${concepts.length} concepts active` },
+              { id: 'pricing_rules', label: 'Pricing rules', icon: DollarSign, count: `${pricingRules.length} rules` },
+              { id: 'quotation-templates', label: 'Quotation template', icon: FileText, count: `${quotationTemplates.length} ${quotationTemplates.length === 1 ? 'template' : 'templates'}` },
+            ].map((sub) => {
+              const isExpanded = proposalSubTab === sub.id;
+              return (
+                <div
+                  key={sub.id}
+                  className={cn(
+                    'bg-white dark:bg-gray-900 rounded-2xl border transition-all overflow-hidden flex flex-col',
+                    isExpanded ? 'border-slate-200 dark:border-gray-700 shadow-sm' : 'border-slate-100 dark:border-gray-800 hover:border-slate-200'
+                  )}
+                >
+                  <button
+                    onClick={() => setProposalSubTab(isExpanded ? '' as any : sub.id as any)}
+                    className="flex items-center justify-between p-6 w-full text-left transition-colors hover:bg-slate-50/50 dark:hover:bg-gray-800/50"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        'w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm',
+                        isExpanded ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-slate-50 dark:bg-gray-800 text-slate-400 dark:text-gray-500'
+                      )}>
+                        <sub.icon className="w-6 h-6" />
                       </div>
-                    </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-        );
-      })}
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-gray-100">{sub.label}</p>
+                        <p className="text-xs text-slate-400 dark:text-gray-400 font-medium">{sub.count}</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={cn(
+                      'w-5 h-5 text-slate-400 dark:text-gray-500 transition-transform duration-300',
+                      isExpanded && 'rotate-180'
+                    )} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="border-t border-slate-50 dark:border-gray-800 bg-white dark:bg-gray-900"
+                      >
+                        <div className="p-8">
+                          {sub.id === 'lead_config' && (
+                            <LeadRequirements
+                              requirementConfigs={requirementConfigs}
+                              pricingModels={pricingModels}
+                              onEdit={(config) => {
+                                setEditingConfig(config);
+                                setIsConfigModalOpen(true);
+                              }}
+                              onDelete={handleDeleteConfig}
+                              onAdd={() => {
+                                setEditingConfig(null);
+                                setIsConfigModalOpen(true);
+                              }}
+                            />
+                          )}
+
+                          {sub.id === 'concepts' && (
+                            <ConceptManagement
+                              concepts={concepts}
+                              tenantId={tenantId}
+                              requirementConfigs={requirementConfigs}
+                              onEdit={(concept) => {
+                                setEditingConcept(concept);
+                                const requirementConfigIds = concept.requirement_configs?.map(item => item.id) || [];
+                                setSelectedConceptServices(requirementConfigIds);
+                                setIsConceptModalOpen(true);
+                              }}
+                              onDelete={handleDeleteConcept}
+                              onAdd={() => {
+                                setEditingConcept(null);
+                                setSelectedConceptServices([]);
+                                setIsConceptModalOpen(true);
+                              }}
+                              afterSave={() => {
+                                fetchConcepts(tenantId);
+                                setIsConceptModalOpen(false);
+                                setEditingConcept(null);
+                              }}
+                            />
+                          )}
+
+                          {sub.id === 'pricing_rules' && (
+                            <PricingRules
+                              pricingRules={pricingRules}
+                              concepts={concepts}
+                              tenantId={tenantId}
+                              requirementConfigs={requirementConfigs}
+                              onSave={handleSavePricingRule}
+                              onDelete={handleDeletePricingRule}
+                              afterSave={() => {
+                                fetchPricingRules(tenantId);
+                              }}
+                            />
+                          )}
+
+                          {sub.id === 'quotation-templates' && (
+                            <QuotationTemplates
+                              templates={quotationTemplates}
+                              onUpload={handleUploadQuotationTemplate}
+                              onDelete={handleDeleteQuotationTemplate}
+                              onPreview={handlePreviewQuotationTemplate}
+                              onSetDefault={handleSetDefaultQuotationTemplate}
+                              placeholderList={placeholders}
+                            />
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1061,48 +611,19 @@ const SettingsPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
+                className="bg-white dark:bg-gray-900 w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
               >
-                <div className="p-6 border-b flex justify-between items-center bg-white">
-                  <h2 className="font-bold text-slate-800 text-lg">Quotation Template Preview</h2>
-                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                    <X className="w-5 h-5 text-slate-500" />
+                <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900">
+                  <h2 className="font-bold text-slate-800 dark:text-gray-100 text-lg">Quotation Template Preview</h2>
+                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-slate-500 dark:text-gray-400" />
                   </button>
                 </div>
 
-                <div className="flex-1 bg-slate-100 p-4">
+                <div className="flex-1 bg-slate-100 dark:bg-gray-950 p-4">
                   {previewQuotationUrl && (
                     <iframe
                       src={`${previewQuotationUrl}#toolbar=0&navpanes=0`}
-                      className="w-full h-full rounded-xl border-none shadow-lg"
-                      title="Visual Preview"
-                    />
-                  )}
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-        {/* Email Template Modal */}
-        <AnimatePresence>
-          {isPreviewModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white w-full max-w-5xl h-[90vh] rounded-[32px] overflow-hidden flex flex-col shadow-2xl"
-              >
-                <div className="p-6 border-b flex justify-between items-center bg-white">
-                  <h2 className="font-bold text-slate-800 text-lg">Email Template Preview</h2>
-                  <button onClick={closePreview} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                    <X className="w-5 h-5 text-slate-500" />
-                  </button>
-                </div>
-
-                <div className="flex-1 bg-slate-100 p-4">
-                  {previewUrl && (
-                    <iframe
-                      src={`${previewUrl}#toolbar=0&navpanes=0`}
                       className="w-full h-full rounded-xl border-none shadow-lg"
                       title="Visual Preview"
                     />
@@ -1128,35 +649,35 @@ const SettingsPage: React.FC = () => {
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <form onSubmit={handleSaveConcept}>
-                  <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
-                    <h2 className="text-xl font-bold text-[#1F2937]">{editingConcept ? 'Edit Concept' : 'Add New Concept'}</h2>
-                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] rounded-full">
-                      <X className="w-5 h-5 text-[#6B7280]" />
+                  <div className="p-6 border-b border-[#F3F4F6] dark:border-gray-800 flex items-center justify-between bg-[#F9FAFB] dark:bg-gray-800/50">
+                    <h2 className="text-xl font-bold text-[#1F2937] dark:text-gray-100">{editingConcept ? 'Edit Concept' : 'Add New Concept'}</h2>
+                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] dark:hover:bg-gray-700 rounded-full">
+                      <X className="w-5 h-5 text-[#6B7280] dark:text-gray-400" />
                     </button>
                   </div>
                   <div className="p-6 space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Concept Name</label>
-                      <input name="name" defaultValue={editingConcept?.name} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. LITE, IMPACT" />
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Concept Name</label>
+                      <input name="name" defaultValue={editingConcept?.name} required className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm" placeholder="e.g. LITE, IMPACT" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Minimum Cost</label>
-                      <input name="minimum_cost" type="number" step="0.01" defaultValue={editingConcept?.minimum_cost} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="e.g. 5000.00" />
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Minimum Cost</label>
+                      <input name="minimum_cost" type="number" step="0.01" defaultValue={editingConcept?.minimum_cost} className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm" placeholder="e.g. 5000.00" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Included Services</label>
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Included Services</label>
                       <div className="space-y-3">
                         <select
-                          className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
+                          className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] outline-none transition-all"
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val && !selectedConceptServices.includes(val)) {
                               setSelectedConceptServices([...selectedConceptServices, val]);
                             }
-                            e.target.value = "";
+                            e.target.value = '';
                           }}
                         >
                           <option value="">Add a service...</option>
@@ -1172,7 +693,7 @@ const SettingsPage: React.FC = () => {
                           {selectedConceptServices.map(id => {
                             const config = requirementConfigs.find(c => c.id === id);
                             return (
-                              <div key={id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FF] text-[#4F46E5] rounded-xl text-xs font-bold border border-[#C7D2FE] shadow-sm">
+                              <div key={id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FF] dark:bg-blue-900/30 text-[#4F46E5] dark:text-blue-400 rounded-xl text-xs font-bold border border-[#C7D2FE] dark:border-blue-800 shadow-sm">
                                 {config?.label || id}
                                 <button
                                   type="button"
@@ -1189,12 +710,12 @@ const SettingsPage: React.FC = () => {
                       <p className="text-[10px] text-[#9CA3AF] mt-2">Select the services that are part of this concept. Pricing will be calculated based on these selections.</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Description</label>
-                      <textarea name="description" defaultValue={editingConcept?.description} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm h-24 resize-none" placeholder="Describe the concept..." />
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Description</label>
+                      <textarea name="description" defaultValue={editingConcept?.description} className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm h-24 resize-none" placeholder="Describe the concept..." />
                     </div>
                   </div>
-                  <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
-                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="flex-1 py-2.5 border border-[#E5E7EB] text-[#6B7280] rounded-xl font-bold text-sm hover:bg-white transition-colors">
+                  <div className="p-6 bg-[#F9FAFB] dark:bg-gray-800/50 border-t border-[#F3F4F6] dark:border-gray-800 flex gap-3">
+                    <button type="button" onClick={() => setIsConceptModalOpen(false)} className="flex-1 py-2.5 border border-[#E5E7EB] dark:border-gray-700 text-[#6B7280] dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-white dark:hover:bg-gray-800 transition-colors">
                       Cancel
                     </button>
                     <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">
@@ -1222,32 +743,32 @@ const SettingsPage: React.FC = () => {
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <form onSubmit={handleSaveConfig}>
-                  <div className="p-6 border-b border-[#F3F4F6] flex items-center justify-between bg-[#F9FAFB]">
-                    <h2 className="text-xl font-bold text-[#1F2937]">{editingConfig ? 'Edit Field' : 'Add New Field'}</h2>
-                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] rounded-full">
-                      <X className="w-5 h-5 text-[#6B7280]" />
+                  <div className="p-6 border-b border-[#F3F4F6] dark:border-gray-800 flex items-center justify-between bg-[#F9FAFB] dark:bg-gray-800/50">
+                    <h2 className="text-xl font-bold text-[#1F2937] dark:text-gray-100">{editingConfig ? 'Edit Field' : 'Add New Field'}</h2>
+                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="p-2 hover:bg-[#E5E7EB] dark:hover:bg-gray-700 rounded-full">
+                      <X className="w-5 h-5 text-[#6B7280] dark:text-gray-400" />
                     </button>
                   </div>
                   <div className="p-6 space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Label</label>
-                      <input name="label" defaultValue={editingConfig?.label} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Label</label>
+                      <input name="label" defaultValue={editingConfig?.label} required className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Field Key</label>
-                      <input name="field_key" defaultValue={editingConfig?.field_key} required className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" />
+                      <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Field Key</label>
+                      <input name="field_key" defaultValue={editingConfig?.field_key} required className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Base Price</label>
-                        <input name="base_price" type="number" step="0.01" defaultValue={editingConfig?.base_price} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm" placeholder="0.00" />
+                        <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Base Price</label>
+                        <input name="base_price" type="number" step="0.01" defaultValue={editingConfig?.base_price} className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm" placeholder="0.00" />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-[#6B7280] uppercase mb-1">Pricing Model</label>
-                        <select name="pricing_model_id" defaultValue={editingConfig?.pricing_model_id} className="w-full p-2 border border-[#E5E7EB] rounded-lg text-sm">
+                        <label className="block text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase mb-1">Pricing Model</label>
+                        <select name="pricing_model_id" defaultValue={editingConfig?.pricing_model_id} className="w-full p-2 border border-[#E5E7EB] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white">
                           {pricingModels.map((pm: any) => (
                             <option key={pm.id} value={pm.id}>{pm.value} ({pm.label})</option>
                           ))}
@@ -1255,13 +776,13 @@ const SettingsPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm text-[#4B5563]">
+                      <label className="flex items-center gap-2 text-sm text-[#4B5563] dark:text-gray-300">
                         <input type="checkbox" name="is_active" defaultChecked={editingConfig?.is_active ?? true} /> Active
                       </label>
                     </div>
                   </div>
-                  <div className="p-6 bg-[#F9FAFB] border-t border-[#F3F4F6] flex gap-3">
-                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="flex-1 py-2 text-sm font-bold text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl">Cancel</button>
+                  <div className="p-6 bg-[#F9FAFB] dark:bg-gray-800/50 border-t border-[#F3F4F6] dark:border-gray-800 flex gap-3">
+                    <button type="button" onClick={() => setIsConfigModalOpen(false)} className="flex-1 py-2 text-sm font-bold text-[#4B5563] dark:text-gray-300 bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 rounded-xl">Cancel</button>
                     <button type="submit" className="flex-1 py-2 text-sm font-bold text-white bg-blue-600 rounded-xl">Save</button>
                   </div>
                 </form>
@@ -1269,9 +790,9 @@ const SettingsPage: React.FC = () => {
             </div>
           )}
         </AnimatePresence>
-
       </div>
     </div>
   );
 };
+
 export default SettingsPage;

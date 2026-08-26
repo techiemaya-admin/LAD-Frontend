@@ -15,7 +15,7 @@ function getAuthHeaders(req: NextRequest): Record<string, string> {
   return headers;
 }
 
-/** GET /api/deals-pipeline/leads — list contacts with optional search/pagination */
+/** GET /api/deals-pipeline/leads - list contacts with optional search/pagination */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

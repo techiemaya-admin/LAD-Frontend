@@ -413,7 +413,7 @@ export const GoHighLevelIntegration: React.FC = () => {
                 <Button
                   onClick={handleConnect}
                   disabled={saving || !token.trim() || !locationId.trim()}
-                  className="w-full"
+                  className="w-full h-11 px-5 rounded-xl text-sm font-bold text-white bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-[#0b1957] dark:disabled:hover:bg-[#2563eb] disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer border-none"
                 >
                   {saving ? (
                     <>

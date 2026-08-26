@@ -1,10 +1,11 @@
-import { memo, useMemo, useRef, useEffect, useCallback } from 'react';
+import { memo, useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { Message } from '@/types/conversation';
 import { MessageBubble } from './MessageBubble';
 import { DateSeparator } from './DateSeparator';
 import { isSameDay } from 'date-fns';
 import { Loader2, ChevronUp } from 'lucide-react';
+import { getConversationFeedback } from '@lad/frontend-features/conversations';
 
 interface Contact {
   id: string;
@@ -20,12 +21,16 @@ interface MessageListProps {
   isAgentTyping?: boolean;
   contact?: Contact;
   onAgentClick?: (agentId?: string) => void;
+  onDeleteMessage?: (message: Message, scope: 'me' | 'everyone') => void;
+  onToggleStar?: (message: Message) => void;
   /** Whether older messages exist beyond the current window */
   hasMore?: boolean;
   /** Whether older messages are currently being fetched */
   isLoadingMore?: boolean;
   /** Called when the user scrolls to the top or clicks "Load older messages" */
   onLoadMore?: () => void;
+  searchText?: string;
+  highlightedMessageId?: string;
 }
 
 interface ListItem {
@@ -91,10 +96,32 @@ export const MessageList = memo(function MessageList({
   isAgentTyping,
   contact,
   onAgentClick,
+  onDeleteMessage,
+  onToggleStar,
   hasMore,
   isLoadingMore,
   onLoadMore,
+  searchText,
+  highlightedMessageId,
 }: MessageListProps) {
+  // Existing verdicts for this thread, so reopening it doesn't reset the
+  // thumbs. Best-effort: feedback is an enhancement, and failing to load it
+  // must never stop messages rendering.
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, 'like' | 'dislike'>>({});
+  useEffect(() => {
+    if (!conversationId) return;
+    let cancelled = false;
+    getConversationFeedback(conversationId)
+      .then((rows) => {
+        if (cancelled) return;
+        const map: Record<string, 'like' | 'dislike'> = {};
+        for (const r of rows) map[String(r.message_id)] = r.rating;
+        setFeedbackByMessage(map);
+      })
+      .catch(() => { /* non-fatal - thumbs simply start unset */ });
+    return () => { cancelled = true; };
+  }, [conversationId]);
+
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Build list items: prepend the "load older" header item, then date + messages
@@ -118,8 +145,6 @@ export const MessageList = memo(function MessageList({
     return items;
   }, [messages]);
 
-  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
-
   // Scroll to bottom on conversation switch (instant)
   useEffect(() => {
     if (!virtuosoRef.current || listItems.length === 0) return;
@@ -127,18 +152,27 @@ export const MessageList = memo(function MessageList({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // Smooth scroll to bottom on new message
-  useEffect(() => {
-    if (!virtuosoRef.current || listItems.length === 0) return;
-    virtuosoRef.current.scrollToIndex({ index: listItems.length - 1, behavior: 'smooth' });
-  }, [lastMessageId, listItems.length]);
-
   // Scroll to bottom when typing indicator appears
   useEffect(() => {
     if (isAgentTyping && virtuosoRef.current && listItems.length > 0) {
       virtuosoRef.current.scrollToIndex({ index: listItems.length - 1, behavior: 'smooth' });
     }
   }, [isAgentTyping]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to highlighted message when it changes
+  useEffect(() => {
+    if (!highlightedMessageId || !virtuosoRef.current) return;
+    const index = listItems.findIndex(
+      (item) => item.type === 'message' && (item.data as Message).id === highlightedMessageId
+    );
+    if (index !== -1) {
+      virtuosoRef.current.scrollToIndex({
+        index,
+        behavior: 'smooth',
+        align: 'center',
+      });
+    }
+  }, [highlightedMessageId, listItems]);
 
   // When older messages finish loading, stay at the same position (don't jump)
   // Virtuoso handles this automatically when prepending via prependItemCount
@@ -152,27 +186,34 @@ export const MessageList = memo(function MessageList({
   const itemContent = (index: number) => {
     const item = listItems[index];
     if (item.type === 'date') {
-      return <DateSeparator date={item.data as Date} />;
+      return <DateSeparator date={item.data as Date} variant="whatsapp" />;
     }
+    const msg = item.data as Message;
     return (
-      <div className="px-3 py-[3px]">
+      <div className="px-4 lg:px-8 py-[3px]">
         <MessageBubble
-          message={item.data as Message}
+          message={msg}
+          conversationId={conversationId}
+          feedbackRating={feedbackByMessage[String(msg.id)] ?? null}
           contact={contact}
           onAgentClick={onAgentClick}
+          onDeleteMessage={onDeleteMessage}
+          onToggleStar={onToggleStar}
+          searchText={searchText}
+          isHighlighted={msg.id === highlightedMessageId}
         />
       </div>
     );
   };
 
   return (
-    <div className="flex-1 overflow-hidden whatsapp-chat-bg flex flex-col">
+    <div className="flex-1 overflow-hidden bg-transparent flex flex-col mx-10">
       <Virtuoso
         ref={virtuosoRef}
         style={{ flex: 1 }}
         totalCount={listItems.length}
         itemContent={itemContent}
-        followOutput="smooth"
+        followOutput="auto"
         alignToBottom
         className="custom-scrollbar"
         initialTopMostItemIndex={listItems.length - 1}

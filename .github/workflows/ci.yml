@@ -1,0 +1,123 @@
+name: ci
+
+on:
+  push:
+    branches: [develop, stage, main]
+  pull_request:
+    branches: [develop, stage, main]
+
+# Phase 0 — wire ESLint into CI (R6).
+# Note: pre-existing `console.log` statements will fail lint until M4 is complete.
+jobs:
+  web-ci:
+    name: lint (Next.js web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # Monorepo uses npm workspaces — the only lockfile is at the repo root
+          # (web/package-lock.json was removed in the workspaces migration).
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        # npm ci must run at the workspace root, not in web/, so it can resolve
+        # the root lockfile and install all workspaces.
+        run: npm ci
+        working-directory: .
+
+      - name: Lint
+        run: npm run lint
+
+  # ---------------------------------------------------------------------------
+  # Type-check gate (tsc --noEmit).
+  #
+  # Motivation: twice in one day a *missing export* reached users as a runtime
+  # crash because `next build` never type-checks — next.config.mjs sets
+  # `typescript.ignoreBuildErrors: true`. Examples:
+  #   • ScheduledFollowupsModal imported `proxyGet` from '@/lib/api' →
+  #     "(0 , et.proxyGet) is not a function" on stage.
+  #   • community-roi DataImportModal imported a non-existent '../hooks/useDataImport'.
+  # `tsc --noEmit` catches exactly this class ("X is not exported / Cannot find
+  # module") at PR time.
+  #
+  # PHASE 1: REPORT-ONLY. develop carries a few hundred pre-existing type errors
+  # (originally masked by an invalid `ignoreDeprecations` value that made tsc
+  # short-circuit); the current count is the BASELINE constant set below, which
+  # must be re-anchored whenever it drifts — see the note there. We do NOT block
+  # merges on that debt — the job surfaces
+  # the count + full error list in the PR summary and warns on regressions above
+  # the baseline, but always exits 0.
+  #
+  # PHASE 2 (follow-up, after the baseline is burned down to 0): make this
+  # blocking (delete the `exit 0` / `|| true`) AND remove
+  # `typescript.ignoreBuildErrors` from next.config.mjs so `next build` enforces
+  # types too. Do them together.
+  # ---------------------------------------------------------------------------
+  type-check:
+    name: type-check (tsc --noEmit) [report-only]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # Monorepo uses npm workspaces — the only lockfile is at the repo root.
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Type-check (report-only)
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Known pre-existing error count on develop. Burn this down over time;
+          # when it reaches 0, flip the gate to blocking (see PHASE 2 note above).
+          #
+          # Re-anchor this whenever it drifts. While it sat at 363 and develop was
+          # at 379, EVERY pull request inherited a "16 above baseline" warning that
+          # had nothing to do with its own changes — which trains everyone to scroll
+          # past the one annotation that is supposed to mean "you just broke an
+          # import". A baseline that is always wrong is the same as no baseline.
+          BASELINE=379
+          npx tsc --noEmit > /tmp/tsc.log 2>&1 || true
+          COUNT=$(grep -cE ': error TS' /tmp/tsc.log || true)
+          {
+            echo "## TypeScript type-check (report-only)"
+            echo ""
+            echo "- Errors on this branch: **$COUNT**"
+            echo "- Known develop baseline: **$BASELINE**"
+            echo ""
+            if [ "$COUNT" -gt "$BASELINE" ]; then
+              echo "> ⚠️ **$((COUNT - BASELINE))** more type error(s) than baseline — likely a new missing export/import or type regression. Please fix before merge."
+            elif [ "$COUNT" -lt "$BASELINE" ]; then
+              echo "> ✅ **$((BASELINE - COUNT))** fewer than baseline — lower \`BASELINE\` in ci.yml to lock in the win."
+            else
+              echo "> No change vs baseline."
+            fi
+            echo ""
+            echo "<details><summary>Full tsc output</summary>"
+            echo ""
+            echo '```'
+            grep -E ': error TS' /tmp/tsc.log || echo '(no type errors)'
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$COUNT" -gt "$BASELINE" ]; then
+            echo "::warning::type-check found $COUNT errors ($((COUNT - BASELINE)) above baseline $BASELINE). Report-only for now; will block once the baseline is burned down."
+          fi
+          # PHASE 1 is report-only — never fail the build. Remove this line in PHASE 2.
+          exit 0

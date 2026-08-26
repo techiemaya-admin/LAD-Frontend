@@ -35,7 +35,7 @@ export default function SlotBasedPipelineBoard({
       return (
         <div key={slotConfig.id} className="border rounded-lg p-4 bg-muted/50">
           <p className="text-sm text-muted-foreground">
-            Slot "{slotConfig.component}" not implemented
+            Slot &quot;{slotConfig.component}&quot; not implemented
           </p>
         </div>
       );
@@ -90,4 +90,4 @@ export default function SlotBasedPipelineBoard({
       </div>
     </div>
   );
-}
+}

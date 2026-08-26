@@ -87,7 +87,16 @@ export function formatQuestionForChat(question: ICPQuestion, currentStep: number
   // Remove any "Step X of Y" prefix if present (user doesn't want to see step numbers)
   let formatted = question.question;
   // Remove step prefix if it exists
-  formatted = formatted.replace(/^Step\s+\d+\s+of\s+\d+\s*[—:–-]\s*/i, '');
+  // Separator after "Step X of Y": colon, en-dash, em-dash or hyphen.
+  //
+  // Written with \u escapes ON PURPOSE. This was `[—:–-]`, and a punctuation
+  // sweep rewrote the em-dash to " - " and the en-dash to "-", leaving
+  // `[ - :--]` — which parses as a range from ':' (0x3A) to '-' (0x2D), i.e.
+  // descending, so V8 threw "Range out of order in character class" AT PARSE
+  // TIME and `next build` failed. Escapes keep literal dashes out of the source
+  // so the same sweep cannot corrupt this class again. The hyphen stays last so
+  // it is a literal, not a range operator.
+  formatted = formatted.replace(/^Step\s+\d+\s+of\s+\d+\s*[:\u2013\u2014-]\s*/i, '');
   formatted = formatted.replace(/^Step\s+\d+\s+of\s+\d+\s+/i, '');
   if (question.example) {
     formatted += `\n(${question.example})`;

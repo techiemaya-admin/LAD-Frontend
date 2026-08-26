@@ -30,9 +30,10 @@ export default function InteractionsTestPanel() {
   const [activeTab, setActiveTab] = useState<'meeting' | 'referral' | 'history'>('meeting');
 
   const { data: members } = useListMembers({ tenantId: typeof window !== 'undefined' ? localStorage.getItem('tenantId') as any : null });
-  const { data: history, isLoading: isLoadingHistory } = member1Id && member2Id
-    ? useGetInteractionHistory(member1Id, member2Id)
-    : { data: null, isLoading: false };
+  const hasBothMembers = Boolean(member1Id && member2Id);
+  const { data: historyData, isLoading: historyLoading } = useGetInteractionHistory(member1Id, member2Id);
+  const history = hasBothMembers ? historyData : null;
+  const isLoadingHistory = hasBothMembers ? historyLoading : false;
 
   // Mutations
   const meetingMutation = useLogMeeting();

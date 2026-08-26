@@ -318,7 +318,7 @@ export default function SplitScreenOnboarding() {
                     className="w-full text-left px-6 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
                   >
                     <div className="font-semibold text-gray-900 mb-1">Generate leads for me</div>
-                    <div className="text-sm text-gray-600">We'll find leads based on your criteria</div>
+                    <div className="text-sm text-gray-600">We&apos;ll find leads based on your criteria</div>
                   </button>
                 </div>
               )}
@@ -341,4 +341,4 @@ export default function SplitScreenOnboarding() {
       </div>
     </div>
   );
-}
+}

@@ -1,16 +1,16 @@
 'use client';
 /**
- * AgentVisualizer — animated LAD logo visualizer
+ * AgentVisualizer - animated LAD logo visualizer
  * Ported from lads-visualizer-demo.html
  *
  * States:
- *   idle        — dots sway gently side to side
- *   thinking    — dots bounce left→right (searching / processing)
- *   listening   — Newton's-cradle dots
- *   speaking    — bars pulse to audio
- *   connecting  — liquid rises and churns
- *   initializing— liquid fills
- *   disconnected— dots jitter/glitch
+ *   idle        - dots sway gently side to side
+ *   thinking    - dots bounce left→right (searching / processing)
+ *   listening   - Newton's-cradle dots
+ *   speaking    - bars pulse to audio
+ *   connecting  - liquid rises and churns
+ *   initializing -  liquid fills
+ *   disconnected -  dots jitter/glitch
  */
 import React, { useRef, useState, useEffect, useId } from 'react';
 
@@ -24,7 +24,7 @@ export type VisualizerState =
   | 'disconnected';
 
 // ── Brand constants ──────────────────────────────────────────────────────────
-const BRAND = '#0b1958';
+const BRAND = '#1e3a8a';
 const DOT_X = [324.4, 344.5, 364.8];
 
 // Clip-path shape (full logo outline with 3 eye-dots, used for liquid mask)
@@ -56,7 +56,7 @@ const CLIP_PATH =
   ' C 162.410156 166.558594 94.703125 161.332031 71.832031 129.640625' +
   ' C 72.855469 145.585938 84.34375 154.5 98.324219 160.398438 Z';
 
-// Solid logo path (no eye-dots — used as the static filled shape)
+// Solid logo path (no eye-dots - used as the static filled shape)
 const SOLID_PATH =
   'M 90.605469 187.71875 C 76.769531 183.199219 62.945312 195.695312 66.507812 210.113281' +
   ' C 71.101562 227.882812 90.164062 236.230469 108.925781 235.582031' +
@@ -213,7 +213,14 @@ export default function AgentVisualizer({ state = 'idle', size = 36 }: Props) {
   const XFORM = 'translate(144.48,-148.655) scale(1.88)';
 
   return (
-    <svg viewBox="225 75 230 248" width={size} height={size} style={{ display: 'block', flexShrink: 0 }}>
+    <svg viewBox="225 75 230 248" width={size} height={size}
+         className="fill-current" style={{ display: 'block', flexShrink: 0}}>
+      <style>{`
+        /* Default (Light Mode): Blue logo */
+        svg { --logo-color: #1e3a8a; }
+        /* Dark Mode: White logo */
+        :global(.dark) svg { --logo-color: #ffffff; }
+      `}</style>
       <defs>
         <clipPath id={clipId}>
           <path clipRule="evenodd" transform={XFORM} d={CLIP_PATH} />
@@ -222,7 +229,7 @@ export default function AgentVisualizer({ state = 'idle', size = 36 }: Props) {
 
       {/* ── Static logo + animated dots ── */}
       <g opacity={1 - liquidOpacity}>
-        <path fill={BRAND} transform={XFORM} d={SOLID_PATH} />
+        <path  transform={XFORM} d={SOLID_PATH} />
         {DOT_X.map((cx, i) => {
           const { h, dy, dx, opacity } = dots[i];
           const w = Math.max(11, h);
@@ -230,7 +237,6 @@ export default function AgentVisualizer({ state = 'idle', size = 36 }: Props) {
           return (
             <rect
               key={i}
-              fill={BRAND}
               opacity={opacity}
               x={cx - 5.5 + dx}
               y={227.2 - w / 2 + dy}
@@ -246,14 +252,15 @@ export default function AgentVisualizer({ state = 'idle', size = 36 }: Props) {
       {/* ── Liquid logo ── */}
       <g opacity={liquidOpacity}>
         <path
-          fill={BRAND} fillOpacity={0.06}
-          stroke={BRAND} strokeWidth={1.4} strokeOpacity={0.22}
+           fillOpacity={0.06}
+          strokeWidth={1.4} strokeOpacity={0.22}
           fillRule="evenodd" transform={XFORM} d={CLIP_PATH}
         />
         <g clipPath={`url(#${clipId})`}>
-          <path d={wave2} fill={BRAND} opacity={0.24} />
-          <path d={wave1} fill={BRAND} opacity={0.86} />
+          <path d={wave2} opacity={0.24} />
+          <path d={wave1} opacity={0.86} />
         </g>
+
       </g>
     </svg>
   );

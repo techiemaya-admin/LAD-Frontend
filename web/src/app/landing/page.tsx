@@ -7,12 +7,9 @@ import MeetOurAgentSection from "@/components/landing/MeetOurAgentSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import ParallaxFeaturesSection from "@/components/landing/ParallaxFeaturesSection";
 import SocialProofSection from "@/components/landing/SocialProofSection";
-import PricingHero from "@/components/landing/PricingHero";
-import StandardPlans from "@/components/landing/StandardPlans";
-import EnterprisePlans from "@/components/landing/EnterprisePlans";
-import PricingBreakdown from "@/components/landing/PricingBreakdown";
-import InteractivePricingCalculator from "@/components/landing/InteractivePricingCalculator";
-import PricingCTA from "@/components/landing/PricingCTA";
+// Pricing components removed from the home page - see the dedicated /pricing
+// route. PricingHero / StandardPlans / EnterprisePlans / PricingBreakdown /
+// InteractivePricingCalculator / PricingCTA imports dropped with them.
 import CTASection from "@/components/landing/CTASection";
 import AgentGuide from "@/components/landing/AgentGuide";
 
@@ -45,25 +42,7 @@ export default function LAD3DShowcase() {
       {/* Social Proof Section */}
       <SocialProofSection />
 
-      {/* Pricing Section */}
-      <section className="py-20 relative bg-gradient-to-b from-background via-background to-background">
-        {/* Pricing Hero */}
-        <PricingHero />
-
-        {/* Standard Plans */}
-        <StandardPlans />
-
-        {/* Interactive Pricing Calculator */}
-        <div className="container mx-auto px-4">
-          <InteractivePricingCalculator />
-        </div>
-
-        {/* Pricing Breakdown */}
-        <PricingBreakdown />
-
-        {/* Pricing CTA */}
-        {/* <PricingCTA /> */}
-      </section>
+      {/* Pricing section removed - lives on the dedicated /pricing route. */}
 
       {/* CTA Section */}
       <CTASection />

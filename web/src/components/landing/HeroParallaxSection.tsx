@@ -8,93 +8,78 @@ export default function HeroParallaxSection() {
 
 export const products = [
   {
-    title: "LinkedIn Safe Automation",
+    title: "Mr LAD Prospects",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=LinkedIn&scale=80",
+    thumbnail: "/Linkedin Sales Automation_05.jpg",
   },
   {
-    title: "AI Sales Agent",
+    title: "Your AI Sales Employee",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex&scale=80",
+    thumbnail: "/Ai sales Agent_04.jpg",
   },
   {
-    title: "Multi-Channel Outreach",
+    title: "Every Channel, One Employee",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Maya&scale=80",
+    thumbnail: "/Multi-Channel Outreach_03.jpg",
   },
   {
-    title: "Lead Qualification",
+    title: "Qualifies Every Lead",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Qualification&scale=80",
+    thumbnail: "/Lead Qualification_02.jpg",
   },
   {
-    title: "Deal Closing",
+    title: "Books the Meeting",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Deal&scale=80",
+    thumbnail: "/Deal Closing_01.jpg",
   },
   {
-    title: "Email Campaigns",
+    title: "Mr LAD Nurtures",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Email&scale=80",
+    thumbnail: "/Email Campaigns_06.jpg",
   },
   {
-    title: "WhatsApp Integration",
+    title: "Mr LAD on WhatsApp",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=WhatsApp&scale=80",
+    thumbnail: "/WhatsApp Integration_7.jpg",
   },
   {
-    title: "SMS Automation",
+    title: "Follows Up Instantly",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=SMS&scale=80",
+    thumbnail: "/SMS Automation_08.jpg",
   },
   {
-    title: "Analytics Dashboard",
+    title: "Mr LAD Reports",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Analytics&scale=80",
+    thumbnail: "/Analytics Dashboard_09.jpg",
   },
   {
     title: "Real-time Tracking",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Tracking&scale=80",
+    thumbnail: "/Real-Time Tracking_10.jpg",
   },
   {
-    title: "Personalization Engine",
+    title: "Personalized Research",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Personalization&scale=80",
+    thumbnail: "/Personalization Engine_15.jpg",
   },
   {
-    title: "Conversation AI",
+    title: "Holds Real Conversations",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Conversation&scale=80",
+    thumbnail: "/Conversation_Ai_14.jpg",
   },
   {
-    title: "Team Collaboration",
+    title: "Works With Your Team",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Team&scale=80",
+    thumbnail: "/Team Collebration_13.jpg",
   },
   {
-    title: "Custom Workflows",
+    title: "Trained On Your Business",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Workflows&scale=80",
+    thumbnail: "/custom workflows_12.jpg",
   },
   {
-    title: "API Integration",
+    title: "Syncs With Your CRM",
     link: "#",
-    thumbnail:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=API&scale=80",
+    thumbnail: "/API Integration_11.jpg",
   },
 ];

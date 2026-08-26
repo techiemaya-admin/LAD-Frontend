@@ -250,7 +250,9 @@ export function CreditsHighlightCard({
                   hover:shadow-xl hover:shadow-blue-500/40
                   active:scale-95
                 `}
-                onClick={() => router.push("/settings?tab=credits#add-credits")}
+                // action=add opens the shared Add Credits popup; the old
+                // #add-credits hash matched no element and did nothing.
+                onClick={() => router.push("/settings?tab=credits&action=add")}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add credits
@@ -284,4 +286,4 @@ export function CreditsHighlightCard({
       `}</style>
     </div>
   );
-}
+}

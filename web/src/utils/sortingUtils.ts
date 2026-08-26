@@ -30,13 +30,9 @@ export function sortCallLogs<T extends CallLogForSorting>(
 ): T[] {
   if (!sortConfig) return items;
 
-  console.log("sortCallLogs - sortConfig:", sortConfig); // DEBUG
-  
   return [...items].sort((a, b) => {
     let aVal: any = a[sortConfig.field];
     let bVal: any = b[sortConfig.field];
-
-    console.log(`Comparing ${sortConfig.field}:`, aVal, "vs", bVal); // DEBUG
 
     // Handle null/undefined
     if (aVal === null || aVal === undefined) return 1;
@@ -59,9 +55,7 @@ export function sortCallLogs<T extends CallLogForSorting>(
       
       const aPriority = tagPriority[String(aVal).toLowerCase()] || 0;
       const bPriority = tagPriority[String(bVal).toLowerCase()] || 0;
-      
-      console.log(`Tag priorities for ${aVal}/${bVal}:`, aPriority, bPriority); // DEBUG
-      
+
       // Sort by priority (high to low)
       return bPriority - aPriority;
     }

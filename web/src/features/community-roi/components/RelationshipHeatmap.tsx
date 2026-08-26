@@ -113,7 +113,7 @@ const MatrixCell: React.FC<{ cell: CellData | null; rowName: string; colName: st
 const DiagonalCell: React.FC = () => (
   <td className="border border-slate-100 p-0">
     <div className="min-w-[72px] min-h-[48px] bg-slate-100 flex items-center justify-center">
-      <span className="text-slate-300 text-xs font-bold select-none">—</span>
+      <span className="text-slate-300 text-xs font-bold select-none">-</span>
     </div>
   </td>
 );

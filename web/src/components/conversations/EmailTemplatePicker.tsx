@@ -54,6 +54,14 @@ const toBackendProvider = (p: EmailProvider): string =>
   : p === 'custom' ? 'custom_smtp'
   : 'google';
 
+// Mirrors the LAD-Email-Comms quota defaults (services/quota_tracker.py)  - 
+// past these, the orchestrator paces/pauses, so warn the user up front.
+const SAFE_DAILY_VOLUME: Record<EmailProvider, number> = {
+  gmail: 400,
+  outlook: 250,
+  custom: 1000,
+};
+
 interface EmailTemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -91,6 +99,9 @@ interface SendResult {
   failed: number;
   total: number;
   errors: { email: string; error: string }[];
+  /** True when the send was queued on the paced broadcast orchestrator  - 
+   *  progress lives in the Sent folder rather than this dialog. */
+  queued?: boolean;
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -268,6 +279,53 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
         return;
       }
 
+      // No attachments → route through the LAD-Email-Comms broadcast
+      // orchestrator: records a run in the Sent folder and paces sends
+      // (human-like jitter + per-account daily/hourly quotas + sender
+      // warm-up) instead of blasting the provider in a tight loop - a
+      // 344-recipient burst on the legacy path got a sender flagged as
+      // spam. Attachment sends stay on the legacy direct path until the
+      // orchestrator supports attachments.
+      if (attachments.length === 0) {
+        try {
+          const acctRes = await fetch('/api/email-comms/accounts', { headers: authHeaders() });
+          const acctData = await acctRes.json().catch(() => ({}));
+          const accountsList: Array<{ id: string; provider: string; status: string }> =
+            acctData.accounts ?? [];
+          const account = accountsList.find(
+            (a) => a.provider === toBackendProvider(provider) && a.status === 'active',
+          );
+          if (account) {
+            const res = await fetch('/api/email-comms/broadcast/send', {
+              method: 'POST',
+              headers: authHeaders(),
+              body: JSON.stringify({
+                from_email_account_id: account.id,
+                subject,
+                body_html: body,
+                group_id: group.id,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.broadcast_run_id) {
+              setSendResult({
+                sent: 0,
+                failed: 0,
+                total: data.recipient_count ?? recipients.length,
+                errors: [],
+                queued: true,
+              });
+              setView('done');
+              setSending(false);
+              return;
+            }
+            console.warn('[EmailTemplatePicker] broadcast route failed - falling back to direct send', data);
+          }
+        } catch (err) {
+          console.warn('[EmailTemplatePicker] broadcast route unreachable - falling back to direct send', err);
+        }
+      }
+
       // Serialize attachments to base64
       const attachmentPayloads = await Promise.all(
         attachments.map(file => new Promise<{ filename: string; contentType: string; content: string }>((resolve, reject) => {
@@ -307,7 +365,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
         });
         setView('done');
       } else {
-        setSendError(data.error || data.detail || 'Send failed — please try again.');
+        setSendError(data.error || data.detail || 'Send failed - please try again.');
         setView('preview');
       }
     } catch (err) {
@@ -382,28 +440,28 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-xl max-h-[60vh] sm:max-h-[85vh] flex flex-col p-0 gap-0">
         {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b border-border flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+          <DialogTitle className="flex items-start sm:items-center gap-2 text-sm font-semibold">
             {(view === 'compose' || view === 'preview') && (
               <button
                 onClick={() => {
                   if (view === 'preview') { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }
                   else setView('list');
                 }}
-                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1"
+                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1 mt-0.5 sm:mt-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
             <div
-              className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+              className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5 sm:mt-0"
               style={{ backgroundColor: group.color }}
             >
               {group.name.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between pr-6 sm:pr-0 gap-0.5 sm:gap-2">
               <span className="truncate">
                 {view === 'list' && `Send Email to "${group.name}"`}
                 {view === 'compose' && 'New Template'}
@@ -411,10 +469,10 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                 {view === 'sending' && 'Sending…'}
                 {view === 'done' && 'Sent!'}
               </span>
+              <span className="text-xs text-muted-foreground font-normal flex-shrink-0">
+                {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
+              </span>
             </div>
-            <span className="text-xs text-muted-foreground font-normal flex-shrink-0">
-              {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
-            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -664,7 +722,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  Sending to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} in "{group.name}"
+                  Sending to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} in &quot;{group.name}&quot;
                 </p>
                 <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                   {group.members.slice(0, 10).map(m => (
@@ -712,21 +770,27 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                 <Check className="h-7 w-7 text-green-600" />
               </div>
               <div>
-                <p className="font-semibold text-lg">Emails Sent!</p>
+                <p className="font-semibold text-lg">
+                  {sendResult.queued ? 'Broadcast queued' : 'Emails Sent!'}
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Campaign dispatched via {providerLabel}
+                  {sendResult.queued
+                    ? `Sending to ${sendResult.total} recipient${sendResult.total === 1 ? '' : 's'} via ${providerLabel} - paced to protect your sender reputation. Track progress and opens in the Sent tab.`
+                    : `Campaign dispatched via ${providerLabel}`}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-                <div className="p-3 rounded-xl bg-green-50 border border-green-200">
-                  <p className="text-2xl font-bold text-green-700">{sendResult.sent}</p>
-                  <p className="text-xs text-green-600 mt-0.5">Sent</p>
+              {!sendResult.queued && (
+                <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                  <div className="p-3 rounded-xl bg-green-50 border border-green-200">
+                    <p className="text-2xl font-bold text-green-700">{sendResult.sent}</p>
+                    <p className="text-xs text-green-600 mt-0.5">Sent</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                    <p className="text-2xl font-bold text-red-700">{sendResult.failed}</p>
+                    <p className="text-xs text-red-600 mt-0.5">Failed</p>
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                  <p className="text-2xl font-bold text-red-700">{sendResult.failed}</p>
-                  <p className="text-xs text-red-600 mt-0.5">Failed</p>
-                </div>
-              </div>
+              )}
               {sendResult.errors.length > 0 && (
                 <details className="text-xs text-left w-full max-w-xs">
                   <summary className="cursor-pointer text-red-500 font-medium">
@@ -735,7 +799,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
                   <ul className="mt-2 space-y-1 max-h-24 overflow-y-auto">
                     {sendResult.errors.map((err, i) => (
                       <li key={i} className="text-muted-foreground">
-                        <span className="text-red-400">·</span> {err.email} — {err.error}
+                        <span className="text-red-400">·</span> {err.email}: {err.error}
                       </li>
                     ))}
                   </ul>
@@ -771,19 +835,30 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
           )}
 
           {view === 'preview' && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }}>
-                Back
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={handleSend}
-                disabled={sending || !sendSubject.trim() || !sendBody.trim()}
-              >
-                <Send className="h-3.5 w-3.5" />
-                Send to {group.member_count} Recipient{group.member_count !== 1 ? 's' : ''}
-              </Button>
+            <div className="space-y-2">
+              {group.member_count > SAFE_DAILY_VOLUME[provider] && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {group.member_count} recipients exceeds the safe daily volume for a{' '}
+                  {providerLabel} mailbox (~{SAFE_DAILY_VOLUME[provider]}/day). Sending is
+                  paced and may spread across days to protect your sender reputation - for
+                  regular large sends, connect an email service (Brevo / Amazon SES) via
+                  Custom SMTP in Settings.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }}>
+                  Back
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={handleSend}
+                  disabled={sending || !sendSubject.trim() || !sendBody.trim()}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Send to {group.member_count} Recipient{group.member_count !== 1 ? 's' : ''}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -821,11 +896,11 @@ function PersonalizationHints({ onInsert }: { onInsert: (v: string) => void }) {
             key={label}
             type="button"
             onClick={() => onInsert(label)}
-            title={`Insert ${label} — ${desc}`}
+            title={`Insert ${label} - ${desc}`}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-background border border-border text-xs font-mono hover:border-primary/50 hover:bg-primary/5 transition-colors"
           >
             <span className="text-primary">{label}</span>
-            <span className="text-muted-foreground hidden sm:inline">— {desc}</span>
+            <span className="text-muted-foreground hidden sm:inline">: {desc}</span>
           </button>
         ))}
       </div>

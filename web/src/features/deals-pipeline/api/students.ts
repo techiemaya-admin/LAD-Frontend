@@ -37,9 +37,8 @@ export interface StudentData {
     counsellor_id?: string;
   };
 }
-export interface StudentWithLead extends StudentData {
-  // Extended with lead-specific fields if needed
-}
+// Extended with lead-specific fields if needed
+export type StudentWithLead = StudentData;
 export interface StudentCreateData {
   name: string;
   email?: string;

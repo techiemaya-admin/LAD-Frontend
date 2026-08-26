@@ -40,10 +40,10 @@ export const RequireCapability: React.FC<RequireCapabilityProps> = ({
       <Shield className="h-12 w-12 mx-auto text-yellow-600 mb-4" />
       <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
       <p className="text-gray-600">
-        You don't have permission to access this feature.
+        You don&apos;t have permission to access this feature.
         <br />
         Contact your administrator to request the <strong>{capability}</strong> capability.
       </p>
     </div>
   );
-};
+};

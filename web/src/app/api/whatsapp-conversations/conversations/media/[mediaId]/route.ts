@@ -1,5 +1,5 @@
 /**
- * Media Proxy — streams inbound WhatsApp media to the browser
+ * Media Proxy - streams inbound WhatsApp media to the browser
  *
  * GET /api/whatsapp-conversations/conversations/media/{mediaId}?channel=waba
  *
@@ -8,7 +8,7 @@
  * sent by customers (inbound) can be displayed in the conversation UI.
  */
 import { NextRequest } from 'next/server';
-import { getWABAServiceUrl, getBackendUrl } from '../../../utils/python-proxy';
+import { getWABAServiceUrl, getWAPAServiceUrl } from '../../../utils/python-proxy';
 
 function extractTenantIdFromJwt(token: string): string | null {
   try {
@@ -27,10 +27,11 @@ export async function GET(
 ) {
   const { mediaId } = await params;
 
-  // Personal WhatsApp inbound media — IDs are prefixed with "pwa_"
-  // These are stored on LAD_backend (Node.js), not the WABA Python service
+  // Personal WhatsApp inbound media - IDs are prefixed with "pwa_".
+  // The WAPA service (Baileys) downloaded and stored these on its own disk
+  // (uploads/personal-media), so they're served from WAPA, not LAD_backend.
   const isPersonalMedia = mediaId.startsWith('pwa_');
-  const serviceUrl = isPersonalMedia ? getBackendUrl() : getWABAServiceUrl();
+  const serviceUrl = isPersonalMedia ? getWAPAServiceUrl() : getWABAServiceUrl();
   const mediaPath  = isPersonalMedia
     ? `/api/whatsapp-conversations/conversations/media/${mediaId}`
     : `/api/conversations/media/${mediaId}`;
@@ -39,13 +40,23 @@ export async function GET(
 
   const headers: Record<string, string> = {};
 
-  // Auth + tenant extraction (same as python-proxy.ts)
+  // Auth + tenant extraction (same as python-proxy.ts).
+  // Browsers load media via <img src>, which sends cookies but NO Authorization
+  // header. The WAPA (Node) service verifies the JWT, so a missing Authorization
+  // header → 401 - lift the cookie token into it when the header is absent.
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
     headers['Authorization'] = authHeader;
     const token = authHeader.replace('Bearer ', '');
     const tenantId = extractTenantIdFromJwt(token);
     if (tenantId) headers['X-Tenant-ID'] = tenantId;
+  } else {
+    const cookieToken = req.cookies.get('access_token')?.value || req.cookies.get('token')?.value;
+    if (cookieToken) {
+      headers['Authorization'] = `Bearer ${cookieToken}`;
+      const tenantId = extractTenantIdFromJwt(cookieToken);
+      if (tenantId) headers['X-Tenant-ID'] = tenantId;
+    }
   }
 
   const directTenantId = req.headers.get('x-tenant-id');

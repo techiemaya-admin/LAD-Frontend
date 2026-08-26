@@ -60,7 +60,7 @@ export function getApiUrl(): string {
 export function getBackendUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side
-    let url =
+    const url =
       process.env.BACKEND_INTERNAL_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
@@ -69,7 +69,7 @@ export function getBackendUrl(): string {
     return url.replace(/\/api\/?$/, '');
   }
   // Client-side
-  let url =
+  const url =
     (process.env.NEXT_PUBLIC_BACKEND_URL as string) ||
     (process.env.NEXT_PUBLIC_API_URL as string) ||
     'http://localhost:3004';

@@ -677,7 +677,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
 
   // Memoized stage column component to prevent unnecessary re-renders
   const StageColumnMemo = useMemo(() => {
-    return React.memo(({ stageKey, stage, leads, activeCard, handlers, allStages }: {
+    const StageColumn = React.memo(({ stageKey, stage, leads, activeCard, handlers, allStages }: {
       stageKey: string;
       stage: Stage;
       leads: Lead[];
@@ -724,6 +724,8 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
         </SortableContext>
       );
     });
+    StageColumn.displayName = 'StageColumn';
+    return StageColumn;
   }, [zoom, currentStages, teamMembers]);
   // Data loading logic
   const loadStagesAndLeads = async (): Promise<void> => {
@@ -795,7 +797,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
     }
     const allLeads = Object.values(currentLeadsByStage).flatMap((stage) => stage.leads || []);
     const activeLeadData = (active.data?.current as { lead?: Lead })?.lead;
-    let activeLead = activeLeadData || allLeads.find(l => String(l.id) === String(active.id));
+    const activeLead = activeLeadData || allLeads.find(l => String(l.id) === String(active.id));
     const activeLeadId = activeLead?.id || active.id;
     let destinationStageId: string | number | null = null;
     if (over?.data?.current) {
@@ -1040,7 +1042,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
     if (!referenceStage) return null;
     const stagesCopy = [...currentStages].sort((a, b) => (a.order || 0) - (b.order || 0));
     const referenceIndex = stagesCopy.findIndex(s => s.key === positionStageId);
-    let previewStages = [...stagesCopy];
+    const previewStages = [...stagesCopy];
     const previewId = `preview-${Date.now()}`;
     const previewStage = {
       id: previewId,
@@ -1102,7 +1104,6 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
   }, [USE_REDUX_PIPELINE, dispatch]);
   const handleCreateStage = useCallback(async (stageData: StageDataForCreate): Promise<void> => {
     try {
-      console.debug('[PipelineBoard] Creating stage:', stageData);
       if (USE_REDUX_ACTIONS) {
         // Use Redux action for creating stage
         await dispatch(createStageAction({

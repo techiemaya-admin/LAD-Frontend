@@ -1,0 +1,29 @@
+name: security
+
+on:
+  push:
+    branches: [develop, stage, main]
+  pull_request:
+    branches: [develop, stage, main]
+
+jobs:
+  gitleaks:
+    name: gitleaks (no committed secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the first run on a branch catches anything that
+          # slipped in before this workflow existed.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tell gitleaks to use the repo's .gitleaks.toml
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # Fail the job on any finding
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true

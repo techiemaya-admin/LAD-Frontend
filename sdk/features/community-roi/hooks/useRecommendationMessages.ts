@@ -12,7 +12,7 @@ export interface CommunicationTemplate {
   name: string;
   template_key?: string;
   content: string;
-  body?: string; // legacy alias — prefer content
+  body?: string; // legacy alias - prefer content
   placeholders?: string[];
   metadata?: {
     sendMode?: string;

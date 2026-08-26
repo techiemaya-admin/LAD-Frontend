@@ -320,7 +320,7 @@ export default function SelectableOptions({
       {/* Leads Per Day Warning */}
       {showLeadsWarning && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          If your LinkedIn account is a free account, it's better to continue with 25 leads per day.
+          If your LinkedIn account is a free account, it&apos;s better to continue with 25 leads per day.
         </div>
       )}
     </div>

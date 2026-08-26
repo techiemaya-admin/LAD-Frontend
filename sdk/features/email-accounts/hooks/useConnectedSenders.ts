@@ -1,5 +1,5 @@
 /**
- * Email Accounts — useConnectedSenders
+ * Email Accounts - useConnectedSenders
  * Returns all connected email accounts formatted as campaign sender options.
  */
 import { useQuery } from '@tanstack/react-query';

@@ -6,7 +6,7 @@
  *   { member_a_id, member_b_id, meeting_date, start_time, end_time }
  *
  * Response:
- *   { conflicts: ConflictError[] }   — empty array = no conflicts
+ *   { conflicts: ConflictError[] }   - empty array = no conflicts
  */
 import { NextRequest, NextResponse } from 'next/server'
 

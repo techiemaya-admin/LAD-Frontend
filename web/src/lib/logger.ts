@@ -1,6 +1,7 @@
+/* eslint-disable no-console */
 /**
  * Centralized Logger Utility
- * 
+ *
  * LAD Architecture Compliance:
  * - Replaces console.log/error/warn throughout codebase
  * - NO secrets, tokens, passwords, or sensitive data in logs

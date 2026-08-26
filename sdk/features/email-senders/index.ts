@@ -1,5 +1,5 @@
 /**
- * Email Senders — SDK Feature Index
+ * Email Senders - SDK Feature Index
  */
 
 export * from './types';

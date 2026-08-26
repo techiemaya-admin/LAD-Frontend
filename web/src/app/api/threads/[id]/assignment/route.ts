@@ -13,7 +13,7 @@ import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../whatsapp-c
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Let the channel param pass through — proxyToPythonService handles routing:
+  // Let the channel param pass through - proxyToPythonService handles routing:
   //   channel=personal  → LAD_backend  /api/whatsapp-conversations/threads/:id/assignment
   //   channel=waba      → Python       /threads/:id/assignment (default)
   return proxyToPythonService(req, getWhatsAppServiceUrl(), `/threads/${id}/assignment`);

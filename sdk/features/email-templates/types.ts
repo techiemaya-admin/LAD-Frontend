@@ -1,6 +1,6 @@
 /**
- * Email Template — SDK Types
- * LAD Architecture: SDK Layer — shared TypeScript contracts
+ * Email Template - SDK Types
+ * LAD Architecture: SDK Layer - shared TypeScript contracts
  */
 
 export type EmailCategory = 'email_send' | 'email_followup';
@@ -17,9 +17,9 @@ export interface EmailTemplate {
   subject: string;
   /** Content format: plain_text | html | markdown */
   content_format: ContentFormat;
-  /** Plain-text body — always present; also the plain-text fallback for HTML emails */
+  /** Plain-text body - always present; also the plain-text fallback for HTML emails */
   body: string;
-  /** Full HTML markup — present only when content_format = 'html' */
+  /** Full HTML markup - present only when content_format = 'html' */
   body_html: string | null;
   tags: string[];
   is_default: boolean;
@@ -35,7 +35,7 @@ export interface CreateEmailTemplateInput {
   subject: string;
   /** Plain-text body (required; serves as fallback for HTML emails) */
   body: string;
-  /** Full HTML markup — supply to create an HTML email template */
+  /** Full HTML markup - supply to create an HTML email template */
   body_html?: string;
   /** Defaults to 'html' when body_html is provided, else 'plain_text' */
   content_format?: ContentFormat;

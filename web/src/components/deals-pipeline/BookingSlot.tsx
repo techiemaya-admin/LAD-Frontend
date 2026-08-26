@@ -299,7 +299,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         });
       logger.debug('Final mapped bookings', { count: sortedBookings?.length || 0 });
       setBookedSlots(sortedBookings);
-      
+
       // Sync with lead status in store if a scheduled booking exists
       const hasScheduled = mappedBookings.some(b => b.status === 'scheduled');
       if (hasScheduled) {
@@ -608,7 +608,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     } catch (error: any) {
       console.error('[BookingSlot.handleConfirmBooking] Error booking slot:', error);
       // Extract error message - the error.message should already contain the backend message
-      let errorMessage = error.message || 'Failed to book slot. Please try again.';
+      const errorMessage = error.message || 'Failed to book slot. Please try again.';
       // Check if it's an availability/unavailability error (should be shown as warning, not error)
       const isAvailabilityError =
         errorMessage.toLowerCase().includes('unavailable') ||
@@ -688,7 +688,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     }
   };
   const formatTime = (time: string) => {
-    if (!time || !time.includes(':')) return time || '—';
+    if (!time || !time.includes(':')) return time || '-';
     const [hours, minutes = '00'] = time.split(':');
     const hour = parseInt(hours, 10);
     if (Number.isNaN(hour)) return time;
@@ -697,10 +697,10 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
     return `${displayHour}:${minutes} ${ampm}`;
   };
   const formatDate = (dateString: string) => {
-    if (!dateString) return '—';
+    if (!dateString) return '-';
     const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
     const date = new Date(dateOnly ? `${dateString}T00:00:00` : dateString);
-    if (isNaN(date.getTime())) return '—';
+    if (isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
@@ -716,14 +716,14 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         {/* Booked Appointments List - Enhanced View in Edit Mode */}
         {bookedSlots.length > 0 ? (
           <div>
-            <Label className="text-sm text-gray-600 mb-3 block font-medium">
+            <Label className="text-sm text-gray-600 dark:text-slate-300 mb-3 block font-medium">
               Booked Appointments ({bookedSlots.length})
             </Label>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {visibleBookedSlots.map((slot) => (
                 <div
                   key={slot.id}
-                  className="p-4 bg-white border border-green-200 rounded-lg hover:border-green-300 transition-colors"
+                  className="p-4 bg-white dark:bg-[#030a21]/60 border border-green-200 dark:border-blue-950/40 rounded-lg hover:border-green-300 dark:hover:border-blue-900/60 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
@@ -731,35 +731,35 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                         {String(slot.status || '').toLowerCase() === 'completed' ? (
                           <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                         ) : (
-                          <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                          <Clock className="h-5 w-5 text-blue-500 dark:text-[#2b7cff] flex-shrink-0" />
                         )}
                         <div>
-                          <div className="text-sm font-semibold text-gray-900 flex flex-wrap items-center gap-x-2">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white flex flex-wrap items-center gap-x-2">
                             <span>{formatDate(slot.date)}</span>
                             {slot.bookingType ? (
-                              <span className="text-xs text-gray-600 font-normal">• {slot.bookingType}</span>
+                              <span className="text-xs text-gray-600 dark:text-slate-300 font-normal">• {slot.bookingType}</span>
                             ) : null}
-                            <span className="text-xs text-gray-600 font-normal">• Retry: {slot.retryCount ?? 0}</span>
+                            <span className="text-xs text-gray-600 dark:text-slate-300 font-normal">• Retry: {slot.retryCount ?? 0}</span>
                             {slot.status && (
                               <span className={cn(
                                 "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase",
-                                slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
-                                slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
-                                slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
-                                slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
-                                "bg-gray-50 text-gray-600 border border-gray-100"
+                                slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100 dark:bg-transparent dark:text-[#2b7cff] dark:border-transparent dark:font-extrabold" :
+                                slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100 dark:bg-transparent dark:text-emerald-400 dark:border-transparent dark:font-extrabold" :
+                                slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100 dark:bg-transparent dark:text-rose-400 dark:border-transparent dark:font-extrabold" :
+                                slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100 dark:bg-transparent dark:text-slate-400 dark:border-transparent dark:font-extrabold" :
+                                "bg-gray-50 text-gray-600 border border-gray-100 dark:bg-transparent dark:text-slate-400 dark:border-transparent dark:font-extrabold"
                               )}>
                                 {slot.status}
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-700 mt-1">
+                          <div className="text-sm text-gray-700 dark:text-slate-200 mt-1">
                             {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                           </div>
                         </div>
                       </div>
                       {slot.userName && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600 ml-7">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 ml-7">
                           <User className="h-3 w-3" />
                           <span>
                             {slot.userName}
@@ -772,7 +772,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                       size="sm"
                       variant="ghost"
                       onClick={() => handleCancelBooking(slot.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-rose-500/10 flex-shrink-0"
                       disabled={loading}
                     >
                       <XCircle className="h-4 w-4 mr-1" />
@@ -788,7 +788,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-blue-600 hover:text-blue-700 dark:text-[#2b7cff] dark:hover:text-[#2b7cff]/80"
                   onClick={() => setShowAllBookedAppointments((v) => !v)}
                 >
                   {showAllBookedAppointments ? 'View less' : 'View more'}
@@ -797,20 +797,20 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
-            <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+          <div className="text-center py-8 text-gray-500 bg-white dark:bg-[#030a21]/40 rounded-lg border border-gray-200 dark:border-blue-950/40">
+            <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-slate-300" />
             <p className="text-sm">No appointments scheduled</p>
           </div>
         )}
         {/* Allow booking new appointments in edit mode */}
-        <div className="pt-4 border-t border-gray-200">
-          <Label className="text-sm text-gray-600 mb-3 block font-medium">
+        <div className="pt-4 border-t border-gray-200 dark:border-blue-950/40">
+          <Label className="text-sm text-gray-600 dark:text-slate-300 mb-3 block font-medium">
             Book New Appointment
           </Label>
           <div className="space-y-4">
             {/* Date Selection */}
             <div>
-              <Label htmlFor="appointment-date-edit" className="text-sm text-gray-600 mb-2 block">
+              <Label htmlFor="appointment-date-edit" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                 Select Date
               </Label>
               <Input
@@ -819,12 +819,12 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full"
+                className="w-full bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white"
               />
             </div>
             {/* User Selection */}
             <div>
-              <Label htmlFor="user-select-edit" className="text-sm text-gray-600 mb-2 block">
+              <Label htmlFor="user-select-edit" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                 Select User
               </Label>
               <Select
@@ -832,7 +832,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 onValueChange={(value: string) => setSelectedUser(value)}
                 disabled={Boolean(createdBy) || users.length === 0}
               >
-                <SelectTrigger id="user-select-edit" className="w-full">
+                <SelectTrigger id="user-select-edit" className="w-full bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white">
                   <SelectValue
                     placeholder={
                       createdBy && currentUser?.email
@@ -854,7 +854,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                         : null}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#071131] dark:border-blue-950/40 text-slate-800 dark:text-white">
                   {users.map((user) => (
                     <SelectItem key={user.id} value={String(user.id)}>
                       {user.name} {user.email ? `(${user.email})` : ''}
@@ -863,21 +863,21 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 </SelectContent>
               </Select>
               {!createdBy && users.length === 0 ? (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-slate-300 mt-2">
                   No counsellors/users loaded, so booking is disabled.
                 </p>
               ) : null}
             </div>
             {/* Booking Type */}
             <div>
-              <Label htmlFor="booking-type" className="text-sm text-gray-600 mb-2 block">
+              <Label htmlFor="booking-type" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                 Booking Type
               </Label>
               <Select value={bookingType} onValueChange={(value: string) => setBookingType(value)}>
-                <SelectTrigger id="booking-type" className="w-full">
+                <SelectTrigger id="booking-type" className="w-full bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white">
                   <SelectValue placeholder="Select booking type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#071131] dark:border-blue-950/40 text-slate-800 dark:text-white">
                   <SelectItem value="manual_followup">manual_followup</SelectItem>
                 </SelectContent>
               </Select>
@@ -885,108 +885,104 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             {/* Start Time and End Time Selection - 15 minute intervals */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="start-time-edit" className="text-sm text-gray-600 mb-2 block">
+                <Label htmlFor="start-time-edit" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                   Start Time (15 min intervals)
                 </Label>
-                <select
-                  id="start-time-edit"
+                <Select
                   value={startTime}
-                  onChange={(e) => {
-                    const newStartTime = e.target.value;
-                    setStartTime(newStartTime);
-                    const matching = availableSlots.find((s) => s.startTime === newStartTime);
+                  onValueChange={(value: string) => {
+                    setStartTime(value);
+                    const matching = availableSlots.find((s) => s.startTime === value);
                     if (matching) {
                       setEndTime(matching.endTime);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={availableSlots.length === 0}
                 >
-                  {availableSlots.length === 0 ? (
-                    <option value="">No available slots</option>
-                  ) : (
-                    Array.from(new Set(availableSlots.map((s) => s.startTime))).map((t) => (
-                      <option key={t} value={t}>
+                  <SelectTrigger id="start-time-edit" className="w-full bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white">
+                    <SelectValue placeholder="No available slots" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-[#071131] dark:border-blue-950/40 text-slate-800 dark:text-white">
+                    {availableSlots.length === 0 ? null : Array.from(new Set(availableSlots.map((s) => s.startTime))).map((t) => (
+                      <SelectItem key={t} value={t}>
                         {t}
-                      </option>
-                    ))
-                  )}
-                </select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="end-time-edit" className="text-sm text-gray-600 mb-2 block">
+                <Label htmlFor="end-time-edit" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                   End Time (15 min intervals)
                 </Label>
-                <select
-                  id="end-time-edit"
+                <Select
                   value={endTime}
-                  onChange={(e) => {
-                    const newEndTime = e.target.value;
-                    const [endHour, endMin] = newEndTime.split(':').map(Number);
+                  onValueChange={(value: string) => {
+                    const [endHour, endMin] = value.split(':').map(Number);
                     const endTotalMin = endHour * 60 + endMin;
                     const [startHour, startMin] = startTime.split(':').map(Number);
                     const startTotalMin = startHour * 60 + startMin;
-                    if (newEndTime && startTime && endTotalMin > startTotalMin) {
-                      setEndTime(newEndTime);
+                    if (value && startTime && endTotalMin > startTotalMin) {
+                      setEndTime(value);
                     } else {
                       alert('End time must be after start time');
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={availableSlots.length === 0}
                 >
-                  {availableSlots.length === 0 ? (
-                    <option value="">No available slots</option>
-                  ) : (
-                    Array.from(
+                  <SelectTrigger id="end-time-edit" className="w-full bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white">
+                    <SelectValue placeholder="No available slots" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-[#071131] dark:border-blue-950/40 text-slate-800 dark:text-white">
+                    {Array.from(
                       new Set(
                         (availableSlots.filter((s) => s.startTime === startTime).length > 0
                           ? availableSlots.filter((s) => s.startTime === startTime).map((s) => s.endTime)
                           : availableSlots.map((s) => s.endTime))
                       )
                     ).map((t) => (
-                      <option key={t} value={t}>
+                      <SelectItem key={t} value={t}>
                         {t}
-                      </option>
-                    ))
-                  )}
-                </select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {/* Availability Preview */}
             {selectedUser && selectedDate && (
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="bg-white border border-gray-200 rounded-lg p-3">
-                    <Label className="text-xs text-gray-600 block mb-2">
+                  <div className="bg-white dark:bg-[#030a21]/40 border border-gray-200 dark:border-blue-950/40 rounded-lg p-3">
+                    <Label className="text-xs text-gray-600 dark:text-slate-300 block mb-2">
                       Available Slots ({availableSlots.length})
                     </Label>
                     {availableSlots.length === 0 ? (
-                      <p className="text-xs text-gray-500">No available slots returned</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-300">No available slots returned</p>
                     ) : (
                       <div className="max-h-28 overflow-y-auto space-y-1">
                         {availableSlots.map((s, idx) => (
-                          <div key={`${s.startTime}-${s.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between">
+                          <div key={`${s.startTime}-${s.endTime}-${idx}`} className="text-xs text-gray-700 dark:text-slate-300 flex justify-between">
                             <span>{s.startTime}</span>
-                            <span className="text-gray-500">-</span>
+                            <span className="text-gray-500 dark:text-slate-600">-</span>
                             <span>{s.endTime}</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3">
-                    <Label className="text-xs text-gray-600 block mb-2">
+                  <div className="bg-white dark:bg-[#030a21]/40 border border-gray-200 dark:border-blue-950/40 rounded-lg p-3">
+                    <Label className="text-xs text-gray-600 dark:text-slate-300 block mb-2">
                       Previous Bookings ({previousBookingsForUser.length})
                     </Label>
                     {previousBookingsForUser.length === 0 ? (
-                      <p className="text-xs text-gray-500">No previous bookings</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-300">No previous bookings</p>
                     ) : (
                       <div className="max-h-28 overflow-y-auto space-y-1">
                         {previousBookingsForUser.map((b, idx) => (
-                          <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between">
+                          <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 dark:text-slate-300 flex justify-between">
                             <span>{b.startTime}</span>
-                            <span className="text-gray-500">-</span>
+                            <span className="text-gray-500 dark:text-slate-600">-</span>
                             <span>{b.endTime}</span>
                           </div>
                         ))}
@@ -998,7 +994,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
             )}
             {/* Appointment Notes */}
             <div>
-              <Label htmlFor="appointment-notes" className="text-sm text-gray-600 mb-2 block">
+              <Label htmlFor="appointment-notes" className="text-sm text-gray-600 dark:text-slate-300 mb-2 block">
                 Notes
               </Label>
               <Textarea
@@ -1007,12 +1003,14 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 placeholder="Add notes for this appointment (optional)"
                 value={bookingNotes}
                 onChange={(e) => setBookingNotes(e.target.value)}
+                className="bg-transparent dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-400"
               />
             </div>
             {/* Book Slot Button */}
             {startTime && endTime && endTime > startTime && (
               <div className={cn("pt-2", !fullWidthButton && "flex justify-end")}>
                 <Button
+                      data-slot="button"
                   onClick={() => {
                     if (!selectedUser) {
                       showToast('Please select a user first', 'warning');
@@ -1035,7 +1033,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                     setSelectedSlotForBooking(customSlot);
                     setConfirmDialogOpen(true);
                   }}
-                  className={cn("bg-[#0B1957] hover:bg-[#0B1957]/90 text-white rounded-xl h-11 px-8 font-bold shadow-sm transition-all", fullWidthButton && "w-full")}
+                  className={cn("inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 active:scale-95 select-none [&_svg]:pointer-events-none [_svg:not([class*='size-'])]:size-4 shrink-0 [_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary dark:bg-[#2B7CFF] text-primary-foreground dark:text-white hover:bg-primary/90 dark:hover:bg-sky-500 px-4 py-2 has-[>svg]:px-3 h-14 rounded-[10px] font-semibold shadow-sm mx-0", fullWidthButton && "w-full")}
                   disabled={
                     loading ||
                     !selectedUser ||
@@ -1057,45 +1055,49 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
         </div>
         {/* Confirmation Dialog */}
         <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-          <DialogContent showCloseButton={true} className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 pb-3 border-b border-gray-100 flex-shrink-0">
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-[#3A3A4F]">
-                <Calendar className="h-5 w-5 text-blue-500" />
-                Confirm Booking
-              </DialogTitle>
+          <DialogContent showCloseButton={true} className="sm:max-w-5xl sm:w-[90vw] sm:h-[90vh] flex flex-col p-0 overflow-hidden bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
+            <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400 border border-blue-100 dark:border-blue-900/40 shadow-sm flex items-center justify-center w-10 h-10">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <DialogTitle className="dark:text-white text-[#0b1957] text-left font-semibold text-lg leading-tight">
+                  Confirm Booking
+                </DialogTitle>
+              </div>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto p-6">
               {selectedSlotForBooking && (
                 <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 shadow-sm">
-                    <h4 className="font-bold text-[#3A3A4F] mb-4 flex items-center gap-2">
+                  <div className="bg-blue-50 dark:bg-[#030a21]/60 border border-blue-200 dark:border-blue-950/40 rounded-xl p-5 shadow-sm">
+                    <h4 className="font-bold text-[#3A3A4F] dark:text-white mb-4 flex items-center gap-2">
                       <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
                       Booking Details
                     </h4>
                     <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-sm">
                       <div className="flex items-center gap-3">
-                        <Calendar className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-700">
+                        <Calendar className="h-4 w-4 text-blue-500 dark:text-[#2b7cff]" />
+                        <span className="text-gray-700 dark:text-slate-200">
                           <strong className="font-semibold">Date:</strong> {formatDate(selectedDate)}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Clock className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-700">
+                        <Clock className="h-4 w-4 text-blue-500 dark:text-[#2b7cff]" />
+                        <span className="text-gray-700 dark:text-slate-200">
                           <strong className="font-semibold">Time:</strong> {formatTime(selectedSlotForBooking.startTime)} - {formatTime(selectedSlotForBooking.endTime)}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <AlertCircle className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-700">
+                        <AlertCircle className="h-4 w-4 text-blue-500 dark:text-[#2b7cff]" />
+                        <span className="text-gray-700 dark:text-slate-200">
                           <strong className="font-semibold">Type:</strong> {bookingType}
                         </span>
                       </div>
                       {selectedUser && (
                         <div className="flex items-center gap-3">
-                          <User className="h-4 w-4 text-blue-500" />
-                          <span className="text-gray-700">
+                          <User className="h-4 w-4 text-blue-500 dark:text-[#2b7cff]" />
+                          <span className="text-gray-700 dark:text-slate-200">
                             <strong className="font-semibold">User:</strong>{' '}
                             {users.find((c) => String(c.id) === selectedUser)?.name || 'N/A'}
                           </span>
@@ -1104,50 +1106,50 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-                    <h4 className="font-bold text-[#3A3A4F] mb-4 flex items-center gap-2">
-                      <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="bg-gray-50 dark:bg-[#030a21]/40 border border-gray-200 dark:border-blue-950/40 rounded-xl p-5">
+                    <h4 className="font-bold text-[#3A3A4F] dark:text-white mb-4 flex items-center gap-2">
+                      <svg className="h-4 w-4 text-gray-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       Booking Information
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-3 border border-gray-100">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Organization ID</span>
-                        <p className="text-xs text-gray-900 font-mono truncate">{tenantId || 'Missing'}</p>
+                      <div className="flex flex-col gap-1 bg-white dark:bg-[#071131] rounded-lg p-3 border border-gray-100 dark:border-blue-950/40">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-slate-300 font-bold">Organization ID</span>
+                        <p className="text-xs text-gray-900 dark:text-white font-mono truncate">{tenantId || 'Missing'}</p>
                       </div>
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-3 border border-gray-100">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Student / Lead ID</span>
-                        <p className="text-xs text-gray-900 font-mono truncate">{studentId || String(leadId)}</p>
+                      <div className="flex flex-col gap-1 bg-white dark:bg-[#071131] rounded-lg p-3 border border-gray-100 dark:border-blue-950/40">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-slate-300 font-bold">Student / Lead ID</span>
+                        <p className="text-xs text-gray-900 dark:text-white font-mono truncate">{studentId || String(leadId)}</p>
                       </div>
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-3 border border-gray-100">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Assigned User</span>
-                        <p className="text-xs text-gray-900 font-mono truncate">{String(assignedUserId || createdBy || selectedUser || '')}</p>
+                      <div className="flex flex-col gap-1 bg-white dark:bg-[#071131] rounded-lg p-3 border border-gray-100 dark:border-blue-950/40">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-slate-300 font-bold">Assigned User</span>
+                        <p className="text-xs text-gray-900 dark:text-white font-mono truncate">{String(assignedUserId || createdBy || selectedUser || '')}</p>
                       </div>
-                      <div className="flex flex-col gap-1 bg-white rounded-lg p-3 border border-gray-100">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Source</span>
-                        <p className="text-xs text-gray-900">user_ui</p>
+                      <div className="flex flex-col gap-1 bg-white dark:bg-[#071131] rounded-lg p-3 border border-gray-100 dark:border-blue-950/40">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-slate-300 font-bold">Source</span>
+                        <p className="text-xs text-gray-900 dark:text-white">user_ui</p>
                       </div>
                     </div>
                   </div>
 
                   {previousBookingsForUser.length > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-5">
-                      <h4 className="font-bold text-[#3A3A4F] mb-3 text-sm">Existing bookings for selected user</h4>
+                    <div className="bg-white dark:bg-[#030a21]/40 border border-gray-200 dark:border-blue-950/40 rounded-xl p-5">
+                      <h4 className="font-bold text-[#3A3A4F] dark:text-white mb-3 text-sm">Existing bookings for selected user</h4>
                       <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
                         {previousBookingsForUser.map((b, idx) => (
-                          <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 flex justify-between p-2 bg-gray-50 rounded-lg">
+                          <div key={`${b.startTime}-${b.endTime}-${idx}`} className="text-xs text-gray-700 dark:text-slate-300 flex justify-between p-2 bg-gray-50 dark:bg-[#071131] rounded-lg border border-transparent dark:border-blue-950/40">
                             <span className="font-medium">{b.startTime} - {b.endTime}</span>
-                            <span className="text-gray-400">Reserved</span>
+                            <span className="text-gray-400 dark:text-slate-500">Reserved</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl">
                     <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                    <p className="text-sm text-amber-700">
+                    <p className="text-sm text-amber-700 dark:text-amber-400/90">
                       Once confirmed, this slot will be blocked for other users and synchronized with the calendar.
                     </p>
                   </div>
@@ -1155,11 +1157,11 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
               )}
             </div>
 
-            <DialogActions className="p-6 pt-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0 flex justify-end">
+            <DialogActions className="p-6 pt-4 border-t border-gray-100 dark:border-blue-950/40 bg-gray-50/50 dark:bg-[#071131] flex-shrink-0 flex justify-end">
               <Button
                 onClick={handleConfirmBooking}
                 disabled={loading || !tenantId || !createdBy}
-                className="bg-[#0B1957] hover:bg-[#0B1957]/90 text-white px-8 h-11 font-bold shadow-md rounded-lg transition-all"
+                className="bg-[#0B1957] dark:bg-[#2B7CFF] hover:bg-[#0B1957]/90 dark:hover:bg-sky-500 text-white px-8 h-11 font-bold shadow-md rounded-lg transition-all"
               >
                 {loading ? 'Booking...' : 'Confirm Booking'}
               </Button>
@@ -1181,44 +1183,44 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
                 {String(slot.status || '').toLowerCase() === 'completed' ? (
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                 ) : (
-                  <Clock className="h-4 w-4 text-blue-500" />
+                  <Clock className="h-4 w-4 text-blue-500 dark:text-[#2b7cff]" />
                 )}
-                <span className="text-gray-900 font-medium">{formatDate(slot.date)}</span>
+                <span className="text-gray-900 dark:text-white font-medium">{formatDate(slot.date)}</span>
                 {slot.bookingType ? (
-                  <span className="text-gray-600 text-sm">• {slot.bookingType}</span>
+                  <span className="text-gray-600 dark:text-slate-300 text-sm">• {slot.bookingType}</span>
                 ) : null}
-                <span className="text-gray-600 text-sm">• Retry: {slot.retryCount ?? 0}</span>
+                <span className="text-gray-600 dark:text-slate-300 text-sm">• Retry: {slot.retryCount ?? 0}</span>
                 {slot.status && (
                   <span className={cn(
                     "text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ml-1",
-                    slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100" :
-                    slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100" :
-                    slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100" :
-                    slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100" :
-                    "bg-gray-50 text-gray-600 border border-gray-100"
+                    slot.status.toLowerCase() === 'scheduled' ? "bg-blue-50 text-blue-600 border border-blue-100 dark:bg-transparent dark:text-[#2b7cff] dark:border-transparent dark:font-extrabold" :
+                    slot.status.toLowerCase() === 'completed' ? "bg-green-50 text-green-600 border border-green-100 dark:bg-transparent dark:text-emerald-400 dark:border-transparent dark:font-extrabold" :
+                    slot.status.toLowerCase() === 'failed' ? "bg-red-50 text-red-600 border border-red-100 dark:bg-transparent dark:text-rose-400 dark:border-transparent dark:font-extrabold" :
+                    slot.status.toLowerCase() === 'cancelled' || slot.status.toLowerCase() === 'canceled' ? "bg-gray-50 text-gray-600 border border-gray-100 dark:bg-transparent dark:text-slate-400 dark:border-transparent dark:font-extrabold" :
+                    "bg-gray-50 text-gray-600 border border-gray-100 dark:bg-transparent dark:text-slate-400 dark:border-transparent dark:font-extrabold"
                   )}>
                     {slot.status}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 ml-6">
-                <Clock className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">
+                <Clock className="h-4 w-4 text-gray-500 dark:text-slate-300" />
+                <span className="text-gray-700 dark:text-slate-200">
                   {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                 </span>
               </div>
               {slot.userName && (
                 <div className="flex items-center gap-2 ml-6">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600 text-sm">{slot.userName}</span>
+                  <User className="h-4 w-4 text-gray-500 dark:text-slate-300" />
+                  <span className="text-gray-600 dark:text-slate-300 text-sm">{slot.userName}</span>
                 </div>
               )}
             </div>
           ))
         ) : (
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span className="text-gray-600">No Slot Scheduled</span>
+            <Calendar className="h-4 w-4 text-gray-500 dark:text-slate-300" />
+            <span className="text-gray-600 dark:text-slate-300">No Slot Scheduled</span>
           </div>
         )}
         {bookedSlots.length > 5 && (
@@ -1227,7 +1229,7 @@ const BookingSlot: React.FC<BookingSlotProps> = ({
               type="button"
               variant="ghost"
               size="sm"
-              className="text-blue-600 hover:text-blue-700"
+              className="text-blue-600 hover:text-blue-700 dark:text-[#2b7cff] dark:hover:text-[#2b7cff]/80"
               onClick={() => setShowAllBookedAppointments((v) => !v)}
             >
               {showAllBookedAppointments ? 'View less' : 'View more'}

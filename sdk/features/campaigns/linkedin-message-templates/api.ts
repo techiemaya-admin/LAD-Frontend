@@ -6,11 +6,13 @@
  */
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '../../../shared/apiClient';
+import { safeStorage } from '../../../shared/storage';
 import type {
   LinkedInMessageTemplate,
   CreateTemplateRequest,
   UpdateTemplateRequest,
-  TemplateFilters
+  TemplateFilters,
+  TemplateMediaUploadResult
 } from './types';
 
 // Query keys for TanStack Query
@@ -141,6 +143,52 @@ export async function updateMessageTemplate(
  */
 export async function deleteMessageTemplate(id: string): Promise<void> {
   await apiClient.delete(`/api/campaigns/linkedin/message-templates/${id}`);
+}
+
+/**
+ * Upload a media file (image / video / audio-voice-note / document) for use as a
+ * LinkedIn template attachment. Multipart upload goes through the Next proxy
+ * route (which forwards to the backend media-upload endpoint) so JSON body-size
+ * limits don't apply. Returns a permanent GCS URL + media metadata to store on
+ * the template.
+ */
+export async function uploadTemplateMedia(file: File): Promise<TemplateMediaUploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const token = safeStorage.getItem('token');
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const selectedTenantId = safeStorage.getItem('selectedTenantId') || '';
+    const rawUser = safeStorage.getItem('user');
+    let userTenantId = '';
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        userTenantId = parsed?.tenantId || parsed?.organizationId || '';
+      } catch {
+        userTenantId = '';
+      }
+    }
+    const effectiveTenantId = selectedTenantId && selectedTenantId !== 'default' ? selectedTenantId : userTenantId;
+    if (effectiveTenantId) headers['X-Tenant-ID'] = effectiveTenantId;
+  }
+
+  const res = await fetch('/api/campaigns/linkedin-templates/upload', {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.url) {
+    const message = data?.error || data?.detail || data?.message || `Media upload failed (${res.status})`;
+    throw new Error(message);
+  }
+  return data as TemplateMediaUploadResult;
 }
 
 // ====================

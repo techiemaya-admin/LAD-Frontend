@@ -3,8 +3,8 @@
  * GET /api/whatsapp-conversations/contacts → Backend /api/contacts
  *
  * Routing:
- *   ?channel=personal → LAD_backend (Node.js) — wa_contacts table (all 6000+ contacts)
- *   ?channel=waba     → LAD-WABA-Comms (Python) — DEFAULT
+ *   ?channel=personal → LAD_backend (Node.js) - wa_contacts table (all 6000+ contacts)
+ *   ?channel=waba     → LAD-WABA-Comms (Python) - DEFAULT
  *
  * Supports: limit, offset, search, page query params
  */

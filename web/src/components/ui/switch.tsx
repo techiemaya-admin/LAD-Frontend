@@ -24,4 +24,4 @@ function Switch({
     </SwitchPrimitive.Root>
   )
 }
-export { Switch }
+export { Switch }

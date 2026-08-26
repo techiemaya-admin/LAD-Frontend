@@ -1,4 +1,4 @@
-/** GET /api/email-conversations/contacts — list | POST — import */
+/** GET /api/email-conversations/contacts - list | POST - import */
 import { NextRequest } from 'next/server';
 import { proxyToWABA } from '../utils/proxy';
 

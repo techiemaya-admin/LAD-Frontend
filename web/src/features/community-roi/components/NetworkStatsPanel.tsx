@@ -11,81 +11,20 @@ import { useAuth } from '@/contexts/AuthContext';
  * Displays Community ROI Analytics KPIs
  */
 export default function NetworkStatsPanel() {
-  // BASIC DEBUG - IF THIS DOESN'T APPEAR, COMPONENT ISN'T RENDERING AT ALL
-  console.log('%c🔴 [NetworkStatsPanel] COMPONENT FUNCTION EXECUTING NOW', 'color: red; font-weight: bold; font-size: 14px;');
-  
-  let authContext: any;
-  try {
-    authContext = useAuth();
-  } catch (e) {
-    console.error('[NetworkStatsPanel] ERROR: useAuth failed. AuthProvider may not be wrapping this component:', e);
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 text-red-600">
-            <AlertCircle className="h-4 w-4" />
-            <span>Auth context error - check component setup</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const authContext = useAuth();
 
-  const { isAuthenticated, token } = authContext;
+  const isAuthenticated = authContext?.isAuthenticated ?? false;
+  const token = authContext?.token;
   const isEnabled = isAuthenticated && !!token;
   const { data: stats, isLoading, error, refetch } = useNetworkStats(isEnabled);
 
-  console.log(
-    '%c[NetworkStatsPanel] 📍 COMPONENT RENDER',
-    'color: #FF00FF; font-weight: bold; font-size: 12px;',
-    {
-      isAuthenticated,
-      isEnabled,
-      isLoading,
-      hasError: !!error,
-      hasStats: !!stats,
-      statsType: stats ? typeof stats : 'undefined',
-    }
-  );
-
   useEffect(() => {
-    console.log(
-      '%c[NetworkStatsPanel] Auth/Query State Changed',
-      'color: #FF9800; font-weight: bold;',
-      {
-        isAuthenticated,
-        hasToken: !!token,
-        isEnabled,
-        isLoading,
-        hasData: !!stats,
-        hasError: !!error,
-        timestamp: new Date().toISOString(),
-      }
-    );
-
     if (!isEnabled) {
-      console.warn('%c[NetworkStatsPanel] ⚠️ Query disabled - not authenticated', 'color: #FF9800;');
       return;
     }
 
-    console.log(
-      '%c[NetworkStatsPanel] 🔄 Triggering refetch (auth confirmed)',
-      'color: #2196F3; font-weight: bold;'
-    );
-    
     // Refetch returns a Promise
-    refetch().then((queryResult: any) => {
-      console.log(
-        '%c[NetworkStatsPanel] ✅ Refetch completed',
-        'color: #4CAF50; font-weight: bold;',
-        {
-          hasData: !!queryResult?.data,
-          hasError: !!queryResult?.error,
-          status: (queryResult as any)?.status || 'unknown',
-          dataKeys: queryResult?.data ? Object.keys(queryResult.data) : [],
-        }
-      );
-    }).catch((err: unknown) => {
+    refetch().catch((err: unknown) => {
       console.error(
         '%c[NetworkStatsPanel] ❌ Refetch failed',
         'color: #F44336; font-weight: bold;',
@@ -96,52 +35,19 @@ export default function NetworkStatsPanel() {
 
   // Log stats changes and validate structure
   useEffect(() => {
-    console.log('%c[NetworkStatsPanel] Stats/Error Changed', 'color: #9C27B0; font-weight: bold;', {
-      hasStats: !!stats,
-      hasError: !!error,
-      isLoading,
-      timestamp: new Date().toISOString(),
-    });
-
     if (stats) {
-      console.log('%c[NetworkStatsPanel] ✅ Stats Received:', 'color: #4CAF50; font-weight: bold;');
-      console.log('Full stats object:', stats);
-      console.log('networkBreakdown:', stats.networkBreakdown);
-      console.log('connectivityAnalysis:', stats.connectivityAnalysis);
-      console.log('relationshipStrength:', stats.relationshipStrength);
-      console.log('businessValue:', stats.businessValue);
-      
       // Validate the expected structure
       const hasNetworkBreakdown = stats.networkBreakdown && typeof stats.networkBreakdown === 'object';
       const hasConnectivity = stats.connectivityAnalysis && typeof stats.connectivityAnalysis === 'object';
-      const hasRelationship = stats.relationshipStrength && typeof stats.relationshipStrength === 'object';
-      const hasBusinessValue = stats.businessValue && typeof stats.businessValue === 'object';
-      
-      console.log('%c[NetworkStatsPanel] Data Structure Validation:', 'color: #2196F3;', {
-        hasNetworkBreakdown,
-        hasConnectivity,
-        hasRelationship,
-        hasBusinessValue,
-        statKeys: Object.keys(stats || {}),
-        networkBreakdownKeys: Object.keys(stats?.networkBreakdown || {}),
-        connectivityKeys: Object.keys(stats?.connectivityAnalysis || {}),
-      });
-      
+
       if (!hasNetworkBreakdown || !hasConnectivity) {
         console.error('%c[NetworkStatsPanel] ❌ INVALID DATA STRUCTURE', 'color: #F44336; font-weight: bold;', {
           expected: 'networkBreakdown && connectivityAnalysis properties',
           received: stats,
         });
-      } else {
-        console.log('%c[NetworkStatsPanel] ✅ DATA STRUCTURE VALID', 'color: #4CAF50; font-weight: bold;', {
-          members: stats.connectivityAnalysis?.memberCount,
-          meetings: stats.networkBreakdown?.meetings,
-          referrals: stats.networkBreakdown?.referrals,
-          density: stats.connectivityAnalysis?.networkDensity,
-        });
       }
     }
-    
+
     if (error) {
       console.error('%c[NetworkStatsPanel] ❌ API Error:', 'color: #F44336; font-weight: bold;', {
         message: error instanceof Error ? error.message : String(error),
@@ -150,8 +56,14 @@ export default function NetworkStatsPanel() {
     }
   }, [stats, error]);
 
+  const handleManualLoad = () => {
+    // Refetch returns a Promise
+    refetch().catch((err: unknown) => {
+      console.error('[NetworkStatsPanel] Manual refetch failed:', err);
+    });
+  };
+
   if (!isAuthenticated || !token) {
-    console.log('%c[NetworkStatsPanel] 🔐 EARLY RETURN: Not authenticated', 'color: #FFA500;');
     return (
       <Card>
         <CardContent className="pt-6">
@@ -164,27 +76,7 @@ export default function NetworkStatsPanel() {
     );
   }
 
-  const handleManualLoad = () => {
-    console.log('[NetworkStatsPanel] 🔄 Manual load triggered');
-    console.log('[NetworkStatsPanel] Current state:', {
-      isLoading,
-      hasError: !!error,
-      hasData: !!stats,
-    });
-    // Refetch returns a Promise
-    refetch().then((result: any) => {
-      console.log('[NetworkStatsPanel] Manual refetch completed:', {
-        hasData: !!result?.data,
-        hasError: !!result?.error,
-        dataKeys: result?.data ? Object.keys(result.data) : [],
-      });
-    }).catch((err: unknown) => {
-      console.error('[NetworkStatsPanel] Manual refetch failed:', err);
-    });
-  };
-
   if (isLoading) {
-    console.log('%c[NetworkStatsPanel] ⏳ EARLY RETURN: isLoading=true', 'color: #2196F3;');
     return (
       <Card>
         <CardContent className="pt-6">
@@ -198,7 +90,6 @@ export default function NetworkStatsPanel() {
   }
 
   if (error) {
-    console.log('%c[NetworkStatsPanel] ❌ EARLY RETURN: error=%s', 'color: #F44336;', error instanceof Error ? error.message : String(error));
     return (
       <Card>
         <CardContent className="pt-6">
@@ -214,15 +105,15 @@ export default function NetworkStatsPanel() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handleManualLoad}
                 className="px-3 py-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 font-medium"
               >
                 🔄 Retry
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  console.log('[NetworkStatsPanel] Debug info:', {
+                  console.warn('[NetworkStatsPanel] Debug info:', {
                     isAuthenticated,
                     hasToken: !!token,
                     tokenLength: token?.length,
@@ -243,29 +134,28 @@ export default function NetworkStatsPanel() {
   }
 
   if (!stats) {
-    console.log('%c🚫 EARLY RETURN: !stats (data object is null/undefined)', 'color: #FF0000; font-weight: bold; font-size: 12px;');
     return (
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-3 text-center">
             <div className="text-slate-600 font-semibold">No network data available</div>
             <p className="text-xs text-slate-500">
-              The API returned no data. This could mean the query wasn't executed or returned empty results.
+              The API returned no data. This could mean the query wasn&apos;t executed or returned empty results.
             </p>
             <div className="flex gap-2 justify-center">
-              <button 
+              <button
                 onClick={handleManualLoad}
                 className="px-4 py-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 font-medium"
               >
                 📊 Load Data
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  console.group('[NetworkStatsPanel] Full Debug State');
-                  console.log('Auth:', { isAuthenticated, hasToken: !!token });
-                  console.log('Query:', { isLoading, hasError: !!error, hasData: !!stats });
-                  console.log('Token:', token?.substring(0, 50), '...');
-                  console.groupEnd();
+                  console.warn('[NetworkStatsPanel] Full Debug State', {
+                    auth: { isAuthenticated, hasToken: !!token },
+                    query: { isLoading, hasError: !!error, hasData: !!stats },
+                    token: token ? `${token.substring(0, 50)}...` : null,
+                  });
                 }}
                 className="px-4 py-2 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
               >
@@ -279,28 +169,6 @@ export default function NetworkStatsPanel() {
   }
 
   const { networkBreakdown, relationshipStrength, connectivityAnalysis, businessValue } = stats;
-
-  // DEBUG: Log full stats object structure to understand why values are 0
-  console.log('%c[NetworkStatsPanel] 🔍 FULL STATS OBJECT:', 'color: #FF6600; font-weight: bold;', stats);
-  console.log('%c[NetworkStatsPanel] networkBreakdown:', 'color: #FF6600;', networkBreakdown);
-  console.log('%c[NetworkStatsPanel] connectivityAnalysis:', 'color: #FF6600;', connectivityAnalysis);
-  console.log('%c[NetworkStatsPanel] relationshipStrength:', 'color: #FF6600;', relationshipStrength);
-  console.log('%c[NetworkStatsPanel] businessValue:', 'color: #FF6600;', businessValue);
-
-  // Log the exact values being rendered
-  console.log(
-    '%c[NetworkStatsPanel] 🎨 RENDERING WITH VALUES:',
-    'color: #FF1493; font-weight: bold; font-size: 14px;',
-    {
-      memberCount: connectivityAnalysis?.memberCount,
-      totalInteractions: networkBreakdown?.meetings,
-      referrals: networkBreakdown?.referrals,
-      networkDensity: connectivityAnalysis?.networkDensity,
-      avgConnections: connectivityAnalysis?.avgConnectionsPerMember,
-      avgStrength: relationshipStrength?.avgStrengthScore,
-      totalBusinessValue: businessValue?.totalBusinessValue,
-    }
-  );
 
   return (
     <div className="space-y-6">

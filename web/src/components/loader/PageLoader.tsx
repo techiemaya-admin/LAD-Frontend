@@ -32,6 +32,7 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
   showMessage = true,
 }) => {
   const pathname = usePathname();
+  const loadingState = React.useContext(LoadingContext);
 
   // Disable the page loader for specific routes
   const isCampaignsListPage = pathname === '/campaigns';
@@ -41,7 +42,6 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
     return null;
   }
 
-  const loadingState = React.useContext(LoadingContext);
   const isVisible = loadingState.activeCount > 0;
   const hasMinVisibleTime = loadingState.nextHideAt !== null && Date.now() < loadingState.nextHideAt;
 

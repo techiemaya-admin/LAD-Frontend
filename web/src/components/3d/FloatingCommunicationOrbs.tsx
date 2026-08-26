@@ -235,4 +235,6 @@ const FloatingCommunicationOrbs = memo(() => {
   );
 });
 
+FloatingCommunicationOrbs.displayName = 'FloatingCommunicationOrbs';
+
 export default FloatingCommunicationOrbs;

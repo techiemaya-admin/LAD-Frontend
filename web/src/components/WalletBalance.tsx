@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2, Repeat, RefreshCw, AlertCircle } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { getCreditPackages, getWalletBalance, getWalletBalanceLegacy } from '@lad/frontend-features/billing';
-import { rechargeWallet } from '../../../sdk/features/billing/api';
+import { rechargeWallet, subscribeMonthly, setupAutoRecharge, getRecurring, cancelRecurring, type RecurringStatus } from '../../../sdk/features/billing/api';
 interface WalletData {
   balance: number;
   currency: string;
@@ -38,9 +38,14 @@ export const WalletBalance: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [purchaseMode, setPurchaseMode] = useState<'one_time' | 'monthly' | 'auto_recharge'>('one_time');
+  const [threshold, setThreshold] = useState<number>(250);
+  const [recurring, setRecurring] = useState<RecurringStatus | null>(null);
+  const [cancellingKind, setCancellingKind] = useState<'monthly' | 'auto_recharge' | null>(null);
   useEffect(() => {
     fetchWalletData();
     fetchCreditPackages();
+    fetchRecurring();
   }, []);
   const fetchWalletData = async () => {
     try {
@@ -98,6 +103,66 @@ export const WalletBalance: React.FC = () => {
       setShowRechargeModal(false);
     }
   };
+  const fetchRecurring = async () => {
+    try {
+      setRecurring(await getRecurring());
+    } catch (error) {
+      console.error('Error fetching recurring billing:', error);
+      setRecurring(null);
+    }
+  };
+  const handleSubscribe = async (packageId: string) => {
+    setProcessing(true);
+    try {
+      const { sessionUrl } = await subscribeMonthly({
+        packageId,
+        successUrl: `${window.location.origin}/wallet/success`,
+        cancelUrl: `${window.location.origin}/wallet/cancel`,
+      });
+      window.location.href = sessionUrl;
+    } catch (error: any) {
+      console.error('Error starting subscription:', error);
+      alert(error?.message || 'Failed to start subscription. Please try again.');
+    } finally {
+      setProcessing(false);
+      setShowRechargeModal(false);
+    }
+  };
+  const handleAutoRecharge = async (packageId: string) => {
+    setProcessing(true);
+    try {
+      const { sessionUrl } = await setupAutoRecharge({
+        packageId,
+        thresholdCredits: threshold,
+        successUrl: `${window.location.origin}/wallet/success`,
+        cancelUrl: `${window.location.origin}/wallet/cancel`,
+      });
+      window.location.href = sessionUrl;
+    } catch (error: any) {
+      console.error('Error enabling auto-recharge:', error);
+      alert(error?.message || 'Failed to enable auto-recharge. Please try again.');
+    } finally {
+      setProcessing(false);
+      setShowRechargeModal(false);
+    }
+  };
+  const handleConfirmPurchase = (packageId: string) => {
+    if (purchaseMode === 'monthly') return handleSubscribe(packageId);
+    if (purchaseMode === 'auto_recharge') return handleAutoRecharge(packageId);
+    return handleRecharge(packageId);
+  };
+  const handleCancelRecurring = async (kind: 'monthly' | 'auto_recharge') => {
+    setCancellingKind(kind);
+    try {
+      await cancelRecurring(kind);
+      await fetchRecurring();
+    } catch (error) {
+      console.error('Error cancelling recurring:', error);
+      alert('Failed to cancel. Please try again.');
+    } finally {
+      setCancellingKind(null);
+    }
+  };
   const formatDate = (timestamp: string) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       month: 'short',
@@ -139,6 +204,67 @@ export const WalletBalance: React.FC = () => {
           Available credits for voice calls, data scraping, and AI queries
         </p>
       </div>
+      {/* Recurring billing status */}
+      {(recurring?.monthly || recurring?.autoRecharge) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {recurring?.monthly && recurring.monthly.status !== 'canceled' && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-5 w-5 text-primary" />
+                  <h4 className="font-semibold text-foreground">Monthly subscription</h4>
+                </div>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${recurring.monthly.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                  {recurring.monthly.status}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {recurring.monthly.credits.toLocaleString()} credits / month · ${recurring.monthly.priceUsd}
+              </p>
+              {recurring.monthly.currentPeriodEnd && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Next charge: {formatDate(recurring.monthly.currentPeriodEnd)}
+                </p>
+              )}
+              <button
+                onClick={() => handleCancelRecurring('monthly')}
+                disabled={cancellingKind === 'monthly'}
+                className="mt-3 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+              >
+                {cancellingKind === 'monthly' ? 'Cancelling…' : 'Cancel subscription'}
+              </button>
+            </div>
+          )}
+          {recurring?.autoRecharge && recurring.autoRecharge.status !== 'canceled' && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                  <h4 className="font-semibold text-foreground">Auto-recharge</h4>
+                </div>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${recurring.autoRecharge.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                  {recurring.autoRecharge.status}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                +{recurring.autoRecharge.credits.toLocaleString()} credits when balance &lt; {recurring.autoRecharge.thresholdCredits?.toLocaleString()} credits
+              </p>
+              {recurring.autoRecharge.lastError && (
+                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" /> {recurring.autoRecharge.lastError}
+                </p>
+              )}
+              <button
+                onClick={() => handleCancelRecurring('auto_recharge')}
+                disabled={cancellingKind === 'auto_recharge'}
+                className="mt-3 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+              >
+                {cancellingKind === 'auto_recharge' ? 'Disabling…' : 'Disable auto-recharge'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {/* Recharge Modal */}
       {showRechargeModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowRechargeModal(false); setSelectedPackage(null); }}>
@@ -162,8 +288,42 @@ export const WalletBalance: React.FC = () => {
               </button>
             </div>
 
-            {/* Package Cards - 2x2 grid, compact */}
+            {/* Mode toggle + Package Cards */}
             <div className="p-4">
+              {/* Purchase mode */}
+              <div className="grid grid-cols-3 gap-2 mb-4 p-1 bg-muted rounded-xl">
+                {([
+                  { key: 'one_time', label: 'One-time' },
+                  { key: 'monthly', label: 'Monthly' },
+                  { key: 'auto_recharge', label: 'Auto-recharge' },
+                ] as const).map((m) => (
+                  <button
+                    key={m.key}
+                    onClick={() => setPurchaseMode(m.key)}
+                    className={`text-xs font-semibold py-2 rounded-lg transition-all ${purchaseMode === m.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {purchaseMode === 'auto_recharge' && (
+                <div className="mb-4 rounded-xl border border-border bg-accent/30 p-3">
+                  <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Recharge when my balance falls below
+                  </label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={threshold}
+                      onChange={(e) => setThreshold(Math.max(1, parseInt(e.target.value || '0', 10)))}
+                      className="w-28 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground"
+                    />
+                    <span className="text-xs text-muted-foreground">credits</span>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 {packages.map((pkg) => (
                   <div
@@ -205,7 +365,7 @@ export const WalletBalance: React.FC = () => {
             {/* Footer */}
             <div className="px-5 py-3 border-t border-border space-y-2">
               <button
-                onClick={() => selectedPackage && handleRecharge(selectedPackage)}
+                onClick={() => selectedPackage && handleConfirmPurchase(selectedPackage)}
                 disabled={!selectedPackage || processing}
                 className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center"
               >
@@ -216,7 +376,13 @@ export const WalletBalance: React.FC = () => {
                   </>
                 ) : selectedPackage ? (
                   <>
-                    Purchase {packages.find(p => p.id === selectedPackage)?.name} - ${packages.find(p => p.id === selectedPackage)?.price}
+                    {(() => {
+                      const pkg = packages.find(p => p.id === selectedPackage);
+                      if (!pkg) return 'Continue';
+                      if (purchaseMode === 'monthly') return `Subscribe ${pkg.name} - $${pkg.price}/mo`;
+                      if (purchaseMode === 'auto_recharge') return `Enable auto-recharge - $${pkg.price} per top-up`;
+                      return `Purchase ${pkg.name} - $${pkg.price}`;
+                    })()}
                     <ArrowUpRight className="h-4 w-4 ml-1.5" />
                   </>
                 ) : (
@@ -224,7 +390,11 @@ export const WalletBalance: React.FC = () => {
                 )}
               </button>
               <p className="text-[11px] text-muted-foreground text-center">
-                Secure payment powered by Stripe. Credits never expire.
+                {purchaseMode === 'monthly'
+                  ? 'Billed monthly via Stripe until you cancel. Credits added each cycle.'
+                  : purchaseMode === 'auto_recharge'
+                  ? 'We securely save your card and top up automatically when you run low.'
+                  : 'Secure payment powered by Stripe. Credits valid for 1 month.'}
               </p>
             </div>
           </div>

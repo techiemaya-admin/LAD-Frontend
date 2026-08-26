@@ -87,14 +87,14 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
                         transition-all duration-200
                         ${
                           state === 'completed'
-                            ? 'bg-[#0b1957] text-white shadow-sm'
+                            ? 'bg-[#0b1957] dark:bg-blue-600 text-white shadow-sm'
                             : state === 'active'
-                            ? 'bg-white border-2 border-[#0b1957] text-[#0b1957] shadow-md'
-                            : 'bg-[#F1F5F9] border-2 border-[#CBD5E1] text-[#94A3B8]'
+                            ? 'bg-white dark:bg-[#0e1a3a] border-2 border-[#0b1957] dark:border-blue-400 text-[#0b1957] dark:text-blue-400 shadow-md'
+                            : 'bg-[#F1F5F9] dark:bg-[#1a2a43] border-2 border-[#CBD5E1] dark:border-[#262831] text-[#94A3B8] dark:text-slate-300'
                         }
                       `}
                     >
-                      {/* Always show the step-type icon — colour conveys state */}
+                      {/* Always show the step-type icon - colour conveys state */}
                       <IconComponent className="w-3.5 h-3.5" strokeWidth={2} />
                     </div>
 
@@ -102,9 +102,9 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
                     {state === 'completed' && (
                       <span
                         className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full
-                                   bg-emerald-500 flex items-center justify-center ring-1 ring-white"
+                                   bg-emerald-500 flex items-center justify-center ring-1 ring-white dark:ring-[#0f172a]"
                       >
-                        {/* tiny SVG checkmark — avoids importing another Lucide icon at this size */}
+                        {/* tiny SVG checkmark - avoids importing another Lucide icon at this size */}
                         <svg viewBox="0 0 10 10" className="w-2 h-2" fill="none">
                           <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -113,7 +113,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
 
                     {/* Pulsing ring for the active step */}
                     {state === 'active' && (
-                      <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#0b1957]" />
+                      <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#0b1957] dark:bg-blue-400" />
                     )}
                   </div>
                 </TooltipTrigger>
@@ -130,7 +130,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStep, steps
               <div
                 className={`
                   h-[2px] flex-1 mx-1 transition-all duration-200
-                  ${state === 'completed' ? 'bg-[#0b1957]' : 'bg-[#D9D9D9]'}
+                  ${state === 'completed' ? 'bg-[#0b1957] dark:bg-blue-600' : 'bg-[#D9D9D9] dark:bg-[#262831]'}
                 `}
               />
             )}

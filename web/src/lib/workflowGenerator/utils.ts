@@ -30,4 +30,4 @@ export function buildLeadGenerationFilters(mappedAnswers: Record<string, any>): 
       : [mappedAnswers.location];
   }
   return filters;
-}
+}

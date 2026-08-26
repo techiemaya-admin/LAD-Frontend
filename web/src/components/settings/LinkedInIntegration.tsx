@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff, X, Power, Linkedin } from 'lucide-react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getApiBaseUrl } from '@/lib/api-utils';
@@ -18,7 +18,19 @@ const getAuthHeaders = () => {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
+/** What the integration can actually do with this account, from Unipile. */
+interface LinkedInCapabilities {
+  known?: boolean;
+  premium?: boolean;
+  salesNavigator?: boolean;
+  recruiter?: boolean;
+  canInMail?: boolean;
+  totalCredits?: number;
+  credits?: { premium?: number; recruiter?: number; salesNavigator?: number };
+}
+
 interface LinkedInAccount {
+  capabilities?: LinkedInCapabilities;
   id?: string;
   connected: boolean;
   status?: 'connected' | 'disconnected' | 'stopped' | 'checkpoint' | 'unknown' | 'error';
@@ -47,6 +59,24 @@ interface LinkedInStatusResponse {
   connections: LinkedInAccount[];
   totalConnections: number;
 }
+// Tenant-level LinkedIn automation config (one per tenant, derived from the
+// active social_linkedin_accounts metadata). Returned by
+// GET /api/social-integration/linkedin/automation-settings wrapped in { data }.
+interface LinkedInAutomationSettings {
+  auto_like_posts: boolean;
+  auto_comment_posts: boolean;
+  ai_agent_enabled: boolean;
+  ai_agent_reply_delay_seconds: number;
+  // Tenant-chosen model for AI-personalized outbound messages (connection
+  // requests + follow-ups). Kept in sync with the backend allow-list in
+  // core/constants/aiMessageModels.js.
+  /** Still returned by the backend; the picker was removed and every tenant
+   *  generates on DeepSeek. Kept so the type matches the payload. */
+  linkedin_ai_model?: string;
+}
+// Curated model menu for LinkedIn outbound message personalization. Must match
+// the backend registry (core/constants/aiMessageModels.js) - ids are validated
+// server-side on PUT, so an out-of-sync entry here is rejected rather than saved.
 type AuthMethod = 'credentials' | 'cookies';
 export const LinkedInIntegration: React.FC = () => {
   const [linkedInConnections, setLinkedInConnections] = useState<LinkedInAccount[]>([]);
@@ -77,8 +107,29 @@ export const LinkedInIntegration: React.FC = () => {
   // Yes/No auto-polling states
   const [yesNoPolling, setYesNoPolling] = useState<NodeJS.Timeout | null>(null);
   const [autoResolving, setAutoResolving] = useState(false);
+  // ── AI Replies (tenant-level LinkedIn AI agent) ────────────────────────────
+  // ai_agent_enabled is stored once per tenant, so every connected account shares
+  // the same flag. We hold the full settings object (not just the boolean) so a
+  // PUT can resend auto_like_posts / auto_comment_posts / reply-delay unchanged  - 
+  // the backend rebuilds all four keys, so omitting them would clobber them.
+  const [automationSettings, setAutomationSettings] = useState<LinkedInAutomationSettings | null>(null);
+  const [aiRepliesSaving, setAiRepliesSaving] = useState(false);
+  const [aiToast, setAiToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null);
+  const inputClass =
+      'w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#00051d_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#00051d_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
+
+  // Auto-dismiss the AI Replies toast after a few seconds (mirrors Instagram).
+  useEffect(() => {
+    if (!aiToast) return;
+    const t = setTimeout(() => setAiToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [aiToast]);
   useEffect(() => {
     checkLinkedInConnection();
+    // Fetch the tenant's AI-agent setting on mount and whenever the account
+    // count changes (connect/disconnect). Deliberately NOT in the 30s poll so
+    // an in-flight optimistic toggle isn't overwritten mid-flight.
+    void fetchAutomationSettings();
     // Start polling status every 30 seconds if any connection is active
     const pollInterval = setInterval(() => {
       if (linkedInConnections.some(conn => conn.connected)) {
@@ -284,11 +335,9 @@ export const LinkedInIntegration: React.FC = () => {
       const data = await Promise.race([dataPromise, timeoutPromise]) as any;
       // Handle response from backend (returns { success, accounts })
       if (data.accounts && Array.isArray(data.accounts)) {
-        console.debug('[LinkedIn] Loaded accounts:', data.accounts.length);
         setLinkedInConnections(data.accounts);
       } else if (data.connections && Array.isArray(data.connections)) {
         // Fallback for old format
-        console.debug('[LinkedIn] Loaded connections:', data.connections.length);
         setLinkedInConnections(data.connections);
       } else {
         // Single account format
@@ -307,6 +356,66 @@ export const LinkedInIntegration: React.FC = () => {
       setLoading(false);
     }
   };
+  // GET the tenant's LinkedIn automation settings. Response is { success, data }.
+  // Failure is non-fatal: we leave settings unloaded and keep the pill disabled
+  // (so a toggle can never PUT a partial/clobbering payload).
+  const fetchAutomationSettings = async () => {
+    try {
+      const res = await apiGet<{ success?: boolean; data?: LinkedInAutomationSettings }>(
+        '/api/social-integration/linkedin/automation-settings'
+      );
+      if (res?.data) {
+        setAutomationSettings(res.data);
+      }
+    } catch (error) {
+      // Non-fatal - see note above.
+    }
+  };
+  // Flip the tenant-level AI agent on/off. Optimistic UI, then PUT the FULL set
+  // (only ai_agent_enabled changed) so the backend's jsonb rebuild preserves
+  // auto_like_posts / auto_comment_posts / reply-delay. Reverts + toasts on
+  // failure (mirrors Instagram's per-account AI toggle).
+  const toggleAiReplies = async () => {
+    if (!automationSettings || aiRepliesSaving) return;
+    const previous = automationSettings;
+    const next = !previous.ai_agent_enabled;
+    // Optimistic - all cards read this one flag, so they flip together.
+    setAutomationSettings({ ...previous, ai_agent_enabled: next });
+    setAiRepliesSaving(true);
+    try {
+      const response = await fetch(
+        `${getApiBaseUrl()}/api/social-integration/linkedin/automation-settings`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            auto_like_posts: previous.auto_like_posts,
+            auto_comment_posts: previous.auto_comment_posts,
+            ai_agent_enabled: next,
+            ai_agent_reply_delay_seconds: previous.ai_agent_reply_delay_seconds,
+          }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || data?.message || 'Failed to update AI Replies');
+      }
+      // Reconcile with the server's authoritative copy.
+      if (data.data) setAutomationSettings(data.data as LinkedInAutomationSettings);
+    } catch (error) {
+      // Roll back the optimistic flip and surface the error.
+      setAutomationSettings(previous);
+      setAiToast({
+        kind: 'err',
+        message: error instanceof Error ? error.message : 'Could not update AI Replies.',
+      });
+    } finally {
+      setAiRepliesSaving(false);
+    }
+  };
+  // Change the tenant's outbound-message model. Optimistic UI, then a PARTIAL PUT
+  // ({ linkedin_ai_model }) - the backend jsonb-merges it, so the other automation
+  // settings are preserved. Reverts + toasts on failure (mirrors toggleAiReplies).
   const handleConnect = async () => {
     setConnecting(true);
     setConnectionError(null);
@@ -617,228 +726,232 @@ export const LinkedInIntegration: React.FC = () => {
         };
     }
   };
+
+  // Modern browser autofill utility string with forced light/dark text fills
+  const autofillClasses = "autofill:shadow-[0_0_0_1000px_#1e293b_inset] dark:autofill:shadow-[0_0_0_1000px_#1e293b_inset] [webkit-text-fill-color:#111827_!important] dark:[webkit-text-fill-color:#f3f4f6_!important] transition-[background-color] duration-[99999s] ease-in-out";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     );
   }
   return (
     <>
-      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div className="flex items-start">
-            <div className="bg-blue-100 p-3 rounded-lg mr-3 sm:mr-4 flex-shrink-0">
-              {/* Official LinkedIn Icon */}
-              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
-                <path d={LINKEDIN_LOGO_PATH}/>
-              </svg>
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 space-y-4 font-sans text-slate-900 dark:text-white">
+        {/* 1. SEPARATED TOP HEADER CARD */}
+        <div className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 shadow-sm dark:shadow-none">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {/* LinkedIn Icon Box */}
+              <div className="w-10 h-10 rounded-lg bg-[#1d4ed8] flex items-center justify-center shrink-0">
+                <Linkedin className="h-6 w-6 text-white fill-current" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white leading-tight">LinkedIn</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                  Connect your LinkedIn account for automated lead enrichment and outreach
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900">LinkedIn</h3>
-              <p className="text-sm text-gray-600 break-words">
-                Connect your LinkedIn account for automated lead enrichment and outreach
-              </p>
+
+            {/* Top Right Status Badge */}
+            <div className="flex items-center shrink-0">
+              {(() => {
+                const hasConnected = linkedInConnections.some(conn => conn.connected);
+                const primaryStatus = linkedInConnections.length > 0
+                  ? linkedInConnections[0].status || (linkedInConnections[0].connected ? 'connected' : 'disconnected')
+                  : 'disconnected';
+                const statusDisplay = getStatusDisplay(primaryStatus, hasConnected);
+
+                return (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-200 dark:border-[#0e4835] bg-emerald-50 dark:bg-[#061e19] text-emerald-700 dark:text-[#00d68f] text-xs font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-[#00d68f]" />
+                    <span>
+                      {linkedInConnections.length > 0 ? `${linkedInConnections.length} Account${linkedInConnections.length > 1 ? 's' : ''}` : statusDisplay.text}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
-          </div>
-          <div className="flex items-center justify-end sm:justify-start flex-shrink-0">
-            {(() => {
-              const hasConnected = linkedInConnections.some(conn => conn.connected);
-              const primaryStatus = linkedInConnections.length > 0 
-                ? linkedInConnections[0].status || (linkedInConnections[0].connected ? 'connected' : 'disconnected')
-                : 'disconnected';
-              const statusDisplay = getStatusDisplay(primaryStatus, hasConnected);
-              const StatusIcon = statusDisplay.icon;
-              return (
-                <div className={`flex items-center px-3 py-1.5 rounded-full border-2 text-xs sm:text-sm ${
-                  statusDisplay.color === 'text-green-600' ? 'bg-green-50 border-green-200' :
-                  statusDisplay.color === 'text-gray-400' ? 'bg-gray-50 dark:bg-slate-800 border-gray-200' :
-                  statusDisplay.color === 'text-yellow-600' ? 'bg-yellow-50 border-yellow-200' :
-                  statusDisplay.color === 'text-orange-600' ? 'bg-orange-50 border-orange-200' :
-                  'bg-red-50 border-red-200'
-                }`}>
-                  {statusDisplay.showPulse && (
-                    <div className={`h-2 w-2 sm:h-2.5 sm:w-2.5 ${statusDisplay.bgColor} rounded-full mr-1.5 sm:mr-2 animate-pulse flex-shrink-0`}></div>
-                  )}
-                  <StatusIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 ${statusDisplay.color} flex-shrink-0`} />
-                  <span className={`font-semibold ${statusDisplay.color} whitespace-nowrap`}>
-                    {linkedInConnections.length > 0 ? `${linkedInConnections.length} Account${linkedInConnections.length > 1 ? 's' : ''}` : statusDisplay.text}
-                  </span>
-                </div>
-              );
-            })()}
           </div>
         </div>
-        {/* Display all connected LinkedIn accounts */}
+
+        {/* AI Replies toast feedback */}
+        {aiToast && (
+          <div
+            className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
+              aiToast.kind === 'ok'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+                : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
+            }`}
+          >
+            {aiToast.kind === 'ok' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            {aiToast.message}
+          </div>
+        )}
+
+        {/* 2. SECTION TITLE */}
         {linkedInConnections.length > 0 && (
-          <div className="mb-6 space-y-3">
-            <h4 className="font-medium text-gray-900 text-sm mb-2">
-              Connected Accounts ({linkedInConnections.length})
-            </h4>
+          <h4 className="font-medium text-slate-700 dark:text-gray-100 text-sm pt-1">
+            Connected Accounts ({linkedInConnections.length})
+          </h4>
+        )}
+
+        {/* 3. CONNECTED ACCOUNTS LIST */}
+        {linkedInConnections.length > 0 && (
+          <div className="space-y-3">
             {linkedInConnections.map((account, index) => {
-              const accountStatusDisplay = getStatusDisplay(account.status, account.connected);
-              const AccountStatusIcon = accountStatusDisplay.icon;
-              const accountNumber = index + 1;
               return (
-                <div key={account.id || account.email || `account-${index}`} className="p-4 rounded-lg border bg-blue-50 border-blue-200">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <p className="font-medium text-gray-900 truncate">{account.accountName || account.profileName || account.email || 'LinkedIn Account'}</p>
-                        <div className={`flex items-center px-2 py-1 rounded-md text-xs font-medium w-fit flex-shrink-0 ${
-                          accountStatusDisplay.color === 'text-green-600' ? 'bg-green-100 text-green-700' :
-                          accountStatusDisplay.color === 'text-gray-400' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600' :
-                          accountStatusDisplay.color === 'text-yellow-600' ? 'bg-yellow-100 text-yellow-700' :
-                          accountStatusDisplay.color === 'text-orange-600' ? 'bg-orange-100 text-orange-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {accountStatusDisplay.showPulse && (
-                            <div className={`h-1.5 w-1.5 ${accountStatusDisplay.bgColor} rounded-full mr-1.5 animate-pulse flex-shrink-0`}></div>
-                          )}
-                          <AccountStatusIcon className={`h-3 w-3 mr-1 ${accountStatusDisplay.color} flex-shrink-0`} />
-                          <span className="whitespace-nowrap">{accountStatusDisplay.text}</span>
-                        </div>
-                      </div>
-                      {account.email && (
-                        <p className="text-sm text-gray-600 break-words">{account.email}</p>
-                      )}
-                      {account.profileUrl && (
-                        <a
-                          href={account.profileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center mt-1 break-all"
-                        >
-                          View Profile
-                          <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                        </a>
-                      )}
-                      {account.connectedAt && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Connected on {new Date(account.connectedAt).toLocaleDateString()}
-                        </p>
-                      )}
-                      {account.status && account.status !== 'connected' && account.status !== 'active' && (
-                        <div className={`mt-3 p-2 rounded-md text-xs ${
-                          account.status === 'disconnected' || account.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
-                          account.status === 'stopped' ? 'bg-yellow-100 text-yellow-700' :
-                          account.status === 'checkpoint' || account.status === 'credentials_expired' ? 'bg-orange-100 text-orange-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {(account.status === 'disconnected' || account.status === 'inactive') && '⚠️ Account is disconnected. Please reconnect to continue using LinkedIn features.'}
-                          {account.status === 'stopped' && '⏸️ Account is stopped. Click reconnect to resume.'}
-                          {(account.status === 'checkpoint' || account.status === 'credentials_expired') && '🔒 LinkedIn requires verification. Please reconnect with your credentials.'}
-                          {account.status === 'unknown' && '❓ Unable to determine account status. Please check your connection.'}
-                          {account.status === 'error' && '❌ Error checking account status. Please try reconnecting.'}
-                        </div>
-                      )}
+                <div 
+                  key={account.id || account.email || `account-${index}`} 
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#08172e] shadow-sm dark:shadow-none"
+                >
+                  {/* Header Row: Account Name & Actions Vertically Centered */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900 dark:text-gray-100 truncate text-sm">
+                        {account.accountName || account.profileName || account.email || 'LinkedIn Account'}
+                      </p>
                     </div>
-                    <div className="flex sm:ml-4 sm:flex-col gap-2">
+
+                    {/* Status Badge + Disconnect Button */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-[#0e4835] bg-emerald-50 dark:bg-[#061e19] text-emerald-700 dark:text-[#00d68f] text-xs font-medium">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-[#00d68f]"></span>
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-[#00d68f]" />
+                        <span>Connected</span>
+                      </div>
+
                       <button
                         onClick={() => disconnectLinkedIn(account.id, account.email)}
                         disabled={disconnecting[account.id || 'default']}
-                        className="px-4 py-2 text-sm sm:text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap w-full sm:w-auto"
+                        className="px-4 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-950 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer font-medium"
                       >
                         {disconnecting[account.id || 'default'] ? 'Disconnecting...' : 'Disconnect'}
                       </button>
                     </div>
                   </div>
+
+                  {/* Profile Info Sub-details */}
+                  <div className="mt-1">
+                    {account.profileUrl && (
+                      <a
+                        href={account.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 break-all"
+                      >
+                        View Profile
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    )}
+
+                    {account.connectedAt && (
+                      <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                        Connected on {new Date(account.connectedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status warnings */}
+                  {account.status && account.status !== 'connected' && account.status !== 'active' && (
+                    <div className="mt-3 p-2 rounded-md text-xs bg-amber-50 dark:bg-yellow-950/30 text-amber-800 dark:text-yellow-400 border border-amber-200 dark:border-yellow-500/20">
+                      {(account.status === 'disconnected' || account.status === 'inactive') && '⚠️ Account is disconnected. Please reconnect to continue using LinkedIn features.'}
+                      {account.status === 'stopped' && '⏸️ Account is stopped. Click reconnect to resume.'}
+                      {(account.status === 'checkpoint' || account.status === 'credentials_expired') && '🔒 LinkedIn requires verification. Please reconnect with your credentials.'}
+                      {account.status === 'unknown' && '❓ Unable to determine account status. Please check your connection.'}
+                      {account.status === 'error' && '❌ Error checking account status. Please try reconnecting.'}
+                    </div>
+                  )}
+
+                  {/* AI Toggle */}
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <AiToggleChip
+                      label="AI Replies"
+                      enabled={automationSettings?.ai_agent_enabled ?? true}
+                      disabled={!automationSettings || aiRepliesSaving}
+                      onToggle={toggleAiReplies}
+                    />
+                  </div>
+                  <LinkedInPlanSummary caps={account.capabilities} />
                 </div>
               );
             })}
           </div>
         )}
-        <div className="space-y-4">
-          {/* <div className="border-t border-gray-200 pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">Features</h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Automatically enrich leads with LinkedIn profile data</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Extract decision maker information and contact details</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Access to company employee lists and org charts</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Send automated connection requests and messages</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Track engagement and response rates</span>
-              </li>
-            </ul>
-          </div> */}
-          <div className="border-t border-gray-200 pt-4 space-y-3">
-            {/* Always show "Add Account" button to allow multiple connections */}
-            <button
-              onClick={() => setShowConnectionModal(true)}
-              className="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 transition-colors flex items-center justify-center text-sm sm:text-base font-medium"
-            >
-              {/* Official LinkedIn Icon */}
-              <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d={LINKEDIN_LOGO_PATH}/>
-              </svg>
-              {linkedInConnections.length > 0 ? 'Add Another LinkedIn Account' : 'Connect LinkedIn Account'}
-            </button>
-          </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800 min-w-0">
-                <p className="font-medium mb-1">Important Note</p>
-                <p className="leading-relaxed">
-                  LinkedIn has strict rate limits and usage policies. Automated actions should be used 
-                  responsibly to avoid account restrictions. We recommend limiting connection requests 
-                  to 50-100 per day.
-                </p>
-              </div>
+
+        {/* 4. ADD BUTTON */}
+        <button
+          onClick={() => setShowConnectionModal(true)}
+          className="w-full h-12 px-5 rounded-2xl text-sm font-semibold text-white bg-[#2463ef] hover:bg-[#1d4ed8] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1d4ed8]/20 active:scale-[0.99] cursor-pointer border-none"
+        >
+          <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24">
+            <path d={LINKEDIN_LOGO_PATH}/>
+          </svg>
+          <span>
+            {linkedInConnections.length > 0 ? 'Add Another LinkedIn Account' : 'Connect LinkedIn Account'}
+          </span>
+        </button>
+
+        {/* 5. SEPARATED IMPORTANT NOTE CARD */}
+        <div className="bg-amber-50 dark:bg-[#071925] border border-amber-200 dark:border-yellow-500/30 rounded-2xl p-4">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+            <div className="text-sm text-amber-900 dark:text-yellow-200 min-w-0 leading-relaxed">
+              <p className="font-semibold mb-1 text-amber-950 dark:text-yellow-300">Important Note</p>
+              <span>
+                LinkedIn has strict rate limits and usage policies. Automated actions should be used
+                responsibly to avoid account restrictions.{" "}
+              </span>
+              <span className="text-amber-700 dark:text-yellow-400 font-semibold">
+                We recommend limiting connection requests to 50-100 per day.
+              </span>
             </div>
           </div>
         </div>
       </div>
       {/* Connection Modal */}
       <Dialog open={showConnectionModal} onOpenChange={setShowConnectionModal}>
-        <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0 bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800/80 outline-none focus:outline-none focus-visible:outline-none">
+
+          <DialogHeader className="bg-slate-50 dark:bg-[#000724] px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl">
             <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 p-2 rounded">
-                {/* Official LinkedIn Icon */}
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="#0077B5">
-                  <path d={LINKEDIN_LOGO_PATH}/>
-                </svg>
+              <div className="bg-blue-100 dark:bg-[#000724] p-2 rounded-lg mr-3 flex-shrink-0">
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>
+                <Linkedin className="h-6 w-6 text-blue-700 "/>
+                </div>
               </div>
-              <DialogTitle className="text-xl font-semibold text-gray-900">Sign in to LinkedIn</DialogTitle>
+              <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-white">Sign in to LinkedIn</DialogTitle>
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 max-h-[70vh]">
             {/* Choose Method */}
-            <div className="mb-6">
-              <h3 className="text-center text-2xl font-semibold text-gray-700 mb-4">Choose a method</h3>
-              <div className="flex gap-3 justify-center">
+            <div className="bg-slate-50/60 dark:bg-[#00051d]/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/40 text-center">
+              <h4 className="mb-2.5 text-xs font-bold text-slate-400 dark:text-slate-300 uppercase tracking-wider">
+                Choose method
+              </h4>
+              <div className="w-full flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800/80 dark:bg-[#00051d]">
                 <button
+                    type="button"
                   onClick={() => setAuthMethod('credentials')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg h-11 text-sm font-bold transition-all cursor-pointer ${
                     authMethod === 'credentials'
-                      ? 'bg-gray-100 text-gray-900 border-2 border-gray-300'
-                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                      ? 'bg-[#0b1957] text-white shadow-md dark:bg-[#2563eb]'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/40'
                   }`}
                 >
                   Credentials
                 </button>
                 <button
+                    type="button"
                   onClick={() => setAuthMethod('cookies')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg h-11 text-sm font-bold transition-all cursor-pointer ${
                     authMethod === 'cookies'
-                      ? 'bg-white text-gray-900 border-2 border-gray-300'
-                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                      ? 'bg-[#0b1957] text-white shadow-md dark:bg-[#2563eb]'
+                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/40'
                   }`}
                 >
                   Cookies
@@ -848,14 +961,14 @@ export const LinkedInIntegration: React.FC = () => {
 
             {/* Credentials Form */}
             {authMethod === 'credentials' && (
-              <div className="space-y-4">
-                <div>
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="space-y-1">
                   <input
                     type="email"
                     placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
                 <div className="relative">
@@ -864,12 +977,12 @@ export const LinkedInIntegration: React.FC = () => {
                     placeholder="LinkedIn Details"
                     value={pinCode}
                     onChange={(e) => setPinCode(e.target.value)}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={inputClass}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none cursor-pointer"
                     aria-label={showPin ? "Hide pin" : "Show pin"}
                   >
                     {showPin ? (
@@ -884,28 +997,27 @@ export const LinkedInIntegration: React.FC = () => {
 
             {/* Cookies Form */}
             {authMethod === 'cookies' && (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-gray-700 mb-1">
+              <div className="space-y-4 animate-in fade-in duration-200">
+               <div className="bg-slate-50/50 dark:bg-[#00051d]/30 border border-slate-100 dark:border-slate-800/60 p-3 rounded-xl">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-300 leading-relaxed">
                     Copy your LinkedIn cookies.{' '}
                     <button
                       onClick={() => setShowCookieHelp(!showCookieHelp)}
-                      className="text-blue-600 hover:text-blue-700 underline"
+                      className="text-blue-500 font-bold hover:underline cursor-pointer inline-flex items-center gap-0.5"
                     >
                       How to find them?
                     </button>
                   </p>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     Your cookies need to be collected in the same browser as this page.
                   </p>
                 </div>
                 {showCookieHelp && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">How to find my cookies?</h4>
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <p className="font-medium">Follow the steps to find your linkedin cookies (not available on mobile)</p>
+                  <div className="bg-slate-50 dark:bg-[#00051d]/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <h4 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider mb-2">How to find my cookies?</h4>
+                    <div className="text-xs text-slate-500 dark:text-slate-300 space-y-2 leading-relaxed font-medium"><p>Follow the steps to find your linkedin cookies (not available on mobile)</p>
                       <ol className="list-decimal list-inside space-y-1 ml-2">
-                        <li>Open linkedin in a new tab (or click here: <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">linkedin</a>).</li>
+                        <li>Open linkedin in a new tab (or click here: <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">linkedin</a>).</li>
                         <li>Log in to your account.</li>
                         <li>Open your browser&apos;s developer console (F12 for Chrome and Firefox, option + command + I for Safari) then go to the &quot;application&quot; or &quot;storage&quot; tab.</li>
                         <li>Open the cookies folder and click on the one called &quot;https://www.linkedin.com&quot;.</li>
@@ -914,17 +1026,17 @@ export const LinkedInIntegration: React.FC = () => {
                     </div>
                   </div>
                 )}
-                <div>
+                <div className="space-y-1">
                   <input
                     type="text"
                     placeholder="Enter your li_at value"
                     value={liAtCookie}
                     onChange={(e) => setLiAtCookie(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
-                <div>
-                  <p className="text-gray-700 mb-2">
+                <div className="space-y-1 pt-1">
+                  <p className="text-[11px] font-medium text-slate-400 dark:text-slate-300 leading-normal mb-1">
                     If your account has Recruiter or Sales Navigator subscription, copy the li_a too.
                   </p>
                   <input
@@ -932,71 +1044,61 @@ export const LinkedInIntegration: React.FC = () => {
                     placeholder="Enter your li_a value (optional)"
                     value={liACookie}
                     onChange={(e) => setLiACookie(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={inputClass}
                   />
                 </div>
               </div>
             )}
 
             {/* Optional Settings */}
-            <div className="mt-6">
+            <div className="pt-1">
               <button
                 onClick={() => setShowOptionalSettings(!showOptionalSettings)}
-                className="flex items-center text-gray-700 hover:text-gray-900 font-medium"
+                className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-slate-300 cursor-pointer select-none"
               >
-                {showOptionalSettings ? (
-                  <ChevronUp className="h-5 w-5 mr-1" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 mr-1" />
-                )}
+                <span className={`inline-block transition-transform duration-200 mr-1 ${showOptionalSettings ? 'rotate-90' : ''}`}>›</span>
                 Optional settings
               </button>
               {showOptionalSettings && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    Additional configuration options will be available here for advanced users.
-                  </p>
+                <div className="mt-2.5 p-3.5 bg-slate-50/50 dark:bg-[#00051d]/40 rounded-xl border border-slate-200 dark:border-slate-800/80 text-xs text-slate-400 dark:text-slate-300 font-medium leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                  Additional configuration options will be available here for advanced users.
                 </div>
               )}
             </div>
 
             {/* Error Message */}
             {connectionError && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 font-semibold leading-relaxed animate-in fade-in duration-200">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 text-red-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-800">Connection Failed</p>
-                    <p className="text-sm text-red-700 mt-1">{connectionError}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-red-800 dark:text-red-400">Connection Failed</p>
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400/80 mt-0.5">{connectionError}</p>
                   </div>
                 </div>
-              </div>
             )}
 
             {/* Success Message */}
             {connectionSuccess && (
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400 font-semibold leading-relaxed animate-in fade-in duration-200">
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800">Connection Successful!</p>
-                    <p className="text-sm text-green-700 mt-1">Your LinkedIn account has been connected successfully.</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Connection Successful!</p>
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400/80 mt-0.5">Your LinkedIn account has been connected successfully</p>
                   </div>
                 </div>
-              </div>
             )}
           </div>
 
-          <DialogActions className="px-8 pb-8 pt-4">
-            <Button
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50 dark:bg-[#000724] px-6 py-3.5 rounded-b-2xl">
+            <button
               onClick={handleConnect}
               disabled={connecting || (authMethod === 'credentials' ? !email || !pinCode : !liAtCookie)}
-              className={`px-8 h-11 rounded-full font-semibold transition-colors ${
+              className={`px-5 h-10 rounded-xl font-bold text-sm transition-all shadow-md cursor-pointer border-none flex items-center justify-center min-w-[100px] active:scale-95 ${
                 connectionSuccess
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : connectionError
                   ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-[#0B1957] hover:bg-[#0B1957]/90 text-white'
+                  : 'bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 text-white'
               }`}
             >
               {connecting ? (
@@ -1014,23 +1116,23 @@ export const LinkedInIntegration: React.FC = () => {
               ) : (
                 'Login'
               )}
-            </Button>
-          </DialogActions>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
-      {/* Checkpoint Verification Modal (OTP or Yes/No) — LinkedIn-style UI */}
+      {/* Checkpoint Verification Modal (OTP or Yes/No) - LinkedIn-style UI */}
       <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
-        <DialogContent className="max-w-sm p-0">
-          <DialogHeader className="text-center justify-center pt-8">
-            <div className="flex justify-center mb-4">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="#0A66C2">
-                <path d={LINKEDIN_LOGO_PATH}/>
-              </svg>
+        <DialogContent className="max-w-sm p-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <DialogHeader className="text-center justify-center pt-8 px-6">
+            <div className="bg-white dark:bg-gray-900 p-2 rounded-lg mr-3 flex-shrink-0">
+              <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>
+                <Linkedin className="h-6 w-6 text-blue-700 "/>
+              </div>
             </div>
-            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
               {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
             </DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">
               {currentCheckpointAccount?.checkpoint?.is_yes_no
                 ? 'Approve the sign-in request on your mobile device'
                 : 'We sent a code to complete your sign-in'}
@@ -1042,14 +1144,14 @@ export const LinkedInIntegration: React.FC = () => {
               <div className="space-y-5">
                 {/* Phone icon + prompt */}
                 <div className="flex flex-col items-center text-center gap-3">
-                  <div className="w-14 h-14 rounded-full bg-[#EEF3FB] flex items-center justify-center">
-                    <svg className="w-7 h-7 text-[#0A66C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="w-14 h-14 rounded-full bg-[#EEF3FB] dark:bg-blue-950/40 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-[#0A66C2] dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={PHONE_AUTH_PATH} />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    We sent a notification to the <span className="font-semibold text-gray-800">LinkedIn app</span> on your phone.
-                    Tap <span className="font-bold text-[#057642]">Yes</span> to approve this sign-in.
+                  <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                    We sent a notification to the <span className="font-semibold text-gray-800 dark:text-gray-200">LinkedIn app</span> on your phone.
+                    Tap <span className="font-bold text-[#057642] dark:text-green-400">Yes</span> to approve this sign-in.
                   </p>
                 </div>
 
@@ -1058,42 +1160,42 @@ export const LinkedInIntegration: React.FC = () => {
                   {[
                     'Open the LinkedIn app on your phone',
                     'Find the sign-in approval notification',
-                    <>Tap <strong className="text-[#057642]">Yes</strong> to approve this login</>,
+                    <>Tap <strong className="text-[#057642] dark:text-green-400">Yes</strong> to approve this login</>,
                   ].map((step, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#0A66C2] text-white text-xs font-semibold flex items-center justify-center mt-0.5">
                         {i + 1}
                       </span>
-                      <span className="text-sm text-gray-700">{step}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{step}</span>
                     </li>
                   ))}
                 </ol>
 
                 {/* Waiting status */}
                 {yesNoPolling && !autoResolving && (
-                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] rounded-lg">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] flex-shrink-0" />
-                    <p className="text-sm text-[#0A66C2] font-medium">Waiting for your approval...</p>
+                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EEF3FB] dark:bg-blue-950/30 rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#0A66C2] dark:text-blue-400 flex-shrink-0" />
+                    <p className="text-sm text-[#0A66C2] dark:text-blue-400 font-medium">Waiting for your approval...</p>
                   </div>
                 )}
 
                 {/* Approved status */}
                 {autoResolving && (
-                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] rounded-lg">
-                    <CheckCircle2 className="h-4 w-4 text-[#057642] flex-shrink-0" />
-                    <p className="text-sm text-[#057642] font-semibold">Approval detected! Connecting your account...</p>
+                  <div className="flex items-center gap-2 px-4 py-3 bg-[#EAF5EA] dark:bg-green-950/20 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-[#057642] dark:text-green-400 flex-shrink-0" />
+                    <p className="text-sm text-[#057642] dark:text-green-400 font-semibold">Approval detected! Connecting your account...</p>
                   </div>
                 )}
 
                 {/* Hint */}
-                <p className="text-xs text-gray-400 text-center leading-relaxed">
-                  Don't see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center leading-relaxed">
+                  Don&apos;t see the notification? Open the LinkedIn app manually and look for a security alert or login approval request.
                 </p>
               </div>
             ) : (
               /* ── OTP Checkpoint ── */
               <div>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-600 dark:text-slate-300 mb-4">
                   {currentCheckpointAccount?.checkpoint?.message || 'Enter the verification code sent to your email or phone.'}
                 </p>
                 <input
@@ -1105,11 +1207,11 @@ export const LinkedInIntegration: React.FC = () => {
                     setOtp(value);
                     setOtpError(null);
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono"
+                  className={`w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono ${autofillClasses}`}
                   maxLength={6}
                   autoFocus
                 />
-                <p className="text-xs text-gray-400 mt-2 text-center">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
                   Enter the 6-digit code sent to your email or phone
                 </p>
               </div>
@@ -1117,9 +1219,9 @@ export const LinkedInIntegration: React.FC = () => {
 
             {/* Error */}
             {otpError && (
-              <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-700">{otpError}</p>
+              <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-400">{otpError}</p>
               </div>
             )}
           </div>
@@ -1131,7 +1233,7 @@ export const LinkedInIntegration: React.FC = () => {
                 disabled={verifyingOtp || otp.length !== 6}
                 className={`w-full py-3 rounded-full text-sm font-semibold transition-colors ${
                   verifyingOtp || otp.length !== 6
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                     : 'bg-[#0A66C2] text-white hover:bg-[#004182]'
                 }`}
               >
@@ -1149,3 +1251,87 @@ export const LinkedInIntegration: React.FC = () => {
     </>
   );
 };
+
+// ── AI Replies chip ──────────────────────────────────────────────────────────
+// Green pill toggle mirroring Instagram's connected-account cards
+/**
+ * LinkedIn plan and InMail credits, as the integration sees them.
+ *
+ * Deliberately reports what Unipile can reach, not what the LinkedIn website
+ * shows the account owner. Those two disagree in a way that has already cost a
+ * campaign: an account connected before a Sales Navigator seat was added
+ * reports the seat as absent and every credit pool as null, while its owner can
+ * see 149 credits in LinkedIn. Showing the LinkedIn figure would hide exactly
+ * the problem this is here to surface.
+ */
+function LinkedInPlanSummary({ caps }: { caps?: LinkedInCapabilities }) {
+  if (!caps?.known) return null;
+
+  const credits = caps.credits || {};
+  const plans = [
+    caps.salesNavigator && 'Sales Navigator',
+    caps.recruiter && 'Recruiter',
+    caps.premium && !caps.salesNavigator && !caps.recruiter && 'Premium',
+  ].filter(Boolean) as string[];
+
+  const pools = [
+    { label: 'Sales Navigator', n: credits.salesNavigator || 0 },
+    { label: 'Recruiter', n: credits.recruiter || 0 },
+    { label: 'Premium', n: credits.premium || 0 },
+  ].filter((p) => p.n > 0);
+
+  // Paid plan, no reachable credits: the case worth calling out, because the
+  // owner will be looking at credits in LinkedIn and wondering why sends fail.
+  const paidButUnusable = (caps.premium || caps.salesNavigator || caps.recruiter) && !caps.canInMail;
+
+  return (
+    <div className="mt-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px]">
+        <span className="text-gray-500 dark:text-white/50">Plan</span>
+        <span className="font-medium text-gray-800 dark:text-white/85">
+          {plans.length ? plans.join(' + ') : 'Free'}
+        </span>
+        <span className="text-gray-500 dark:text-white/50">InMail credits</span>
+        <span className="font-medium text-gray-800 dark:text-white/85">
+          {pools.length ? pools.map((p) => `${p.n} ${p.label}`).join(', ') : 'none available'}
+        </span>
+      </div>
+      {paidButUnusable && (
+        <p className="mt-1.5 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+          This account has a paid plan, but no InMail credits are visible to Mr LAD. Sales Navigator
+          credits stay hidden unless the account was connected while that seat was active. Reconnect
+          the account to pick them up.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// (components/instagram/InstagramTenantOnboarding.tsx → AiToggleChip).
+function AiToggleChip({
+  label,
+  enabled,
+  onToggle,
+  disabled,
+}: {
+  label: string;
+  enabled: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        enabled
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20'
+          : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10'
+      }`}
+    >
+      <Power className="h-3 w-3" />
+      {label}: {enabled ? 'on' : 'off'}
+    </button>
+  );
+}

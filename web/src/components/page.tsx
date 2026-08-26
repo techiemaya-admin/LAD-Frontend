@@ -178,7 +178,7 @@ export default function CampaignAnalyticsPage() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)} 
+              onClick={() => router.push(`/onboarding/advanced-search-ai?campaignId=${campaignId}`)}
               className="border-white text-white hover:bg-white/10"
             >
               Edit Campaign

@@ -6,7 +6,7 @@
  *   channel=personal → Node.js /api/personal-whatsapp/conversations/context-statuses
  *   channel=waba     → Python WABA service, with Node.js fallback on 5xx
  *                      (e.g. when the tenant isn't in the Python service's
- *                       tenant_database_config yet — staging / new tenants)
+ *                       tenant_database_config yet - staging / new tenants)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { proxyToPythonService, getWABAServiceUrl, getBackendUrl } from '../../utils/python-proxy';
@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
     const wabaResp = await proxyToPythonService(req, getWABAServiceUrl(), '/api/conversations/context-statuses');
 
     if (wabaResp.status < 500) {
-      // 2xx / 4xx — return as-is (4xx = real client error, not a missing-tenant problem)
+      // 2xx / 4xx - return as-is (4xx = real client error, not a missing-tenant problem)
       return wabaResp;
     }
 
-    // 5xx from Python service — check if it's a missing tenant_database_config error
+    // 5xx from Python service - check if it's a missing tenant_database_config error
     let body: any = {};
     try { body = await wabaResp.json(); } catch { /* ignore parse error */ }
     const detail: string = body?.detail || body?.error || body?.message || '';
@@ -39,13 +39,13 @@ export async function GET(req: NextRequest) {
                             detail.toLowerCase().includes('tenant_database_config');
 
     if (!isTenantMissing) {
-      // Unrelated 5xx — surface the original error
+      // Unrelated 5xx - surface the original error
       return NextResponse.json(body, { status: wabaResp.status });
     }
 
-    // Tenant not configured in Python service — fall through to Node.js
+    // Tenant not configured in Python service - fall through to Node.js
   } catch {
-    // Python service unreachable — fall through to Node.js
+    // Python service unreachable - fall through to Node.js
   }
 
   // ── Fallback: Node.js backend ─────────────────────────────────────────────

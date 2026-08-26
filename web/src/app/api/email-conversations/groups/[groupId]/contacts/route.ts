@@ -1,4 +1,4 @@
-/** POST /api/email-conversations/groups/[groupId]/contacts — add contacts */
+/** POST /api/email-conversations/groups/[groupId]/contacts - add contacts */
 import { NextRequest } from 'next/server';
 import { proxyToWABA } from '../../../utils/proxy';
 

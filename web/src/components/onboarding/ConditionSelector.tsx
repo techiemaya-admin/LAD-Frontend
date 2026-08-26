@@ -80,7 +80,7 @@ export default function ConditionSelector({ onSubmit, onSkip }: ConditionSelecto
       {selected?.toLowerCase().includes('custom') && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 animate-in fade-in slide-in-from-top-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Describe your custom condition (e.g., "Replied positively")
+            Describe your custom condition (e.g., &quot;Replied positively&quot;)
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#172560] focus-within:border-transparent">

@@ -13,7 +13,6 @@ import Link from "next/link";
 export function SignupForm() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form submitted");
   };
 
   return (

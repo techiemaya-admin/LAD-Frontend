@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { proxyToPythonService, getWhatsAppServiceUrl } from '../../../utils/python-proxy';
 import { getBackendUrl } from '../../../../utils/backend';
+import { resolveAuthorizedTenantId } from '../../../../utils/tenant-scope';
 
 export async function PATCH(
   req: NextRequest,
@@ -29,7 +30,8 @@ export async function PATCH(
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const auth = req.headers.get('authorization');
     if (auth) headers['Authorization'] = auth;
-    const tid = req.headers.get('x-tenant-id');
+    // Non-super-admins can't override their tenant via x-tenant-id (utils/tenant-scope).
+    const tid = resolveAuthorizedTenantId(req, { logLabel: 'admin-wa-accounts' });
     if (tid) headers['X-Tenant-ID'] = tid;
     const resp = await fetch(`${backendUrl}/api/whatsapp-conversations/admin/whatsapp-accounts/${slug}`, {
       method: 'PATCH', headers, body,
@@ -53,23 +55,13 @@ export async function DELETE(
     const wabaReq = new NextRequest(url, req);
 
     // Python DELETE endpoint requires tenant_id as a query param (Query(...)).
-    // Embed it directly in the path string — nextUrl.searchParams can cache the
+    // Embed it directly in the path string - nextUrl.searchParams can cache the
     // original URL when using new NextRequest(modifiedUrl, req), so setting it
     // on the cloned URL is not reliably forwarded by proxyToPythonService.
-    // Try header first, fall back to JWT cookie decode.
-    let tenantId = req.headers.get('x-tenant-id');
-    if (!tenantId) {
-      const token = req.cookies.get('token')?.value || req.cookies.get('access_token')?.value;
-      if (token) {
-        try {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-            tenantId = payload.tenantId || payload.tenant_id || null;
-          }
-        } catch { /* ignore */ }
-      }
-    }
+    // Resolve the AUTHORISED tenant: a client x-tenant-id naming another tenant
+    // is honoured only for the super admin (utils/tenant-scope). proxyToPythonService
+    // re-applies the same gate to the header + this query param as defence in depth.
+    const tenantId = resolveAuthorizedTenantId(req, { logLabel: 'admin-wa-accounts' });
     const pythonPath = tenantId
       ? `/admin/whatsapp-accounts/${slug}?tenant_id=${encodeURIComponent(tenantId)}`
       : `/admin/whatsapp-accounts/${slug}`;

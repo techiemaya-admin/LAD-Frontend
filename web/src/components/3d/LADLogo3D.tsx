@@ -214,4 +214,4 @@ const LADLogo3D = ({ size = 'md', animated = true }: LADLogo3DProps) => {
     </div>
   );
 };
-export default LADLogo3D;
+export default LADLogo3D;

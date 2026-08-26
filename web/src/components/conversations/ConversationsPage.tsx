@@ -1,484 +1,34 @@
 "use client";
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { useConversations } from '@lad/frontend-features/conversations';
-import { ConversationSidebar } from './ConversationSidebar';
-import { ChatWindow } from './ChatWindow';
-import { GroupChatWindow } from './GroupChatWindow';
-import { ConversationContextPanel } from './ConversationContextPanel';
 import { AIPlayground } from './AIPlayground';
+import { AILearningsPanel } from './AILearningsPanel';
 import { LinkedInConversationView } from './LinkedInConversationView';
 import { EmailChannelView } from './EmailChannelView';
-import { CreateBroadcastGroupModal } from './CreateBroadcastGroupModal';
-import type { ChatGroup } from './ChatGroupManager';
-import type { Conversation, Channel } from '@/types/conversation';
+import InstagramConversationView from './InstagramConversationView';
+import { WABusinessView } from './WABusinessView';
 import { Button } from '@/components/ui/button';
-import { PanelLeft, FlaskConical, X } from 'lucide-react';
+import { FlaskConical, GraduationCap, X } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { ChannelIcon } from './ChannelIcon';
 import { cn } from '@/lib/utils';
 
-const CONV_API = '/api/whatsapp-conversations/conversations';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Inner view — one instance per tab, fully independent hook + state
-// ─────────────────────────────────────────────────────────────────────────────
-function ChannelConversationView({ 
-  channel, 
-  onShowBroadcastModal,
-  visibleTabs,
-  activeTab,
-  setActiveTab,
-  isPlaygroundOpen,
-  setIsPlaygroundOpen,
-  isSidebarCollapsed,
-  setIsSidebarCollapsed,
-  isMobile
-}: { 
-  channel: 'personal' | 'waba'; 
-  onShowBroadcastModal?: () => void;
-  visibleTabs: { id: WaTab; label: string; sublabel: string }[];
-  activeTab: WaTab;
-  setActiveTab: (tab: WaTab) => void;
-  isPlaygroundOpen: boolean;
-  setIsPlaygroundOpen: (val: boolean) => void;
-  isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: (val: boolean) => void;
-  isMobile: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const {
-    conversations,
-    selectedConversation,
-    selectedId,
-    selectConversation,
-    channelFilter,
-    setChannelFilter,
-    contextStatusFilter,
-    setContextStatusFilter,
-    searchQuery,
-    setSearchQuery,
-    hideEmpty,
-    setHideEmpty,
-    sortBy,
-    setSortBy,
-    unreadCounts,
-    sendMessage,
-    markAsResolved,
-    muteConversation,
-    loadMore,
-    isLoadingMore,
-    hasMore,
-  } = useConversations({ channel });
-
-
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
-  const [contextPanelTab, setContextPanelTab] = useState<'assignment' | 'notes' | 'comments'>('assignment');
-  const [activeGroup, setActiveGroup] = useState<ChatGroup | null>(null);
-  const [groupMemberSelected, setGroupMemberSelected] = useState(false);
-  const [groupInfoAutoOpen, setGroupInfoAutoOpen] = useState(false);
-  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [createGroupSelectedIds, setCreateGroupSelectedIds] = useState<string[]>([]);
-
-  const handleSelectGroup = useCallback((group: ChatGroup) => {
-    setActiveGroup(group);
-    setGroupMemberSelected(false);
-    setGroupInfoAutoOpen(false);
-  }, []);
-
-  const handleOpenGroupInfo = useCallback((group: ChatGroup) => {
-    setActiveGroup(group);
-    setGroupMemberSelected(false);
-    setGroupInfoAutoOpen(true);
-  }, []);
-
-  const handleBackFromGroup = useCallback(() => {
-    setActiveGroup(null);
-    setGroupMemberSelected(false);
-    setGroupInfoAutoOpen(false);
-  }, []);
-
-  const handleGroupDeleted = useCallback(() => {
-    setActiveGroup(null);
-    setGroupMemberSelected(false);
-    setGroupInfoAutoOpen(false);
-    setGroupRefreshKey(k => k + 1); // force sidebar to reload groups list
-  }, []);
-
-  const handleSelectConversation = useCallback((id: string) => {
-    selectConversation(id);
-    if (activeGroup) setGroupMemberSelected(true);
-  }, [selectConversation, activeGroup]);
-
-  const toggleSidebar = useCallback(() => setIsSidebarCollapsed((p) => !p), []);
-  const toggleContextPanel = useCallback(() => setIsContextPanelOpen((p) => !p), []);
-
-  // ── CRM actions — fetchWithTenant already sends ?channel= from localStorage,
-  //    but we explicitly append it here so actions go to the right backend.
-  const withChannel = useCallback(
-    (url: string) => `${url}${url.includes('?') ? '&' : '?'}channel=${channel}`,
-    [channel]
-  );
-
-  const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
-  }, [queryClient]);
-
-  const handlePin = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/pin`), { method: 'PATCH' });
-      if (res.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const handleLock = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/lock`), { method: 'PATCH' });
-      if (res.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const handleFavorite = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/favorite`), { method: 'PATCH' });
-      if (res.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const handleExport = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`/api/whatsapp-conversations/conversations/${id}/messages`));
-      const data = await res.json();
-      if (!data.success) return;
-      const lines = (data.data || []).map(
-        (m: { role: string; content: string; created_at: string }) =>
-          `[${m.created_at || ''}] ${m.role}: ${m.content}`
-      );
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `conversation-${id}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {}
-  }, [withChannel]);
-
-  const handleBlock = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}/status`), {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'resolved' }),
-      });
-      if (res.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      const res = await fetchWithTenant(withChannel(`${CONV_API}/${id}`), { method: 'DELETE' });
-      if (res.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const handleBulkAction = useCallback(async (action: string, ids: string[]) => {
-    try {
-      let res: Response | undefined;
-      if (action === 'resolve') {
-        res = await fetchWithTenant(withChannel(`${CONV_API}/bulk`), {
-          method: 'POST',
-          body: JSON.stringify({ action: 'status', ids, status: 'resolved' }),
-        });
-      } else if (action === 'delete') {
-        res = await fetchWithTenant(withChannel(`${CONV_API}/bulk`), {
-          method: 'POST',
-          body: JSON.stringify({ action: 'delete', ids }),
-        });
-      }
-      if (res?.ok) invalidate();
-    } catch {}
-  }, [withChannel, invalidate]);
-
-  const typedConversations = useMemo(() => conversations as Conversation[], [conversations]);
-  const typedSelectedConversation = useMemo(
-    () => selectedConversation as Conversation | null,
-    [selectedConversation]
-  );
-
-  const allUnreadCounts = useMemo(() => {
-    const sdkCounts = unreadCounts as Record<string, number>;
-    return {
-      all: sdkCounts.all ?? 0,
-      whatsapp: sdkCounts.whatsapp ?? 0,
-      linkedin: sdkCounts.linkedin ?? 0,
-      gmail: sdkCounts.gmail ?? 0,
-      outlook: sdkCounts.outlook ?? 0,
-      instagram: sdkCounts.instagram ?? 0,
-    };
-  }, [unreadCounts]);
-
-  return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Sidebar — desktop */}
-      <AnimatePresence mode="wait">
-        {!isSidebarCollapsed && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 340, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="h-full flex-shrink-0 overflow-hidden hidden lg:block"
-          >
-            <ConversationSidebar
-              conversations={typedConversations}
-              selectedId={selectedId}
-              onSelectConversation={handleSelectConversation}
-              channelFilter={channelFilter}
-              onChannelFilterChange={setChannelFilter}
-              contextStatusFilter={contextStatusFilter}
-              onContextStatusFilterChange={setContextStatusFilter}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              unreadCounts={allUnreadCounts}
-              backendChannel={channel}
-              onBulkAction={handleBulkAction}
-              onRefresh={invalidate}
-              onGroupSelect={handleSelectGroup}
-              onOpenGroupInfo={handleOpenGroupInfo}
-              onShowBroadcastModal={onShowBroadcastModal}
-              onShowCreateGroupModal={(ids) => {
-                setCreateGroupSelectedIds(ids);
-                setShowCreateGroupModal(true);
-              }}
-              groupRefreshKey={groupRefreshKey}
-              onLoadMore={loadMore}
-              isLoadingMore={isLoadingMore}
-              hasMore={hasMore}
-              hideEmpty={hideEmpty}
-              onHideEmptyChange={setHideEmpty}
-              sortBy={sortBy}
-              onSortByChange={setSortBy}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile sidebar overlay */}
-      <AnimatePresence>
-        {!isSidebarCollapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 lg:hidden"
-            onClick={toggleSidebar}
-          >
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="w-full h-full bg-card flex flex-col pt-14"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Mobile Sidebar Header with Tabs + Test AI */}
-              <div className="p-3 border-b border-border bg-card flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
-                  {visibleTabs.map(({ id, label, sublabel }) => (
-                    <button
-                      key={id}
-                      onClick={() => setActiveTab(id)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap',
-                        activeTab === id
-                          ? 'text-white shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-border'
-                      )}
-                      style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
-                    >
-                      <ChannelIcon
-                        channel={sublabel as any}
-                        size={14}
-                        overrideColor={activeTab === id ? '#ffffff' : undefined}
-                      />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Mobile Test AI button */}
-                <Button
-                  variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={cn(
-                    "flex-shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold gap-1.5",
-                    isPlaygroundOpen && "text-primary bg-primary/10"
-                  )}
-                  onClick={() => {
-                    setIsPlaygroundOpen(!isPlaygroundOpen);
-                    setIsSidebarCollapsed(true);
-                  }}
-                >
-                  <FlaskConical className="h-3.5 w-3.5" />
-                  Test AI
-                </Button>
-              </div>
-
-              <div className="flex-1 overflow-hidden">
-                {activeTab === 'linkedin' ? (
-                  <LinkedInConversationView 
-                    visibleTabs={visibleTabs}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    onBack={() => setIsSidebarCollapsed(false)}
-                    isMobile={isMobile}
-                  />
-                ) : (
-                  <ConversationSidebar
-                    conversations={typedConversations}
-                    selectedId={selectedId}
-                    onSelectConversation={(id) => {
-                      handleSelectConversation(id);
-                      setIsSidebarCollapsed(true);
-                    }}
-                    channelFilter={channelFilter}
-                    onChannelFilterChange={setChannelFilter}
-                    contextStatusFilter={contextStatusFilter}
-                    onContextStatusFilterChange={setContextStatusFilter}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    unreadCounts={allUnreadCounts}
-                    backendChannel={channel}
-                    onBulkAction={handleBulkAction}
-                    onRefresh={invalidate}
-                    onGroupSelect={handleSelectGroup}
-                    onOpenGroupInfo={handleOpenGroupInfo}
-                    onShowBroadcastModal={onShowBroadcastModal}
-                    onShowCreateGroupModal={(ids) => {
-                      setCreateGroupSelectedIds(ids);
-                      setShowCreateGroupModal(true);
-                    }}
-                    groupRefreshKey={groupRefreshKey}
-                    onLoadMore={loadMore}
-                    isLoadingMore={isLoadingMore}
-                    hasMore={hasMore}
-                    hideEmpty={hideEmpty}
-                    onHideEmptyChange={setHideEmpty}
-                    sortBy={sortBy}
-                    onSortByChange={setSortBy}
-                  />
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Collapsed sidebar toggle (desktop) */}
-      {isSidebarCollapsed && (
-        <div className="hidden lg:flex flex-col items-center py-3 px-2 bg-card border-r border-border">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggleSidebar}>
-            <PanelLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* Main chat area */}
-      {activeGroup && !groupMemberSelected ? (
-        <GroupChatWindow
-          groupId={activeGroup.id}
-          groupName={activeGroup.name}
-          groupColor={activeGroup.color}
-          onBack={handleBackFromGroup}
-          onGroupDeleted={handleGroupDeleted}
-          autoOpenInfo={groupInfoAutoOpen}
-          channel={channel}
-        />
-      ) : (
-        <ChatWindow
-          conversation={typedSelectedConversation}
-          onMarkResolved={markAsResolved}
-          onMute={muteConversation}
-          onSendMessage={sendMessage}
-          onTogglePanel={toggleContextPanel}
-          isPanelOpen={isContextPanelOpen}
-          backendChannel={channel}
-          onPin={handlePin}
-          onLock={handleLock}
-          onFavorite={handleFavorite}
-          onExport={handleExport}
-          onBlock={handleBlock}
-          onDelete={handleDelete}
-          onBack={() => {
-            selectConversation('');
-            setIsSidebarCollapsed(false);
-          }}
-          onOpenAssignmentPanel={() => {
-            setContextPanelTab('assignment');
-            if (!isContextPanelOpen) setIsContextPanelOpen(true);
-          }}
-        />
-      )}
-
-      {/* Context panel */}
-      <AnimatePresence mode="wait">
-        {isContextPanelOpen && typedSelectedConversation && (!activeGroup || groupMemberSelected) && (
-          <motion.div
-            initial={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
-            animate={isMobile ? { x: 0 } : { width: 320, opacity: 1 }}
-            exit={isMobile ? { x: '100%' } : { width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className={cn(
-              "h-full flex-shrink-0 overflow-hidden",
-              "fixed inset-0 z-50 w-full lg:relative lg:inset-auto lg:z-0 lg:w-[320px] bg-background",
-              "pt-14 lg:pt-0"
-            )}
-          >
-            <ConversationContextPanel
-              conversation={typedSelectedConversation}
-              onClose={toggleContextPanel}
-              backendChannel={channel}
-              defaultTab={contextPanelTab}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Create Broadcast Group Modal */}
-      <AnimatePresence>
-        {showCreateGroupModal && (
-          <CreateBroadcastGroupModal
-            open={showCreateGroupModal}
-            onOpenChange={setShowCreateGroupModal}
-            selectedIds={createGroupSelectedIds}
-            onSuccess={() => {
-              setGroupRefreshKey((prev) => prev + 1);
-              setCreateGroupSelectedIds([]);
-            }}
-            channel={channel}
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
-type WaTab = 'personal' | 'waba' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
+type WaTab = 'personal' | 'waba' | 'instagram' | 'linkedin' | 'gmail' | 'outlook' | 'custom';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Check which channels are connected — uses the same endpoints as
+// Utility: Check which channels are connected - uses the same endpoints as
 // the Integrations settings page for consistency.
 // All checks run in parallel so the tab bar appears in one paint.
 // ─────────────────────────────────────────────────────────────────────────────
 interface ChannelConnectionStatus {
   personal: boolean;
   waba: boolean;
+  instagram: boolean;
   linkedin: boolean;
   gmail: boolean;
   gmailEmail: string | null;
@@ -489,7 +39,7 @@ interface ChannelConnectionStatus {
 }
 
 async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
-  const [personalResult, wabaResult, linkedinResult, emailResult] = await Promise.allSettled([
+  const [personalResult, wabaResult, instagramResult, linkedinResult, emailResult] = await Promise.allSettled([
     // Personal WA
     fetchWithTenant('/api/personal-whatsapp/accounts')
       .then(async (res) => {
@@ -507,6 +57,18 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
         const data = await res.json();
         const accounts: any[] = data?.accounts ?? data ?? [];
         return accounts.some((a: any) => a.status === 'active' || a.status === 'connected');
+      })
+      .catch(() => false),
+
+    // Instagram (LAD-Instagram-Comms via Next.js proxy)
+    fetchWithTenant('/api/instagram-conversations/accounts')
+      .then(async (res) => {
+        if (!res.ok) return false;
+        const data = await res.json();
+        const accounts: any[] = data?.accounts ?? data?.data ?? data ?? [];
+        return accounts.some(
+          (a: any) => (a.status ?? 'active') !== 'inactive' && !a.is_deleted,
+        );
       })
       .catch(() => false),
 
@@ -551,6 +113,7 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
   return {
     personal:     personalResult.status === 'fulfilled' ? (personalResult.value as boolean) : false,
     waba:         wabaResult.status    === 'fulfilled' ? (wabaResult.value as boolean)    : false,
+    instagram:    instagramResult.status === 'fulfilled' ? (instagramResult.value as boolean) : false,
     linkedin:     linkedinResult.status === 'fulfilled' ? (linkedinResult.value as boolean) : false,
     gmail:        emailStatus.gmail,
     gmailEmail:   emailStatus.gmailEmail,
@@ -562,27 +125,30 @@ async function getConnectedChannels(): Promise<ChannelConnectionStatus> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Determine default tab — prefer Personal WA, then WABA, then LinkedIn,
+// Determine default tab - prefer Personal WA, then WABA, then LinkedIn,
 // then Gmail, then Outlook
 // ─────────────────────────────────────────────────────────────────────────────
 function getDefaultTab(status: ChannelConnectionStatus): WaTab {
-  if (status.personal) return 'personal';
-  if (status.waba)     return 'waba';
-  if (status.linkedin) return 'linkedin';
-  if (status.gmail)    return 'gmail';
-  if (status.outlook)  return 'outlook';
-  if (status.custom)   return 'custom';
+  if (status.personal)  return 'personal';
+  if (status.waba)      return 'waba';
+  if (status.instagram) return 'instagram';
+  if (status.linkedin)  return 'linkedin';
+  if (status.gmail)     return 'gmail';
+  if (status.outlook)   return 'outlook';
+  if (status.custom)    return 'custom';
   return 'personal'; // fallback (nothing connected)
 }
 
-// All possible tabs in display order
+// All possible tabs in display order - matches the Integrations page order:
+// Personal WA, WA Business, Instagram, LinkedIn, then Email channels
 const ALL_TABS: { id: WaTab; label: string; sublabel: string }[] = [
-  { id: 'personal', label: 'Personal WA', sublabel: 'personal_whatsapp' },
-  { id: 'waba',     label: 'WA Business',  sublabel: 'business_whatsapp' },
-  { id: 'linkedin', label: 'LinkedIn',      sublabel: 'linkedin' },
-  { id: 'gmail',    label: 'Gmail',         sublabel: 'gmail' },
-  { id: 'outlook',  label: 'Outlook',       sublabel: 'outlook' },
-  { id: 'custom',   label: 'Custom Email',  sublabel: 'custom_email' },
+  { id: 'personal',  label: 'WAPA',  sublabel: 'personal_whatsapp' },
+  { id: 'waba',      label: 'WA Business',  sublabel: 'business_whatsapp' },
+  { id: 'instagram', label: 'Instagram',    sublabel: 'instagram_dm' },
+  { id: 'linkedin',  label: 'LinkedIn',     sublabel: 'linkedin' },
+  { id: 'gmail',     label: 'Gmail',        sublabel: 'gmail' },
+  { id: 'outlook',   label: 'Outlook',      sublabel: 'outlook' },
+  { id: 'custom',    label: 'Custom Email', sublabel: 'custom_email' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -592,32 +158,27 @@ function getTabColor(tabId: WaTab): string {
   switch (tabId) {
     case 'personal':  return '#25D366'; // WhatsApp green
     case 'waba':      return '#128C7E'; // WhatsApp Business teal
+    case 'instagram': return '#E1306C'; // Instagram pink - pulled from the official gradient mid-stop
     case 'linkedin':  return '#0077B5'; // LinkedIn blue
     case 'gmail':     return '#EA4335'; // Gmail red
     case 'outlook':   return '#0078D4'; // Outlook blue
-    case 'custom':    return '#059669'; // Emerald — matches integration tile
+    case 'custom':    return '#059669'; // Emerald - matches integration tile
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page shell — handles only tab + AI playground state
+// Page shell - handles only tab + AI playground state
 // ─────────────────────────────────────────────────────────────────────────────
 export function ConversationsPage() {
   const [activeTab, setActiveTab] = useState<WaTab>('personal');
   const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false);
+  const [isLearningsOpen, setIsLearningsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   // null = still loading; once resolved, only connected channels are shown
   const [channelStatus, setChannelStatus] = useState<ChannelConnectionStatus | null>(null);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
-  // Check which channels are connected on mount — all parallel requests
+  // Check which channels are connected on mount - all parallel requests
   useEffect(() => {
     getConnectedChannels().then((status) => {
       setChannelStatus(status);
@@ -625,12 +186,17 @@ export function ConversationsPage() {
     });
   }, []);
 
+  // Broadcast active tab change to sidebar and other components for dynamic theme adjustments
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('conversations:channel-changed', { detail: { channel: activeTab } }));
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('conversations:channel-changed', { detail: { channel: null } }));
+      }
+    };
+  }, [activeTab]);
 
   // Show only tabs whose channel is actively connected.
   // While loading (null) render nothing so there's no flash of wrong tabs.
@@ -644,17 +210,27 @@ export function ConversationsPage() {
       })
     : [];
 
+  const isBlackGrayDarkTheme = activeTab !== 'linkedin';
+
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top bar: WA channel tabs + AI toggle — now always visible */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border bg-card shrink-0">
-        {/* Channel tabs — only connected channels are rendered */}
-        <div className="flex items-center gap-1">
+      {/* Top bar: WA channel tabs + AI toggle - now always visible */}
+      <div
+        className={cn(
+          "h-10 flex items-center justify-between px-3 border-b shrink-0 gap-2 transition-colors duration-300",
+          "bg-card border-border",
+          isBlackGrayDarkTheme
+            ? "dark:bg-zinc-900 dark:border-zinc-800"
+            : "dark:bg-[#0C162F] dark:border-slate-800"
+        )}
+      >
+        {/* Channel tabs - only connected channels are rendered */}
+        <div className="flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
           {/* Loading skeleton while connection status is being resolved */}
           {channelStatus === null && (
             <>
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
-              <div className="h-7 w-24 rounded-md bg-muted animate-pulse" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
+              <div className="h-7 w-24 rounded-md bg-muted animate-pulse shrink-0" />
             </>
           )}
           {visibleTabs.map(({ id, label, sublabel }) => (
@@ -662,77 +238,125 @@ export function ConversationsPage() {
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all',
+                'group flex items-center gap-1.5 px-3 h-7 rounded-md text-xs font-medium transition-all shrink-0 whitespace-nowrap',
                 activeTab === id
                   ? 'text-white shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-gray-300/30 dark:hover:bg-zinc-500/30'
               )}
-              style={activeTab === id ? { backgroundColor: getTabColor(id) } : undefined}
+              style={
+                activeTab === id
+                  ? { backgroundColor: getTabColor(id) }
+                  : undefined
+              }
             >
               <ChannelIcon
                 channel={sublabel as any}
                 size={16}
                 overrideColor={activeTab === id ? '#ffffff' : undefined}
+                // className={cn(
+                //   id === 'linkedin' && activeTab !== id && 'dark:group-hover:[&_svg]:!text-white'
+                // )}
               />
               {label}
             </button>
           ))}
         </div>
 
-        {/* AI Playground toggle */}
-        <Button
-          variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
-          size="sm"
-          className={`gap-1.5 text-xs h-7 ${isPlaygroundOpen ? 'text-primary' : ''}`}
-          onClick={() => setIsPlaygroundOpen((v) => !v)}
-          title="Open AI Playground to test your system prompt"
-        >
-          <FlaskConical className="h-3.5 w-3.5" />
-          Test AI
-        </Button>
-      </div>
+        <div className="flex items-center gap-1 ml-auto shrink-0">
+          {/* AI Playground toggle */}
+          <Button
+            variant={isPlaygroundOpen ? 'secondary' : 'ghost'}
+            size="sm"
+            className={cn(
+              'gap-1.5 text-xs h-7 shrink-0',
+              isPlaygroundOpen && 'text-primary',
+              isBlackGrayDarkTheme
+                ? 'dark:hover:bg-black dark:hover:text-white'
+                : 'dark:hover:bg-[#2B7CFF] dark:hover:text-white'
+            )}
+            onClick={() => setIsPlaygroundOpen((v) => !v)}
+            title="Open AI Playground to test your system prompt"
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Test AI
+          </Button>
 
-      {/* Channel views — only the active tab is mounted */}
+          {/* AI Learnings - what the agent has been taught from thumbs-down
+            feedback. Sits beside Test AI because both answer "why did it say
+            that?": one lets you probe the prompt, the other shows what human
+            review has since added to it. */}
+          <Button
+            variant={isLearningsOpen ? "secondary" : "ghost"}
+            size="sm"
+            className={`gap-1.5 text-xs h-7 shrink-0 ${isLearningsOpen ? "text-primary" : ""}`}
+            onClick={() => setIsLearningsOpen((v) => !v)}
+            title="View and manage what the AI has learned from feedback"
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            AI Learnings
+          </Button>
+
+          <AILearningsPanel
+            open={isLearningsOpen}
+            onClose={() => setIsLearningsOpen(false)}
+          />
+        </div>
+      </div>
+      {/* Channel views - only the active tab is mounted */}
       <div className="flex-1 flex overflow-hidden">
-        {activeTab === 'personal' && (
-          <ChannelConversationView
-            channel="personal"
-            onShowBroadcastModal={() => setShowBroadcastModal(true)}
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            setIsPlaygroundOpen={setIsPlaygroundOpen}
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-            isMobile={isMobile}
-          />
+        {channelStatus === null ? (
+          <div className="flex-1 bg-background" />
+        ) : (
+          <>
+            {activeTab === "personal" && (
+              // Personal WA reuses the rich WhatsApp-Business view (same UI as WABA),
+              // driven against LAD-WAPA-Comms via backendChannel="personal".
+              <WABusinessView
+                backendChannel="personal"
+                isSidebarCollapsed={isSidebarCollapsed}
+                setIsSidebarCollapsed={setIsSidebarCollapsed}
+              />
+            )}
+            {activeTab === "waba" && (
+              <WABusinessView
+                backendChannel="waba"
+                isSidebarCollapsed={isSidebarCollapsed}
+                setIsSidebarCollapsed={setIsSidebarCollapsed}
+              />
+            )}
+            {activeTab === "instagram" && <InstagramConversationView />}
+            {activeTab === "linkedin" && <LinkedInConversationView />}
+            {activeTab === "gmail" && (
+              <EmailChannelView
+                provider="gmail"
+                connectedEmail={channelStatus?.gmailEmail ?? undefined}
+              />
+            )}
+            {activeTab === "outlook" && (
+              <EmailChannelView
+                provider="outlook"
+                connectedEmail={channelStatus?.outlookEmail ?? undefined}
+              />
+            )}
+            {activeTab === "custom" && (
+              <EmailChannelView
+                provider="custom"
+                connectedEmail={channelStatus?.customEmail ?? undefined}
+              />
+            )}
+          </>
         )}
-        {activeTab === 'waba' && (
-          <ChannelConversationView
-            channel="waba"
-            onShowBroadcastModal={() => setShowBroadcastModal(true)}
-            visibleTabs={visibleTabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isPlaygroundOpen={isPlaygroundOpen}
-            setIsPlaygroundOpen={setIsPlaygroundOpen}
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-            isMobile={isMobile}
-          />
-        )}
-        {activeTab === 'linkedin'  && <LinkedInConversationView />}
-        {activeTab === 'gmail'     && <EmailChannelView provider="gmail"   connectedEmail={channelStatus?.gmailEmail   ?? undefined} />}
-        {activeTab === 'outlook'   && <EmailChannelView provider="outlook" connectedEmail={channelStatus?.outlookEmail ?? undefined} />}
-        {activeTab === 'custom'    && <EmailChannelView provider="custom"  connectedEmail={channelStatus?.customEmail  ?? undefined} />}
       </div>
 
       {/* Broadcast Modal (WhatsApp-only) */}
       <AnimatePresence>
-        {showBroadcastModal && (activeTab === 'personal' || activeTab === 'waba') && (
-          <BroadcastModal onClose={() => setShowBroadcastModal(false)} activeTab={activeTab as 'personal' | 'waba'} />
-        )}
+        {showBroadcastModal &&
+          (activeTab === "personal" || activeTab === "waba") && (
+            <BroadcastModal
+              onClose={() => setShowBroadcastModal(false)}
+              activeTab={activeTab as "personal" | "waba"}
+            />
+          )}
       </AnimatePresence>
 
       {/* AI Playground slide-over */}
@@ -746,7 +370,10 @@ export function ConversationsPage() {
               className="fixed inset-0 z-40 bg-black/30 sm:hidden"
               onClick={() => setIsPlaygroundOpen(false)}
             />
-            <AIPlayground onClose={() => setIsPlaygroundOpen(false)} />
+            <AIPlayground
+              onClose={() => setIsPlaygroundOpen(false)}
+              variant={activeTab === 'personal' || activeTab === 'waba' ? 'whatsapp' : 'conversations'}
+            />
           </>
         )}
       </AnimatePresence>

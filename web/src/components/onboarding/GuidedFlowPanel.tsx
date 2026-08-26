@@ -21,6 +21,7 @@ import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import type { LinkedInMessageTemplate } from '@lad/frontend-features/campaigns';
+import { campaignSaveErrorMessage } from '@lad/frontend-features/campaigns';
 import { TemplateSelector, TemplateSaveModal, TemplateManagerModal } from '@/components/campaigns/linkedin-templates';
 // WhatsApp actions with recommended
 const WHATSAPP_ACTIONS = [
@@ -185,8 +186,8 @@ const ROLE_CHIPS = [
 ];
 // Company sizes for ICP questions
 const COMPANY_SIZES = [
-  { label: '10–50', value: '10-50' },
-  { label: '50–200', value: '50-200' },
+  { label: '10-50', value: '10-50' },
+  { label: '50-200', value: '50-200' },
   { label: '200+', value: '200+' }
 ];
 // Decision maker titles for ICP questions
@@ -228,10 +229,6 @@ export default function GuidedFlowPanel() {
     setHasSelectedOption,
     onboardingMode,
   } = useOnboardingStore();
-  // Do not render form-based ICP questions when in CHAT mode
-  if (onboardingMode === 'CHAT') {
-    return null;
-  }
   const [currentStep, setCurrentStep] = useState<GuidedStep>('icp_questions');
   const [answers, setAnswers] = useState<GuidedAnswers>({});
   const [bestCustomersRawText, setBestCustomersRawText] = useState<string>('');
@@ -897,7 +894,7 @@ export default function GuidedFlowPanel() {
             }`}
           >
             <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
-              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2–3 best customers?')}
+              {isLoadingQuestions ? 'Loading question...' : (getQuestionByIntent('ideal_customer')?.question || '1. Who are your top 2-3 best customers?')}
             </h3>
             {getQuestionByIntent('ideal_customer')?.helperText && (
               <p className="mb-4 text-[#64748B] block text-[13px] italic">
@@ -984,7 +981,7 @@ export default function GuidedFlowPanel() {
               5. What size was the company?
             </h3>
             <p className="mb-6 text-[#64748B] block text-[13px] italic">
-              Example: 10–50 employees, 50–200 employees
+              Example: 10-50 employees, 50-200 employees
             </p>
             <div className="flex flex-row gap-4">
               {COMPANY_SIZES.map((size) => {
@@ -1087,7 +1084,7 @@ export default function GuidedFlowPanel() {
             }`}
           >
             <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
-              9. What was that person's role or title?
+              9. What was that person&apos;s role or title?
             </h3>
             <p className="mb-6 text-[#64748B] block text-[13px] italic">
               Example: Operations Manager, Founder, Finance Head
@@ -1185,7 +1182,7 @@ export default function GuidedFlowPanel() {
               If you could clone this customer, would you?
             </h3>
             <p className="mb-6 text-[#64748B] block text-[13px] italic">
-              If yes — this is your ICP
+              If yes - this is your ICP
             </p>
             <div className="flex flex-row gap-4">
               <Button
@@ -1227,7 +1224,7 @@ export default function GuidedFlowPanel() {
             }`}
           >
             <h3 className="mb-2 font-semibold text-[#1E293B] text-[15px]">
-              11. What's your company name?
+              11. What&apos;s your company name?
             </h3>
             <Input
               placeholder="Enter your company name"
@@ -2316,7 +2313,7 @@ export default function GuidedFlowPanel() {
                 )}
                 {hasEmail && hasLinkedIn && (
                   <p className="text-[#78350F] text-[13px]">
-                    • <strong>Email:</strong> If you're also using LinkedIn, the email will be sent after the delay period following the LinkedIn connection.
+                    • <strong>Email:</strong> If you&apos;re also using LinkedIn, the email will be sent after the delay period following the LinkedIn connection.
                   </p>
                 )}
                 {hasVoice && (
@@ -2551,7 +2548,7 @@ export default function GuidedFlowPanel() {
     const getScheduleText = () => {
       if (workingDays.length === 7) return 'All days';
       if (workingDays.length === 5 && workingDays.every(d => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(d))) {
-        return 'Weekdays (Mon–Fri)';
+        return 'Weekdays (Mon-Fri)';
       }
       const dayLabels = workingDays.map(d => {
         const day = workingDaysOptions.find(opt => opt.value === d);
@@ -2763,7 +2760,7 @@ export default function GuidedFlowPanel() {
                     Weekdays
                   </p>
                   <p className="text-[#64748B] text-[12px]">
-                    Mon–Fri (Recommended)
+                    Mon-Fri (Recommended)
                   </p>
                 </div>
                 <div
@@ -3135,7 +3132,9 @@ export default function GuidedFlowPanel() {
       }
     } catch (error: any) {
       logger.error('Error creating campaign', error);
-      setCreateError(error.message || 'Failed to create campaign. Please try again.');
+      setCreateError(
+        campaignSaveErrorMessage(error, campaignName, 'Failed to create campaign. Please try again.')
+      );
     } finally {
       setIsCreatingCampaign(false);
     }
@@ -3291,6 +3290,10 @@ export default function GuidedFlowPanel() {
       </StepLayout>
     );
   };
+  // Do not render form-based ICP questions when in CHAT mode
+  if (onboardingMode === 'CHAT') {
+    return null;
+  }
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       <div className="h-full w-full flex flex-col overflow-hidden">

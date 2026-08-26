@@ -86,7 +86,7 @@ export function useGenerateBulkRecommendations() {
 
 /**
  * Fetches the last saved (already generated) recommendations grouped by week.
- * Calls GET /api/community-roi/recommendations/saved — no regeneration side effects.
+ * Calls GET /api/community-roi/recommendations/saved - no regeneration side effects.
  */
 export function useSavedRecommendations() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);

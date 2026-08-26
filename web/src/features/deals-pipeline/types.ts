@@ -85,4 +85,4 @@ export interface Activity {
   created_by?: string | number | null;
   created_at: string;
   metadata?: Record<string, any>;
-}
+}

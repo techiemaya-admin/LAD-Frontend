@@ -116,11 +116,11 @@ function PaymentSuccessContent() {
         )}
         <div className="bg-blue-50 p-6 rounded-lg mb-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            What's Next?
+            What&apos;s Next?
           </h3>
           <ul className="space-y-2 text-blue-800">
             <li>• Your subscription is now active</li>
-            <li>• You'll receive a confirmation email shortly</li>
+            <li>• You&apos;ll receive a confirmation email shortly</li>
             <li>• Access all premium features in your dashboard</li>
             <li>• Manage your subscription in the billing section</li>
           </ul>

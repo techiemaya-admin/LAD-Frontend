@@ -1,6 +1,6 @@
 /**
- * Email Senders — SDK Hooks
- * LAD Architecture: SDK Layer — React Query hooks ONLY, no fetch/axios
+ * Email Senders - SDK Hooks
+ * LAD Architecture: SDK Layer - React Query hooks ONLY, no fetch/axios
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,6 @@ export function useConnectedEmailSenders() {
   return useQuery({
     queryKey: emailSenderKeys.list(),
     queryFn: listConnectedSenders,
-    staleTime: 5 * 60_000, // 5 min — connections don't change often
+    staleTime: 5 * 60_000, // 5 min - connections don't change often
   });
 }

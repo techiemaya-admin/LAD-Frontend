@@ -3,6 +3,7 @@ export type StepType =
   | 'linkedin_follow' 
   | 'linkedin_connect' 
   | 'linkedin_message'
+  | 'linkedin_inmail'
   | 'linkedin_scrape_profile'
   | 'linkedin_company_search'
   | 'linkedin_employee_list'
@@ -18,11 +19,42 @@ export type StepType =
   | 'instagram_autopost'
   | 'instagram_comment_reply'
   | 'instagram_story_view'
+  | 'mindbody_action'
+  | 'whatsapp_broadcast'
+  | 'email_broadcast'
   | 'lead_generation'
-  | 'delay' 
-  | 'condition' 
-  | 'start' 
-  | 'end';
+  | 'media_generation'
+  | 'delay'
+  | 'condition'
+  | 'start'
+  | 'end'
+  // Custom Workflow Builder macro nodes (visual-only; expanded/stripped at launch)
+  | 'followup_sequence'
+  | 'analytics_report'
+  | 'export_results'
+  | 'linkedin_post'
+  // Campaign-level: ONE Instagram post/Reel per campaign, not one per lead.
+  | 'instagram_post'
+  // Per-lead: pauses the lead until a human confirms via a one-time link.
+  | 'human_task'
+  // Per-lead by default; switches to a campaign-level macro when its scope is
+  // set to the whole campaign's industry (see config.campaign_report).
+  | 'lead_report'
+  // Campaign-level: generates ONE public page for the campaign. Never per-lead  - 
+  // a per-lead landing page would mint one public URL per enrolled prospect.
+  | 'landing_page'
+  | 'linkedin_content'
+  | 'post_approval'
+  | 'web_scrape'
+  | 'web_research'
+  | 'lead_score'
+  | 'split_test'
+  | 'set_field'
+  | 'http_request'
+  | 'zoho_update'
+  | 'switch'
+  | 'ai_parse'
+  | 'data_enrich';
 export type ConditionType = 
   | 'connected'           // LinkedIn: if connected
   | 'linkedin_replied'     // LinkedIn: if replied to message

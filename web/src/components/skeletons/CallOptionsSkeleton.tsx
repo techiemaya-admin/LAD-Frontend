@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export const CallOptionsSkeleton: React.FC = () => {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="bg-white dark:bg-[#071131] rounded-2xl border border-gray-100 dark:border-blue-950/60 p-6 space-y-6 animate-pulse">
       {/* Header */}
       <div className="space-y-2">
         <Skeleton className="h-6 w-40" />

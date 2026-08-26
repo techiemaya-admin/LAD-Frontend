@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,8 @@ import {
 } from "@lad/frontend-features/campaigns";
 import { useApolloLeads } from "@lad/frontend-features/apollo-leads";
 import { EmployeeCard, ProfileSummaryDialog } from "@/components/campaigns";
-import { safeStorage } from '@lad/shared/storage';  
+import { safeStorage } from '@lad/shared/storage';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { motion } from "framer-motion";
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
@@ -47,13 +48,17 @@ export default function CampaignLeadsPage() {
   );
   const isInboundCampaign = campaign?.campaign_type === "inbound";
 
+  // Server-side search: debounce the typed query so we don't spam the API
+  // on every keystroke. 300ms feels responsive without thrashing.
+  const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
+
   // Use SDK hook for leads
   const {
     leads: campaignLeads,
     loading: leadsLoading,
     error: leadsError,
     refetch,
-  } = useCampaignLeads(campaignId);
+  } = useCampaignLeads(campaignId, { search: debouncedSearch || undefined });
 
   // Convert to extended type for UI
   const leads = (campaignLeads || []) as ExtendedCampaignLead[];
@@ -71,13 +76,6 @@ export default function CampaignLeadsPage() {
   const revealLinkedInMutation = useRevealLeadLinkedIn();
   const generateSummaryMutation = useGenerateLeadProfileSummary();
 
-  // Debug: Log first lead to check photo_url
-  useEffect(() => {
-    if (leads.length > 0) {
-      console.log("First lead data:", leads[0]);
-      console.log("Photo URL:", leads[0].photo_url);
-    }
-  }, [leads]);
   // Note: Pagination would ideally come from SDK
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -325,17 +323,9 @@ export default function CampaignLeadsPage() {
     setProfileRecentPosts(null);
     setSummaryError(null);
   };
-  const filteredLeads = useMemo(() => {
-    if (!searchTerm.trim()) return leads;
-    const query = searchTerm.toLowerCase().trim();
-    return leads.filter(
-      (lead) =>
-        lead.name?.toLowerCase().includes(query) ||
-        lead.email?.toLowerCase().includes(query) ||
-        lead.company?.toLowerCase().includes(query) ||
-        lead.title?.toLowerCase().includes(query),
-    );
-  }, [leads, searchTerm]);
+  // Search now runs server-side via the SDK's filters arg; the backend
+  // returns only the matching subset, so the rendered list is just `leads`.
+  const filteredLeads = leads;
   if (loading && leads.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-[#000724]">
@@ -371,9 +361,9 @@ export default function CampaignLeadsPage() {
         {/* Search */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
             <Input
-              className="pl-10 bg-white rounded-xl"
+              className="pl-10 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-blue-950/40 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 rounded-xl"
               placeholder="Search leads by name, email, company, or title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -382,7 +372,7 @@ export default function CampaignLeadsPage() {
         </div>
         {/* Employee Cards Grid */}
         {filteredLeads.length === 0 ? (
-          <Card className="rounded-2xl border border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] shadow-sm">
             <CardContent className="text-center py-12">
               <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h6 className="text-lg font-semibold text-slate-500 mb-2">

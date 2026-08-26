@@ -18,18 +18,25 @@ This directory contains **web-specific services only**. Feature-specific service
 
 ### ❌ Deprecated (Use SDK Instead)
 
-See `_deprecated/` folder - these duplicate SDK functionality:
-- `apolloLeadsService.ts` → Use `@LAD/frontend-features/apollo-leads`
-- `campaignService.ts` → Use `@LAD/frontend-features/campaigns`
-- `pipelineService.ts` → Use `@LAD/frontend-features/deals-pipeline`
-- `mayaAIService.ts` → Use `@LAD/frontend-features/ai-icp-assistant`
+These duplicated SDK functionality. There is no `_deprecated/` folder — all but
+one have already been deleted outright:
+
+| Old service | Status | Use instead |
+|---|---|---|
+| `apolloLeadsService.ts` | deleted | `@lad/frontend-features/apollo-leads` |
+| `campaignService.ts` | deleted | `@lad/frontend-features/campaigns` |
+| `mayaAIService.ts` | deleted | `@lad/frontend-features/ai-icp-assistant` |
+| `pipelineService.ts` | **still present** | `@lad/frontend-features/deals-pipeline` |
+
+`pipelineService.ts` has not been removed yet — it is still imported by
+`web/src/features/deals-pipeline/store/action/leadsActions.ts`.
 
 ## Import Pattern
 
 ```typescript
-// ✅ Good: Import features from SDK
-import { apolloLeadsService } from '@LAD/frontend-features/apollo-leads';
-import { useCampaigns } from '@LAD/frontend-features/campaigns';
+// ✅ Good: Import features from SDK (named exports — there is no service object)
+import { searchCompanies } from '@lad/frontend-features/apollo-leads';
+import { useCampaigns } from '@lad/frontend-features/campaigns';
 
 // ✅ Good: Import web-specific services
 import { authService } from '@/services/authService';
@@ -41,7 +48,7 @@ import pipelineService from '@/services/pipelineService'; // Use SDK!
 
 ## Architecture Rules
 
-1. **Feature Logic** → SDK (`@LAD/frontend-features/*`)
+1. **Feature Logic** → SDK (`@lad/frontend-features/*`)
 2. **Web Glue** → This directory
 3. **Session/Auth** → This directory
 4. **Real-time** → This directory (Socket.io, webhooks)

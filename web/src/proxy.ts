@@ -83,24 +83,37 @@ export async function proxy(req: NextRequest) {
 
   // 5. Token exists - validate token by calling auth API
   try {
-    const isTokenValid = await validateAuthToken(token);
+    const { ok, status, sessionInvalid } = await validateAuthToken(token);
 
-    if (!isTokenValid) {
-      logger.warn('[Middleware] Token validation failed - Invalid or expired token', { 
+    if (ok) {
+      logger.debug('[Middleware] Token validation successful - Access granted', { pathname });
+      return NextResponse.next();
+    }
+
+    // Only clear the session + bounce to /login when the token is genuinely
+    // rejected (401/403). For any other non-ok response - chiefly a 5xx when the
+    // backend's DB pool is momentarily exhausted and /api/auth/me times out - KEEP
+    // the session and let the request through. A transient backend hiccup must not
+    // log healthy users out (this was the root cause of stage auto-logouts).
+    if (sessionInvalid) {
+      logger.warn('[Middleware] Token rejected (invalid/expired) - clearing session', {
         pathname,
+        status,
       });
-      
-      // Clear invalid token and redirect to login
+
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('redirect_url', pathname);
-      
+
       const response = NextResponse.redirect(loginUrl);
       response.cookies.delete('token');
       response.cookies.delete('refresh_token');
       return response;
     }
 
-    logger.debug('[Middleware] Token validation successful - Access granted', { pathname });
+    logger.warn('[Middleware] Auth check returned a server error - keeping session (fail-open)', {
+      pathname,
+      status,
+    });
     return NextResponse.next();
   } catch (error) {
     logger.error('[Middleware] Token validation error', { 

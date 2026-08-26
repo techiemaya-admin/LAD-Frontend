@@ -64,8 +64,8 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="high_school">High School</SelectItem>
-                <SelectItem value="bachelors">Bachelor's</SelectItem>
-                <SelectItem value="masters">Master's</SelectItem>
+                <SelectItem value="bachelors">Bachelor&apos;s</SelectItem>
+                <SelectItem value="masters">Master&apos;s</SelectItem>
                 <SelectItem value="phd">PhD</SelectItem>
               </SelectContent>
             </Select>
@@ -233,4 +233,4 @@ export default function EducationStudentSlot({ student, onUpdate, readonly = fal
       </CardContent>
     </Card>
   );
-}
+}

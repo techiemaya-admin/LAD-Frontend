@@ -117,14 +117,7 @@ export const selectLeadsByStage = createSelector(
     // Ensure both stages and leads are arrays
     const safeStages = Array.isArray(stages) ? stages : [];
     const safeLeads = Array.isArray(leads) ? leads : [];
-    
-    console.log('[Selector] Computing leadsByStage with:', {
-      stages: safeStages.length,
-      leads: safeLeads.length,
-      timestamp: Date.now(),
-      leadsWithStages: safeLeads.map(l => ({ id: l.id, name: l.name, stage: l.stage }))
-    });
-    
+
     const leadsByStage: LeadsByStage = {};
     
     // Initialize with all stages (even empty ones)
@@ -145,18 +138,6 @@ export const selectLeadsByStage = createSelector(
         console.warn(`Lead ${lead.id} has unknown stage: ${lead.stage}`);
       }
     });
-    
-    const distribution = Object.keys(leadsByStage).map(key => ({
-      stage: key,
-      leadCount: leadsByStage[key].leads.length,
-      leadIds: leadsByStage[key].leads.map(l => l.id)
-    }));
-    
-    console.log('[Selector] Final leadsByStage distribution:', distribution);
-    console.log('[Selector] Raw stage distribution from leads:', safeLeads.reduce((acc, lead) => {
-      acc[lead.stage || 'unknown'] = (acc[lead.stage || 'unknown'] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>));
     
     return leadsByStage;
   }

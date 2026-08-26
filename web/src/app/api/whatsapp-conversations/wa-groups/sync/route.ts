@@ -1,15 +1,15 @@
 /**
- * WA Groups Sync Proxy — Personal WhatsApp only
+ * WA Groups Sync Proxy - Personal WhatsApp only
  *
  * POST /api/whatsapp-conversations/wa-groups/sync
- *   → LAD_backend /api/whatsapp-conversations/wa-groups/sync
+ *   → LAD-WAPA-Comms /api/whatsapp-conversations/wa-groups/sync (where the Baileys session lives)
  *
  * Fetches native WhatsApp groups from the connected Baileys session and
  * upserts them into the tenant's chat_groups table so they appear in the
  * Chat Groups panel alongside manually created groups.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackendUrl } from '../../utils/python-proxy';
+import { getWAPAServiceUrl } from '../../utils/python-proxy';
 
 function authHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {
@@ -30,7 +30,7 @@ function authHeaders(req: NextRequest): Record<string, string> {
         if (tenantId) headers['X-Tenant-ID'] = tenantId;
       }
     } catch {
-      // ignore — token may not be a JWT
+      // ignore - token may not be a JWT
     }
   }
 
@@ -42,7 +42,7 @@ function authHeaders(req: NextRequest): Record<string, string> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const backendUrl = getBackendUrl();
+    const backendUrl = getWAPAServiceUrl();
     const targetUrl = `${backendUrl}/api/whatsapp-conversations/wa-groups/sync`;
 
     const response = await fetch(targetUrl, {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const backendUrl = getBackendUrl();
+    const backendUrl = getWAPAServiceUrl();
     const targetUrl = `${backendUrl}/api/whatsapp-conversations/wa-groups`;
 
     const response = await fetch(targetUrl, {

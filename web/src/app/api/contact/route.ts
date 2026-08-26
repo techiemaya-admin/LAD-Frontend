@@ -62,9 +62,6 @@ export async function POST(request: NextRequest) {
     // Store in memory (TODO: Save to MongoDB)
     submissions.push(submission);
 
-    // Log for debugging
-    console.log('New contact form submission:', submission);
-
     // TODO: Send email notification to admin
     // TODO: Send confirmation email to user
     // Example: await sendEmailNotification(submission);

@@ -1,0 +1,58 @@
+# Gitleaks configuration for Mr LAD repos
+# https://github.com/gitleaks/gitleaks
+#
+# Strategy: use the upstream default rules (they cover Google/AWS/Stripe/Slack/etc.)
+# plus repo-specific rules for the secret shapes the R0 audit found in this codebase.
+# Allowlist scope is deliberately narrow — keep additions minimal.
+
+[extend]
+useDefault = true
+
+# ---- Custom rules ----------------------------------------------------------
+
+[[rules]]
+id = "lad-google-oauth-client-secret"
+description = "Google OAuth client secret (GOCSPX-…)"
+regex = '''GOCSPX-[A-Za-z0-9_\-]{20,}'''
+keywords = ["GOCSPX"]
+tags = ["secret", "google-oauth"]
+
+[[rules]]
+id = "lad-cloudbuild-literal-secret-substitution"
+description = "Cloud Build substitution variable for a secret has a literal value (should be SET_IN_TRIGGER)"
+# Matches lines like `_FOO_SECRET: 'bar'` or `_FOO_KEY: "bar"` where the
+# substitution name contains SECRET / KEY / TOKEN / PASSWORD / APIKEY.
+# NOTE: gitleaks uses the RE2 engine, which has no lookahead — so the
+# "value is not SET_IN_TRIGGER" exclusion is handled by the [allowlist]
+# regex below (SET_IN_TRIGGER) rather than an inline negative lookahead.
+regex = '''(?im)^\s*_[A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|APIKEY)[A-Z0-9_]*:\s*['"][^'"]{8,}['"]'''
+path = '''cloudbuild.*\.ya?ml$'''
+tags = ["secret", "cloudbuild"]
+
+[[rules]]
+id = "lad-email-token-encryption-key-shape"
+description = "Hex string the length of the leaked email token encryption key (64 hex chars)"
+regex = '''(?i)\b[a-f0-9]{64}\b'''
+keywords = ["EMAIL_TOKEN_ENCRYPTION_KEY", "email_token_encryption_key"]
+tags = ["secret", "encryption-key"]
+
+# ---- Allowlist -------------------------------------------------------------
+
+[allowlist]
+description = "Repo-specific allowlist — keep narrow"
+paths = [
+  # Migrations and fixtures: 64-hex strings here are commit hashes, not keys
+  '''migrations/.*\.sql$''',
+  '''.*\.test\.(js|ts|tsx|py)$''',
+  '''.*__tests__/.*''',
+  '''.*tests?/fixtures/.*''',
+  # The audit runbook references the leaked values intentionally for the rotation
+  # checklist — these are post-leak, the documented values were already exposed.
+  '''SECRETS_ROTATION_RUNBOOK\.md$''',
+]
+regexes = [
+  # SET_IN_TRIGGER is the canonical placeholder used in cloudbuild yamls; never a secret
+  '''SET_IN_TRIGGER''',
+  # OAuth client IDs are public by design (the matching SECRET is the secret)
+  '''[0-9]+-[a-z0-9]{32}\.apps\.googleusercontent\.com''',
+]

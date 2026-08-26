@@ -9,7 +9,11 @@ import {
   RotateCcw,
   AlertCircle,
   Loader2,
-  Languages
+  Languages,
+  Sliders,
+  Volume2,
+  Music,
+  Gauge
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,6 +43,8 @@ import { PromptEditor } from './PromptEditor';
 import { VoicePreview } from './VoicePreview';
 import { CharacterCounter } from './CharacterCounter';
 import { cn } from '@/lib/utils';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 
 interface AgentFormProps {
   formData: AgentFormData;
@@ -100,6 +106,14 @@ export function AgentForm({
   // Filter voices by selected gender
   const filteredVoices = voices.filter((v: Voice) => v.gender === formData.gender);
 
+  // Local state for Universal Agent Settings (Voice Dynamics and Background Ambiance)
+  const [speed, setSpeed] = React.useState<number>(1.0);
+  const [pitch, setPitch] = React.useState<number>(0.0);
+  const [volume, setVolume] = React.useState<number>(1.0);
+  const [bgSoundOn, setBgSoundOn] = React.useState<boolean>(false);
+  const [bgSoundUrl, setBgSoundUrl] = React.useState<string>('/office_chatter_loud.mp3');
+  const [bgSoundVolume, setBgSoundVolume] = React.useState<number>(0.4);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -152,7 +166,7 @@ export function AgentForm({
           <Button 
             onClick={onSave} 
             disabled={!isValid || isSaving}
-            className="gradient-primary min-w-32"
+            className="justify-center gap-2 h-10 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 shadow-lg transition-all font-medium flex"
           >
             {isSaving ? (
               <>
@@ -178,7 +192,7 @@ export function AgentForm({
             </div>
             <div>
               <CardTitle className="text-lg">Basic Details</CardTitle>
-              <CardDescription>Configure your agent's identity</CardDescription>
+              <CardDescription>Configure your agent&apos;s identity</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -198,7 +212,10 @@ export function AgentForm({
                 value={formData.name}
                 onChange={(e) => onUpdateField('name', e.target.value)}
                 placeholder="e.g., Sales Assistant Alex"
-                className={cn(errors.name && "border-destructive")}
+                className={cn(
+                  "border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]",
+                  errors.name && "border-destructive dark:border-destructive"
+                )}
               />
               {errors.name && (
                 <p className="text-xs text-destructive flex items-center gap-1">
@@ -247,9 +264,9 @@ export function AgentForm({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
             {/* Voice Selection */}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 w-full">
               <Label htmlFor="voice">Voice</Label>
               <Select
                 value={formData.voice_id}
@@ -263,23 +280,30 @@ export function AgentForm({
                 }}
                 disabled={isLoadingVoices || filteredVoices.length === 0}
               >
-                <SelectTrigger id="voice" className="w-full">
+                <SelectTrigger 
+                  id="voice" 
+                  className="w-full border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                >
                   <SelectValue placeholder={isLoadingVoices ? "Loading voices..." : "Select voice"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#132035] dark:border-slate-800 dark:text-slate-100">
                   {filteredVoices.length === 0 && !isLoadingVoices && (
-                    <SelectItem value="no-voices" disabled>
+                    <SelectItem value="no-voices" disabled className="dark:text-slate-400">
                       No voices available for selected gender
                     </SelectItem>
                   )}
                   {filteredVoices.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id}>
+                    <SelectItem 
+                      key={voice.id} 
+                      value={voice.id}
+                      className="dark:focus:bg-slate-800 dark:focus:text-slate-100 cursor-pointer"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="capitalize text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-muted">
+                        <span className="capitalize text-xs text-muted-foreground dark:text-slate-400 px-1.5 py-0.5 rounded bg-muted dark:bg-slate-800 dark:border dark:border-slate-700/60">
                           {voice.gender}
                         </span>
                         <span>{voice.description}</span>
-                        <span className="text-xs text-muted-foreground">({voice.accent})</span>
+                        <span className="text-muted-foreground dark:text-slate-400">({voice.accent})</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -290,37 +314,219 @@ export function AgentForm({
               </p>
             </div>
 
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 w-full">
               <Label htmlFor="language">Language</Label>
               <Select
                 value={formData.language}
                 onValueChange={(value) => onUpdateField('language', value)}
               >
-                <SelectTrigger id="language" className="w-full">
+                <SelectTrigger 
+                  id="language" 
+                  className="w-full border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                >
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-[#132035] dark:border-slate-800 dark:text-slate-100">
                   {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
+                    <SelectItem 
+                      key={lang.value} 
+                      value={lang.value}
+                      className="dark:focus:bg-slate-800 dark:focus:text-slate-100 cursor-pointer"
+                    >
                       {lang.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="sm:self-end">
-              <VoicePreview 
-                language={formData.language} 
-                gender={formData.gender}
-                voice_sample_url={voiceSampleUrl}
-              />
+            <div className="space-y-2 shrink-0">
+              <Label className="invisible hidden sm:block select-none" aria-hidden="true">Preview</Label>
+              <div>
+                <VoicePreview 
+                  language={formData.language} 
+                  gender={formData.gender}
+                  voice_sample_url={voiceSampleUrl}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Universal Agent Settings */}
+      <Card className="form-section animate-fade-in-up stagger-3">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="icon-container">
+              <Sliders className="h-5 w-5 text-blue" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Universal Agent Settings</CardTitle>
+              <CardDescription>Configure provider-independent voice dynamics and ambiance masking</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-border">
+            {/* Left Column: Voice Dynamics */}
+            <div className="space-y-6 md:pr-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-1">Voice Dynamics</h3>
+                <p className="text-xs text-muted-foreground">Standardized, provider-independent settings for pitch, speed, and volume.</p>
+              </div>
+
+              {/* Speed */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Gauge className="h-4 w-4 text-muted-foreground" />
+                    <span>Speaking Rate (Speed)</span>
+                  </Label>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {speed.toFixed(2)}x
+                  </span>
+                </div>
+                <Slider 
+                  value={speed} 
+                  onValueChange={setSpeed} 
+                  min={0.5} 
+                  max={2.0} 
+                  step={0.05} 
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Slow (0.5x)</span>
+                  <span>Normal (1.0x)</span>
+                  <span>Fast (2.0x)</span>
+                </div>
+              </div>
+
+              {/* Pitch */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-muted-foreground" />
+                    <span>Voice Pitch</span>
+                  </Label>
+                  <span className={cn(
+                    "text-xs font-semibold px-2 py-0.5 rounded-full",
+                    pitch === 0 ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                  )}>
+                    {pitch > 0 ? `+${pitch.toFixed(1)}` : pitch.toFixed(1)}
+                  </span>
+                </div>
+                <Slider 
+                  value={pitch} 
+                  onValueChange={setPitch} 
+                  min={-1.0} 
+                  max={1.0} 
+                  step={0.1} 
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Lowest (-1.0)</span>
+                  <span>Native (0.0)</span>
+                  <span>Highest (1.0)</span>
+                </div>
+              </div>
+
+              {/* Volume */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <span>Loudness (Volume)</span>
+                  </Label>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {volume.toFixed(2)}x
+                  </span>
+                </div>
+                <Slider 
+                  value={volume} 
+                  onValueChange={setVolume} 
+                  min={0.5} 
+                  max={2.0} 
+                  step={0.05} 
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Soft (0.5x)</span>
+                  <span>Native (1.0x)</span>
+                  <span>Loud (2.0x)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Background Ambiance */}
+            <div className="space-y-6 pt-6 md:pt-0 md:pl-8">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-1">Background Ambiance</h3>
+                <p className="text-xs text-muted-foreground">Standardized control for enabling background ambient masking audio.</p>
+              </div>
+
+              {/* Background Sound On/Off */}
+              <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-muted/40">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Ambient Noise Masking</Label>
+                  <p className="text-xs text-muted-foreground">Inject natural background atmosphere during calls</p>
+                </div>
+                <Switch 
+                  checked={bgSoundOn} 
+                  onCheckedChange={setBgSoundOn}
+                />
+              </div>
+
+              {/* Background URL & Volume */}
+              <div className={cn(
+                "space-y-6 transition-all duration-300",
+                !bgSoundOn ? "opacity-40 pointer-events-none" : "opacity-100"
+              )}>
+                {/* Background Sound URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="bg-sound-url" className="text-xs font-medium">Sound Override URL / Path</Label>
+                  <Input
+                    id="bg-sound-url"
+                    value={bgSoundUrl}
+                    onChange={(e) => setBgSoundUrl(e.target.value)}
+                    placeholder="/office_chatter_loud.mp3"
+                    disabled={!bgSoundOn}
+                    className="h-9 text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Complete URL or relative sound path (e.g. <code>/office_chatter_loud.mp3</code>)
+                  </p>
+                </div>
+
+                {/* Background Sound Volume */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-xs">
+                      <Music className="h-4 w-4 text-muted-foreground" />
+                      <span>Ambiance Volume</span>
+                    </Label>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {Math.round(bgSoundVolume * 100)}%
+                    </span>
+                  </div>
+                  <Slider 
+                    value={bgSoundVolume} 
+                    onValueChange={setBgSoundVolume} 
+                    min={0.0} 
+                    max={1.0} 
+                    step={0.05}
+                    disabled={!bgSoundOn}
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Silent (0%)</span>
+                    <span>Standard (40%)</span>
+                    <span>Full (100%)</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Agent Instructions */}
-      <Card className="form-section animate-fade-in-up stagger-3">
+      <Card className="form-section animate-fade-in-up stagger-4">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
             <div className="icon-container bg-success/10">
@@ -348,7 +554,7 @@ export function AgentForm({
       </Card>
 
       {/* System Instructions */}
-      <Card className="form-section animate-fade-in-up stagger-4">
+      <Card className="form-section animate-fade-in-up stagger-5">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
             <div className="icon-container bg-warning/10">
@@ -376,7 +582,7 @@ export function AgentForm({
       </Card>
 
       {/* Outbound Configuration */}
-      <Card className="form-section animate-fade-in-up">
+      <Card className="form-section animate-fade-in-up stagger-6">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
             <div className="icon-container bg-primary/10">

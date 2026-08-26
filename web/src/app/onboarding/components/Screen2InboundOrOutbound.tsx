@@ -29,7 +29,7 @@ export default function Screen2InboundOrOutbound() {
               How do you want to get started?
             </h1>
             <p className="text-xl text-gray-600">
-              Choose how you'd like to work with leads
+              Choose how you&apos;d like to work with leads
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -44,7 +44,7 @@ export default function Screen2InboundOrOutbound() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">Inbound Leads</h2>
                 <p className="text-gray-600 mb-6">
-                  You already have leads. Upload your Excel or CSV file and we'll help you map the fields.
+                  You already have leads. Upload your Excel or CSV file and we&apos;ll help you map the fields.
                 </p>
                 <div className="flex items-center gap-2 text-blue-600 font-semibold group-hover:gap-4 transition-all">
                   <span>Upload your leads</span>
@@ -63,7 +63,7 @@ export default function Screen2InboundOrOutbound() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">Outbound Leads</h2>
                 <p className="text-gray-600 mb-6">
-                  We'll generate leads for you based on your criteria. Just tell us what you're looking for.
+                  We&apos;ll generate leads for you based on your criteria. Just tell us what you&apos;re looking for.
                 </p>
                 <div className="flex items-center gap-2 text-green-600 font-semibold group-hover:gap-4 transition-all">
                   <span>Generate leads</span>
@@ -76,4 +76,4 @@ export default function Screen2InboundOrOutbound() {
       </div>
     </div>
   );
-}
+}

@@ -23,8 +23,8 @@ export function LiveActivityStatusBadge({ status, currentStep }: LiveActivitySta
 
   if (value.includes('success') || value.includes('completed') || value.includes('ended')) {
     return (
-      <span className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold w-[100px] bg-green-100 text-green-700 border border-green-300 ${DARK_RESET} dark:!text-emerald-400 dark:!w-auto`}>
-        <span className="w-2 h-2 rounded-full bg-green-600 dark:!bg-emerald-400" />
+      <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-emerald-400" />
         Success
       </span>
     );
@@ -32,8 +32,8 @@ export function LiveActivityStatusBadge({ status, currentStep }: LiveActivitySta
 
   if (value.includes('failed') || value.includes('error') || value.includes('unreachable')) {
     return (
-      <span className={`inline-flex items-center justify-left gap-2 px-3 py-1.5 rounded-full text-xs font-semibold w-[100px] bg-red-100/70 text-red-700 border border-red-300 ${DARK_RESET} dark:!text-rose-400 dark:!w-auto`}>
-        <span className="w-2 h-2 rounded-full bg-red-600 dark:!bg-rose-400" />
+      <span className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100/70 text-red-700 border border-red-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-red-600 dark:bg-rose-400" />
         Failed
       </span>
     );
@@ -41,8 +41,8 @@ export function LiveActivityStatusBadge({ status, currentStep }: LiveActivitySta
 
   if (value.includes('skipped')) {
     return (
-      <span className={`inline-flex items-center justify-left gap-2 px-3 py-1.5 rounded-full text-xs font-semibold w-[100px] bg-[#fffbed] text-[#b45309] border border-amber-300 ${DARK_RESET} dark:!text-amber-300 dark:!w-auto`}>
-        <span className="w-2 h-2 rounded-full bg-[#f59e0b] dark:!bg-amber-300" />
+      <span className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#fffbed] text-[#b45309] border border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60 ${DARK_RESET}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] dark:bg-amber-400" />
         Waiting
       </span>
     );

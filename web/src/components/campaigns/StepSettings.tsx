@@ -45,6 +45,7 @@ const getRequiredFields = (stepType: StepType): string[] => {
   const required: Record<StepType, string[]> = {
     linkedin_connect: [], // Message is optional due to LinkedIn's 4-5 connection messages/month limit
     linkedin_message: ['message'],
+    linkedin_inmail: ['message'],
     email_send: ['subject', 'body'],
     email_followup: ['subject', 'body'],
     whatsapp_send: ['whatsappAccountId', 'whatsappMessage'],
@@ -67,6 +68,34 @@ const getRequiredFields = (stepType: StepType): string[] => {
     linkedin_follow: [],
     start: [],
     end: [],
+    // Custom Workflow Builder macro nodes - expanded/stripped before execution.
+    media_generation: [],
+    followup_sequence: [],
+    analytics_report: [],
+    export_results: [],
+    linkedin_post: [],
+    instagram_post: [],
+    human_task: [],
+    lead_report: [],
+    landing_page: [],
+    linkedin_content: [],
+    post_approval: [],
+    web_scrape: [],
+    web_research: [],
+    lead_score: [],
+    split_test: [],
+    set_field: [],
+    http_request: ['url'],
+    zoho_update: [],
+    switch: [],
+    ai_parse: [],
+    // Mirrors the backend StepValidators. A broadcast is business-initiated,
+    // so WhatsApp free text is undeliverable and a template is mandatory.
+    whatsapp_broadcast: ['template_name'],
+    email_broadcast: ['subject', 'body'],
+    // action defaults to book_trial; the account falls back to the tenant's.
+    mindbody_action: [],
+    data_enrich: [],
   };
   return required[stepType] || [];
 };
@@ -117,26 +146,8 @@ export default function StepSettings({
   } else if (!useOnboarding && campaignNodes.length > 0) {
     selectedNode = campaignNodes.find((n: any) => n.id === selectedNodeId);
   }
-  if (!selectedNode || selectedNode.type === 'start' || selectedNode.type === 'end') {
-    return (
-      <div className="w-full bg-slate-50 flex items-center justify-center p-6">
-        <p className="text-sm text-slate-500 text-center">
-          {selectedNodeId ? 'This step cannot be edited' : 'Select a step to configure'}
-        </p>
-      </div>
-    );
-  }
-  // Use prop stepType if provided, otherwise use selectedNode.type
-  const resolvedStepType = (stepType || selectedNode.type) as StepType;
-  // Handle both data structure (campaign store) and direct properties (onboarding store)
-  // For onboarding store, data might be nested in node.data or be direct properties
-  const nodeData = selectedNode.data || {};
-  const data = {
-    ...selectedNode, // Direct properties (onboarding store format)
-    ...nodeData,     // Nested data (campaign store format)
-    // Ensure we have the latest values by prioritizing nested data over direct
-    ...(stepData || {}), // Use prop stepData if provided
-  };
+  // Use prop stepType if provided, otherwise use selectedNode.type (may be undefined if no node selected)
+  const resolvedStepType = (stepType || selectedNode?.type) as StepType | undefined;
 
   // ─── WhatsApp data fetching ────────────────────────────────────────────
   const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
@@ -157,19 +168,38 @@ export default function StepSettings({
       setWhatsappAccounts((accountsRes.accounts || []).filter((a) => a.status === 'connected'));
       setWhatsappTemplates(templatesRes.data || []);
     }).finally(() => setLoadingWa(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [resolvedStepType]);
 
-  const requiredFields = getRequiredFields(resolvedStepType);
+  if (!selectedNode || selectedNode.type === 'start' || selectedNode.type === 'end') {
+    return (
+      <div className="w-full bg-slate-50 flex items-center justify-center p-6">
+        <p className="text-sm text-slate-500 text-center">
+          {selectedNodeId ? 'This step cannot be edited' : 'Select a step to configure'}
+        </p>
+      </div>
+    );
+  }
+  // Handle both data structure (campaign store) and direct properties (onboarding store)
+  // For onboarding store, data might be nested in node.data or be direct properties
+  const nodeData = selectedNode.data || {};
+  const data = {
+    ...selectedNode, // Direct properties (onboarding store format)
+    ...nodeData,     // Nested data (campaign store format)
+    // Ensure we have the latest values by prioritizing nested data over direct
+    ...(stepData || {}), // Use prop stepData if provided
+  };
+
+  const resolvedStepTypeSafe = resolvedStepType as StepType;
+  const requiredFields = getRequiredFields(resolvedStepTypeSafe);
   // Special validation for delay step
-  const isValid = resolvedStepType === 'delay' 
+  const isValid = resolvedStepTypeSafe === 'delay'
     ? isDelayValid(data)
     : requiredFields.every(field => isFieldValid(field, data[field as keyof typeof data]));
   const handleUpdate = (field: string, value: any) => {
     if (useOnboarding) {
       // For onboarding store, updates would need to be handled via the appropriate method
-      // Currently just logging for future implementation
-      console.debug(`Update onboarding field: ${field} = ${value}`);
+      // Currently a no-op pending future implementation
     } else {
       // Update campaign store
       campaignStore.updateStep(selectedNodeId!, { [field]: value });
@@ -220,7 +250,7 @@ export default function StepSettings({
         
         <Separator className="my-4" />
       {/* LinkedIn Steps */}
-      {(resolvedStepType === 'linkedin_connect' || resolvedStepType === 'linkedin_message') && (
+      {(resolvedStepTypeSafe === 'linkedin_connect' || resolvedStepTypeSafe === 'linkedin_message' || resolvedStepTypeSafe === 'linkedin_inmail') && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -229,7 +259,7 @@ export default function StepSettings({
             </h4>
           </div>
           <div className="mb-4">
-            <Label htmlFor="linkedin-message">{resolvedStepType === 'linkedin_connect' ? 'Message (Optional)' : 'Message'}</Label>
+            <Label htmlFor="linkedin-message">{resolvedStepTypeSafe === 'linkedin_connect' ? 'Message (Optional)' : 'Message'}</Label>
             <div className="flex items-start gap-2">
               <Textarea
                 id="linkedin-message"
@@ -237,18 +267,18 @@ export default function StepSettings({
                 value={data.message || ''}
                 onChange={(e) => handleUpdate('message', e.target.value)}
                 placeholder={
-                  resolvedStepType === 'linkedin_connect' 
+                  resolvedStepTypeSafe === 'linkedin_connect' 
                     ? 'Hi {{first_name}}, I\'d like to connect with you... (Optional - LinkedIn limits connection messages to 4-5/month)'
                     : 'Hi {{first_name}}, I noticed...'
                 }
                 className={requiredFields.includes('message') && !isFieldValid('message', data.message) ? 'border-red-500' : ''}
               />
-              {resolvedStepType === 'linkedin_message' && renderRequiredIndicator('message')}
+              {(resolvedStepTypeSafe === 'linkedin_message' || resolvedStepTypeSafe === 'linkedin_inmail') && renderRequiredIndicator('message')}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {requiredFields.includes('message') && !isFieldValid('message', data.message)
                 ? 'Message is required'
-                : resolvedStepType === 'linkedin_connect'
+                : resolvedStepTypeSafe === 'linkedin_connect'
                 ? 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{industry}} for personalization. Note: LinkedIn limits connection messages to 4-5 per month for normal accounts.'
                 : 'Use {{first_name}}, {{last_name}}, {{company_name}}, {{title}}, {{industry}} for personalization'
               }
@@ -276,7 +306,7 @@ export default function StepSettings({
         </>
       )}
       {/* Email Steps */}
-      {(resolvedStepType === 'email_send' || resolvedStepType === 'email_followup') && (
+      {(resolvedStepTypeSafe === 'email_send' || resolvedStepTypeSafe === 'email_followup') && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#F59E0B] mb-2 flex items-center">
@@ -350,7 +380,7 @@ export default function StepSettings({
         </>
       )}
       {/* Delay Step */}
-      {resolvedStepType === 'delay' && (
+      {resolvedStepTypeSafe === 'delay' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#10B981] mb-2 flex items-center">
@@ -427,7 +457,7 @@ export default function StepSettings({
         </>
       )}
       {/* Condition Step */}
-      {resolvedStepType === 'condition' && (
+      {resolvedStepTypeSafe === 'condition' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#10B981] mb-2 flex items-center">
@@ -440,7 +470,7 @@ export default function StepSettings({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Define a condition to check before proceeding. The workflow will check if the previous step met this condition. If true, continue to next step; if false, the workflow may skip or take alternative path.</p>
+                  <p>Define a condition to check before proceeding. The Accelerator will check if the previous step met this condition. If true, continue to next step; if false, the workflow may skip or take alternative path.</p>
                 </TooltipContent>
               </Tooltip>
             </h4>
@@ -499,24 +529,24 @@ export default function StepSettings({
               📋 How Conditions Work:
             </span>
             <span className="text-[11px] text-blue-900 block mb-1">
-              1. The system checks the status of the <strong>previous step</strong> in the workflow
+              1. The system checks the status of the <strong>previous step</strong> in the Accelerator
             </span>
             <span className="text-[11px] text-blue-900 block mb-1">
-              2. If the condition is <strong>met</strong> (e.g., "If Connected on LinkedIn" = true), the workflow continues to the next step
+              2. If the condition is <strong>met</strong> (e.g., &quot;If Connected on LinkedIn&quot; = true), the Accelerator continues to the next step
             </span>
             <span className="text-[11px] text-blue-900 block">
-              3. If the condition is <strong>not met</strong>, the workflow may skip steps or take an alternative path
+              3. If the condition is <strong>not met</strong>, the Accelerator may skip steps or take an alternative path
             </span>
           </div>
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 mt-2">
             <span className="text-[11px] text-amber-900">
-              <strong>⚠️ Important:</strong> Make sure the previous step in your workflow can produce the result you're checking for. For example, if checking "If Connected on LinkedIn", ensure there's a LinkedIn connection step before this condition.
+              <strong>⚠️ Important:</strong> Make sure the previous step in your Accelerator can produce the result you&apos;re checking for. For example, if checking &quot;If Connected on LinkedIn&quot;, ensure there&apos;s a LinkedIn connection step before this condition.
             </span>
           </div>
         </>
       )}
       {/* WhatsApp Steps */}
-      {resolvedStepType === 'whatsapp_send' && (
+      {resolvedStepTypeSafe === 'whatsapp_send' && (
         <>
           {/* ── Header ── */}
           <div className="mb-4">
@@ -604,10 +634,10 @@ export default function StepSettings({
               }}
             >
               <SelectTrigger id="whatsapp-template-select" className="mt-1">
-                <SelectValue placeholder="None — write custom message below" />
+                <SelectValue placeholder="None: write custom message below" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None — custom message</SelectItem>
+                <SelectItem value="">None: custom message</SelectItem>
                 {whatsappTemplates.length === 0 && !loadingWa && (
                   <SelectItem value="__no_templates__" disabled>
                     No saved templates yet
@@ -713,7 +743,7 @@ export default function StepSettings({
         </>
       )}
       {/* Voice Agent Steps */}
-      {resolvedStepType === 'voice_agent_call' && (
+      {resolvedStepTypeSafe === 'voice_agent_call' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#8B5CF6] mb-2 flex items-center">
@@ -779,7 +809,7 @@ export default function StepSettings({
         </>
       )}
       {/* Additional LinkedIn Steps */}
-      {resolvedStepType === 'linkedin_scrape_profile' && (
+      {resolvedStepTypeSafe === 'linkedin_scrape_profile' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -796,7 +826,7 @@ export default function StepSettings({
               placeholder="https://linkedin.com/in/username"
               className="mt-1"
             />
-            <p className="text-xs text-slate-500 mt-1">Leave empty to scrape from lead's LinkedIn profile</p>
+            <p className="text-xs text-slate-500 mt-1">Leave empty to scrape from lead&apos;s LinkedIn profile</p>
           </div>
           <div className="mb-4">
             <Label htmlFor="scrape-fields">Fields to Scrape *</Label>
@@ -828,7 +858,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'linkedin_company_search' && (
+      {resolvedStepTypeSafe === 'linkedin_company_search' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -854,7 +884,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'linkedin_employee_list' && (
+      {resolvedStepTypeSafe === 'linkedin_employee_list' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -880,7 +910,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'linkedin_autopost' && (
+      {resolvedStepTypeSafe === 'linkedin_autopost' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -917,7 +947,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'linkedin_comment_reply' && (
+      {resolvedStepTypeSafe === 'linkedin_comment_reply' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#0077B5] mb-2 flex items-center">
@@ -945,7 +975,7 @@ export default function StepSettings({
         </>
       )}
       {/* Instagram Steps */}
-      {resolvedStepType === 'instagram_follow' && (
+      {resolvedStepTypeSafe === 'instagram_follow' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -971,7 +1001,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'instagram_like' && (
+      {resolvedStepTypeSafe === 'instagram_like' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -997,7 +1027,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'instagram_dm' && (
+      {resolvedStepTypeSafe === 'instagram_dm' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -1062,7 +1092,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'instagram_autopost' && (
+      {resolvedStepTypeSafe === 'instagram_autopost' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -1130,7 +1160,7 @@ export default function StepSettings({
           )}
         </>
       )}
-      {resolvedStepType === 'instagram_comment_reply' && (
+      {resolvedStepTypeSafe === 'instagram_comment_reply' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -1157,7 +1187,7 @@ export default function StepSettings({
           </div>
         </>
       )}
-      {resolvedStepType === 'instagram_story_view' && (
+      {resolvedStepTypeSafe === 'instagram_story_view' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#E4405F] mb-2 flex items-center">
@@ -1184,7 +1214,7 @@ export default function StepSettings({
         </>
       )}
       {/* Lead Generation Step */}
-      {resolvedStepType === 'lead_generation' && (
+      {resolvedStepTypeSafe === 'lead_generation' && (
         <>
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-[#6366F1] mb-2 flex items-center">
@@ -1241,14 +1271,14 @@ export default function StepSettings({
         </>
       )}
       {/* Other LinkedIn Steps */}
-      {(resolvedStepType === 'linkedin_visit' || resolvedStepType === 'linkedin_follow') && (
+      {(resolvedStepTypeSafe === 'linkedin_visit' || resolvedStepTypeSafe === 'linkedin_follow') && (
         <p className="text-sm text-slate-600">
           This step will be executed automatically. No configuration needed.
         </p>
       )}
 
       {/* Advanced Options - Delay Configuration for Any Step Type (except delay and start/end) */}
-      {resolvedStepType !== 'delay' && resolvedStepType !== 'start' && resolvedStepType !== 'end' && (
+      {resolvedStepTypeSafe !== 'delay' && resolvedStepTypeSafe !== 'start' && resolvedStepTypeSafe !== 'end' && (
         <>
           <Separator className="my-4" />
           <div className="mb-4">

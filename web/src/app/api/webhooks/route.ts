@@ -6,18 +6,24 @@ import { Webhook } from 'svix';
 import { logger } from '@/lib/logger';
 
 // Conditional Prisma import to avoid build errors
-let PrismaClient: any = null;
 let prisma: any = null;
 
-try {
-  ({ PrismaClient } = require('@prisma/client'));
-  prisma = new PrismaClient();
-} catch (error) {
-  logger.warn('Prisma client not available, webhooks will not work properly');
+// Lazily initialize the Prisma client via a dynamic import so the route does
+// not crash at build/load time when @prisma/client is unavailable.
+async function getPrisma(): Promise<any> {
+  if (prisma) return prisma;
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
+  } catch (error) {
+    logger.warn('Prisma client not available, webhooks will not work properly');
+  }
+  return prisma;
 }
 export async function POST(req: NextRequest) {
   try {
     // Check if Prisma client is available
+    prisma = await getPrisma();
     if (!prisma) {
       logger.error('Prisma client not available');
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
@@ -97,6 +103,8 @@ export async function POST(req: NextRequest) {
     logger.error('Webhook processing error', error);
     return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 });
   } finally {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 }

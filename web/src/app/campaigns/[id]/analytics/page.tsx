@@ -13,12 +13,13 @@ import {
   AlertCircle, Linkedin, Phone, MessageCircle,
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
   Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
-  SquarePen, Sparkles, ChevronDown, ChevronUp, RefreshCw
+  SquarePen, Sparkles, ChevronDown, ChevronUp, RefreshCw, CalendarClock
 } from 'lucide-react';
 import { useCampaignAnalytics, useCampaignLeads } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
+import ScheduledFollowupsModal from '@/components/campaigns/ScheduledFollowupsModal';
 import { LiveBadge } from '@/components/LiveBadge';
 import { proxyPost } from '@/lib/api';
 
@@ -60,15 +61,18 @@ export default function CampaignAnalyticsPage() {
   const isConnected = analytics?.campaign?.status === 'running';
 
   // ── Bulk Follow-up state ───────────────────────────────────────────────────
-  const { leads: allLeads, loading: leadsLoading } = useCampaignLeads(campaignId);
+  // limit raised past the server's default 100 so bulk follow-up can select
+  // across the whole campaign, not just the first page of leads.
+  const { leads: allLeads, loading: leadsLoading } = useCampaignLeads(campaignId, { limit: 1000 });
   const [followupPanelOpen, setFollowupPanelOpen] = useState(false);
+  const [scheduleManagerOpen, setScheduleManagerOpen] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [bulkChannel, setBulkChannel] = useState<string>('');
   const [bulkStatus, setBulkStatus] = useState<'idle' | 'running' | 'done'>('idle');
   const [leadProgress, setLeadProgress] = useState<Array<{ id: string; name: string; status: 'pending' | 'sending' | 'done' | 'error'; message?: string; error?: string }>>([]);
   const [bulkDoneCount, setBulkDoneCount] = useState(0);
 
-  // ── All bulk follow-up hooks MUST live here — before any early returns ─────
+  // ── All bulk follow-up hooks MUST live here - before any early returns ─────
 
   // Channels used in this campaign (derived from step_analytics; safe when analytics is null)
   const campaignChannels = useMemo(() => {
@@ -83,15 +87,14 @@ export default function CampaignAnalyticsPage() {
     return channels;
   }, [analytics]);
 
-  // LinkedIn → only accepted-connection leads; email/whatsapp → all leads
+  // LinkedIn → only accepted-connection leads; email/whatsapp → all leads.
+  // has_connected is authoritative (server-side, from campaign_analytics). The
+  // old status-substring fallback also matched "connection_sent", so leads who
+  // had merely been invited were offered for LinkedIn follow-up.
   const selectableLeads = useMemo(() => {
     if (!allLeads) return [];
     if (bulkChannel === 'linkedin') {
-      return (allLeads as any[]).filter((l: any) =>
-        l.has_connected === true ||
-        l.status?.toLowerCase().includes('connect') ||
-        l.status?.toLowerCase().includes('accept')
-      );
+      return (allLeads as any[]).filter((l: any) => l.has_connected === true);
     }
     return allLeads as any[];
   }, [allLeads, bulkChannel]);
@@ -169,7 +172,7 @@ export default function CampaignAnalyticsPage() {
     push({ title: 'Follow-up Complete', description: `Sent ${done} messages via ${bulkChannel}` });
   }, [selectedLeadIds, bulkChannel, selectableLeads, campaignId, push]);
 
-  // ── Error handler (also a hook — stays before early returns) ─────────────
+  // ── Error handler (also a hook - stays before early returns) ─────────────
   useEffect(() => {
     if (error) {
       push({ variant: 'error', title: 'Error', description: String(error) || 'Failed to load analytics' });
@@ -202,7 +205,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40">
               <div className="flex justify-between items-start mb-4">
                 <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-10 w-10 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
@@ -214,8 +217,8 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Activity Table */}
-        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-sm mb-8">
-          <div className="p-4 border-b border-[#E2E8F0]">
+        <div className="bg-white dark:bg-[#071131] rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm mb-8">
+          <div className="p-4 border-b border-[#E2E8F0] dark:border-blue-950/40">
             <div className="flex justify-between items-center">
               <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
               <div className="flex gap-2">
@@ -226,7 +229,7 @@ export default function CampaignAnalyticsPage() {
           </div>
           <div className="p-4">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex gap-4 py-3 border-b border-gray-100">
+              <div key={index} className="flex gap-4 py-3 border-b border-gray-100 dark:border-blue-950/40">
                 <div className="h-4 w-32 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-4 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -237,7 +240,7 @@ export default function CampaignAnalyticsPage() {
         </div>
 
         {/* Skeleton Charts */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-8">
+        <div className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40 mb-8">
           <div className="h-6 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -248,7 +251,7 @@ export default function CampaignAnalyticsPage() {
         {/* Skeleton 3-Column Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div key={index} className="bg-white dark:bg-[#071131] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-blue-950/40">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-9 w-9 bg-gray-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
                 <div className="flex-1">
@@ -338,7 +341,7 @@ export default function CampaignAnalyticsPage() {
   // ── Chart data for AnalyticsCharts ─────────────────────────────────────────
   const extendedAnalytics = analytics as any;
 
-  // 1. Timeline — multi-series daily data
+  // 1. Timeline - multi-series daily data
   const chartTimeline: Array<{ date: string; sent?: number; delivered?: number; connected?: number; replied?: number }> =
     extendedAnalytics?.timeline?.length
       ? extendedAnalytics.timeline.map((t: any) => ({
@@ -401,12 +404,12 @@ export default function CampaignAnalyticsPage() {
   const theme = {
     bg: isDarkMode ? '#1644ad' : 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #DDD6FE 100%)',
     cardBg: isDarkMode ? 'rgba(30, 41, 59, 0.8)' : 'white',
-    cardBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+    cardBorder: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#E2E8F0',
     textPrimary: isDarkMode ? 'white' : '#1E293B',
     textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : '#64748B',
     textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : '#94A3B8',
     statBg: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
-    statBorder: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+    statBorder: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#E2E8F0',
     progressBg: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
   };
 
@@ -430,24 +433,27 @@ export default function CampaignAnalyticsPage() {
               {analytics.campaign.status}
             </Badge>
             <LiveBadge isConnected={isConnected} showOffline className="font-semibold" />
-            <p className="text-sm text-[#64748B] dark:text-[#7a8ba3]">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
+            <p className="text-sm text-[#64748B] dark:text-slate-300">Created {new Date(analytics.campaign.created_at).toLocaleDateString()}</p>
           </div>
         </div>
         <div className="flex gap-3 items-start">
           <Button
             onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads`)}
-            className="bg-[#0b1957] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:bg-[#0a1540]"
+            className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white !text-white transition-all duration-200 cursor-pointer border-none outline-none active:scale-[0.99]
+                      bg-[#0b1957] hover:bg-[#122572] shadow-[0_4px_20px_rgba(11,25,87,0.3)]
+                      dark:bg-[#2563eb] dark:hover:bg-blue-700 dark:shadow-[0_4px_20px_rgba(37,99,235,0.25)]"
           >
-            <Users className="w-4 h-4 mr-2" />
-            View Leads
+            <Users className="w-4 h-4 mr-2 shrink-0 stroke-[2] text-white !text-white" />
+            <span className="text-white !text-white">View Leads</span>
           </Button>
           <Button
-            variant="outline"
-            onClick={() => router.push(`/onboarding?campaignId=${campaignId}`)}
-            className="border-[#0b1957] text-[#0b1957] font-semibold border-2 hover:bg-[#0b1957]/5 rounded-xl dark:border-slate-500 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800 dark:hover:text-white dark:hover:border-slate-400"
+            onClick={() => router.push(`/onboarding/advanced-search-ai?campaignId=${campaignId}`)}
+            className="h-10 px-4 rounded-xl font-semibold text-sm tracking-wide text-white !text-white transition-all duration-200 cursor-pointer border-none outline-none active:scale-[0.99]
+              bg-[#0b1957] hover:bg-[#122572] shadow-[0_4px_12px_rgba(11,25,87,0.15)]
+              dark:bg-[#2563eb] dark:hover:bg-blue-700 dark:shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
           >
-            <SquarePen />
-            Edit Campaign
+            <SquarePen className="w-4 h-4 mr-2 shrink-0 stroke-[2] text-white !text-white" />
+            <span className="text-white !text-white">Edit Campaign</span>
           </Button>
         </div>
       </div>
@@ -459,18 +465,18 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=all`)}
         >
-          <div className="bg-white dark:bg-[#1a2a43] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-blue-100 w-12 h-12 rounded-full">
-                    <AvatarFallback className="bg-blue-100">
-                      <Users className="w-6 h-6 text-blue-600" />
+                  <Avatar className="bg-blue-100 dark:bg-blue-500/20 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-blue-100 dark:bg-transparent">
+                      <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
-                  <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <p className="text-sm text-slate-500 dark:text-slate-300 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     Total Leads
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
@@ -487,18 +493,18 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=sent`)}
         >
-          <div className="bg-white dark:bg-[#1a2a43] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-green-100 w-12 h-12 rounded-full">
-                    <AvatarFallback className="bg-green-100">
-                      <Send className="w-6 h-6 text-green-600" />
+                  <Avatar className="bg-green-100 dark:bg-emerald-500/20 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-green-100 dark:bg-transparent">
+                      <Send className="w-6 h-6 text-green-600 dark:text-emerald-400" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
-                  <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <p className="text-sm text-slate-500 dark:text-slate-300 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     {sentLabel}
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
@@ -515,18 +521,18 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=connected`)}
         >
-          <div className="bg-white dark:bg-[#1a2a43] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-indigo-100 w-12 h-12 rounded-full">
-                    <AvatarFallback className="bg-indigo-100">
-                      <Linkedin className="w-6 h-6 text-indigo-600" />
+                  <Avatar className="bg-blue-50 dark:bg-sky-500/20 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-blue-50 dark:bg-transparent">
+                      <Linkedin className="w-6 h-6 text-[#0077B5] dark:text-sky-400" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
-                  <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <p className="text-sm text-slate-500 dark:text-slate-300 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     Connected
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
@@ -543,28 +549,27 @@ export default function CampaignAnalyticsPage() {
           className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] cursor-pointer"
           onClick={() => router.push(`/campaigns/${campaignId}/analytics/leads?filter=replied`)}
         >
-          <div className="bg-white dark:bg-[#1a2a43] rounded-[20px] border border-slate-200 dark:border-[#262831] shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
+          <div className="bg-white dark:bg-[#071131] rounded-[20px] border border-slate-200 dark:border-blue-950/40 shadow-sm w-full flex flex-col h-full min-h-[120px] transition-all duration-300 ease-out hover:shadow-md hover:scale-[1.02]">
             <div className="flex-1 flex flex-col p-4">
               <div className="flex flex-col h-full">
                 <div className="flex justify-end mb-2">
-                  <Avatar className="bg-amber-100 w-12 h-12 rounded-full">
-                    <AvatarFallback className="bg-amber-100">
-                      <Reply className="w-6 h-6 text-amber-600" />
+                  <Avatar className="bg-amber-100 dark:bg-amber-500/20 w-12 h-12 rounded-full">
+                    <AvatarFallback className="bg-amber-100 dark:bg-transparent">
+                      <Reply className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 flex flex-col justify-end">
-                  <p className="text-sm text-slate-500 dark:text-[#7a8ba3] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  <p className="text-sm text-slate-500 dark:text-slate-300 mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     Lead Contact Back
                   </p>
                   <h5 className="text-2xl font-bold text-slate-800 dark:text-white">
                     {analytics.overview.replied}
                   </h5>
-                  {/* Follow-ups sent sub-stat */}
-                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <Sparkles className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
-                    <span className="text-xs text-slate-500">Follow-ups sent:</span>
-                    <span className="text-sm font-bold text-violet-600">{totalFollowupsSent}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-300">Follow-ups sent:</span>
+                    <span className="text-sm font-bold text-violet-600 dark:text-violet-400">{totalFollowupsSent}</span>
                   </div>
                 </div>
               </div>
@@ -585,35 +590,46 @@ export default function CampaignAnalyticsPage() {
 
       {/* ── Bulk Follow-up Panel ────────────────────────────────────────── */}
       <div className="mb-8">
-        {/* Collapsed header — always visible */}
-        <button
-          onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
-          className="w-full flex items-center justify-between px-5 py-4 bg-white dark:bg-[#1a2a43] rounded-2xl border border-slate-200 dark:border-[#262831] shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center">
-              <Send className="w-5 h-5 text-[#0b1957]" />
+        {/* Collapsed header - always visible */}
+        <div className="flex items-stretch gap-2">
+          <button
+            onClick={() => { setFollowupPanelOpen(v => !v); setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
+            className="flex-1 flex items-center justify-between px-5 py-4 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 dark:bg-blue-500/20 flex items-center justify-center transition-colors">
+                <Send className="w-5 h-5 text-[#0b1957] dark:text-blue-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-[#1E293B] dark:text-white text-base">Send Follow-up</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300">Select leads → choose channel → AI generates personalised messages and sends</p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="font-bold text-[#1E293B] dark:text-white text-base">Send Follow-up</p>
-              <p className="text-xs text-slate-500 dark:text-[#7a8ba3]">Select leads → choose channel → AI generates personalised messages and sends</p>
+            <div className="flex items-center gap-3">
+              {selectedLeadIds.size > 0 && !followupPanelOpen && (
+                <span className="text-xs bg-[#0b1957] text-white px-2.5 py-1 rounded-full font-semibold">
+                  {selectedLeadIds.size} selected
+                </span>
+              )}
+              {followupPanelOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {selectedLeadIds.size > 0 && !followupPanelOpen && (
-              <span className="text-xs bg-[#0b1957] text-white px-2.5 py-1 rounded-full font-semibold">
-                {selectedLeadIds.size} selected
-              </span>
-            )}
-            {followupPanelOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-          </div>
-        </button>
+          </button>
+
+          <button
+            onClick={() => setScheduleManagerOpen(true)}
+            title="View & manage scheduled follow-ups for connection-accepted leads"
+            className="flex items-center gap-2 px-4 rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] text-sm font-semibold text-[#0b1957] dark:text-white shadow-sm hover:border-[#0b1957]/40 hover:shadow-md transition-all whitespace-nowrap"
+          >
+            <CalendarClock className="w-4 h-4" />
+            <span className="hidden sm:inline">Manage schedule</span>
+          </button>
+        </div>
 
         {/* Expanded panel */}
         {followupPanelOpen && (
-          <div className="mt-2 bg-white dark:bg-[#1a2a43] rounded-2xl border border-slate-200 dark:border-[#262831] shadow-sm overflow-hidden">
+          <div className="mt-2 bg-white dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100">
+            <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
               {/* Select all */}
               <div className="flex items-center gap-2 mr-2">
                 <Checkbox
@@ -622,7 +638,7 @@ export default function CampaignAnalyticsPage() {
                   onCheckedChange={toggleAll}
                   disabled={selectableLeads.length === 0}
                 />
-                <label htmlFor="select-all" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
+                <label htmlFor="select-all" className="text-sm font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
                   {selectedLeadIds.size === selectableLeads.length && selectedLeadIds.size > 0
                     ? 'Deselect all'
                     : `Select all (${selectableLeads.length})`}
@@ -630,7 +646,7 @@ export default function CampaignAnalyticsPage() {
               </div>
 
               {selectedLeadIds.size > 0 && (
-                <span className="text-xs bg-[#0b1957]/10 text-[#0b1957] px-2.5 py-1 rounded-full font-semibold">
+                <span className="text-xs bg-[#0b1957]/10 dark:bg-blue-500/20 text-[#0b1957] dark:text-blue-400 px-2.5 py-1 rounded-full font-semibold">
                   {selectedLeadIds.size} selected
                 </span>
               )}
@@ -655,7 +671,7 @@ export default function CampaignAnalyticsPage() {
               <Button
                 onClick={startBulkFollowup}
                 disabled={!selectedLeadIds.size || !bulkChannel || bulkStatus === 'running'}
-                className="bg-[#0b1957] hover:bg-[#1a2d8f] text-white rounded-xl h-9 px-4 gap-2 text-sm font-semibold shadow-sm"
+                className="bg-[#0b1957] hover:bg-[#1a2d8f] dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl h-9 px-4 gap-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-50"
               >
                 {bulkStatus === 'running' ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Sending {bulkDoneCount}/{selectedLeadIds.size}…</>
@@ -667,21 +683,21 @@ export default function CampaignAnalyticsPage() {
 
             {/* Progress list (shown during / after send) */}
             {leadProgress.length > 0 && (
-              <div className="px-5 py-3 border-b border-slate-100 max-h-48 overflow-y-auto">
+              <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 max-h-48 overflow-y-auto">
                 <div className="space-y-1.5">
                   {leadProgress.map(p => (
                     <div key={p.id} className="flex items-center gap-3 text-sm py-1">
                       <div className="w-5 flex-shrink-0">
-                        {p.status === 'pending'  && <div className="w-2 h-2 rounded-full bg-slate-300 mx-auto" />}
-                        {p.status === 'sending'  && <Loader2 className="w-4 h-4 animate-spin text-[#0b1957]" />}
+                        {p.status === 'pending'  && <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto" />}
+                        {p.status === 'sending'  && <Loader2 className="w-4 h-4 animate-spin text-[#0b1957] dark:text-blue-400" />}
                         {p.status === 'done'     && <CheckCircle className="w-4 h-4 text-green-500" />}
                         {p.status === 'error'    && <AlertCircle className="w-4 h-4 text-red-400" />}
                       </div>
-                      <span className="font-medium text-slate-700 w-36 truncate">{p.name}</span>
-                      {p.status === 'done'  && <span className="text-xs text-slate-400 truncate flex-1">{p.message}</span>}
+                      <span className="font-medium text-slate-700 dark:text-slate-200 w-36 truncate">{p.name}</span>
+                      {p.status === 'done'  && <span className="text-xs text-slate-400 dark:text-slate-500 truncate flex-1">{p.message}</span>}
                       {p.status === 'error' && <span className="text-xs text-red-400 truncate flex-1">{p.error}</span>}
-                      {p.status === 'sending' && <span className="text-xs text-[#0b1957] flex-1 flex items-center gap-1"><Sparkles className="w-3 h-3 animate-pulse" />Researching & generating…</span>}
-                      {p.status === 'pending' && <span className="text-xs text-slate-300 flex-1">Queued</span>}
+                      {p.status === 'sending' && <span className="text-xs text-[#0b1957] dark:text-blue-400 flex-1 flex items-center gap-1"><Sparkles className="w-3 h-3 animate-pulse" />Researching & generating…</span>}
+                      {p.status === 'pending' && <span className="text-xs text-slate-300 dark:text-slate-600 flex-1">Queued</span>}
                     </div>
                   ))}
                 </div>
@@ -690,7 +706,7 @@ export default function CampaignAnalyticsPage() {
 
             {/* Lead list with checkboxes */}
             {bulkStatus !== 'running' && (
-              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/40">
                 {leadsLoading ? (
                   <div className="flex items-center justify-center py-8 gap-2 text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -700,12 +716,12 @@ export default function CampaignAnalyticsPage() {
                   <div className="text-center py-10 px-6">
                     {bulkChannel === 'linkedin' ? (
                       <>
-                        <Linkedin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-slate-500">No connected leads yet</p>
-                        <p className="text-xs text-slate-400 mt-1">LinkedIn follow-ups can only be sent to leads who have accepted your connection request. Switch to Email or WhatsApp to reach all leads.</p>
+                        <Linkedin className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No connected leads yet</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">LinkedIn follow-ups can only be sent to leads who have accepted your connection request. Switch to Email or WhatsApp to reach all leads.</p>
                       </>
                     ) : (
-                      <p className="text-sm text-slate-400">No leads found for this campaign</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500">No leads found for this campaign</p>
                     )}
                   </div>
                 ) : (
@@ -723,32 +739,34 @@ export default function CampaignAnalyticsPage() {
                       {lead.photo_url ? (
                         <img src={lead.photo_url} alt={lead.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-slate-500">
+                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-300">
                             {(lead.first_name?.[0] || lead.name?.[0] || '?').toUpperCase()}
                           </span>
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim()}</p>
-                        <p className="text-xs text-slate-400 truncate">{[lead.title, lead.company].filter(Boolean).join(' · ')}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim()}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{[lead.title, lead.company].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0 items-center">
-                        {(lead.has_connected || lead.status?.includes('connect')) && (
+                        {/* has_* is authoritative - the status-substring fallbacks
+                            badged "connection_sent" leads as Connected. */}
+                        {lead.has_connected && (
                           <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-sky-400">Connected</span>
                         )}
-                        {(lead.has_replied || lead.status?.includes('repli')) && (
+                        {lead.has_replied && (
                           <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-amber-300">Replied</span>
                         )}
-                        {(lead.has_sent || lead.status?.includes('sent')) && !lead.has_connected && (
+                        {lead.has_sent && !lead.has_connected && (
                           <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!font-extrabold dark:!text-emerald-400">Sent</span>
                         )}
-                        {/* Follow-up count badge — increments in real-time via leadProgress */}
+                        {/* Follow-up count badge - increments in real-time via leadProgress */}
                         {(() => {
                           const sentNow = leadProgress.find(p => p.id === lead.id && p.status === 'done') ? 1 : 0;
                           const total = (lead.manual_followup_count || 0) + sentNow;
                           return total > 0 ? (
-                            <span className="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                            <span className="text-xs bg-violet-50 dark:bg-transparent border border-violet-200 dark:border-violet-500/30 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
                               <Sparkles className="w-2.5 h-2.5" />
                               {total} follow-up{total !== 1 ? 's' : ''}
                             </span>
@@ -763,8 +781,8 @@ export default function CampaignAnalyticsPage() {
 
             {/* Done summary */}
             {bulkStatus === 'done' && (
-              <div className="px-5 py-3 bg-green-50 border-t border-green-100 flex items-center justify-between">
-                <p className="text-sm font-semibold text-green-700">
+              <div className="px-5 py-3 bg-green-50 dark:bg-emerald-950/30 border-t border-green-100 dark:border-emerald-900/50 flex items-center justify-between">
+                <p className="text-sm font-semibold text-green-700 dark:text-emerald-400">
                   ✓ Sent {leadProgress.filter(p => p.status === 'done').length} follow-ups via {bulkChannel}
                   {leadProgress.filter(p => p.status === 'error').length > 0 && (
                     <span className="text-red-500 ml-2">({leadProgress.filter(p => p.status === 'error').length} failed)</span>
@@ -772,7 +790,7 @@ export default function CampaignAnalyticsPage() {
                 </p>
                 <button
                   onClick={() => { setBulkStatus('idle'); setLeadProgress([]); setSelectedLeadIds(new Set()); }}
-                  className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 flex items-center gap-1"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reset
                 </button>
@@ -785,12 +803,12 @@ export default function CampaignAnalyticsPage() {
       {/* Analytics Charts Section */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
-          <Avatar className="w-11 h-11 bg-white border border-slate-200 shadow-sm">
+          <Avatar className="w-11 h-11 bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 shadow-sm">
             <AvatarFallback><BarChart className="w-5 h-5 text-[#0b1957]" /></AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h5 className="text-xl font-bold text-[#1E293B] dark:text-white">Visual Analytics</h5>
-            <p className="text-sm text-[#64748B] dark:text-[#7a8ba3]">Charts and graphs for deeper insights</p>
+            <p className="text-sm text-[#64748B] dark:text-slate-300">Charts and graphs for deeper insights</p>
           </div>
           <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
         </div>
@@ -815,7 +833,7 @@ export default function CampaignAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Channel Performance */}
         {platformAnalytics.length > 0 && (
-          <Card className="bg-white dark:bg-[#1a2a43] border border-[#E2E8F0] dark:border-[#262831] shadow-sm rounded-xl h-full transition-all duration-300">
+          <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
@@ -823,7 +841,7 @@ export default function CampaignAnalyticsPage() {
                 </Avatar>
                 <div className="flex-1">
                   <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">Channel Performance</h6>
-                  <p className="text-xs text-[#64748B] dark:text-[#7a8ba3]">Active channels</p>
+                  <p className="text-xs text-[#64748B] dark:text-slate-300">Active channels</p>
                 </div>
                 <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
               </div>
@@ -840,49 +858,55 @@ export default function CampaignAnalyticsPage() {
                   const safeRate = Number.isFinite(computedRate) ? computedRate : 0;
 
                   return (
-                    <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#253456]">
+                    <div key={item.platform} className="p-4 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-transparent">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <Avatar className="w-8 h-8" style={{ backgroundColor: `${config.color}20` }}>
-                            <AvatarFallback>
-                              <PlatformIcon className="w-4 h-4" style={{ color: config.color }} />
+                          <Avatar className="w-8 h-8 dark:!bg-blue-500/20 text-white flex items-center justify-center" style={{ backgroundColor: `${config.color}20` }}>
+                            <AvatarFallback className="bg-transparent">
+                              <PlatformIcon className="w-4 h-4 dark:!text-blue-400" style={{
+                                color: 'var(--platform-color)',
+                                ['--platform-color' as any]: config.color
+                              }}/>
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-semibold text-[#1E293B]">{config.name}</p>
-                            <p className="text-xs text-[#64748B]">{item.actions > 0 ? 'Active' : 'Ready'}</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-white">{config.name}</p>
+                            <p className="text-xs text-[#64748B] dark:text-slate-300">{item.actions > 0 ? 'Active' : 'Ready'}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-4 gap-2 mb-3">
                         <div className="text-center">
-                          <p className="text-lg font-bold" style={{ color: config.color }}>{item.actions}</p>
-                          <p className="text-xs text-[#64748B]">Actions</p>
+                          <p className="text-lg font-bold dark:text-blue-400" style={{ color: config.color }}>{item.actions}</p>
+                          <p className="text-xs text-[#64748B] dark:text-slate-300">Actions</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-green-600">{item.sent}</p>
-                          <p className="text-xs text-[#64748B]">Sent</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-emerald-400">{item.sent}</p>
+                          <p className="text-xs text-[#64748B] dark:text-slate-300">Sent</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-blue-600">{item.connected}</p>
-                          <p className="text-xs text-[#64748B]">Connected</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-sky-400">{item.connected}</p>
+                          <p className="text-xs text-[#64748B] dark:text-slate-300">Connected</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-violet-600">{totalFollowupsSent}</p>
-                          <p className="text-xs text-[#64748B]">Follow-ups</p>
+                          <p className="text-lg font-bold text-violet-600 dark:text-violet-400">{totalFollowupsSent}</p>
+                          <p className="text-xs text-[#64748B] dark:text-slate-300">Follow-ups</p>
                         </div>
                       </div>
 
                       <div>
                         <div className="flex justify-between mb-1">
-                          <p className="text-xs text-[#64748B]">Success Rate</p>
-                          <p className="text-xs font-bold" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
+                          <p className="text-xs text-[#64748B] dark:text-slate-300">Success Rate</p>
+                          <p className="text-xs font-bold dark:text-blue-400" style={{ color: config.color }}>{safeRate.toFixed(1)}%</p>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-800">
+                        <div className="relative h-1.5 rounded-full bg-slate-200 dark:bg-slate-600">
                           <div
                             className="absolute h-1.5 rounded-full"
-                            style={{ width: `${Math.min(safeRate, 100)}%`, backgroundColor: config.color }}
+                            style={{
+                              width: `${Math.min(safeRate, 100)}%`,
+                              backgroundColor: typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#60a5fa' : config.color
+                            }}
                           ></div>
                         </div>
                       </div>
@@ -895,15 +919,15 @@ export default function CampaignAnalyticsPage() {
         )}
 
 
-        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-blue-950/40 shadow-sm">
                 <AvatarFallback><BarChart className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h6 className="text-lg font-bold text-[#1E293B]">Outreach Metrics</h6>
-                <p className="text-xs text-[#64748B]">Message tracking</p>
+                <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">Outreach Metrics</h6>
+                <p className="text-xs text-[#64748B] dark:text-slate-300">Message tracking</p>
               </div>
               <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
@@ -916,12 +940,12 @@ export default function CampaignAnalyticsPage() {
                 { label: 'Connected', value: analytics.overview.connected, icon: Linkedin, color: '#0A66C2' },
                 { label: 'Replied', value: analytics.overview.replied, icon: Reply, color: '#F59E0B' },
               ].map((metric) => (
-                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border border-[#E2E8F0] dark:border-[#262831] bg-white dark:bg-[#253456]">
+                <div key={metric.label} className="flex justify-between items-center p-4 rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-transparent">
                   <div className="flex items-center gap-4">
-                    <Avatar className="w-9 h-9" style={{ backgroundColor: `${metric.color}20` }}>
-                      <AvatarFallback><metric.icon className="w-4 h-4" style={{ color: metric.color }} /></AvatarFallback>
+                    <Avatar className="w-9 h-9 dark:!bg-blue-500/20" style={{ backgroundColor: `${metric.color}20` }}>
+                      <AvatarFallback className="bg-transparent"><metric.icon className="w-4 h-4 dark:!text-blue-400" style={{ color: metric.color }} /></AvatarFallback>
                     </Avatar>
-                    <p className="text-[#64748B]">{metric.label}</p>
+                    <p className="text-[#64748B] dark:text-slate-300">{metric.label}</p>
                   </div>
                   <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">{metric.value}</h6>
                 </div>
@@ -930,15 +954,15 @@ export default function CampaignAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl h-full transition-all duration-300">
+        <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Avatar className="w-9 h-9 bg-white border border-slate-200 shadow-sm">
+              <Avatar className="w-9 h-9 bg-white dark:bg-[#253456] border border-slate-200 dark:border-blue-950/40 shadow-sm">
                 <AvatarFallback><Gauge className="w-4 h-4 text-[#0b1957]" /></AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h6 className="text-lg font-bold text-[#1E293B]">Performance Rates</h6>
-                <p className="text-xs text-[#64748B]">Success percentages</p>
+                <h6 className="text-lg font-bold text-[#1E293B] dark:text-white">Performance Rates</h6>
+                <p className="text-xs text-[#64748B] dark:text-slate-300">Success percentages</p>
               </div>
               <LiveBadge isConnected={isConnected} className="font-semibold animate-pulse text-xs" />
             </div>
@@ -952,8 +976,8 @@ export default function CampaignAnalyticsPage() {
               ].map((rate) => (
                 <div key={rate.label}>
                   <div className="flex justify-between mb-2">
-                    <p className="text-[#64748B]">{rate.label}</p>
-                    <p className="font-bold" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
+                    <p className="text-[#64748B] dark:text-slate-300">{rate.label}</p>
+                    <p className="font-bold dark:text-blue-400" style={{ color: rate.color }}>{rate.value.toFixed(1)}%</p>
                   </div>
                   <div className="relative h-2.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800/80">
                     <div className="absolute h-full rounded-full transition-all" style={{ width: `${rate.value}%`, backgroundColor: rate.color }}></div>
@@ -976,6 +1000,13 @@ export default function CampaignAnalyticsPage() {
           <Button onClick={() => router.push(`/campaigns/${campaignId}`)} style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }} className="font-semibold">Configure Campaign</Button>
         </Card>
       )} */}
+
+      {/* Scheduled Follow-ups manager (connection-accepted leads) */}
+      <ScheduledFollowupsModal
+        campaignId={campaignId}
+        open={scheduleManagerOpen}
+        onClose={() => setScheduleManagerOpen(false)}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { safeStorage } from '@lad/shared/storage';  
+import { safeStorage } from '@lad/shared/storage';
 import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import {
   User as UserIcon, Mail, Phone, Clock, Paperclip, MessageSquare, FileText, GripVertical,
   Trash2, MoreVertical, Building2, DollarSign, Calendar, Flag, CheckCircle2,
   AlertCircle, TrendingUp, TrendingDown, X, Edit, Save, XCircle, Plus,
-  UserCircle, UserStar, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag, Linkedin
+  UserCircle, UserStar, AlertTriangle, FolderTree, Ban, Sparkles, CheckCheck, Copy, Archive, Tag, Linkedin, Globe
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -33,7 +33,7 @@ import { selectStatuses, selectPriorities, selectSources } from '@/store/slices/
 import { selectStages } from '@/features/deals-pipeline/store/slices/pipelineSlice';
 import { updateLeadAction, deleteLeadAction } from '@/features/deals-pipeline/store/action/pipelineActions';
 import type { Lead } from '@/features/deals-pipeline/types';
-import { 
+import {
   selectLeadCardActiveTab,
   selectLeadCardExpanded,
   selectLeadCardEditingOverview,
@@ -44,9 +44,9 @@ import {
   setLeadCardEditFormData,
   resetLeadCardEditFormData
 } from '@/store/slices/uiSlice';
-import { 
-  selectUsers, 
-  selectUsersLoading, 
+import {
+  selectUsers,
+  selectUsersLoading,
   selectUsersError,
   User
 } from '@/store/slices/usersSlice';
@@ -133,23 +133,23 @@ interface PipelineLeadCardProps {
   onExternalDetailsClose?: (() => void) | null;
   hideCard?: boolean;
 }
-const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ 
-  lead, 
-  isPreview = false, 
-  onDelete, 
-  onEdit, 
-  currentStage = 0, 
-  totalStages = 1, 
-  onStatusChange, 
-  assignedUsers = [], 
+const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
+  lead,
+  isPreview = false,
+  onDelete,
+  onEdit,
+  currentStage = 0,
+  totalStages = 1,
+  onStatusChange,
+  assignedUsers = [],
   teamMembers = [],
-  activityData = [], 
-  probability = 0, 
-  onAddNote, 
-  onAddComment, 
-  onAddAttachment, 
-  onDeleteNote, 
-  onDeleteComment, 
+  activityData = [],
+  probability = 0,
+  onAddNote,
+  onAddComment,
+  onAddAttachment,
+  onDeleteNote,
+  onDeleteComment,
   onDeleteAttachment,
   externalDetailsOpen = null,
   onExternalDetailsClose = null,
@@ -232,7 +232,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     email: string;
   }>>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const goalsArray = Array.isArray(lead.goals) ? lead.goals : 
+  const goalsArray = Array.isArray(lead.goals) ? lead.goals :
                     typeof lead.goals === 'string' && lead.goals.trim() !== '' ? [lead.goals] : [];
   const tagsArray = Array.isArray(lead.tags) ? lead.tags : [];
   const allTags = [...new Set([...goalsArray, ...tagsArray])];
@@ -613,15 +613,15 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
   const handleDownloadAttachment = async (rawAttachment: any) => {
     const { filename } = resolveAttachmentNameAndUrl(rawAttachment as any);
     const fileUrl = rawAttachment?.file_url ?? rawAttachment?.db?.file_url ?? rawAttachment?.url ?? null;
-    
+
     if (!fileUrl) {
       showSnackbar('Attachment URL missing', 'error');
       return;
     }
-    
+
     const attachmentId = rawAttachment?.id ?? rawAttachment?.db?.id ?? null;
     setDownloadingAttachmentId(attachmentId);
-    
+
     try {
       // Use the new SDK API to get signed URL and download
       await leadsService.downloadAttachment(lead.id, fileUrl, filename || 'download');
@@ -960,7 +960,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
       case 'blocked': return '#EF4444';
       case 'inactive': return '#64748B';
       case 'new': return '#3B82F6';
-      case 'completed': 
+      case 'completed':
       case 'success': return '#059669';
       case 'scheduled': return '#3B82F6';
       default: return '#64748B';
@@ -999,7 +999,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     dispatch(setLeadCardExpanded(false));
     setNewNote('');
     setNewComment('');
-    dispatch(setLeadCardActiveTab(0)); 
+    dispatch(setLeadCardActiveTab(0));
   };
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
     toast({
@@ -1045,8 +1045,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     dispatch(setLeadCardActiveTab(parseInt(newValue)));
   };
   const tabs: Array<{ label: string; index: number; content: React.ReactNode }> = [
-    { 
-      label: 'Overview', 
+    {
+      label: 'Overview',
       index: 0,
       content: (
         <div className="flex flex-col gap-6">
@@ -1060,7 +1060,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 {globalEditingOverview ? (
                   <>
                     <div className="relative">
-                      <Label htmlFor="email" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Email</Label>
+                      <Label htmlFor="email" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Email</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1073,7 +1073,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div className="relative">
-                      <Label htmlFor="phone" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Phone</Label>
+                      <Label htmlFor="phone" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Phone</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1086,7 +1086,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div className="relative">
-                      <Label htmlFor="company" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Company</Label>
+                      <Label htmlFor="company" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Company</Label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -1098,7 +1098,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="assignee" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Assignee</Label>
+                      <Label htmlFor="assignee" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Assignee</Label>
                       <Select
                         value={globalEditFormData.assignee || 'unassigned'}
                         onValueChange={(value: string) => handleFormFieldChange('assignee', value === 'unassigned' ? '' : value)}
@@ -1121,7 +1121,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="source" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Source</Label>
+                      <Label htmlFor="source" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Source</Label>
                       <Select
                         value={globalEditFormData.source || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('source', value)}
@@ -1178,11 +1178,11 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <Phone className="h-4 w-4 text-gray-500 dark:text-slate-300" />
                       <span className="text-gray-900 dark:text-white">{String(lead.phone) || '-'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <Building2 className="h-4 w-4 text-gray-500 dark:text-slate-300" />
                       <span className="text-gray-900 dark:text-white">
                         {normalizeDisplayValue(
                           (
@@ -1205,7 +1205,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       ''
                     ) && (
                       <div className="flex items-center gap-2">
-                        <UserStar className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                        <UserStar className="h-4 w-4 text-gray-500 dark:text-slate-300" />
                         <span className="text-gray-900 dark:text-white">
                           {normalizeDisplayValue(
                             (
@@ -1218,29 +1218,29 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <UserCircle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <UserCircle className="h-4 w-4 text-gray-500 dark:text-slate-300" />
                       <span className="text-gray-900 dark:text-white">
                         {getAssigneeName((lead.assignee || lead.assigned_to_id) as string | number | null | undefined)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" /> */}
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-slate-300" /> */}
                       {(() => {
                         const sourceKey = String((lead as any)?.source || '').toLowerCase();
-                        
+
                         // Map sources based on requirements
                         const isVoiceAgent = sourceKey === 'voice_agent';
                         const isWebsite = sourceKey === 'website';
-                        const isLinkedin = 
-                          sourceKey.includes('linkedin') || 
-                          sourceKey === 'inbound_upload' || 
+                        const isLinkedin =
+                          sourceKey.includes('linkedin') ||
+                          sourceKey === 'inbound_upload' ||
                           sourceKey === 'direct_contact' ||
                           sourceKey === 'linkedin';
-                        
+
                         let label = 'No source';
                         let icon = null;
                         let className = 'inline-flex items-center gap-2 rounded-full bg-gray-50 dark:bg-[#253456] text-gray-700 dark:text-white border border-gray-200 dark:border-[#262831] px-3 py-1 text-xs font-medium';
-                        
+
                         if (isLinkedin) {
                           label = 'Linkedin';
                           icon = <Linkedin className="h-4 w-4" />;
@@ -1280,7 +1280,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 {globalEditingOverview ? (
                   <>
                     <div>
-                      <Label htmlFor="status" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Status</Label>
+                      <Label htmlFor="status" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Status</Label>
                       <Select
                         value={globalEditFormData.status || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('status', value)}
@@ -1300,7 +1300,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="priority" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Priority</Label>
+                      <Label htmlFor="priority" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Priority</Label>
                       <Select
                         value={globalEditFormData.priority || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('priority', value)}
@@ -1320,7 +1320,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="stage" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Stage</Label>
+                      <Label htmlFor="stage" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Stage</Label>
                       <Select
                         value={globalEditFormData.stage || undefined}
                         onValueChange={(value: string) => handleFormFieldChange('stage', value)}
@@ -1341,7 +1341,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </div>
 
                     {/* <div className="relative">
-                      <Label htmlFor="expectedCloseDate" className="text-sm text-gray-600 dark:text-[#7a8ba3] mb-1 block">Expected Close Date</Label>
+                      <Label htmlFor="expectedCloseDate" className="text-sm text-gray-600 dark:text-slate-300 mb-1 block">Expected Close Date</Label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
                         <Input
@@ -1363,18 +1363,18 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" /> */}
+                      {/* <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-slate-300" /> */}
                       <span className="text-gray-900 dark:text-white">
                         {getOptionLabel(priorityOptions, String(lead.priority) || undefined) || 'No priority'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FolderTree className="h-4 w-4 text-gray-500 dark:text-[#7a8ba3]" />
+                      <FolderTree className="h-4 w-4 text-gray-500 dark:text-slate-300" />
                       <span className="text-gray-900 dark:text-white">
                         {getOptionLabel(stageOptions, lead.stage) || lead.stage || 'No stage'}
                       </span>
                     </div>
-                   
+
                   </>
                 )}
               </div>
@@ -1387,8 +1387,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               </h3>
               <div className="flex flex-col gap-4">
                 {globalEditingOverview ? (
-                  <BookingSlot 
-                    leadId={lead.id} 
+                  <BookingSlot
+                    leadId={lead.id}
                     tenantId={tenantId || undefined}
                     studentId={studentId || undefined}
                     assignedUserId={assignedUserId || undefined}
@@ -1398,8 +1398,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     fullWidthButton={true}
                   />
                 ) : (
-                  <BookingSlot 
-                    leadId={lead.id} 
+                  <BookingSlot
+                    leadId={lead.id}
                     tenantId={tenantId || undefined}
                     studentId={studentId || undefined}
                     assignedUserId={assignedUserId || undefined}
@@ -1449,7 +1449,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {globalEditFormData.tags && Array.isArray(globalEditFormData.tags) && globalEditFormData.tags.map((tag, index) => (
-                      <Badge 
+                      <Badge
                         key={index}
                         variant="secondary"
                         className="text-xs"
@@ -1468,7 +1468,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               ) : (
                 <div className="flex gap-2 flex-wrap">
                   {allTags.map((tag, index) => (
-                    <Badge 
+                    <Badge
                       key={index}
                       variant="outline"
                       className="text-xs hover:bg-gray-100 transition-colors"
@@ -1477,7 +1477,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                     </Badge>
                   ))}
                   {allTags.length === 0 && (
-                    <p className="text-sm text-gray-500 dark:text-[#7a8ba3] italic">
+                    <p className="text-sm text-gray-500 dark:text-slate-300 italic">
                       No tags assigned
                     </p>
                   )}
@@ -1488,20 +1488,20 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         </div>
       )
     },
-    { 
-      label: `Notes (${notes.length})`, 
+    {
+      label: `Notes (${notes.length})`,
       index: 1,
       content: (
         <div className="flex flex-col gap-4">
           {notesLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading notes...</p>
+              <p className="text-sm text-gray-500 dark:text-slate-300">Loading notes...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {notes.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
+                  <p className="text-sm text-gray-500 dark:text-slate-300">
                     No notes yet.
                   </p>
                 </div>
@@ -1513,7 +1513,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {note.user_name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-[#7a8ba3]">
+                        <p className="text-xs text-gray-500 dark:text-slate-300">
                           {formatDateTimeUnified(note.created_at)}
                         </p>
                       </div>
@@ -1535,7 +1535,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('note', note.id, note.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            ðŸ—‘ï¸
+                            ðŸ-‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1581,13 +1581,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         </div>
       )
     },
-    { 
-      label: `Comments (${comments.length})`, 
+    {
+      label: `Comments (${comments.length})`,
       index: 2,
       content: (
         <div className="flex flex-col gap-4">
           <div className="bg-gray-50 dark:bg-[#253456] rounded-lg p-4">
-            <Label htmlFor="new-comment" className="text-sm font-medium text-gray-700 dark:text-[#7a8ba3]">
+            <Label htmlFor="new-comment" className="text-sm font-medium text-gray-700 dark:text-slate-300">
               Add a public comment
             </Label>
             <Textarea
@@ -1610,13 +1610,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
           {commentsLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading comments...</p>
+              <p className="text-sm text-gray-500 dark:text-slate-300">Loading comments...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {comments.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
+                  <p className="text-sm text-gray-500 dark:text-slate-300">
                     No comments yet. Add your first comment above.
                   </p>
                 </div>
@@ -1628,7 +1628,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {comment.user_name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-[#7a8ba3]">
+                        <p className="text-xs text-gray-500 dark:text-slate-300">
                           {formatDateTimeUnified(comment.created_at)}
                         </p>
                       </div>
@@ -1650,7 +1650,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                             onClick={() => handleDeleteConfirmationOpen('comment', comment.id, comment.user_id)}
                             className="h-7 w-7 text-gray-500 hover:text-red-500"
                           >
-                            ðŸ—‘ï¸
+                            ðŸ-‘ï¸
                           </Button>
                         )}
                       </div>
@@ -1696,8 +1696,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
         </div>
       )
     },
-    { 
-      label: `Attachments (${attachments.length})`, 
+    {
+      label: `Attachments (${attachments.length})`,
       index: 3,
       content: (
         <div className="flex flex-col gap-4">
@@ -1720,13 +1720,13 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </div>
           {attachmentsLoading ? (
             <div className="flex justify-center py-6">
-              <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">Loading attachments...</p>
+              <p className="text-sm text-gray-500 dark:text-slate-300">Loading attachments...</p>
             </div>
           ) : (
             <div className="space-y-3">
               {attachments.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 dark:bg-[#253456] rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">
+                  <p className="text-sm text-gray-500 dark:text-slate-300">
                     No attachments yet. Upload your first file above.
                   </p>
                 </div>
@@ -1782,8 +1782,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
     }
   ];
   const renderDetailsDialog = () => (
-    <Dialog 
-      open={isDetailsOpen} 
+    <Dialog
+      open={isDetailsOpen}
       onOpenChange={(isOpen) => !isOpen && handleClose()}
     >
 
@@ -1803,27 +1803,16 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               <div className="flex-1">
                 <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">{getLeadDisplayName(lead)}</DialogTitle>
                 {normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown, '') && (
-                  <p className="text-sm text-gray-500 dark:text-[#7a8ba3]">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-300">{normalizeDisplayValue((lead.company ?? (lead as any).company_name) as unknown)}</p>
                 )}
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClose();
-              }}
-              className="text-gray-500 dark:text-[#7a8ba3] hover:text-gray-900 dark:hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="w-full">
-            <Tabs 
-              value={String(globalActiveTab)} 
+            <Tabs
+              value={String(globalActiveTab)}
               onValueChange={(value) => dispatch(setLeadCardActiveTab(parseInt(value, 10)))}
               className="flex flex-col"
             >
@@ -1831,7 +1820,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 <TabsList className="flex w-full justify-around bg-gray-50/50 dark:bg-[#1a2a43] p-1 rounded-xl">
 
                   {tabs.map((tab) => (
-                    <TabsTrigger 
+                    <TabsTrigger
                       key={tab.index}
                       value={String(tab.index)}
                       className="px-8 text-sm font-medium py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
@@ -1842,8 +1831,8 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                 </TabsList>
               </div>
               {tabs.map((tab) => (
-                <TabsContent 
-                  key={tab.index} 
+                <TabsContent
+                  key={tab.index}
                   value={String(tab.index)}
                   className="flex flex-col mt-0 p-6"
                 >
@@ -1921,7 +1910,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           <button
             type="button"
             data-ignore-card-click
-            className="drag-handle text-gray-400 dark:text-[#7a8ba3] hover:text-gray-600 dark:hover:text-white mt-1 cursor-grab active:cursor-grabbing"
+            className="drag-handle text-gray-400 dark:text-slate-300 hover:text-gray-600 dark:hover:text-white mt-1 cursor-grab active:cursor-grabbing"
             {...listeners}
             onMouseDown={handleDragHandleMouseDown}
             style={{ touchAction: 'none' }}
@@ -1965,7 +1954,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   const isSuccess = ['won', 'closed', 'success', 'converted', 'active'].includes(status);
                   const isFailed = ['lost', 'failed', 'rejected', 'inactive', 'cancelled'].includes(status);
                   const isNew = ['new'].includes(status);
-                  
+
                   let badgeClass = 'text-xs flex items-center gap-1 capitalize bg-primary/10 text-primary';
                   if (isSuccess) {
                     badgeClass = 'text-xs flex items-center gap-1 capitalize bg-green-100 text-green-600';
@@ -1974,7 +1963,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
                   } else if (isNew) {
                     badgeClass = 'text-xs flex items-center gap-1 capitalize bg-violet-100 text-violet-600';
                   }
-                  
+
                   return (
                     <Badge className={badgeClass}>
                       {getStatusIcon(currentStatus)}
@@ -1999,10 +1988,10 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button 
-                type="button" 
-                data-ignore-card-click 
-                className="text-gray-400 dark:text-[#7a8ba3] hover:text-gray-600 dark:hover:text-white focus:outline-none p-1 rounded hover:bg-gray-100 dark:hover:bg-[#253456]"
+              <button
+                type="button"
+                data-ignore-card-click
+                className="text-gray-400 dark:text-slate-300 hover:text-gray-600 dark:hover:text-white focus:outline-none p-1 rounded hover:bg-gray-100 dark:hover:bg-[#253456]"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -2071,12 +2060,12 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
             </div>
 
             {(lead.description as string | undefined) && (
-              <p className="text-sm text-gray-600 dark:text-[#7a8ba3]">{String(lead.description as unknown)}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-300">{String(lead.description as unknown)}</p>
             )}
           </div>
         )}
-    
-        <div className="mt-4 border-t border-gray-100 dark:border-[#262831] pt-2 text-xs text-gray-500 dark:text-[#7a8ba3] flex items-center justify-between">
+
+        <div className="mt-4 border-t border-gray-100 dark:border-[#262831] pt-2 text-xs text-gray-500 dark:text-slate-300 flex items-center justify-between">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
             {formatDateTimeUnified(getFieldValueLocal(lead, 'updatedAt'))}
@@ -2117,17 +2106,17 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
               const tags = Array.isArray(lead.tags) ? lead.tags : [];
               const priority = String(lead.priority || '').toLowerCase();
               const allTags = tags.map((t: string) => t.toLowerCase());
-              
+
               let temperature: string | null = null;
               // Check for hot/warm/cold in tags (handles "Cold Lead", "Hot Prospect", etc.)
               const hasHot = allTags.some((t: string) => t.includes('hot'));
               const hasWarm = allTags.some((t: string) => t.includes('warm'));
               const hasCold = allTags.some((t: string) => t.includes('cold'));
-              
+
               if (hasHot || priority === 'hot') temperature = 'Hot';
               else if (hasWarm || priority === 'warm') temperature = 'Warm';
               else if (hasCold || priority === 'cold') temperature = 'Cold';
-              
+
               return temperature ? (
                 <>
                   <div className="w-px h-4 bg-gray-200 dark:bg-[#262831]" />
@@ -2154,7 +2143,7 @@ const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({
           </DialogHeader>
           <div className="py-8">
             <p className="text-gray-600 text-base">
-              Are you sure you want to delete <span className="font-semibold text-gray-900">{getLeadDisplayName(lead)}</span>? 
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{getLeadDisplayName(lead)}</span>?
               This action is permanent and cannot be undone.
             </p>
           </div>

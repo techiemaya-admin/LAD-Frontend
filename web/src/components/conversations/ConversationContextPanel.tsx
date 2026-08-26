@@ -1,12 +1,14 @@
 import { memo, useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Conversation, ContactTag, Label, ConversationNote } from '@/types/conversation';
-import { getCurrentUser } from '@/lib/auth';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import {
   Building2,
   Mail,
@@ -31,14 +33,30 @@ import {
   CreditCard,
   ShieldCheck,
   AlertCircle,
+  ChevronLeft,
   ChevronDown,
   ChevronUp,
+  Star,
+  Bell,
+  Shield,
+  Lock,
+  Heart,
+  List,
+  MinusCircle,
+  ChevronRight,
+  Info,
+  ThumbsDown,
+  Ban,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { ChannelIcon } from './ChannelIcon';
 import { AssignmentPanel } from './AssignmentPanel';
+import { InjuryReviewCard } from './InjuryReviewCard';
+import { MessageSettings } from './MessageSettings';
 import { mockInternalComments } from '@/data/mockConversations';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConversationContextPanelProps {
   conversation: Conversation;
@@ -46,6 +64,7 @@ interface ConversationContextPanelProps {
   backendChannel?: 'personal' | 'waba';
   /** Force the panel to open on a specific tab */
   defaultTab?: 'assignment' | 'notes' | 'comments';
+  onFavoriteChat?: (id?: string) => void;
 }
 
 const tagColors: Record<ContactTag, string> = {
@@ -81,31 +100,76 @@ const CONV_API = '/api/whatsapp-conversations/conversations';
 
 const LABEL_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4'];
 
+const mockImages = [
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
+];
+
 export const ConversationContextPanel = memo(function ConversationContextPanel({
   conversation,
   onClose,
   backendChannel = 'waba',
   defaultTab = 'assignment',
+  onFavoriteChat,
 }: ConversationContextPanelProps) {
   const { contact, channel, createdAt } = conversation;
+  const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
+  const [showShareChatPicker, setShowShareChatPicker] = useState(false);
+  const queryClient = useQueryClient();
+  const apiChannel = backendChannel || 'waba';
 
-  // Phone masking — loaded from current user's profile
-  const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
-  useEffect(() => {
-    getCurrentUser()
-      .then((u: any) => setMaskPhoneNumbers(!!(u?.maskPhoneNumber ?? u?.user?.maskPhoneNumber)))
-      .catch(() => {});
-  }, []);
+  const handleFavorite = async () => {
+    try {
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${conversation.id}/favorite?channel=${apiChannel}`, {
+        method: 'PATCH',
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch (err) {
+      console.error('Error favoriting conversation:', err);
+    }
+  };
 
-  const displayPhone = useCallback((phone: string) => {
-    if (!maskPhoneNumbers || !phone) return phone;
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 4) return '••••';
-    const visible = digits.slice(-4);
-    const masked = Array(digits.length - 4).fill('•').join('');
-    return `+${masked}${visible}`;
-  }, [maskPhoneNumbers]);
+  const handleBlock = async () => {
+    try {
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${conversation.id}/status?channel=${apiChannel}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'resolved' }),
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+      }
+    } catch (err) {
+      console.error('Error blocking conversation:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await fetchWithTenant(`/api/whatsapp-conversations/conversations/${conversation.id}?channel=${apiChannel}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['conversations', 'list'] });
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error deleting conversation:', err);
+    }
+  };
+
+  const handleClear = async () => {
+    await handleDelete();
+  };
+
+  // Phone masking - per-viewer setting, shared with every other surface that
+  // renders a contact number (conversation list, group members, starred
+  // messages). Previously a private callback here, which is why this panel was
+  // the ONLY place masking took effect.
+  const { displayPhone } = usePhoneMasking();
 
   // Labels state
   const [allLabels, setAllLabels] = useState<Label[]>([]);
@@ -113,6 +177,19 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+  // Optional intent mapping - when set, the bot's intent classifier will
+  // auto-apply this label on inbound messages classified as that intent.
+  // '' means "manual label only - never auto-applied".
+  const [newLabelIntent, setNewLabelIntent] = useState<'' | 'book' | 'cancel' | 'reschedule' | 'info'>('');
+  // Opt this label into the AI context-tag classifier. When true, the agent
+  // may attach this label on any inbound message whose context matches the
+  // label's name + description. Mutually exclusive with intent mapping above
+  // (intent labels run on a separate, deterministic pipeline).
+  const [newLabelAutoClassify, setNewLabelAutoClassify] = useState(false);
+  // Description doubles as the prompt the LLM uses to decide whether to
+  // apply this label - operators write it like a rule ("customer asks about
+  // pricing or discounts", "expresses frustration or complaint").
+  const [newLabelDescription, setNewLabelDescription] = useState('');
 
   // Business profile state
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
@@ -279,18 +356,37 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
   const createLabel = useCallback(async () => {
     if (!newLabelName.trim()) return;
+    // metadata is JSONB on the server. Only set keys the operator opted in
+    // to - leaving them absent (not "") keeps the row free of empty-string
+    // match conditions the auto-classifier would otherwise pick up.
+    const metadata: Record<string, string> = {};
+    if (newLabelIntent) {
+      metadata.intent = newLabelIntent;
+    } else if (newLabelAutoClassify) {
+      // Auto-classify and intent are mutually exclusive - intent runs on a
+      // deterministic pipeline, auto-classify on the LLM context classifier.
+      metadata.auto_classify = 'true';
+    }
     try {
       const res = await fetchWithTenant(`${LABELS_API}?channel=${backendChannel}`, {
         method: 'POST',
-        body: JSON.stringify({ name: newLabelName.trim(), color: newLabelColor }),
+        body: JSON.stringify({
+          name: newLabelName.trim(),
+          color: newLabelColor,
+          description: newLabelDescription.trim() || undefined,
+          metadata,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setAllLabels((prev) => [...prev, data.data]);
         setNewLabelName('');
+        setNewLabelIntent('');
+        setNewLabelAutoClassify(false);
+        setNewLabelDescription('');
       }
     } catch {}
-  }, [newLabelName, newLabelColor, backendChannel]);
+  }, [newLabelName, newLabelColor, newLabelIntent, newLabelAutoClassify, newLabelDescription, backendChannel]);
 
   // ── Note actions ──────────────────────────────────────────────
 
@@ -340,48 +436,113 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   );
 
   return (
-    <div className="h-full flex flex-col bg-card border-l border-border overflow-hidden">
+    <div className="h-full flex flex-col bg-card dark:bg-[#161717] border-l border-border dark:border-[#222d34] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-        <h3 className="font-heading font-semibold text-sm">Contact Details</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-          <X className="h-4 w-4" />
+      <div className="flex items-center justify-between p-4 border-b border-border dark:border-[#222d34] flex-shrink-0">
+        <div className="flex items-center gap-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 -ml-1 xl:hidden"
+            onClick={onClose}
+            aria-label="Back to chat"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hidden xl:inline-flex"
+            onClick={onClose}
+            aria-label="Close contact info"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <h3 className="font-heading font-semibold text-sm dark:text-white">Contact info</h3>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Pencil className="h-4 w-4" />
         </Button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="p-4">
-          {/* Profile */}
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="relative mb-3">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={contact.avatar} alt={contact.name} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xl font-medium">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1">
-                <ChannelIcon channel={channel} size={16} showBackground />
-              </div>
-            </div>
-            <h4 className="font-semibold">{contact.name}</h4>
-            {contact.position && (
-              <p className="text-sm text-muted-foreground">{contact.position}</p>
-            )}
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
-              {(contact.tags || []).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className={`text-[10px] uppercase ${tagColors[tag]}`}
-                >
-                  {tag}
-                </Badge>
-              ))}
+        {/* Profile */}
+        <div className="flex flex-col items-center text-center pt-6 pb-4 px-4">
+          <div className="relative mb-6">
+            <Avatar className="h-[200px] w-[200px] shadow-sm">
+              <AvatarImage src={contact.avatar} alt={contact.name} />
+              <AvatarFallback className="bg-primary/10 text-primary text-6xl font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute bottom-2 right-2">
+              <ChannelIcon channel={channel} size={32} showBackground />
             </div>
           </div>
+          <h2 className="text-[24px] font-medium text-foreground dark:text-white mb-1">{contact.name}</h2>
+          {contact.position && (
+            <p className="text-[16px] text-muted-foreground dark:text-[#a2a2a2] mb-1">{contact.position}</p>
+          )}
+          <span className="text-[14px] text-muted-foreground mb-1">Other business</span>
+          <span className="text-[14px] text-destructive mb-4">Closed now</span>
+          
+          <Button
+            variant="outline"
+            className="rounded-xl px-6 py-5 flex flex-col items-center justify-center h-auto text-[#00a884] dark:text-[#00a884] border-border dark:border-[#222d34] hover:bg-muted/50 mb-4"
+            onClick={() => setShowShareChatPicker(true)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1 text-[#00a884]">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            <span className="text-xs font-semibold text-foreground dark:text-white">Share</span>
+          </Button>
+
+          {showShareChatPicker && (
+            <ShareContactToChatModal
+              contact={{
+                name: contact.name,
+                phone: contact.phone,
+                email: (contact as { email?: string }).email,
+                position: contact.position,
+              }}
+              currentConversationId={conversation.id}
+              backendChannel={apiChannel as 'personal' | 'waba'}
+              onClose={() => setShowShareChatPicker(false)}
+            />
+          )}
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1.5 justify-center mb-2">
+            {(contact.tags || []).map((tag) => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className={`text-[10px] uppercase ${tagColors[tag]}`}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Business account info & hours */}
+        <div className="px-6 py-4 border-t border-border dark:border-[#222d34] space-y-4">
+          <div className="flex items-center justify-between text-sm text-foreground dark:text-white">
+            <span>This is a business account.</span>
+            <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+          </div>
+          <div className="flex items-center justify-between text-sm cursor-pointer hover:bg-muted/30 dark:hover:bg-[#202c33] p-1.5 rounded-lg transition-colors">
+            <div>
+              <span className="block font-medium dark:text-white">Wednesday</span>
+              <span className="text-xs text-muted-foreground dark:text-[#a2a2a2]">9:00 AM - 6:00 PM</span>
+            </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-border dark:border-[#222d34]">
 
           {/* Labels Section */}
           <div className="mb-6">
@@ -420,7 +581,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
             {/* Label picker */}
             {showLabelPicker && (
-              <div className="mt-2 p-2.5 border rounded-lg bg-muted/30 space-y-2">
+              <div className="mt-2 p-2.5 border dark:border-[#222d34] rounded-lg bg-muted/30 dark:bg-[#1e2a30] space-y-2">
                 {unattachedLabels.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {unattachedLabels.map((label) => (
@@ -460,6 +621,66 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                     Add
                   </Button>
                 </div>
+                {/* Optional: tie this label to what the AI hears from the
+                    customer. When the AI detects the chosen request type
+                    on any inbound message, this label is added to the
+                    conversation automatically. Leave on "Manual only"
+                    for labels operators apply by hand. */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    Auto-apply when AI detects:
+                  </span>
+                  <select
+                    value={newLabelIntent}
+                    onChange={(e) => {
+                      setNewLabelIntent(e.target.value as typeof newLabelIntent);
+                      // Intent + auto-classify are mutually exclusive - selecting
+                      // an intent disables the AI context classifier for this label.
+                      if (e.target.value) setNewLabelAutoClassify(false);
+                    }}
+                    className="h-7 text-xs flex-1 rounded border border-input bg-background px-2"
+                    title="Whenever the AI detects the chosen request type in an inbound message, this label is automatically added to the conversation."
+                  >
+                    <option value="">Manual only (no auto-apply)</option>
+                    <option value="book">Booking request</option>
+                    <option value="cancel">Cancellation request</option>
+                    <option value="reschedule">Reschedule request</option>
+                    <option value="info">Question or info inquiry</option>
+                  </select>
+                </div>
+
+                {/* AI context classifier - operator-curated vocabulary the
+                    Sonnet/Haiku-class classifier picks from on every inbound
+                    message. The description is the prompt the LLM uses to
+                    decide, so write it like a rule. */}
+                <div className="flex items-start gap-1.5 mt-1">
+                  <input
+                    id="newLabelAutoClassify"
+                    type="checkbox"
+                    checked={newLabelAutoClassify}
+                    onChange={(e) => {
+                      setNewLabelAutoClassify(e.target.checked);
+                      if (e.target.checked) setNewLabelIntent('');
+                    }}
+                    className="h-3.5 w-3.5 mt-0.5"
+                  />
+                  <label htmlFor="newLabelAutoClassify" className="text-[10px] text-muted-foreground cursor-pointer">
+                    Let AI apply this label based on conversation context
+                  </label>
+                </div>
+                {newLabelAutoClassify && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    <Input
+                      placeholder='When to apply (e.g. "customer asks about pricing or discounts")'
+                      value={newLabelDescription}
+                      onChange={(e) => setNewLabelDescription(e.target.value)}
+                      className="h-7 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">
+                      The AI uses this description to decide whether the label fits.
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -484,9 +705,15 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             )}
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Clock className="h-4 w-4 flex-shrink-0" />
-              <span>Conversation started {formatDistanceToNow(createdAt, { addSuffix: true })}</span>
+              <span>Conversation started {createdAt ? formatDistanceToNow(new Date(createdAt), { addSuffix: true }) : 'recently'}</span>
             </div>
           </div>
+
+          {/* Injury screening - staff gate that blocks the agent from showing
+              class times / booking until a reported injury is reviewed.
+              Self-hiding: renders nothing for tenants that don't screen for
+              injuries, or when there's no injury and nothing is blocked. */}
+          <InjuryReviewCard conversationId={conversation.id} backendChannel={backendChannel} />
 
           {/* Business Profile */}
           <div className="mb-6">
@@ -496,7 +723,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : businessProfile ? (
-              <div className="space-y-3 p-3 rounded-lg bg-muted/30">
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 dark:bg-[#1e2a30]">
                 {businessProfile.company_name && (
                   <div className="flex items-start gap-3 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -638,12 +865,12 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                 )}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg">No business profile available</p>
+              <p className="text-xs text-muted-foreground p-3 bg-muted/30 dark:bg-[#1e2a30] rounded-lg">No business profile available</p>
             )}
           </div>
 
           {/* Metadata */}
-          <div className="mb-6 p-3 rounded-lg bg-muted/30">
+          <div className="mb-6 p-3 rounded-lg bg-muted/30 dark:bg-[#1e2a30]">
             <h5 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Metadata</h5>
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
@@ -666,10 +893,10 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           </div>
 
           {/* MindBody Payment Panel */}
-          <div className="mb-6 border border-border rounded-lg overflow-hidden">
+          <div className="mb-6 border border-border dark:border-[#222d34] rounded-lg overflow-hidden">
             <button
               onClick={toggleMbPanel}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-muted/40 dark:bg-[#1e2a30] hover:bg-muted/60 dark:hover:bg-[#243038] transition-colors text-left"
             >
               <div className="flex items-center gap-2">
                 <CreditCard className="h-3.5 w-3.5 text-primary" />
@@ -700,7 +927,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                         <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1.5">Available Plans</p>
                         <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                           {mbPaymentLink.options.map(opt => (
-                            <div key={opt.id} className="flex items-center justify-between py-1 px-2 rounded bg-muted/30 text-xs">
+                            <div key={opt.id} className="flex items-center justify-between py-1 px-2 rounded bg-muted/30 dark:bg-[#243038] text-xs">
                               <span className="truncate max-w-[130px]" title={opt.name}>{opt.name}</span>
                               {opt.price && <span className="font-medium text-primary shrink-0 ml-1">AED {opt.price}</span>}
                             </div>
@@ -725,7 +952,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                     </div>
 
                     {/* Verify payment */}
-                    <div className="border-t border-border pt-3">
+                    <div className="border-t border-border dark:border-[#222d34] pt-3">
                       <Button
                         variant="outline"
                         size="sm"
@@ -758,16 +985,16 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
           {/* Tabs: Assignment, Notes & Internal Comments */}
           <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-10 bg-muted/50 p-1 rounded-full border border-border/50">
-              <TabsTrigger value="assignment" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+            <TabsList className="w-full grid grid-cols-3 h-10 bg-muted/50 dark:bg-[#202c33] p-1 rounded-full border border-border/50 dark:border-[#222d34]">
+              <TabsTrigger value="assignment" className="text-[11px] rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a3942] data-[state=active]:shadow-sm transition-all dark:text-[#d1d7db]">
                 <UserCheck className="h-3 w-3 mr-0.5" />
                 Assignment
               </TabsTrigger>
-              <TabsTrigger value="notes" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+              <TabsTrigger value="notes" className="text-[11px] rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a3942] data-[state=active]:shadow-sm transition-all dark:text-[#d1d7db]">
                 <Tag className="h-3 w-3 mr-1" />
                 Notes
               </TabsTrigger>
-              <TabsTrigger value="comments" className="text-[11px] rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+              <TabsTrigger value="comments" className="text-[11px] rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a3942] data-[state=active]:shadow-sm transition-all dark:text-[#d1d7db]">
                 <MessageSquare className="h-3 w-3 mr-0.75" />
                 Internal
               </TabsTrigger>
@@ -805,7 +1032,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                 ) : (
                   <>
                     {notes.map((note) => (
-                      <div key={note.id} className="p-2.5 bg-muted/50 rounded-lg group">
+                      <div key={note.id} className="p-2.5 bg-muted/50 dark:bg-[#1e2a30] rounded-lg group">
                         {editingNoteId === note.id ? (
                           <div className="space-y-2">
                             <Textarea
@@ -865,7 +1092,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                     {(contact.notes || []).map((note, i) => (
                       <div
                         key={`legacy-${i}`}
-                        className="p-2.5 bg-muted/50 rounded-lg text-xs text-muted-foreground"
+                        className="p-2.5 bg-muted/50 dark:bg-[#1e2a30] rounded-lg text-xs text-muted-foreground"
                       >
                         {note}
                       </div>
@@ -904,7 +1131,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   </p>
                 ) : (
                   comments.map((comment) => (
-                    <div key={comment.id} className="bg-muted/50 rounded-lg p-2.5">
+                    <div key={comment.id} className="bg-muted/50 dark:bg-[#1e2a30] rounded-lg p-2.5">
                       <div className="flex items-center gap-2 mb-1">
                         <Avatar className="h-5 w-5">
                           <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
@@ -924,7 +1151,340 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Media, links and docs */}
+        <div className="py-2 border-t border-border dark:border-[#222d34]">
+          <div className="flex items-center justify-between px-6 mb-4 cursor-pointer">
+            <div className="flex items-center gap-4">
+              <ImageIcon className="w-5 h-5 text-muted-foreground dark:text-white" />
+              <h4 className="text-[15px] font-normal text-foreground dark:text-white">Media, links and docs</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] text-muted-foreground dark:text-[#a2a2a2]">{mockImages.length}</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground dark:text-white" />
+            </div>
+          </div>
+          <div className="flex gap-2 px-6 overflow-x-auto no-scrollbar pb-2">
+            {mockImages.map((src, i) => (
+              <div key={i} className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden cursor-pointer">
+                <img src={src} className="w-full h-full object-cover" alt="media" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Starred, Mute, Disappearing, Privacy, Encryption */}
+        <div className="py-2 border-t border-border dark:border-[#222d34]">
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <Star className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <span className="text-[16px] text-foreground dark:text-white flex-1">Starred messages</span>
+          </div>
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <Bell className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <span className="text-[16px] text-foreground dark:text-white flex-1">Mute notifications</span>
+            <Switch />
+          </div>
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <Clock className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <div className="flex-1">
+              <span className="text-[16px] text-foreground dark:text-white block">Disappearing messages</span>
+              <span className="text-[14px] text-muted-foreground dark:text-[#a2a2a2] mt-0.5 block">Off</span>
+            </div>
+          </div>
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <Shield className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <div className="flex-1">
+              <span className="text-[16px] text-foreground dark:text-white block">Advanced chat privacy</span>
+              <span className="text-[14px] text-muted-foreground dark:text-[#a2a2a2] mt-0.5 block">Off</span>
+            </div>
+          </div>
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <Lock className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <div className="flex-1">
+              <span className="text-[16px] text-foreground dark:text-white block">Encryption</span>
+              <span className="text-[14px] text-muted-foreground dark:text-[#a2a2a2] mt-0.5 block">Messages are end-to-end encrypted. Click to verify.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* About and phone number */}
+        <div className="py-4 px-6 border-t border-border dark:border-[#222d34]">
+          <h5 className="text-[14px] text-muted-foreground dark:text-[#a2a2a2] font-medium mb-2">About and phone number</h5>
+          <p className="text-sm text-foreground dark:text-white mb-3">Hey there! I am using WhatsApp.</p>
+          {contact.phone && (
+            <p className="text-sm font-medium text-foreground dark:text-white">{displayPhone(contact.phone)}</p>
+          )}
+        </div>
+
+        {/* Favourites & lists */}
+        <div className="py-2 border-t border-border dark:border-[#222d34]">
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors" onClick={() => onFavoriteChat?.(conversation.id)}>
+            <Heart className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <span className="text-[16px] text-foreground dark:text-white flex-1">Add to favourites</span>
+          </div>
+          <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
+            <List className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
+            <span className="text-[16px] text-foreground dark:text-white">Add to list</span>
+          </div>
+        </div>
+
+        {/* Red actions */}
+        <div className="py-2 px-4 space-y-2 border-t border-border dark:border-[#222d34]">
+          <div className="flex items-center px-4 py-3 rounded-2xl cursor-pointer hover:bg-destructive/10 text-destructive transition-colors" onClick={handleClear}>
+            <MinusCircle className="w-5 h-5 mr-4" />
+            <span className="text-[16px]">Clear chat</span>
+          </div>
+          <div className="flex items-center px-4 py-3 rounded-2xl cursor-pointer hover:bg-destructive/10 text-destructive transition-colors" onClick={handleBlock}>
+            <Ban className="w-5 h-5 mr-4" />
+            <span className="text-[16px]">Block {contact.name}</span>
+          </div>
+          <div className="flex items-center px-4 py-3 rounded-2xl cursor-pointer hover:bg-destructive/10 text-destructive transition-colors">
+            <ThumbsDown className="w-5 h-5 mr-4" />
+            <span className="text-[16px]">Report business</span>
+          </div>
+          <div className="flex items-center px-4 py-3 rounded-2xl cursor-pointer hover:bg-destructive/10 text-destructive transition-colors" onClick={handleDelete}>
+            <Trash2 className="w-5 h-5 mr-4" />
+            <span className="text-[16px]">Delete chat</span>
+          </div>
+        </div>
+
+      </div>
+      {/* Footer / Settings */}
+      <div className="p-3 border-t border-border dark:border-[#222d34] flex justify-between items-center bg-card dark:bg-[#161717] flex-shrink-0">
+        <span className="text-xs text-muted-foreground dark:text-[#a2a2a2] font-medium">Message Settings</span>
+        <MessageSettings />
       </div>
     </div>
   );
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ShareContactToChatModal
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat picker for the Share button on the contact info panel. Fetches the
+// user's other conversations (filtered by search), multi-select, sends the
+// contact vCard to each selected chat via the same POST /conversations/:id/
+// messages endpoint the MessageComposer uses. The WAPA-side vCard builder
+// (baileysBridgeService case 'contact') adds the `waid` param so WhatsApp
+// recognises the shared contact as a WA user (see earlier Baileys fix).
+//
+// Design notes:
+//   - Excludes the current conversation from the list (can't share to self).
+//   - Loops sequentially through selected targets so a single failure doesn't
+//     abort the rest; reports aggregate {sent, failed} in the toast.
+//   - Uses the same `backendChannel` prop the panel already has, so this works
+//     for both personal-WA (LAD-WAPA-Comms) and WABA (LAD-WABA-Comms).
+
+interface ShareContactToChatModalProps {
+  contact: { name: string; phone?: string; email?: string; position?: string };
+  currentConversationId?: string;
+  backendChannel: 'personal' | 'waba';
+  onClose: () => void;
+}
+
+interface ChatRow {
+  id: string;
+  lead_name?: string;
+  contact_name?: string;
+  lead_phone?: string;
+  phone?: string;
+  last_message_content?: string;
+}
+
+function ShareContactToChatModal({
+  contact,
+  currentConversationId,
+  backendChannel,
+  onClose,
+}: ShareContactToChatModalProps) {
+  const { toast } = useToast();
+  const [chats, setChats] = useState<ChatRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations?channel=${backendChannel}&limit=200`,
+        );
+        if (!res.ok) throw new Error(`Failed to load chats (${res.status})`);
+        const data = await res.json();
+        const list: ChatRow[] = data?.conversations ?? data?.data ?? [];
+        if (cancelled) return;
+        setChats(list.filter((c) => c.id !== currentConversationId));
+      } catch (err) {
+        if (cancelled) return;
+        setError((err as Error)?.message || 'Failed to load chats');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [backendChannel, currentConversationId]);
+
+  const filtered = chats.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const name = (c.lead_name || c.contact_name || '').toLowerCase();
+    const phone = (c.lead_phone || c.phone || '').toLowerCase();
+    return name.includes(q) || phone.includes(q);
+  });
+
+  const toggle = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSend = async () => {
+    if (selectedIds.size === 0 || sending) return;
+    setSending(true);
+
+    let succeeded = 0;
+    let failed = 0;
+    for (const convId of selectedIds) {
+      try {
+        const res = await fetchWithTenant(
+          `/api/whatsapp-conversations/conversations/${convId}/messages?channel=${backendChannel}`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              type: 'contact',
+              content: '',
+              contact_name: contact.name || 'Contact',
+              contact_phone: contact.phone,
+              contact_email: contact.email,
+              contact_company: contact.position,
+            }),
+          },
+        );
+        if (res.ok) succeeded += 1; else failed += 1;
+      } catch (_err) {
+        failed += 1;
+      }
+    }
+
+    setSending(false);
+    toast({
+      title: failed === 0
+        ? `Sent to ${succeeded} chat${succeeded === 1 ? '' : 's'}`
+        : `Sent to ${succeeded}, ${failed} failed`,
+      description: contact.name || 'Contact',
+      variant: failed > 0 ? 'destructive' : undefined,
+    });
+    if (failed === 0) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-card dark:bg-[#1e1e1e] rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col overflow-hidden border dark:border-[#222d34]">
+        {/* Header */}
+        <div className="px-5 py-4 border-b dark:border-[#222d34] flex items-center justify-between">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground dark:text-white truncate">
+              Share {contact.name || 'contact'}
+            </h3>
+            <p className="text-xs text-muted-foreground truncate">
+              Send this contact card to another chat
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="shrink-0 ml-3"
+          >
+            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-5 py-3 border-b dark:border-[#222d34]">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search chats…"
+            className="h-9"
+          />
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto min-h-[200px]">
+          {loading && (
+            <div className="p-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading chats…
+            </div>
+          )}
+          {error && !loading && (
+            <div className="p-8 text-center text-sm text-destructive">{error}</div>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              {search ? 'No chats match your search' : 'No other chats available'}
+            </div>
+          )}
+          {!loading && !error && filtered.map((chat) => {
+            const displayName = chat.lead_name || chat.contact_name || 'Unknown';
+            const displayPhone = chat.lead_phone || chat.phone || '';
+            const initials = displayName.slice(0, 2).toUpperCase();
+            const isSelected = selectedIds.has(chat.id);
+            return (
+              <label
+                key={chat.id}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-muted/50 cursor-pointer border-b dark:border-[#222d34] last:border-b-0"
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggle(chat.id)}
+                  className="w-4 h-4 accent-[#00a884]"
+                />
+                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium shrink-0">
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground dark:text-white truncate">
+                    {displayName}
+                  </div>
+                  {displayPhone && (
+                    <div className="text-xs text-muted-foreground truncate">{displayPhone}</div>
+                  )}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t dark:border-[#222d34] flex items-center justify-between bg-card dark:bg-[#1e1e1e]">
+          <span className="text-xs text-muted-foreground">
+            {selectedIds.size} selected
+          </span>
+          <Button
+            type="button"
+            onClick={handleSend}
+            disabled={selectedIds.size === 0 || sending}
+            className="bg-[#00a884] hover:bg-[#008972] text-white"
+          >
+            {sending
+              ? 'Sending…'
+              : selectedIds.size === 0
+                ? 'Send'
+                : `Send to ${selectedIds.size} chat${selectedIds.size === 1 ? '' : 's'}`}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

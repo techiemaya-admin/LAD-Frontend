@@ -152,4 +152,4 @@ export function downloadExampleStructure(example: string): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
+}

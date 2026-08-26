@@ -103,7 +103,7 @@ const conversationSlice = createSlice({
           ...conv,
           owner: (conv.owner !== null && conv.owner !== undefined && conv.owner !== '') ? conv.owner : prev.owner,
           humanAgentId: conv.humanAgentId !== undefined ? conv.humanAgentId : prev.humanAgentId,
-          // Support both 'unread' (old) and 'unread_count' (new — incoming-only) from API
+          // Support both 'unread' (old) and 'unread_count' (new - incoming-only) from API
           unread: typeof conv.unread_count === 'number' ? conv.unread_count
                 : typeof conv.unread === 'number' ? conv.unread
                 : (typeof prev.unread === 'number' ? prev.unread : 0),

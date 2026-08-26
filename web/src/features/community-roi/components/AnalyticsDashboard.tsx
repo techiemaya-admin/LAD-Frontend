@@ -9,12 +9,6 @@ export default function AnalyticsDashboard() {
   // Get data from the hook
   const { data, isLoading, error } = useNetworkStats(true);
 
-  console.log('🔵 [AnalyticsDashboard] RENDERING', { 
-    hasData: !!data, 
-    isLoading, 
-    hasError: !!error 
-  });
-
   // Show loading state
   if (isLoading) {
     return (
@@ -45,20 +39,6 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  // Log the actual data structure we received
-  console.log('🟢 [AnalyticsDashboard] DATA RECEIVED:', data);
-  console.log('🟢 [AnalyticsDashboard] Data keys:', Object.keys(data));
-  
-  if (data.networkBreakdown) {
-    console.log('🟢 [AnalyticsDashboard] networkBreakdown:', data.networkBreakdown);
-    console.log('🟢 [AnalyticsDashboard] networkBreakdown keys:', Object.keys(data.networkBreakdown));
-  }
-  
-  if (data.connectivityAnalysis) {
-    console.log('🟢 [AnalyticsDashboard] connectivityAnalysis:', data.connectivityAnalysis);
-    console.log('🟢 [AnalyticsDashboard] connectivityAnalysis keys:', Object.keys(data.connectivityAnalysis));
-  }
-
   // Extract values using correct property names from types
   const members = data.connectivityAnalysis?.memberCount || 0;
 
@@ -67,13 +47,6 @@ export default function AnalyticsDashboard() {
   const referrals = data.networkBreakdown?.referrals || 0;
 
   const density = data.connectivityAnalysis?.networkDensity || 0;
-
-  console.log('🟡 [AnalyticsDashboard] EXTRACTED VALUES:', {
-    members,
-    meetings,
-    referrals,
-    density
-  });
 
   return (
     <div className="space-y-6 p-6">

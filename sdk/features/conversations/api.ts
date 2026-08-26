@@ -9,6 +9,7 @@
  */
 import { queryOptions, infiniteQueryOptions } from '@tanstack/react-query';
 import { proxyClient } from '../../shared/proxyClient';
+import { safeStorage } from '../../shared/storage';
 import type {
   Conversation,
   ConversationListFilters,
@@ -68,49 +69,96 @@ function mapMessageFromApi(raw: any): Message {
 
   const isOutgoing = role === 'assistant' || role === 'AI' || role === 'human_agent';
 
-  // Human-agent display name: prefer metadata, fall back to 'Agent'
+  // Agent-forward messages surface the customer as a sender label (like a group).
+  // NEW forwards carry the name in metadata with a clean body; OLD ones baked
+  // "📩 *New message from X*\n\nBody" into the content - parse those as a fallback.
+  let displayContent: string = raw.content || '';
+  let forwardSender: string | undefined =
+    (metadata.via === 'agent_forward' || metadata.sender_type === 'forward')
+      ? (metadata.sender_name || undefined)
+      : undefined;
+  if (!forwardSender) {
+    const fwd = displayContent.match(/^[^\n]*\*New message from ([^*\n]+)\*\s*\n+([\s\S]+)$/);
+    if (fwd) { forwardSender = fwd[1].trim(); displayContent = fwd[2].trim(); }
+  }
+
+  // Display name shown above a bubble:
+  //  • human-agent (outgoing takeover) → the agent's name
+  //  • incoming GROUP message          → the participant who sent it
+  //  • agent-forward                   → the customer the message is from
+  //  • 1:1 chats                        → undefined (no per-message label)
   const senderName: string | undefined =
     role === 'human_agent'
       ? (metadata.sender_name || metadata.agent_name || raw.sender_name || undefined)
+      : (forwardSender
+          || (metadata.is_group && !isOutgoing
+              ? (metadata.sender_name || metadata.sender_phone || undefined)
+              : undefined));
+
+  const rawType = String(raw.type || '').toLowerCase();
+  const inferredMediaTypeFromRawType =
+    rawType === 'image' || rawType === 'video' || rawType === 'audio' || rawType === 'document'
+      ? rawType
       : undefined;
 
   return {
     id: raw.id,
     conversationId: raw.conversation_id,
-    content: raw.content || '',
+    content: displayContent,
     timestamp: new Date(raw.created_at),
     isOutgoing,
     // DB default is 'received' for all messages; outbound ones get backfilled to 'sent'.
     // Map 'received' → 'sent' for display (shows clock icon) since older rows may
     // still carry the DB default before the wamid-backfill was introduced.
     status: (() => {
-      const s = raw.message_status || '';
-      if (!s || s === 'received') return 'sent' as MessageStatus;
-      return s as MessageStatus;
+      const s = raw.message_status || raw.status || '';
+      if (s === 'read' || s === 'seen') return 'read' as MessageStatus;
+      if (s === 'delivered' || s === 'delivered_to_device') return 'delivered' as MessageStatus;
+      if (s === 'failed' || s === 'error') return 'failed' as MessageStatus;
+      return 'sent' as MessageStatus;
     })(),
     sender: {
       id: isOutgoing ? (metadata.human_agent_id || 'agent') : raw.lead_id || 'user',
       name: isOutgoing
         ? (role === 'human_agent' ? (senderName || 'Agent') : 'AI Agent')
-        : 'Contact',
+        : (metadata.is_group ? (senderName || 'Member') : 'Contact'),
     },
     role,
     intent: raw.intent,
     senderName,
     humanAgentId: metadata.human_agent_id || undefined,
-    templateName: metadata.template_name || undefined,
+    templateName: metadata.template_name || raw.template_name || undefined,
     // Location fields (extracted from metadata)
-    latitude: metadata.latitude !== undefined ? Number(metadata.latitude) : undefined,
-    longitude: metadata.longitude !== undefined ? Number(metadata.longitude) : undefined,
-    locationName: metadata.location_name || undefined,
-    locationAddress: metadata.location_address || undefined,
+    latitude: metadata.latitude !== undefined
+      ? Number(metadata.latitude)
+      : (raw.latitude !== undefined ? Number(raw.latitude) : undefined),
+    longitude: metadata.longitude !== undefined
+      ? Number(metadata.longitude)
+      : (raw.longitude !== undefined ? Number(raw.longitude) : undefined),
+    locationName: metadata.location_name || raw.location_name || undefined,
+    locationAddress: metadata.location_address || raw.location_address || undefined,
     // Inbound media fields (extracted from metadata)
-    mediaId: metadata.media_id || undefined,
-    mediaType: metadata.message_type || undefined,
-    mediaMimeType: metadata.mime_type || undefined,
-    mediaFilename: metadata.filename || undefined,
-    mediaCaption: metadata.caption || undefined,
+    mediaId: metadata.media_id || raw.media_id || raw.mediaId || raw.file_url || raw.url || undefined,
+    mediaType: metadata.message_type || metadata.media_type || raw.message_type || raw.media_type || raw.mediaType || inferredMediaTypeFromRawType || undefined,
+    mediaMimeType: metadata.mime_type || raw.mime_type || raw.content_type || raw.media_mime_type || undefined,
+    mediaFilename: metadata.filename || raw.filename || raw.media_filename || undefined,
+    mediaCaption: metadata.caption || raw.caption || undefined,
+    starred: Boolean(metadata.starred),
   };
+}
+
+// A conversation's "last activity" can live in either column: updated_at is
+// bumped on every message, but last_message_at historically was NOT (so it could
+// be stale). Use whichever is NEWER for both display and sort, so a freshly-active
+// chat is never ranked/shown as old (real bug 2026-06-20: a chat active "2 min"
+// ago sorted among 2-month chats because the sort keyed off the stale
+// last_message_at). Backend now keeps the two in lock-step; this is belt-and-
+// braces and self-heals before the backfill runs.
+function latestActivityDate(...candidates: Array<string | null | undefined>): Date {
+  const times = candidates
+    .map((c) => (c ? new Date(c).getTime() : NaN))
+    .filter((t) => !Number.isNaN(t));
+  return new Date(times.length ? Math.max(...times) : Date.now());
 }
 
 function mapConversationFromApi(raw: any): Conversation {
@@ -124,6 +172,7 @@ function mapConversationFromApi(raw: any): Conversation {
       name: raw.lead_name || raw.lead_phone || raw.phone || 'Unknown',
       phone: raw.lead_phone,
       email: raw.lead_email,
+      avatar: raw.lead_avatar || undefined,
     },
     messages: [], // Messages loaded separately
     lastMessage: raw.last_message_content
@@ -131,7 +180,7 @@ function mapConversationFromApi(raw: any): Conversation {
           id: `last-${raw.id}`,
           conversationId: raw.id,
           content: raw.last_message_content,
-          timestamp: new Date(raw.last_message_at || raw.updated_at),
+          timestamp: latestActivityDate(raw.last_message_at, raw.updated_at),
           isOutgoing: raw.last_message_role !== 'user',
           status: 'sent',
           sender: {
@@ -145,8 +194,10 @@ function mapConversationFromApi(raw: any): Conversation {
     owner: (raw.owner || 'AI') as ConversationOwner,
     conversationState: raw.context_status as ConversationState,
     messageCount: raw.message_count || 0,
+    is_favorite: Boolean(raw.is_favorite),
+    isFavorite: Boolean(raw.is_favorite),
     createdAt: new Date(raw.started_at || raw.created_at),
-    updatedAt: new Date(raw.updated_at || raw.last_message_at || raw.started_at),
+    updatedAt: latestActivityDate(raw.updated_at, raw.last_message_at, raw.started_at),
   };
 }
 
@@ -189,6 +240,9 @@ export async function getConversations(
   // List-shaping params (default to "false" / "date" on the backend if omitted).
   if (rest.hide_empty) params.hide_empty = 'true';
   if (rest.sort_by) params.sort_by = rest.sort_by;
+  if (rest.label_ids && rest.label_ids.length > 0) {
+    params.label_ids = rest.label_ids.join(',');
+  }
 
   const response = await proxyClient.get<{ success: boolean; data: any[]; total: number }>(
     '/api/whatsapp-conversations/conversations',
@@ -231,6 +285,9 @@ export async function getConversationsPage(
   if (rest.context_status) params.context_status = rest.context_status;
   if (rest.hide_empty) params.hide_empty = 'true';
   if (rest.sort_by) params.sort_by = rest.sort_by;
+  if (rest.label_ids && rest.label_ids.length > 0) {
+    params.label_ids = rest.label_ids.join(',');
+  }
 
   const response = await proxyClient.get<{
     success: boolean;
@@ -306,11 +363,11 @@ function deduplicateMessages(messages: Message[]): Message[] {
   const seen = new Map<string, number>(); // key → first-seen timestamp (ms)
   return messages.filter((msg) => {
     // Build a key that identifies "same content sent in roughly the same moment"
-    // 1-second bucket — tight enough to catch real DB duplicates without
+    // 1-second bucket - tight enough to catch real DB duplicates without
     // incorrectly merging legitimately different messages sent 1-2s apart
     const bucketKey = `${msg.isOutgoing ? 'out' : 'in'}|${msg.content}|${Math.floor(msg.timestamp.getTime() / 1000)}`;
     if (seen.has(bucketKey)) {
-      return false; // near-duplicate — skip
+      return false; // near-duplicate - skip
     }
     seen.set(bucketKey, msg.timestamp.getTime());
     return true;
@@ -337,7 +394,7 @@ export async function getConversationMessages(
   }>(`/api/whatsapp-conversations/conversations/${conversationId}/messages`, { params, channel: backendChannel });
 
   const rawMessages = (response.data.data || []).map(mapMessageFromApi);
-  // Backend returns oldest-first (ORDER BY created_at ASC) — no reverse needed.
+  // Backend returns oldest-first (ORDER BY created_at ASC) - no reverse needed.
   const messages = deduplicateMessages(rawMessages);
 
   return {
@@ -373,7 +430,7 @@ const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
 
 /**
  * Upload a media file (multipart) to get a media reference.
- * This bypasses JSON body size limits — suitable for large PDFs, videos, etc.
+ * This bypasses JSON body size limits - suitable for large PDFs, videos, etc.
  * - WABA channel: uploads to Meta via Python service, returns a numeric media_id
  * - Personal channel: uploads to LAD_backend local/GCP storage, returns a file URL
  */
@@ -385,18 +442,59 @@ async function uploadMediaForMessage(file: File, channel?: string): Promise<stri
     ? '/api/whatsapp-conversations/conversations/upload-media?channel=personal'
     : '/api/whatsapp-conversations/conversations/upload-media';
 
+  const headers: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const token = safeStorage.getItem('token');
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const selectedTenantId = safeStorage.getItem('selectedTenantId') || '';
+    const rawUser = safeStorage.getItem('user');
+    let userTenantId = '';
+    if (rawUser) {
+      try {
+        const parsedUser = JSON.parse(rawUser);
+        userTenantId = parsedUser?.tenantId || parsedUser?.organizationId || '';
+      } catch {
+        userTenantId = '';
+      }
+    }
+
+    const effectiveTenantId = selectedTenantId && selectedTenantId !== 'default'
+      ? selectedTenantId
+      : userTenantId;
+
+    if (effectiveTenantId) {
+      headers['X-Tenant-ID'] = effectiveTenantId;
+    }
+  }
+
   const res = await fetch(uploadUrl, {
     method: 'POST',
+    headers,
+    credentials: 'include',
     body: formData,
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || err?.error || `Media upload failed (${res.status})`);
+    const errorMessage = err?.detail || err?.error || err?.message || `Media upload failed (${res.status})`;
+    console.error('[uploadMediaForMessage] Upload failed:', {
+      status: res.status,
+      statusText: res.statusText,
+      error: err,
+      uploadUrl,
+      channel,
+    });
+    throw new Error(errorMessage);
   }
 
   const data = await res.json();
-  if (!data?.media_id) throw new Error('No media_id returned from upload');
+  if (!data?.media_id) {
+    console.error('[uploadMediaForMessage] No media_id in response:', data);
+    throw new Error('No media_id returned from upload');
+  }
   return data.media_id as string;
 }
 
@@ -441,20 +539,20 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
       }
     } catch (uploadErr) {
       console.error('[sendMessage] Media pre-upload failed, falling back to base64:', uploadErr);
-      // Fall through — will try sending with file_base64 (may fail for very large files)
+      // Fall through - will try sending with file_base64 (may fail for very large files)
     }
   }
 
   const response = await proxyClient.post<{ success: boolean; data: any }>(
     `/api/whatsapp-conversations/conversations/${data.conversationId}/messages`,
     {
-      // Core — always send `content` key so backend body.get("content") never returns None
+      // Core - always send `content` key so backend body.get("content") never returns None
       type:           data.type ?? 'text',
       content:        data.content ?? '',
       lead_id:        data.leadId,
       phone_number:   data.phoneNumber,
       human_agent_id: data.humanAgentId,
-      // Media — for WABA: send media_id if pre-uploaded; for personal: send file_url
+      // Media - for WABA: send media_id if pre-uploaded; for personal: send file_url
       // Fall back to file_base64 if pre-upload failed (will fail for >10MB files)
       media_id:       mediaId,
       file_url:       fileUrl,
@@ -482,7 +580,7 @@ export async function sendMessage(data: SendMessageRequest): Promise<Message> {
 }
 
 /**
- * Mark a conversation as read — resets unread_count to 0 in the DB.
+ * Mark a conversation as read - resets unread_count to 0 in the DB.
  * The GET /conversations/:id endpoint resets unread_count as a side effect.
  */
 export async function markConversationRead(

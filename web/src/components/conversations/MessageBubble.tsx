@@ -1,10 +1,21 @@
 import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
-import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download, MoreVertical, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MessageFeedback } from './MessageFeedback';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MrLadAvatar } from './MrLadAvatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTheme } from '@/contexts/ThemeContext';
+import { usePhoneMasking } from '@/hooks/usePhoneMasking';
+
+// ── Group sender colours (WhatsApp-style, deterministic per sender) ───────────
+const WA_SENDER_COLORS = ['#d9416a', '#0a7cff', '#e07b00', '#00a884', '#7b61ff', '#c0399f', '#0e8a8a', '#a8662a'];
+function senderColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return WA_SENDER_COLORS[h % WA_SENDER_COLORS.length];
+}
 
 // ── Location card renderer ───────────────────────────────────────────────────
 function LocationCard({
@@ -58,7 +69,25 @@ function LocationCard({
 // ── Plain-text renderer with clickable URLs ───────────────────────────────────
 const URL_REGEX = /https?:\/\/[^\s]+/g;
 
-function TextWithLinks({ text, className }: { text: string; className?: string }) {
+function highlightQuery(content: string, query?: string) {
+  if (!query || !query.trim()) return content;
+  const parts = content.split(new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={index} className="bg-amber-300 text-black px-0.5 rounded dark:bg-amber-400">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
+function TextWithLinks({ text, searchText, className }: { text: string; searchText?: string; className?: string }) {
   const lines = text.split('\n');
   return (
     <div className={cn('wa-msg-text whitespace-pre-line', className)}>
@@ -69,7 +98,12 @@ function TextWithLinks({ text, className }: { text: string; className?: string }
         const regex = new RegExp(URL_REGEX.source, 'g');
         while ((match = regex.exec(line)) !== null) {
           if (match.index > lastIndex) {
-            parts.push(line.slice(lastIndex, match.index));
+            const textPart = line.slice(lastIndex, match.index);
+            parts.push(
+              <span key={`text-${lineIdx}-${lastIndex}`}>
+                {highlightQuery(textPart, searchText)}
+              </span>
+            );
           }
           const url = match[0];
           parts.push(
@@ -78,7 +112,7 @@ function TextWithLinks({ text, className }: { text: string; className?: string }
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline break-all"
+              className="text-[#68a4f6] hover:underline break-all"
             >
               {url}
             </a>
@@ -86,9 +120,14 @@ function TextWithLinks({ text, className }: { text: string; className?: string }
           lastIndex = match.index + url.length;
         }
         if (lastIndex < line.length) {
-          parts.push(line.slice(lastIndex));
+          const textPart = line.slice(lastIndex);
+          parts.push(
+            <span key={`text-${lineIdx}-${lastIndex}`}>
+              {highlightQuery(textPart, searchText)}
+            </span>
+          );
         }
-        return <div key={lineIdx}>{parts.length > 0 ? parts : line}</div>;
+        return <div key={lineIdx}>{parts.length > 0 ? parts : highlightQuery(line, searchText)}</div>;
       })}
     </div>
   );
@@ -217,23 +256,39 @@ interface MessageBubbleProps {
   showAvatar?: boolean;
   contact?: Contact;
   onAgentClick?: (agentId?: string) => void;
+  onDeleteMessage?: (message: Message, scope: 'me' | 'everyone') => void;
+  onToggleStar?: (message: Message) => void;
+  searchText?: string;
+  isHighlighted?: boolean;
+  /** Enables the thumbs on AI replies. Omitted → feedback is not rendered. */
+  conversationId?: string;
+  /** Existing verdict, so a reload doesn't reset the thumbs. */
+  feedbackRating?: 'like' | 'dislike' | null;
 }
 
 const statusIcons = {
-  sent: Clock,
-  delivered: Check,
+  sent: Check,
+  delivered: CheckCheck,
   read: CheckCheck,
   failed: AlertCircle,
+  pending: Clock,
 };
 
 // ── Avatar components ────────────────────────────────────────────────────────
 
-/** MR LAD animated visualizer — shown for AI-generated messages */
+/** Mr LAD logo - shown for AI-generated messages (theme-aware) */
 function AiAvatar() {
-  return <MrLadAvatar size={32} className="ring-1 ring-[#5b7fe8]/30" />;
+  const { isDark } = useTheme();
+  return (
+    <img
+      src={isDark ? '/logo-white.svg' : '/logo.svg'}
+      alt="Mr LAD"
+      className="h-8 w-8 object-contain shrink-0"
+    />
+  );
 }
 
-/** Lead avatar — WhatsApp profile pic or first letter of name */
+/** Lead avatar - WhatsApp profile pic or first letter of name */
 function LeadAvatar({ contact }: { contact?: Contact }) {
   const initial = contact?.name ? contact.name.charAt(0).toUpperCase() : 'L';
   return (
@@ -246,7 +301,22 @@ function LeadAvatar({ contact }: { contact?: Contact }) {
   );
 }
 
-/** Human agent avatar — first letter, clickable to open profile */
+/** Forwarded-message avatar - colored initial of the customer the message is from,
+ *  using the same per-sender colour as the bubble's sender label (not the AI logo). */
+function ForwardAvatar({ name }: { name: string }) {
+  const initial = name ? name.charAt(0).toUpperCase() : '?';
+  return (
+    <div
+      className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
+      style={{ backgroundColor: senderColor(name) }}
+      title={name}
+    >
+      {initial}
+    </div>
+  );
+}
+
+/** Human agent avatar - first letter, clickable to open profile */
 function AgentAvatar({
   name,
   agentId,
@@ -261,7 +331,7 @@ function AgentAvatar({
     <button
       className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-semibold ring-1 ring-violet-200 hover:ring-violet-400 hover:bg-violet-200 transition-all cursor-pointer"
       onClick={() => onClick?.(agentId)}
-      title={`${name || 'Human Agent'} — click to view profile`}
+      title={`${name || 'Human Agent'} - click to view profile`}
       aria-label="Open agent profile"
     >
       {initial}
@@ -341,18 +411,30 @@ function AgentProfilePopover({
 
 export const MessageBubble = memo(function MessageBubble({
   message,
-  showAvatar = true,
+  showAvatar = false,
   contact,
   onAgentClick,
+  onDeleteMessage,
+  onToggleStar,
+  searchText,
+  isHighlighted = false,
+  conversationId,
+  feedbackRating = null,
 }: MessageBubbleProps) {
+  // senderName arrives already collapsed to "pushname, else raw number" by the
+  // message mapper, so it is masked here at the render site rather than in the
+  // mapper - keeping bullets out of the message model, where they could reach
+  // search or persistence.
+  const { displayPossiblePhone } = usePhoneMasking();
   const { content, timestamp, isOutgoing, status, sender, role } = message;
   const StatusIcon = statusIcons[status];
 
   const [showAgentProfile, setShowAgentProfile] = useState(false);
 
-  // Determine the sender category
-  const isAI = isOutgoing && role !== 'human_agent';
-  const isHumanAgent = isOutgoing && role === 'human_agent';
+  // Determine the sender category. A forward is an outgoing message that carries a
+  // sender label (the customer it's from) and isn't a human-agent takeover.
+  const isForward = isOutgoing && !!message.senderName && role !== 'human_agent';
+  const isAI = isOutgoing && role !== 'human_agent' && !isForward;
   const isLead = !isOutgoing;
 
   const handleAgentAvatarClick = (agentId?: string) => {
@@ -366,17 +448,19 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        'flex gap-2 animate-message-pop',
+        'flex gap-2 group',
         isOutgoing ? 'flex-row-reverse' : 'flex-row'
       )}
     >
       {/* ── Incoming-side avatar (lead or nothing) ── */}
       {showAvatar && isLead && <LeadAvatar contact={contact} />}
 
-      {/* ── Outgoing-side avatar (AI or human agent) ── */}
+      {/* ── Outgoing-side avatar (forward, AI, or human agent) ── */}
       {showAvatar && isOutgoing && (
         <div className="relative">
-          {isAI ? (
+          {isForward ? (
+            <ForwardAvatar name={message.senderName as string} />
+          ) : isAI ? (
             <AiAvatar />
           ) : (
             <>
@@ -400,18 +484,77 @@ export const MessageBubble = memo(function MessageBubble({
       {/* ── Message bubble ── */}
       <div
         className={cn(
-          'max-w-[72%] px-3 py-[6px] shadow-sm',
-          isOutgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming'
+          'max-w-[72%] px-3 py-[6px] shadow-sm flex flex-col transition-all duration-300 relative',
+          isOutgoing ? 'message-bubble-outgoing' : 'message-bubble-incoming',
+          isHighlighted && 'ring-2 ring-amber-500 dark:ring-amber-400 bg-amber-100/40 dark:bg-amber-500/25 scale-[1.02]'
         )}
       >
-        {/* Sender label for human-agent messages */}
-        {isHumanAgent && (
-          <p className="text-[10px] font-semibold text-violet-400 mb-0.5 uppercase tracking-wide">
-            {message.senderName || sender.name || 'Agent'}
-          </p>
+        {/* Sender label - group participant or the customer an agent-forward is from.
+            (human_agent uses senderName for its avatar instead, so it's excluded.) */}
+        {message.senderName && role !== 'human_agent' && (
+          <span
+            className="text-[12.5px] font-semibold leading-tight mb-0.5 truncate max-w-full"
+            style={{ color: senderColor(message.senderName) }}
+          >
+            {displayPossiblePhone(message.senderName)}
+          </span>
+        )}
+        {(onToggleStar || (isOutgoing && onDeleteMessage)) && (
+          <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Message actions"
+                  className={cn(
+                    'h-6 w-6 rounded-full inline-flex items-center justify-center',
+                    isOutgoing
+                      ? 'bg-black/15 hover:bg-black/25 text-white/90'
+                      : 'bg-black/5 hover:bg-black/10 text-foreground/70 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white/80'
+                  )}
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {onToggleStar && (
+                  <DropdownMenuItem onClick={() => onToggleStar(message)}>
+                    <Star className={cn('h-4 w-4 mr-2', message.starred && 'fill-amber-400 text-amber-400')} />
+                    {message.starred ? 'Unstar message' : 'Star message'}
+                  </DropdownMenuItem>
+                )}
+                {isOutgoing && onDeleteMessage && (
+                  <>
+                    <DropdownMenuItem onClick={() => onDeleteMessage(message, 'me')}>
+                      Delete for me
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDeleteMessage(message, 'everyone')}>
+                      Delete for everyone
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
 
-        {/* Message content — template, media, location, or plain text */}
+        {/* Reply Block */}
+        {(message as any).quotedMessage && (
+          <div
+            className={cn(
+              "mb-1.5 p-2 rounded-md border-l-[3px] border-[#68a4f6] text-[13px] relative overflow-hidden flex flex-col cursor-pointer",
+              isOutgoing ? "bg-[#1e3d2e]" : "bg-[#242626]"
+            )}
+          >
+            <span className="font-semibold text-[#68a4f6] mb-0.5">
+              {(message as any).quotedMessage.sender || 'You'}
+            </span>
+            <span className="text-[#a4a5a5] line-clamp-3 wa-msg-text">
+              {(message as any).quotedMessage.content}
+            </span>
+          </div>
+        )}
+        {/* Message content - template, media, location, or plain text */}
         {message.templateName ? (
           <TemplateMessageBubble content={content} templateName={message.templateName} />
         ) : message.mediaId ? (
@@ -435,7 +578,7 @@ export const MessageBubble = memo(function MessageBubble({
             <TextWithLinks text={content} className="text-sm" />
           </div>
         ) : (
-          <TextWithLinks text={content} />
+          <TextWithLinks text={content} searchText={searchText} />
         )}
 
         {/* Timestamp + status row */}
@@ -445,10 +588,15 @@ export const MessageBubble = memo(function MessageBubble({
             isOutgoing ? 'justify-end' : 'justify-start'
           )}
         >
+          {message.starred && (
+            <Star
+              className="h-3 w-3 fill-amber-400 text-amber-400"
+              aria-label="Starred"
+            />
+          )}
           <span
             className={cn(
-              'wa-msg-time',
-              isOutgoing ? 'text-white/60' : 'text-[#667781]'
+             'wa-msg-time text-[#667781] dark:text-white/60'
             )}
           >
             {format(timestamp, 'h:mm a')}
@@ -458,14 +606,24 @@ export const MessageBubble = memo(function MessageBubble({
               className={cn(
                 'h-3 w-3',
                 status === 'read'
-                  ? 'text-blue-300'
+                   ? 'text-[#53bdeb]'
                   : status === 'failed'
                   ? 'text-red-400'
-                  : 'text-white/50'
+                  : 'text-[#667781] dark:text-[#8696a0]'
               )}
             />
           )}
         </div>
+        {/* Only on AI replies: a human agent's own message has nothing to
+            learn from, and the backend rejects rating anything else. */}
+        {isAI && conversationId && (
+          <MessageFeedback
+            conversationId={conversationId}
+            messageId={String(message.id)}
+            content={typeof content === 'string' ? content : ''}
+            initialRating={feedbackRating ?? null}
+          />
+        )}
       </div>
     </div>
   );

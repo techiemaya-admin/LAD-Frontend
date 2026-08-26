@@ -8,6 +8,12 @@ import { isOpenRoute } from "@/lib/routes";
 export default function LayoutHandler({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  // Home redesign preview owns its own full-screen chrome (rail + header),
+  // so it renders without the app's Sidebar/Header/Footer wrappers.
+  if (pathname.startsWith("/home-redesign")) {
+    return <>{children}</>;
+  }
+
   // Define public/API routes that don't require authentication
   const isPublicRoute = isOpenRoute(pathname) ||
     pathname.startsWith("/api/");

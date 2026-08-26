@@ -64,4 +64,4 @@ export const {
   setCustomRange,
 } = dashboardSlice.actions;
 export const selectDashboard = (state: RootState): DashboardState => state.dashboard;
-export default dashboardSlice.reducer;
+export default dashboardSlice.reducer;

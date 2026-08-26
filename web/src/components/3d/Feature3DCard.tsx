@@ -120,4 +120,4 @@ const Feature3DCard = ({ title, description, icon, gradient, index }: Feature3DC
     </motion.div>
   );
 };
-export default Feature3DCard;
+export default Feature3DCard;

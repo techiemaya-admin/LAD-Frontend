@@ -50,13 +50,15 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   const [channelFilter, setChannelFilter] = useState<Channel | 'all'>('all');
   const [contextStatusFilter, setContextStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Selected label-filter set (UUID strings). Empty = no label filter.
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   // List-shaping controls. Defaults preserve previous behaviour: show
   // everything, sorted by most-recent activity. Both flow through to the
   // server so pagination and totals respect the user's choice.
   const [hideEmpty, setHideEmpty] = useState(false);
   const [sortBy, setSortBy] = useState<ConversationSortBy>('date');
 
-  // Build filters from local state — include the channel override so both the
+  // Build filters from local state - include the channel override so both the
   // query key and the HTTP request carry it, keeping personal/waba caches separate.
   // hide_empty / sort_by are part of the queryKey via spread, so toggling either
   // triggers a fresh fetch from page 0 instead of mutating already-loaded pages.
@@ -66,7 +68,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     context_status: contextStatusFilter !== 'all' ? contextStatusFilter : undefined,
     hide_empty: hideEmpty || undefined,
     sort_by: sortBy !== 'date' ? sortBy : undefined,
-  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy]);
+    label_ids: selectedLabelIds.length > 0 ? selectedLabelIds : undefined,
+  }), [hookOptions?.channel, searchQuery, contextStatusFilter, hideEmpty, sortBy, selectedLabelIds]);
 
   // Infinite query for incremental conversation loading (20 at a time)
   const conversationsQuery = useInfiniteQuery(getConversationsInfiniteOptions(filters));
@@ -77,21 +80,14 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     [conversationsQuery.data],
   );
 
-  // allConversations: same data (no separate unfiltered query needed — unread counts computed from loaded batch)
+  // allConversations: same data (no separate unfiltered query needed - unread counts computed from loaded batch)
   const allConversations = conversations;
-
-  // Auto-select first conversation if none selected
-  const effectiveSelectedId = useMemo(() => {
-    if (selectedId && conversations.find((c) => c.id === selectedId)) {
-      return selectedId;
-    }
-    return conversations[0]?.id || null;
-  }, [selectedId, conversations]);
 
   // Selected conversation (with messages loaded separately)
   const selectedConversation = useMemo(() => {
-    return conversations.find((c) => c.id === effectiveSelectedId) || null;
-  }, [conversations, effectiveSelectedId]);
+    if (!selectedId) return null;
+    return conversations.find((c) => c.id === selectedId) || null;
+  }, [conversations, selectedId]);
 
   // Unread counts
   const unreadCounts = useMemo(() => {
@@ -113,10 +109,11 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
   // Select conversation
   const selectConversation = useCallback((id: string) => {
     setSelectedId(id);
+    if (!id) return;
 
     // Fire-and-forget: persist the reset to the DB so polls stay at 0
     markConversationReadApi(id, hookOptions?.channel).catch(() => {
-      // Non-critical — the next poll will re-sync from DB
+      // Non-critical - the next poll will re-sync from DB
     });
   }, [hookOptions?.channel]);
 
@@ -125,22 +122,22 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     mutationFn: sendMessageApi,
     onSuccess: () => {
       // Invalidate messages and conversation list to show updated last message
-      if (effectiveSelectedId) {
-        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(effectiveSelectedId) });
+      if (selectedId) {
+        queryClient.invalidateQueries({ queryKey: conversationKeys.messages(selectedId) });
       }
       queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
     },
   });
 
   const sendMessage = useCallback(
-    (payload: RichMessagePayload) => {
-      if (!effectiveSelectedId || !selectedConversation) return;
+    async (payload: RichMessagePayload) => {
+      if (!selectedId || !selectedConversation) return;
       // Require at least some content for text messages (also guard against missing type)
       const payloadType = payload.type || 'text';
       if (payloadType === 'text' && !payload.content?.trim()) return;
 
-      sendMutation.mutate({
-        conversationId: effectiveSelectedId,
+      return sendMutation.mutateAsync({
+        conversationId: selectedId,
         leadId: selectedConversation.leadId || selectedConversation.contact.id,
         phoneNumber: selectedConversation.contact.phone,
         channel: hookOptions?.channel,
@@ -164,7 +161,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
         pollOptions:     payload.pollOptions,
       });
     },
-    [effectiveSelectedId, selectedConversation, sendMutation, hookOptions?.channel]
+    [selectedId, selectedConversation, sendMutation, hookOptions?.channel]
   );
 
   // Status update mutations
@@ -197,7 +194,7 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     conversations,
     allConversations,
     selectedConversation,
-    selectedId: effectiveSelectedId,
+    selectedId,
     selectConversation,
     channelFilter,
     setChannelFilter,
@@ -205,6 +202,8 @@ export function useConversations(hookOptions?: UseConversationsOptions): UseConv
     setContextStatusFilter,
     searchQuery,
     setSearchQuery,
+    selectedLabelIds,
+    setSelectedLabelIds,
     hideEmpty,
     setHideEmpty,
     sortBy,

@@ -64,7 +64,7 @@ export default function InteractivePricingCalculator() {
           Pricing Calculator
         </h3>
         <p className="text-[#8F9BB3] dark:text-gray-400 mb-8">
-          Adjust these values to see how many credits you'll need
+          Adjust these values to see how many credits you&apos;ll need
         </p>
 
         {/* Sliders Section */}
@@ -254,7 +254,7 @@ export default function InteractivePricingCalculator() {
                 💡 Pro Tip
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Credits never expire! Buy once and use them at your own pace. Pricing shown is based on tier selections, but actual usage may vary based on your needs.
+                Credits are valid for 1 month. Buy and use them at your own pace. Pricing shown is based on tier selections, but actual usage may vary based on your needs.
               </p>
             </div>
           </div>

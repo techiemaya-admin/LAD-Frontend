@@ -6,4 +6,4 @@ export function CreateNumberClient({ onCreated }: { onCreated?: () => void }) {
   return (
     <CreateNumberDialog onCreated={onCreated ?? (() => router.refresh())} />
   );
-}
+}

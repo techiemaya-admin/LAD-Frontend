@@ -37,4 +37,4 @@ export const fetchDashboardData = (params: FetchParams) => async (dispatch: AppD
     delete inflightRequests[paramsString];
     dispatch(setDashboardLoading(false));
   }
-};
+};

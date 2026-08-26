@@ -240,3 +240,247 @@ export interface LeadsFlowContext {
   sequenceOrder: string[];
   delayBetween: number;
 }
+
+// ─── R8 - Tenant ICP Definitions ─────────────────────────────────────────────
+// Canonical schema for the active per-tenant ICP. See FIT_ENRICHMENT_DESIGN.md
+// §2.5 and SEARCH_DISPATCHER_DESIGN.md §3.
+
+/** Structured ICP captured by the wizard / chat, normalised across sources. */
+export interface IcpStructured {
+  version: '1.0';
+  company: {
+    size_employees?: { min?: number; max?: number };
+    size_revenue_usd?: { min?: number; max?: number };
+    industries?: string[];
+    industries_exclude?: string[];
+    countries?: string[];
+    countries_exclude?: string[];
+    funding_stages?: string[];
+    tech_stack_includes?: string[];
+    tech_stack_excludes?: string[];
+    growth_signals?: Array<'recently_funded' | 'hiring' | 'leadership_changed'>;
+  };
+  person: {
+    seniorities?: string[];
+    job_titles_includes?: string[];
+    job_titles_excludes?: string[];
+    departments?: string[];
+    years_in_role_min?: number;
+    years_in_role_max?: number;
+  };
+  outreach_preferences?: {
+    preferred_channels?: Array<'linkedin' | 'email' | 'voice' | 'whatsapp' | 'instagram'>;
+    blocked_channels?: string[];
+    language_preferences?: string[];
+  };
+  fit_weights?: {
+    industry_match?: number;
+    size_match?: number;
+    seniority_match?: number;
+    title_match?: number;
+    geo_match?: number;
+    tech_stack_match?: number;
+  };
+  /** Optional - routes the search dispatcher across Apollo / Sales Nav / ABM. */
+  search_strategy?: SearchStrategy;
+  metadata?: {
+    captured_at?: string;
+    chat_session_id?: string;
+    tenant_input_summary?: string;
+  };
+}
+
+export type DiscoveryBackend = 'apollo' | 'sales_navigator' | 'abm';
+
+export interface SearchStrategy {
+  discovery_order: DiscoveryBackend[];
+  apollo?: {
+    enabled: boolean;
+    max_results_per_run?: number;
+    use_for?: string[];
+    credit_cap_per_run?: number;
+  };
+  sales_navigator?: {
+    enabled: boolean;
+    max_results_per_run?: number;
+    use_for?: string[];
+    unipile_account_id?: string | null;
+  };
+  abm?: {
+    enabled: boolean;
+    target_accounts?: Array<{
+      company_name: string;
+      domain?: string;
+      apollo_company_id?: string;
+    }>;
+    research_depth?: 'standard' | 'deep';
+  };
+  fallback_rules?: {
+    if_apollo_returns_zero?: 'try_sales_navigator' | 'stop';
+    if_company_has_named_target?: 'use_abm_only' | 'mix_with_apollo';
+    if_total_cap_reached?: 'stop';
+  };
+  deduplication?: {
+    /**
+     * Order in which candidate identity fields are tried to derive a canonical
+     * dedup key. apollo_id + linkedin_member_urn are last-resort fallbacks for
+     * candidates whose cross-backend identity (linkedin_url / email / phone)
+     * isn't yet revealed - see D7 live-smoke fix.
+     */
+    key_priority?: Array<
+      'linkedin_url' | 'email' | 'phone_e164' | 'apollo_id' | 'linkedin_member_urn'
+    >;
+    cross_backend_merge?: 'highest_confidence' | 'first_match' | 'merge_fields';
+  };
+  total_cap_per_run?: number;
+  total_cap_per_day?: number;
+}
+
+/** A row from the tenant_icp_definitions table. */
+export interface IcpDefinition {
+  id: string;
+  tenant_id: string;
+  variant_name: string;
+  is_active: boolean;
+
+  icp_definition: IcpStructured;
+  apollo_search_payload?: Record<string, any> | null;
+  apollo_payload_hash?: string | null;
+
+  captured_via: 'chat' | 'manual_form' | 'signup_wizard' | 'api_import';
+  chat_session_id?: string | null;
+  source_profile_id?: string | null;
+
+  min_fit_score: number;
+  daily_search_cap: number;
+
+  created_by_user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_at?: string | null;
+}
+
+/** A row from tenant_icp_searches - audit log of Apollo / Sales Nav runs. */
+export interface IcpSearch {
+  id: string;
+  tenant_id: string;
+  icp_definition_id: string;
+
+  apollo_search_payload: Record<string, any>;
+  apollo_payload_hash: string;
+
+  started_at: string;
+  completed_at?: string | null;
+  total_matches?: number | null;
+  new_prospects?: number | null;
+  duplicates?: number | null;
+  pages_fetched?: number | null;
+  apollo_credits_used?: number | null;
+
+  status: 'running' | 'completed' | 'cost_capped' | 'failed' | 'cancelled';
+  failure_reason?: string | null;
+  triggered_by: 'cron' | 'manual' | 'icp_changed' | 'api';
+  triggered_by_user_id?: string | null;
+}
+
+/** Body of POST /api/ai-icp-assistant/definitions */
+export interface CreateIcpDefinitionInput {
+  variant?: string;
+  icp_definition: IcpStructured;
+  apollo_search_payload?: Record<string, any>;
+  captured_via?: IcpDefinition['captured_via'];
+  chat_session_id?: string;
+  source_profile_id?: string;
+  min_fit_score?: number;
+  daily_search_cap?: number;
+}
+
+/** Body of PUT /api/ai-icp-assistant/definitions/:id */
+export interface UpdateIcpDefinitionInput {
+  icp_definition: IcpStructured;
+  apollo_search_payload?: Record<string, any>;
+}
+
+/** Body of PATCH /api/ai-icp-assistant/definitions/:id/tuning */
+export interface UpdateIcpTuningInput {
+  min_fit_score?: number;
+  daily_search_cap?: number;
+}
+
+// ── D6: SearchDispatcher HTTP ────────────────────────────────────────────────
+
+/**
+ * One normalised prospect record returned by an adapter (Apollo, Sales Nav, ABM).
+ * Mirrors `ProspectCandidate` typedef in
+ * LAD_backend/features/ai-icp-assistant/services/searchAdapters/_interface.js.
+ */
+export interface ProspectCandidate {
+  // Identity
+  linkedin_url?: string;
+  linkedin_member_urn?: string;
+  email?: string;
+  phone_e164?: string;
+  apollo_id?: string;
+
+  // Person
+  full_name?: string;
+  headline?: string;
+  job_title?: string;
+  seniority?: string;
+  department?: string;
+
+  // Company
+  company_name?: string;
+  apollo_company_id?: string;
+  company_industry?: string;
+  company_size_employees?: number;
+  company_country?: string;
+  company_tech_stack?: string[];
+
+  // Provenance
+  source: DiscoveryBackend;
+  source_record_id?: string;
+  source_confidence: number;
+
+  /** When the dispatcher merged the same person across backends, the union of source names. */
+  _merged_sources?: DiscoveryBackend[];
+}
+
+/** Per-backend rollup attached to a SearchRunResult. */
+export interface BackendRunRollup {
+  candidates?: number;
+  total_matches?: number | null;
+  duration_ms?: number | null;
+  cost_usd?: number;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+}
+
+/** Body of POST /api/ai-icp-assistant/search */
+export interface RunSearchInput {
+  icpId?: string;
+  maxResults?: number;
+  overrideStrategy?: Partial<SearchStrategy>;
+  triggeredBy?: 'manual' | 'cron' | 'api' | 'icp_changed';
+}
+
+/**
+ * Response shape from POST /api/ai-icp-assistant/search (sync mode).
+ * For `?async=1`, only `searchId` and `statusUrl` are populated.
+ */
+export interface SearchRunResult {
+  success: boolean;
+  searchId: string | null;
+  candidates: ProspectCandidate[];
+  backendResults: Record<string, BackendRunRollup>;
+  totalCostUsd: number;
+  emitErrors?: number;
+  count?: number;
+  /** Only on `?async=1`. */
+  status?: 'accepted';
+  statusUrl?: string;
+  /** Soft errors: `'no_active_icp'` when the tenant has no ICP defined. */
+  error?: string;
+}

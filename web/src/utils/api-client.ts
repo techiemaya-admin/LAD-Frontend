@@ -67,18 +67,39 @@ export async function apiFetch(
   }
 }
 
+export interface AuthValidationResult {
+  /** Token was verified - allow access. */
+  ok: boolean;
+  /** HTTP status returned by /api/auth/me. */
+  status: number;
+  /**
+   * True ONLY for 401/403 - the token itself is missing/expired/invalid, so it is
+   * safe to clear the session. A 5xx (e.g. the backend's DB pool is exhausted and
+   * /api/auth/me times out) is a SERVER problem, not an expired session; treating it
+   * as a session failure would log healthy users out on a transient backend hiccup.
+   */
+  sessionInvalid: boolean;
+}
+
 /**
  * Validate authentication token
- * Calls the /api/auth/me endpoint to verify token is valid and authorized
+ * Calls the /api/auth/me endpoint to verify token is valid and authorized.
+ *
+ * Distinguishes "token rejected" (401/403 → clear session) from "backend error"
+ * (5xx → keep session). Network errors are left to propagate - the proxy's catch
+ * block fails open on thrown errors, correctly distinguishing "unreachable" from
+ * "invalid token".
  */
-export async function validateAuthToken(token: string): Promise<boolean> {
-  // Let network errors propagate — the proxy's catch block allows requests through
-  // on thrown errors, so this correctly distinguishes "unreachable" from "invalid token"
+export async function validateAuthToken(token: string): Promise<AuthValidationResult> {
   const response = await apiFetch('/api/auth/me', {
     method: 'GET',
     token,
   });
-  return response.ok;
+  return {
+    ok: response.ok,
+    status: response.status,
+    sessionInvalid: response.status === 401 || response.status === 403,
+  };
 }
 
 /**

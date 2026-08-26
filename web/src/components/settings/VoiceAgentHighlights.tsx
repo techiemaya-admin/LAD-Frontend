@@ -61,7 +61,7 @@ export function VoiceAgentHighlights() {
             </div>
             <p className="text-sm font-medium text-foreground">Access Required</p>
             <p className="text-xs text-muted-foreground mt-1">
-              You don't have access to Voice Agent settings yet
+              You don&apos;t have access to Voice Agent settings yet
             </p>
             {/* View more button - Only show when no access */}
           </div>

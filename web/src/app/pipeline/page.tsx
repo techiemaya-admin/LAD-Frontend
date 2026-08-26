@@ -130,7 +130,7 @@ export default function PipelinePage(): JSX.Element {
           <labels.icon className="w-8 h-8 text-[#1e293b] dark:text-white" />
           <div>
             <h1 className="text-3xl font-bold text-[#1e293b] dark:text-white">{labels.title}</h1>
-            <p className="text-[#6b7280] dark:text-[#7a8ba3]">{labels.subtitle}</p>
+            <p className="text-[#6b7280] dark:text-slate-300">{labels.subtitle}</p>
           </div>
         </div>
 

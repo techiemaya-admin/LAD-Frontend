@@ -1,6 +1,6 @@
 /**
- * Email Templates — SDK Hooks
- * LAD Architecture: SDK Layer — React Query hooks ONLY, no fetch/axios
+ * Email Templates - SDK Hooks
+ * LAD Architecture: SDK Layer - React Query hooks ONLY, no fetch/axios
  *
  * web/ components import from here, never call api.ts directly.
  */

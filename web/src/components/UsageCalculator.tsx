@@ -104,24 +104,22 @@ export const UsageCalculator: React.FC = () => {
   const [callLength, setCallLength] = useState(5);
   const [premiumVoice, setPremiumVoice] = useState(false);
   const [leads, setLeads] = useState(50);
-  const [linkedinConnections, setLinkedinConnections] = useState(50);
   const [templateMessages, setTemplateMessages] = useState(25);
   const [phoneReveals, setPhoneReveals] = useState(25);
   const [linkedinConnection, setLinkedinConnection] = useState(true);
+  const [whatsappConnection, setWhatsappConnection] = useState(false);
+  const [instagramConnection, setInstagramConnection] = useState(false);
   const [googleConnection, setGoogleConnection] = useState(true);
   const [outlookConnection, setOutlookConnection] = useState(false);
 
   // Credit calculations
   const calculateCredits = () => {
-    // Voice calls (3 credits/min for Cartesia, 4 credits/min for ElevenLabs)
+    // Voice calls (3 credits/min standard, 4 credits/min premium)
     const totalMinutes = voiceCalls * callLength;
     const voiceCredits = totalMinutes * (premiumVoice ? 4 : 3);
 
-    // Lead enrichment (2 credits per lead with email + LinkedIn URL)
+    // Lead enrichment (2 credits per lead - email reveal)
     const leadCredits = leads * 2;
-
-    // LinkedIn connections (1 credit per connection)
-    const linkedinConnectionCredits = linkedinConnections * 1;
 
     // Template messages (5 credits each)
     const templateCredits = templateMessages * 5;
@@ -130,17 +128,18 @@ export const UsageCalculator: React.FC = () => {
     const phoneCredits = phoneReveals * 10;
 
     // Platform connections (monthly)
-    const connectionCredits = 
-      (linkedinConnection ? 50 : 0) + 
-      (googleConnection ? 20 : 0) + 
+    const connectionCredits =
+      (linkedinConnection ? 50 : 0) +
+      (whatsappConnection ? 50 : 0) +
+      (instagramConnection ? 50 : 0) +
+      (googleConnection ? 20 : 0) +
       (outlookConnection ? 20 : 0);
 
-    const totalCredits = voiceCredits + leadCredits + linkedinConnectionCredits + templateCredits + phoneCredits + connectionCredits;
+    const totalCredits = voiceCredits + leadCredits + templateCredits + phoneCredits + connectionCredits;
 
     return {
       voiceCredits,
       leadCredits,
-      linkedinConnectionCredits,
       templateCredits,
       phoneCredits,
       connectionCredits,
@@ -233,7 +232,7 @@ export const UsageCalculator: React.FC = () => {
                   className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 />
                 <label className="ml-3 text-sm font-medium text-gray-700">
-                  Use Premium Voice (ElevenLabs TTS)
+                  Use Premium Voice (4 cr/min)
                 </label>
               </div>
             </div>
@@ -241,22 +240,13 @@ export const UsageCalculator: React.FC = () => {
             <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Enrichment</h3>
               <SliderRow
-                label="Leads with email + LinkedIn URL"
+                label="Leads with email"
                 value={leads}
                 min={0}
                 max={500}
                 step={10}
                 onChange={setLeads}
                 helperText="2 credits per lead"
-              />
-              <SliderRow
-                label="LinkedIn connections"
-                value={linkedinConnections}
-                min={0}
-                max={500}
-                step={10}
-                onChange={setLinkedinConnections}
-                helperText="1 credit per connection"
               />
               <SliderRow
                 label="Template messages"
@@ -285,6 +275,20 @@ export const UsageCalculator: React.FC = () => {
                   label="LinkedIn"
                   checked={linkedinConnection}
                   onChange={setLinkedinConnection}
+                  credits={50}
+                  helperText="Monthly connection fee"
+                />
+                <CheckboxRow
+                  label="WhatsApp"
+                  checked={whatsappConnection}
+                  onChange={setWhatsappConnection}
+                  credits={50}
+                  helperText="Monthly connection fee"
+                />
+                <CheckboxRow
+                  label="Instagram"
+                  checked={instagramConnection}
+                  onChange={setInstagramConnection}
                   credits={50}
                   helperText="Monthly connection fee"
                 />
@@ -344,20 +348,6 @@ export const UsageCalculator: React.FC = () => {
                 </div>
               )}
 
-              {credits.linkedinConnectionCredits > 0 && (
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">LinkedIn Connections</p>
-                    <p className="text-xs text-gray-500">
-                      {linkedinConnections} connections × 1 cr
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-gray-900">
-                    {credits.linkedinConnectionCredits.toLocaleString()} cr
-                  </span>
-                </div>
-              )}
-
               {credits.templateCredits > 0 && (
                 <div className="flex justify-between items-center">
                   <div>
@@ -393,6 +383,8 @@ export const UsageCalculator: React.FC = () => {
                     <p className="text-xs text-gray-500">
                       {[
                         linkedinConnection && 'LinkedIn (50)',
+                        whatsappConnection && 'WhatsApp (50)',
+                        instagramConnection && 'Instagram (50)',
                         googleConnection && 'Google (20)',
                         outlookConnection && 'Outlook (20)'
                       ].filter(Boolean).join(', ')}
@@ -437,7 +429,7 @@ export const UsageCalculator: React.FC = () => {
         {/* Additional Info */}
         <div className="mt-12 text-center">
           <p className="text-sm text-gray-600">
-            This calculator provides estimates based on current pricing. All Standard plans include credits that never expire.
+            This calculator provides estimates based on current pricing. All Standard plans include credits valid for 1 month.
           </p>
         </div>
       </div>

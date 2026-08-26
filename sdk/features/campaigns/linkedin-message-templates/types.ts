@@ -10,8 +10,13 @@ export interface LinkedInMessageTemplate {
   tenant_id: string;
   name: string;
   description: string | null;
+  /** Single message body (canonical). */
+  content?: string | null;
+  /** Alias of `content` (kept for back-compat with older consumers). */
+  message?: string | null;
   connection_message: string | null;
   followup_message: string | null;
+  /** Template type: 'linkedin_connection' | 'linkedin_followup'. */
   category: string | null;
   tags: string[] | null;
   is_default: boolean;
@@ -25,31 +30,76 @@ export interface LinkedInMessageTemplate {
 }
 
 /**
- * Request to create new template
+ * Coarse media category for a template attachment.
+ */
+export type TemplateMediaType = 'image' | 'video' | 'audio' | 'document';
+
+/**
+ * Media attachment stored on a template (lives in metadata.media_* on the backend).
+ */
+export interface TemplateMedia {
+  media_url: string;
+  media_type?: TemplateMediaType | string | null;
+  media_filename?: string | null;
+}
+
+/**
+ * Result of a template media upload (see uploadTemplateMedia).
+ */
+export interface TemplateMediaUploadResult {
+  success: boolean;
+  url: string;
+  path: string;
+  filename: string;
+  media_type: TemplateMediaType | string;
+  mime_type: string;
+}
+
+/**
+ * Request to create new template.
+ * Media fields are flat here (media_url/media_type/media_filename); the backend
+ * folds them into the template's metadata JSONB.
  */
 export interface CreateTemplateRequest {
   name: string;
   description?: string;
-  connection_message?: string;
-  followup_message?: string;
+  /** Single message body (canonical). */
+  content?: string;
+  /** Template type. Defaults to 'linkedin_connection' server-side. */
   category?: string;
+  /** @deprecated use `content` - still accepted server-side as the body. */
+  connection_message?: string;
+  /** @deprecated use `content` - still accepted server-side as the body. */
+  followup_message?: string;
   tags?: string[];
   is_default?: boolean;
   is_active?: boolean;
+  media_url?: string | null;
+  media_type?: TemplateMediaType | string | null;
+  media_filename?: string | null;
 }
 
 /**
- * Request to update template
+ * Request to update template.
+ * Set media_url to null to clear an existing attachment.
  */
 export interface UpdateTemplateRequest {
   name?: string;
   description?: string;
-  connection_message?: string;
-  followup_message?: string;
+  /** Single message body (canonical). */
+  content?: string;
+  /** Template type. */
   category?: string;
+  /** @deprecated use `content` - still accepted server-side as the body. */
+  connection_message?: string;
+  /** @deprecated use `content` - still accepted server-side as the body. */
+  followup_message?: string;
   tags?: string[];
   is_default?: boolean;
   is_active?: boolean;
+  media_url?: string | null;
+  media_type?: TemplateMediaType | string | null;
+  media_filename?: string | null;
 }
 
 /**
@@ -81,6 +131,24 @@ export const TEMPLATE_CATEGORIES = [
 ] as const;
 
 export type TemplateCategory = typeof TEMPLATE_CATEGORIES[number];
+
+/**
+ * Template type (what the single body is used for). The connection request note
+ * is text-only and 300-char capped; the follow-up message allows media and any
+ * length.
+ */
+export const TEMPLATE_TYPES = [
+  { value: 'linkedin_connection', label: 'Connection request' },
+  { value: 'linkedin_followup', label: 'Follow-up message' },
+] as const;
+
+export type TemplateType = typeof TEMPLATE_TYPES[number]['value'];
+
+/** Friendly label for a template's type (`category`). */
+export function templateTypeLabel(category?: string | null): string {
+  const match = TEMPLATE_TYPES.find((t) => t.value === category);
+  return match ? match.label : (category || '');
+}
 
 /**
  * Variable placeholders for personalization

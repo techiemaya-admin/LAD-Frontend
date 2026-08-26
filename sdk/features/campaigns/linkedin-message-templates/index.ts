@@ -12,10 +12,16 @@ export type {
   TemplateFilters,
   PersonalizedTemplate,
   TemplateCategory,
+  TemplateType,
+  TemplateMedia,
+  TemplateMediaType,
+  TemplateMediaUploadResult,
 } from './types';
 
 export {
   TEMPLATE_CATEGORIES,
+  TEMPLATE_TYPES,
+  templateTypeLabel,
   MESSAGE_VARIABLES,
   CONNECTION_MESSAGE_MAX_LENGTH,
 } from './types';
@@ -32,6 +38,7 @@ export {
   createMessageTemplate,
   updateMessageTemplate,
   deleteMessageTemplate,
+  uploadTemplateMedia,
   saveTemplatesToLocalStorage,
   loadTemplatesFromLocalStorage,
   clearTemplatesFromLocalStorage,

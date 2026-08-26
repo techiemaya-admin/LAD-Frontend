@@ -8,8 +8,10 @@ import { AgentSelector } from './AgentSelector';
 import { AgentForm } from './AgentForm';
 import { FormSkeleton } from './FormSkeleton';
 import { SidebarSkeleton } from './SidebarSkeleton';
+import { VoiceLibrary } from './VoiceLibrary';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentPlaygroundModal } from './AgentPlaygroundModal';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Volume2 } from 'lucide-react';
 
 export function VoiceAgentSettings() {
   const { toast } = useToast();
@@ -385,45 +387,84 @@ export function VoiceAgentSettings() {
   return (
     <div className="min-h-screen p-2 md:p-2 lg:p-2">
       <div className="mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          {/* Sidebar - Agent Selector */}
-          <aside className="w-full min-w-0 max-w-none lg:w-[320px] lg:flex-none lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-            {isLoadingAgents ? (
-              <SidebarSkeleton />
-            ) : (
-              <AgentSelector
-                agents={agents}
-                selectedAgentId={selectedAgentId}
-                onSelectAgent={handleSelectAgent}
-                onOpenPlayground={() => setIsPlaygroundOpen(true)}
-                isLoading={isLoadingAgents}
-              />
-            )}
-          </aside>
+        <Tabs defaultValue="agents" className="w-full">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-0 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl text-primary dark:text-blue-400">
+                <Volume2 className="h-6 w-6" />
+              </div>
+              <h1 className="text-2xl font-bold font-display text-foreground dark:text-white">
+                Voice Agents Workspace
+              </h1>
+            </div>
+            {/* FIXED:
+   - dark:bg-[#00051d] locks the background container track color in dark mode.
+   - data-[state=active]:dark:bg-blue-650 makes the active tab pop in a clean blue layout.
+   - data-[state=active]:dark:text-white ensures maximum text clarity.
+   - dark:text-slate-400 protects unselected tab visibility.
+*/}
+            <TabsList className="w-full grid grid-cols-2 md:w-auto md:flex dark:bg-[#00051d] p-1 rounded-xl border dark:border-slate-800/60">
+              <TabsTrigger
+                value="agents"
+                className="rounded-lg transition-all dark:text-slate-400 data-[state=active]:dark:bg-[#2563eb] data-[state=active]:dark:text-white shadow-sm"
+              >
+                Agent Configuration
+              </TabsTrigger>
+              <TabsTrigger
+                value="library"
+                className="rounded-lg transition-all dark:text-slate-400 data-[state=active]:dark:bg-[#2563eb] data-[state=active]:dark:text-white shadow-sm"
+              >
+                Voice Library
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* Main Content - Agent Form */}
-          <main ref={formRef}>
-            {isLoadingAgent ? (
-              <FormSkeleton />
-            ) : (
-              <AgentForm
-                formData={formData}
-                errors={errors}
-                isDirty={isDirty}
-                isValid={isValid}
-                isSaving={isSaving}
-                isEditMode={!!selectedAgentId}
-                voiceSampleUrl={selectedAgentVoiceSampleUrl}
-                voices={voices}
-                isLoadingVoices={isLoadingVoices}
-                onUpdateField={updateField}
-                onSave={handleSave}
-                onReset={handleReset}
-                getCharCount={getCharCount}
-              />
-            )}
-          </main>
-        </div>
+          <TabsContent value="agents" className="mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+              {/* Sidebar - Agent Selector */}
+              <aside className="w-full min-w-0 max-w-none lg:w-[320px] lg:flex-none lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+                {isLoadingAgents ? (
+                  <SidebarSkeleton />
+                ) : (
+                  <AgentSelector
+                    agents={agents}
+                    selectedAgentId={selectedAgentId}
+                    onSelectAgent={handleSelectAgent}
+                    onOpenPlayground={() => setIsPlaygroundOpen(true)}
+                    isLoading={isLoadingAgents}
+                  />
+                )}
+              </aside>
+
+              {/* Main Content - Agent Form */}
+              <main ref={formRef}>
+                {isLoadingAgent ? (
+                  <FormSkeleton />
+                ) : (
+                  <AgentForm
+                    formData={formData}
+                    errors={errors}
+                    isDirty={isDirty}
+                    isValid={isValid}
+                    isSaving={isSaving}
+                    isEditMode={!!selectedAgentId}
+                    voiceSampleUrl={selectedAgentVoiceSampleUrl}
+                    voices={voices}
+                    isLoadingVoices={isLoadingVoices}
+                    onUpdateField={updateField}
+                    onSave={handleSave}
+                    onReset={handleReset}
+                    getCharCount={getCharCount}
+                  />
+                )}
+              </main>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="library" className="mt-0">
+            <VoiceLibrary voices={voices} setVoices={setVoices} />
+          </TabsContent>
+        </Tabs>
       </div>
       <AgentPlaygroundModal 
         isOpen={isPlaygroundOpen} 

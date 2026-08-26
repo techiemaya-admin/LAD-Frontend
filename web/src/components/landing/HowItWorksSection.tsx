@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Users, MessageSquare, TrendingUp, CheckCircle2, Check, BarChart3, Mail, MessageCircle, Smartphone, Linkedin } from 'lucide-react';
 
@@ -10,7 +11,7 @@ function ConnectMockUI() {
     { icon: Linkedin, label: 'LinkedIn', connected: true },
     { icon: Mail, label: 'Email', connected: true },
     { icon: MessageCircle, label: 'WhatsApp', connected: true },
-    { icon: Smartphone, label: 'SMS', connected: true },
+    { icon: Smartphone, label: 'Voice', connected: true },
   ];
 
   return (
@@ -54,7 +55,7 @@ function OutreachMockUI() {
             <span className="text-xs text-muted-foreground">Template</span>
             <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 font-semibold">AI Personalized</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">"Hi [Name], noticed your sales team is using [Platform]..."</p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">&quot;Hi [Name], noticed your sales team is using [Platform]...&quot;</p>
         </div>
       </div>
     </div>
@@ -75,7 +76,7 @@ function AITakeoverMockUI() {
         </div>
         <div className="flex justify-start">
           <div className="px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground max-w-[70%] flex items-center gap-2">
-            <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-700 font-semibold">AI Agent</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-700 font-semibold">Mr LAD</span>
             <span>We use HubSpot...</span>
           </div>
         </div>
@@ -161,43 +162,43 @@ export default function HowItWorksSection() {
     {
       id: 0,
       step: '01',
-      title: 'Connect Your Channels',
-      description: 'Link LinkedIn, email, WhatsApp, SMS in minutes with one-click OAuth',
+      title: 'Hire Mr LAD',
+      description: 'Connect your channels in minutes: LinkedIn, WhatsApp, Instagram, email, and voice',
       icon: <Zap className="w-6 h-6 text-white" />,
       duration: '2 mins',
       color: 'from-blue-500 to-cyan-500',
       bullets: [
-        'One-click OAuth for LinkedIn',
-        'SMTP for email integration',
-        'WhatsApp Business API setup'
+        'One-click setup for LinkedIn',
+        'Email and calendar in minutes',
+        'WhatsApp and Instagram ready to go'
       ],
       mockUI: <ConnectMockUI />
     },
     {
       id: 1,
       step: '02',
-      title: 'Define Your Outreach',
-      description: 'Set target audience, messaging templates, and qualification criteria',
+      title: 'Train Him On Your Business',
+      description: 'Teach Mr LAD your ideal customer, your offers, and your brand voice',
       icon: <Users className="w-6 h-6 text-white" />,
       duration: '5 mins',
       color: 'from-purple-500 to-pink-500',
       bullets: [
-        'Target by job title & company size',
-        'Custom message templates',
-        'Automated qualification rules'
+        'Define your ideal customer profile',
+        'Set your offers and messaging',
+        'Match your brand voice'
       ],
       mockUI: <OutreachMockUI />
     },
     {
       id: 2,
       step: '03',
-      title: 'AI Takes Over',
-      description: 'Intelligent agents start conversations and qualify leads automatically',
+      title: 'He Goes To Work',
+      description: 'Mr LAD starts real conversations and qualifies leads around the clock',
       icon: <MessageSquare className="w-6 h-6 text-white" />,
       duration: 'Automatic',
       color: 'from-orange-500 to-red-500',
       bullets: [
-        'AI agents send personalized messages',
+        'Personalized outreach at scale',
         'Real-time conversation handling',
         'Automatic lead qualification'
       ],
@@ -206,30 +207,30 @@ export default function HowItWorksSection() {
     {
       id: 3,
       step: '04',
-      title: 'Deals Close',
-      description: 'AI agents negotiate terms, handle objections, and close transactions',
+      title: 'You Get Booked Meetings',
+      description: 'Mr LAD qualifies, follows up, and books meetings straight onto your calendar',
       icon: <TrendingUp className="w-6 h-6 text-white" />,
       duration: 'Varies',
       color: 'from-green-500 to-emerald-500',
       bullets: [
-        'Intelligent objection handling',
-        'Dynamic offer negotiation',
-        'Deal closing automation'
+        'Answers questions and handles objections',
+        'Follows up until they are ready',
+        'Books meetings on your calendar'
       ],
       mockUI: <DealsMockUI />
     },
     {
       id: 4,
       step: '05',
-      title: 'Review & Optimize',
-      description: 'AI provides insights, recommendations, and performance analytics',
+      title: 'See What Is Working',
+      description: 'Mr LAD logs every touch and shows you what is driving results',
       icon: <BarChart3 className="w-6 h-6 text-white" />,
       duration: 'Daily',
       color: 'from-cyan-500 to-blue-500',
       bullets: [
-        'Real-time performance analytics',
-        'AI-powered optimization tips',
-        'Historical win/loss analysis'
+        'A 360 view of every lead',
+        'Real-time performance insights',
+        'Synced to your CRM'
       ],
       mockUI: <AnalyticsMockUI />
     }
@@ -314,7 +315,7 @@ export default function HowItWorksSection() {
             How It <span className="text-primary">Works</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Five simple steps to automate your entire sales process and watch deals close on their own
+            Five simple steps to hire Mr LAD, put him to work, and watch the meetings land on your calendar
           </p>
         </motion.div>
 
@@ -442,15 +443,17 @@ export default function HowItWorksSection() {
         {/* CTA */}
         <motion.div className="text-center" variants={stepBubbleVariants} custom={4}>
           <p className="text-muted-foreground mb-6 text-lg">
-            Ready to automate your sales process?
+            Ready to put Mr LAD to work?
           </p>
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
-            whileTap={{ scale: 0.95 }}
-            className="px-10 py-4 bg-primary text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
-          >
-            Start Free Trial
-          </motion.button>
+          <Link href="/onboarding">
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
+              whileTap={{ scale: 0.95 }}
+              className="px-10 py-4 bg-primary text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+            >
+              Hire Mr LAD
+            </motion.button>
+          </Link>
         </motion.div>
       </div>
     </motion.section>

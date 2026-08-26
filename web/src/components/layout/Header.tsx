@@ -51,8 +51,10 @@ export function NavbarDemo() {
           <NavbarLogo />
           <NavItems items={navItems} activePath={pathname} />
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <NavbarButton variant="secondary" onClick={login}>Login</NavbarButton>
+            <ThemeToggle/>
+            {!isLoginPage ? (
+              <NavbarButton variant="secondary" onClick={login}>Login</NavbarButton>
+            ) : ''}
             <NavbarButton variant="primary" onClick={handleGetStarted}>Get Started</NavbarButton>
           </div>
         </NavBody>
@@ -69,7 +71,7 @@ export function NavbarDemo() {
                     href={item.link}
                     whileTap={{ scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    className="text-[12px] font-semibold text-[#0b1957] hover:opacity-80 transition-opacity select-none"
+                    className="text-[12px] font-semibold text-[#0b1957] dark:text-slate-200 hover:opacity-80 transition-opacity select-none"
                   >
                     {item.name}
                   </motion.a>

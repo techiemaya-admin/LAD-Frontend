@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { safeStorage } from "@lad/shared/storage";
 
-const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "";
-const isWorkerConfigured = workerUrl.startsWith("https://");
+const rawWorkerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "";
+const workerUrl = rawWorkerUrl.endsWith('/') ? rawWorkerUrl.slice(0, -1) : rawWorkerUrl;
+const isWorkerConfigured = workerUrl.startsWith("http");
 
 export interface PlaygroundStore {
   id: string;
@@ -33,8 +35,25 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
   const [wakeError, setWakeError] = useState("");
   const sessionId = useRef("");
 
+  const getAuthHeaders = () => {
+    const token = safeStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+  };
+
+  const getAuthHeaderOnly = () => {
+    const token = safeStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   useEffect(() => {
-    if (!isWorkerConfigured) return;
+    if (!isWorkerConfigured) {
+      setWakeError("Playground Worker URL is not configured. Features are disabled.");
+      setIsAwake(false);
+      return;
+    }
 
     if (!sessionId.current) {
       sessionId.current = crypto.randomUUID();
@@ -49,7 +68,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
         // Start hold
         fetch(`${workerUrl}/hold-for-call`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: sessionId.current })
         }).catch(e => {
             // Ignore abort or network errors from the long-polling hold
@@ -68,7 +87,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       if (sessionId.current) {
         fetch(`${workerUrl}/release-call`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: sessionId.current }),
           keepalive: true
         }).catch(() => {
@@ -85,7 +104,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
     try {
       const res = await fetch(`${workerUrl}/playground-rag/stores/list`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ tenant_id: tenantId, user_id: userId }),
       });
       if (!res.ok) throw new Error("Failed to fetch stores");
@@ -106,7 +125,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       }
       const res = await fetch(`${workerUrl}/playground-rag/stores`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           tenant_id: tenantId,
           user_id: userId,
@@ -131,6 +150,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       const geminiId = storeName.replace("fileSearchStores/", "");
       const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}?tenant_id=${tenantId}`, {
         method: "DELETE",
+        headers: getAuthHeaderOnly(),
       });
       if (!res.ok) throw new Error("Failed to delete store");
       await fetchStores();
@@ -148,7 +168,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       const geminiId = storeName.replace("fileSearchStores/", "");
       const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}/settings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           tenant_id: tenantId,
           user_id: userId,
@@ -176,6 +196,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
 
       const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}/documents/upload`, {
         method: "POST",
+        headers: getAuthHeaderOnly(),
         body: formData,
       });
       if (!res.ok) {
@@ -192,7 +213,9 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
     if (!isWorkerConfigured || !tenantId) return [];
     try {
       const geminiId = storeName.replace("fileSearchStores/", "");
-      const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}/documents?tenant_id=${tenantId}`);
+      const res = await fetch(`${workerUrl}/playground-rag/stores/${geminiId}/documents?tenant_id=${tenantId}`, {
+        headers: getAuthHeaderOnly()
+      });
       if (!res.ok) throw new Error("Failed to fetch documents");
       return await res.json();
     } catch (err: any) {
@@ -209,7 +232,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
       const docGeminiId = documentId.replace(`${storeName}/documents/`, "");
       const res = await fetch(
         `${workerUrl}/playground-rag/stores/${storeGeminiId}/documents/${docGeminiId}?tenant_id=${tenantId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getAuthHeaderOnly() }
       );
       if (!res.ok) throw new Error("Failed to delete document");
       return true;
@@ -225,7 +248,7 @@ export function useKnowledgeBase(tenantId: string = "", userId: string = "") {
     const storeGeminiId = storeName.replace("fileSearchStores/", "");
     const res = await fetch(`${workerUrl}/playground-rag/stores/${storeGeminiId}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         tenant_id: tenantId,
         question: question,

@@ -30,9 +30,9 @@ function getCompanySizeLabel(employeeCount) {
   const count = parseInt(employeeCount || 0, 10);
   if (!count) return 'Unknown';
   if (count >= 200) return 'Enterprise (200+ employees)';
-  if (count >= 50) return 'Large (50–199 employees)';
-  if (count >= 10) return 'Medium (10–49 employees)';
-  return 'Small (1–9 employees)';
+  if (count >= 50) return 'Large (50-199 employees)';
+  if (count >= 10) return 'Medium (10-49 employees)';
+  return 'Small (1-9 employees)';
 }
 
 function getCompanySizeColor(sizeLabel) {

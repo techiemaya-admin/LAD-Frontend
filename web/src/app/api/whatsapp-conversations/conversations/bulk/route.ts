@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Re-create the request with the body (minus the action field).
-    // Explicitly copy auth + tenant headers so they survive the NextRequest clone —
+    // Explicitly copy auth + tenant headers so they survive the NextRequest clone  - 
     // new NextRequest(url, { headers: req.headers }) can silently drop them in some
     // Next.js versions when req.headers is a ReadonlyHeaders instance.
     const { action: _, ...payload } = body;

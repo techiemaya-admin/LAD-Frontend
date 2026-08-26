@@ -1,0 +1,98 @@
+name: guardrails
+
+on:
+  push:
+    branches: [develop, stage, main]
+  pull_request:
+    branches: [develop, stage, main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Guardrail 1: ban literal `lad_dev.` strings in source code.
+  # The schema must be resolved at runtime via getSchema(req) / core_table().
+  # See design-principles.md §I and architecture.md §M3.
+  # ---------------------------------------------------------------------------
+  no-lad-dev-literal:
+    name: no literal lad_dev.* strings in source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for hardcoded lad_dev. references
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Match `lad_dev.` only in source code; ignore SQL, migrations, docs, tests.
+          violations=$(git grep -n -E '\blad_dev\.' -- \
+            ':(exclude)*.sql' \
+            ':(exclude)*.md' \
+            ':(exclude)migrations/**' \
+            ':(exclude)**/migrations/**' \
+            ':(exclude)**/__tests__/**' \
+            ':(exclude)**/*test*.{js,ts,py}' \
+            ':(exclude).github/**' \
+            ':(exclude).claude/**' \
+            ':(exclude)*.yaml' \
+            ':(exclude)*.yml' \
+            || true)
+
+          if [ -n "$violations" ]; then
+            echo "::error::Found hardcoded 'lad_dev.' references — these must use getSchema(req) (Node) or core_table() (Python)."
+            echo "See design-principles.md §I and the M3 production blocker."
+            echo ""
+            echo "$violations"
+            exit 1
+          fi
+          echo "✓ No hardcoded lad_dev.* references."
+
+  # ---------------------------------------------------------------------------
+  # Guardrail 2: ban NEW introductions of `organization_id` while M2 backfill
+  # is in flight. Existing occurrences are allowed (they are the M2 backlog).
+  # See design-principles.md §B and decisions-log.md M2.
+  # ---------------------------------------------------------------------------
+  no-new-organization-id:
+    name: no new organization_id (M2 backfill in progress)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR diff for new organization_id references
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+
+          # Count added lines containing `organization_id` (lines starting with `+`)
+          # excluding context lines and removed lines.
+          added=$(git diff "$base_sha..$head_sha" -- \
+            ':(exclude)*.md' \
+            ':(exclude)migrations/**' \
+            ':(exclude)**/migrations/**' \
+            ':(exclude)*.sql' \
+            ':(exclude).claude/**' \
+            | grep -E '^\+[^+]' \
+            | grep -c 'organization_id' \
+            || true)
+
+          if [ "$added" -gt 0 ]; then
+            echo "::error::This PR adds ${added} new occurrences of 'organization_id'."
+            echo "Use 'tenant_id' instead — M2 is actively migrating away from organization_id."
+            echo "See decisions-log.md M2."
+            echo ""
+            echo "Added lines:"
+            git diff "$base_sha..$head_sha" -- \
+              ':(exclude)*.md' \
+              ':(exclude)migrations/**' \
+              ':(exclude)**/migrations/**' \
+              ':(exclude)*.sql' \
+              ':(exclude).claude/**' \
+              | grep -E '^\+[^+]' \
+              | grep -n 'organization_id' \
+              | head -50
+            exit 1
+          fi
+          echo "✓ No new organization_id references."

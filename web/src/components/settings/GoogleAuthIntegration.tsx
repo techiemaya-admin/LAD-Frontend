@@ -52,37 +52,37 @@ export const GoogleAuthIntegration: React.FC = () => {
   const busy = isLoading || isActing;
 
   return (
-    <Card>
+    <Card className="dark:bg-[#030a21]/60 dark:border-blue-950/40">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Calendar className="h-6 w-6 text-blue-600" />
+          <div className="p-2 bg-blue-100 dark:bg-blue-950/40 rounded-lg">
+            <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <CardTitle>Google Calendar Integration</CardTitle>
-            <CardDescription>Connect your Google account for Calendar and Gmail access</CardDescription>
+            <CardTitle className="dark:text-white">Google Calendar Integration</CardTitle>
+            <CardDescription className="dark:text-gray-400">Connect your Google account for Calendar and Gmail access</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Connection Status */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#061033]/70 border border-transparent dark:border-blue-950/40 rounded-lg">
           <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-gray-600" />
+            <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             <div>
-              <p className="font-medium text-sm">Connection Status</p>
+              <p className="font-medium text-sm dark:text-white">Connection Status</p>
               {isConnected && email ? (
-                <p className="text-xs text-gray-500 mt-1">Connected as {email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Connected as {email}</p>
               ) : (
-                <p className="text-xs text-gray-500 mt-1">Google account is not connected</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Google account is not connected</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isConnected ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-500 dark:text-emerald-400" />
             ) : (
-              <AlertCircle className="h-5 w-5 text-gray-400" />
+              <AlertCircle className="h-5 w-5 text-gray-400 dark:text-gray-600" />
             )}
           </div>
         </div>
@@ -90,15 +90,15 @@ export const GoogleAuthIntegration: React.FC = () => {
         {/* Permissions */}
         {isConnected && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">Granted Permissions:</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Granted Permissions:</p>
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-xs text-green-700">Google Calendar</span>
+              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-emerald-950/20 rounded border border-green-200 dark:border-emerald-900/40">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-emerald-400" />
+                <span className="text-xs text-green-700 dark:text-emerald-400">Google Calendar</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-xs text-green-700">Gmail</span>
+              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-emerald-950/20 rounded border border-green-200 dark:border-emerald-900/40">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-emerald-400" />
+                <span className="text-xs text-green-700 dark:text-emerald-400">Gmail</span>
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@ export const GoogleAuthIntegration: React.FC = () => {
             <Button
               onClick={connectGoogle}
               disabled={busy}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
             >
               {busy ? (
                 <>
@@ -156,8 +156,8 @@ export const GoogleAuthIntegration: React.FC = () => {
         </div>
 
         {/* Info */}
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-800">
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg">
+          <p className="text-xs text-blue-800 dark:text-blue-400">
             <strong>Note:</strong> We only access the data you explicitly grant permission for. You can revoke access at any time.
           </p>
         </div>
