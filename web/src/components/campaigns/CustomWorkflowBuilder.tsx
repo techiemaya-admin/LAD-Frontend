@@ -3262,7 +3262,20 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     // would launch silently doing nothing - point at the offending node instead.
     if (workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       const hasContent = ((configs[CONTENT_STEP_ID]?.content ?? configs[AUTOPOST_STEP_ID]?.content) || '').trim();
-      if (!hasContent) {
+      // With "write a fresh post with AI each time" on, the body is a TOPIC
+      // SEED, not the post — which is what the checkbox itself says ("uses the
+      // text above as the topic"). generatePost() with an empty seed writes
+      // from the tenant's business profile and campaign targeting, which is the
+      // whole point of a recurring series that does not repeat itself.
+      //
+      // Demanding text anyway made the toggle look broken: it is ticked, the
+      // node is open, and the builder still refuses to launch.
+      //
+      // Nothing downstream needs the guard either. If generation fails at run
+      // time there is no silent empty post — publishPost() refuses a blank body
+      // ("Post content is required") and the failure lands on the schedule row.
+      const aiWritesIt = !!(configs[CONTENT_STEP_ID]?.ai_generate ?? configs[AUTOPOST_STEP_ID]?.ai_generate);
+      if (!hasContent && !aiWritesIt) {
         // ABSENT and EMPTY are different problems with different fixes. Telling
         // someone to "add" a node that is plainly on their canvas reads as the
         // builder being broken, when the instruction is to open it and type.
