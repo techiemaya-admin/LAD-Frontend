@@ -33,6 +33,10 @@ import {
   ChevronRight,
   Info,
   Eye,
+  ListChecks,
+  Play,
+  Upload,
+  XCircle,
 } from 'lucide-react';
 import { safeStorage } from '@lad/shared/storage';
 import { BrandAssetsSettings } from './BrandAssetsSettings';
@@ -79,7 +83,142 @@ interface KeywordPreview {
 /** What the card shows for a profile, plus the marker for a wizard-built one. */
 type ViewedDna = BrandDnaData & { from_crawl?: boolean };
 
-type Section = 'gallery' | 'dna' | 'icp' | 'drive' | 'keywords';
+type Section = 'gallery' | 'dna' | 'icp' | 'drive' | 'keywords' | 'workorders';
+
+/** One row in the work order list, as `GET /auto-media/jobs` returns it. */
+interface WorkOrderJob {
+  group_id: string;
+  source: 'drive' | 'gcs';
+  status: string;
+  filename: string;
+  instruction: string;
+  description: string;
+  attempts: number;
+  error?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  image_count: number;
+}
+
+interface WorkOrderJobs {
+  active_run: boolean;
+  last_synced?: string | null;
+  counts: { queued: number; processing: number; completed: number; closed: number };
+  queued: WorkOrderJob[];
+  processing: WorkOrderJob[];
+  completed: WorkOrderJob[];
+  closed: WorkOrderJob[];
+}
+
+/** Short local time. Returns an em dash for a missing or unparseable stamp. */
+const shortTime = (iso?: string | null): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+};
+
+/** How long a finished job took, from claimed to completed. */
+const duration = (from?: string | null, to?: string | null): string => {
+  if (!from || !to) return '';
+  const ms = new Date(to).getTime() - new Date(from).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const secs = Math.round(ms / 1000);
+  return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
+};
+
+/**
+ * One state's worth of jobs.
+ *
+ * Declared at module level rather than inside MageSettings: a component defined
+ * in a render body is a new type on every render, so React unmounts and remounts
+ * the whole subtree each time — which would drop focus and re-run effects.
+ */
+const JobBucket: React.FC<{
+  title: string;
+  rows: WorkOrderJob[];
+  empty: string;
+  busy: string;
+  showTimes?: boolean;
+  onCancel?: (groupId: string) => void;
+}> = ({ title, rows, empty, busy, showTimes, onCancel }) => (
+  <div>
+    <div className="flex items-center gap-2 mb-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {title}
+      </span>
+      <span className="text-xs text-gray-400">{rows.length}</span>
+    </div>
+
+    {rows.length === 0 ? (
+      <p className="text-xs text-gray-400 dark:text-gray-500 pl-1">{empty}</p>
+    ) : (
+      <ul className="space-y-2">
+        {rows.map((job) => (
+          <li
+            key={job.group_id}
+            className="rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 flex items-start gap-3"
+          >
+            <span className="flex-1 min-w-0">
+              <span className="flex items-center gap-2">
+                <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                  {job.filename || job.group_id}
+                </span>
+                {/* Where it came from, because a direct upload will never be
+                    findable in the customer's Drive folder. */}
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 shrink-0">
+                  {job.source === 'gcs' ? 'uploaded' : 'drive'}
+                </span>
+              </span>
+
+              {job.instruction && (
+                <span className="block text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                  {job.instruction}
+                </span>
+              )}
+
+              {showTimes && (
+                <span className="block text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  started {shortTime(job.started_at)} · finished{' '}
+                  {shortTime(job.completed_at)}
+                  {duration(job.started_at, job.completed_at) &&
+                    ` · took ${duration(job.started_at, job.completed_at)}`}
+                  {job.image_count > 0 && ` · ${job.image_count} image${
+                    job.image_count === 1 ? '' : 's'
+                  }`}
+                </span>
+              )}
+
+              {job.error && (
+                <span className="block text-[11px] text-red-600 dark:text-red-400 mt-1">
+                  {job.error}
+                </span>
+              )}
+            </span>
+
+            {onCancel && (
+              <button
+                onClick={() => onCancel(job.group_id)}
+                disabled={busy === `cancel:${job.group_id}`}
+                title="Take this out of the queue. Your file is not deleted."
+                className="shrink-0 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+              >
+                {busy === `cancel:${job.group_id}` ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4" />
+                )}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
 
 export const MageSettings: React.FC = () => {
   const [open, setOpen] = useState<Section | null>('dna');
@@ -108,6 +247,13 @@ export const MageSettings: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [viewingDna, setViewingDna] = useState<ViewedDna | null>(null);
   const [dnaLoading, setDnaLoading] = useState<string>('');
+
+  const [jobs, setJobs] = useState<WorkOrderJobs | null>(null);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadInstruction, setUploadInstruction] = useState('');
+  const [uploadRunNow, setUploadRunNow] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [kwKey, setKwKey] = useState('');
   const [kwValue, setKwValue] = useState('');
@@ -337,6 +483,124 @@ export const MageSettings: React.FC = () => {
     },
     [headers, loadOverview],
   );
+
+  // ── work orders ───────────────────────────────────────────────────────────
+
+  const loadJobs = useCallback(async () => {
+    setJobsLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/auto-media/jobs`, { headers: headers() });
+      if (!res.ok) throw new Error(await readError(res, 'Could not load work orders.'));
+      setJobs(await res.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load work orders.');
+    } finally {
+      setJobsLoading(false);
+    }
+  }, [headers]);
+
+  // Load the queue when the section is opened, not on card mount — it is one
+  // more request, and most visits to this card are not about work orders.
+  useEffect(() => {
+    if (open === 'workorders' && !jobs) loadJobs();
+  }, [open, jobs, loadJobs]);
+
+  /**
+   * Start a run and deliberately ignore what comes back.
+   *
+   * The open request IS the hold that keeps the Cloud Run instance alive for the
+   * length of the run, so this must NOT be aborted — closing it early can get the
+   * instance reclaimed mid-job, stranding that job at 🟡 until its claim TTL
+   * expires. We simply do not await the body; results are viewed in the Gallery.
+   */
+  const triggerRun = async () => {
+    if (jobs?.active_run) {
+      setNotice('A run is already in flight. Wait for it to finish.');
+      return;
+    }
+    setBusy('run');
+    setError('');
+    try {
+      const res = await fetch(`${WORKER_URL}/auto-media/run`, {
+        method: 'POST',
+        headers: headers(true),
+        body: JSON.stringify({ return_type: 'url' }),
+      });
+      if (res.status === 409) {
+        setNotice(await readError(res, 'A run is already in flight.'));
+      } else if (!res.ok) {
+        setError(await readError(res, 'Could not start the run.'));
+      } else {
+        setNotice('Run started. Generated images appear in the Gallery when it finishes.');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not start the run.');
+    } finally {
+      setBusy('');
+      loadJobs();
+    }
+  };
+
+  const cancelJob = async (groupId: string) => {
+    setBusy(`cancel:${groupId}`);
+    setError('');
+    try {
+      const res = await fetch(
+        `${WORKER_URL}/auto-media/jobs/${encodeURIComponent(groupId)}/cancel`,
+        { method: 'POST', headers: headers(true) },
+      );
+      if (!res.ok) throw new Error(await readError(res, 'Could not cancel that job.'));
+      setNotice('Job cancelled. Your file is untouched — only the queue changed.');
+      await loadJobs();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not cancel that job.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  /**
+   * Upload straight to our storage, skipping Drive.
+   *
+   * The service account cannot write to Drive at all — it has no storage quota —
+   * so an upload from here lands in GCS and will not appear in the customer's
+   * Drive folder. It is queued and processed identically either way.
+   */
+  const uploadWorkOrder = async () => {
+    if (!uploadFile) return;
+    setBusy('upload');
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('file', uploadFile);
+      form.append('instruction', uploadInstruction);
+      form.append('run_now', String(uploadRunNow));
+      form.append('return_type', 'url');
+
+      const token = safeStorage.getItem('token');
+      const res = await fetch(`${WORKER_URL}/auto-media/upload`, {
+        method: 'POST',
+        // No Content-Type: the browser must set the multipart boundary itself.
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form,
+      });
+      if (!res.ok) throw new Error(await readError(res, 'Could not upload that file.'));
+
+      setNotice(
+        uploadRunNow
+          ? 'Uploaded and generated. Open the Gallery to see the results.'
+          : 'Uploaded and queued. The next run will pick it up.',
+      );
+      setUploadFile(null);
+      setUploadInstruction('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await loadJobs();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not upload that file.');
+    } finally {
+      setBusy('');
+    }
+  };
 
   // ── keywords ──────────────────────────────────────────────────────────────
 
@@ -740,6 +1004,162 @@ export const MageSettings: React.FC = () => {
           {open === 'drive' && (
             <div className="px-5 pb-5">
               <BrandAssetsSettings />
+            </div>
+          )}
+        </div>
+
+        {/* ── Work orders ── */}
+        <div>
+          <SectionHeader
+            id="workorders"
+            icon={<ListChecks className="w-4 h-4" />}
+            title="Work orders"
+            subtitle={
+              jobs
+                ? `${jobs.counts.queued} queued · ${jobs.counts.processing} running · ${jobs.counts.completed} done`
+                : 'Queue, upload and run the auto media agent'
+            }
+          />
+          {open === 'workorders' && (
+            <div className="px-5 pb-5 space-y-5">
+              {/* trigger + status dot */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={triggerRun}
+                  disabled={busy === 'run' || jobs?.active_run}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {busy === 'run' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
+                  Run auto media agent
+                </button>
+
+                <span className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      jobs?.active_run
+                        ? 'bg-amber-500 animate-pulse'
+                        : jobs && jobs.counts.queued > 0
+                          ? 'bg-indigo-500'
+                          : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                  {jobs?.active_run
+                    ? 'A run is in progress'
+                    : jobs && jobs.counts.queued > 0
+                      ? `${jobs.counts.queued} waiting to run`
+                      : 'Idle'}
+                </span>
+
+                <button
+                  onClick={loadJobs}
+                  disabled={jobsLoading}
+                  className="ml-auto text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
+                >
+                  {jobsLoading ? 'Refreshing…' : 'Refresh'}
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Running syncs your Drive folder first, then works through the queue.
+                Generated images appear in the Gallery — this page does not show them.
+                Keep this tab open while it runs.
+              </p>
+
+              {/* direct upload */}
+              <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Upload a work order
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Goes straight to Mr LAD storage, not your Drive folder — so it will
+                  not appear in Drive, but it is queued and generated exactly the same.
+                  PNG, JPG, WEBP or GIF.
+                </p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-xs text-gray-600 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950/40 dark:file:text-indigo-300"
+                />
+
+                <textarea
+                  value={uploadInstruction}
+                  onChange={(e) => setUploadInstruction(e.target.value)}
+                  rows={2}
+                  placeholder="What should the agent make? Added to whatever the filename already says."
+                  className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                />
+
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={uploadRunNow}
+                    onChange={(e) => setUploadRunNow(e.target.checked)}
+                    className="rounded border-gray-300 dark:border-gray-700"
+                  />
+                  Generate straight away (takes a few minutes — leave this tab open).
+                  Otherwise it waits for the next run.
+                </label>
+
+                <button
+                  onClick={uploadWorkOrder}
+                  disabled={!uploadFile || busy === 'upload'}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {busy === 'upload' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  {uploadRunNow ? 'Upload and generate' : 'Upload and queue'}
+                </button>
+              </div>
+
+              {/* the queue */}
+              {jobsLoading && !jobs ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading work orders…
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <JobBucket
+                    title="Waiting to run"
+                    rows={jobs?.queued || []}
+                    empty="Nothing queued."
+                    onCancel={cancelJob}
+                    busy={busy}
+                  />
+                  <JobBucket
+                    title="Running now"
+                    rows={jobs?.processing || []}
+                    empty="Nothing running."
+                    busy={busy}
+                  />
+                  <JobBucket
+                    title="Completed"
+                    rows={jobs?.completed || []}
+                    empty="Nothing generated yet."
+                    showTimes
+                    busy={busy}
+                  />
+                  <JobBucket
+                    title="Failed and cancelled"
+                    rows={jobs?.closed || []}
+                    empty="Nothing failed or cancelled."
+                    busy={busy}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
