@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { logger } from '@/lib/logger';
 import { safeStorage } from '@lad/shared/storage';  
 // Use backend URL directly
 const API_BASE_URL: string = process.env.NEXT_PUBLIC_BACKEND_URL || '';
