@@ -494,7 +494,7 @@ export async function revealLeadPhone(
   campaignId: string,
   leadId: string,
   apolloPersonId: string
-): Promise<{ phone: string; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
+): Promise<{ phone: string | null; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
   const response = await apiClient.post<{
     error: string;
     success: boolean;
