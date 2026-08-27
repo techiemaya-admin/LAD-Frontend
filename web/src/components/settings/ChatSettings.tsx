@@ -2587,7 +2587,7 @@ export function ChatSettings() {
               <button
                 onClick={handleSaveFollowup}
                 disabled={savingFollowup}
-                className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 dark:bg-blue-600 rounded-xl hover:bg-blue-500 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold text-white bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-xl active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
               >
                 {savingFollowup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save Follow-up Settings
