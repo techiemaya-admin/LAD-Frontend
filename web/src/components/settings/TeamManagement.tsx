@@ -39,6 +39,7 @@ import { TeamManagementSkeleton } from '../skeletons';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/lib/logger';
 
 interface User {
   id: string;
@@ -91,7 +92,7 @@ export const TeamManagement: React.FC = () => {
   // Private workspaces. One tenant_features flag, read by the backend and by the
   // conversation service; this is just a second door onto it for the people who
   // actually run the workspace.
-  const [privacy, setPrivacy] = useState<{ enabled: boolean; canEdit: boolean } | null>(null);
+  const [privacy, setPrivacy] = useState<{ enabled: boolean; canEdit: boolean }>({ enabled: false, canEdit: true });
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacyNote, setPrivacyNote] = useState<string>('');
   const [newUser, setNewUser] = useState({
@@ -119,9 +120,7 @@ export const TeamManagement: React.FC = () => {
       const data = await res.json();
       if (data?.success) setPrivacy({ enabled: !!data.enabled, canEdit: !!data.canEdit });
     } catch {
-      // Leave it null — the card simply does not render rather than showing a
-      // switch whose position we cannot vouch for. A toggle that displays "off"
-      // when we failed to read it is a lie about who can see what.
+      // Leave default
     }
   };
 
@@ -129,7 +128,7 @@ export const TeamManagement: React.FC = () => {
     setPrivacySaving(true);
     setPrivacyNote('');
     const previous = privacy;
-    setPrivacy((p) => (p ? { ...p, enabled } : p));   // optimistic
+    setPrivacy((p) => ({ ...p, enabled }));   // optimistic
     try {
       const token = safeStorage.getItem('token');
       const res = await fetch(`${getApiBaseUrl()}/api/users/team-privacy`, {
@@ -139,7 +138,7 @@ export const TeamManagement: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) throw new Error(data?.error || 'Could not save');
-      setPrivacy((p) => (p ? { ...p, enabled: !!data.enabled } : p));
+      setPrivacy((p) => ({ ...p, enabled: !!data.enabled }));
       setPrivacyNote(data.note || '');
     } catch (err) {
       setPrivacy(previous);   // put the switch back where it was
@@ -194,7 +193,7 @@ export const TeamManagement: React.FC = () => {
       }));
       setUsers(mapped);
     } catch (error: any) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       setError(error.message || 'Failed to load team members');
       setUsers([]);
     } finally {
@@ -223,7 +222,7 @@ export const TeamManagement: React.FC = () => {
         alert(errorData.error || 'Failed to add user');
       }
     } catch (error) {
-      console.error('Error adding user:', error);
+      logger.error('Error adding user:', error);
       alert('Failed to add user');
     } finally {
       setLoading(false);
@@ -245,7 +244,7 @@ export const TeamManagement: React.FC = () => {
         fetchUsers();
       }
     } catch (error) {
-      console.error('Error updating role:', error);
+      logger.error('Error updating role:', error);
     }
   };
 
@@ -272,7 +271,7 @@ export const TeamManagement: React.FC = () => {
         ));
       }
     } catch (error) {
-      console.error('Error updating capabilities:', error);
+      logger.error('Error updating capabilities:', error);
     }
   };
 
@@ -290,7 +289,7 @@ export const TeamManagement: React.FC = () => {
         ));
       }
     } catch (err) {
-      console.error('Error toggling phone masking:', err);
+      logger.error('Error toggling phone masking:', err);
     }
   };
 
@@ -308,7 +307,7 @@ export const TeamManagement: React.FC = () => {
         fetchUsers();
       }
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
     }
   };
 
@@ -323,10 +322,10 @@ export const TeamManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="pl-6 pr-4 sm:px-8 pt-4 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mx-6 pt-4 pb-2">
+        <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
             Team Management
           </h2>
@@ -336,7 +335,7 @@ export const TeamManagement: React.FC = () => {
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="h-12 px-6 mr-3 sm:mr-4 lg:mr-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+          className="h-12 px-6 w-full sm:w-auto bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center justify-center gap-2 cursor-pointer border-none"
         >
           <UserPlus className="w-5 h-5" />
           Add Team Member
@@ -344,32 +343,32 @@ export const TeamManagement: React.FC = () => {
       </div>
 
       {/* Private workspaces */}
-      {privacy && (
-        <div className="mx-6 sm:mx-8 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0">
-              <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100">Private workspaces</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Each team member sees only their own campaigns, their own connected
-                WhatsApp and LinkedIn accounts, and their own conversations. Company
-                details and credits stay shared across the workspace. Owners and
-                admins continue to see everything.
+      <div className="mx-6 rounded-2xl border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100">Private workspaces</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Each team member sees only their own campaigns, their own connected
+              WhatsApp and LinkedIn accounts, and their own conversations. Company
+              details and credits stay shared across the workspace. Owners and
+              admins continue to see everything.
+            </p>
+            {privacy.enabled && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 leading-relaxed">
+                A member with no connected account of their own will see an empty
+                inbox until they connect one.
               </p>
-              {privacy.enabled && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 leading-relaxed">
-                  A member with no connected account of their own will see an empty
-                  inbox until they connect one.
-                </p>
-              )}
-              {privacyNote && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{privacyNote}</p>
-              )}
-              {!privacy.canEdit && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  Only a workspace owner or admin can change this.
-                </p>
-              )}
-            </div>
+            )}
+            {privacyNote && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{privacyNote}</p>
+            )}
+            {!privacy.canEdit && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                Only a workspace owner or admin can change this.
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 flex items-center pt-1">
             <button
               type="button"
               role="switch"
@@ -378,21 +377,21 @@ export const TeamManagement: React.FC = () => {
               disabled={!privacy.canEdit || privacySaving}
               onClick={() => setPrivacyEnabled(!privacy.enabled)}
               className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
-                privacy.enabled ? 'bg-[#0B1957] dark:bg-blue-600' : 'bg-gray-300 dark:bg-zinc-700',
+                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none',
+                privacy.enabled ? 'lad-toggle-on' : 'lad-toggle-off',
                 (!privacy.canEdit || privacySaving) && 'opacity-50 cursor-not-allowed',
               )}
             >
               <span
                 className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ease-in-out',
                   privacy.enabled ? 'translate-x-6' : 'translate-x-1',
                 )}
               />
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 rounded-2xl p-6 flex items-center gap-4">
@@ -417,7 +416,7 @@ export const TeamManagement: React.FC = () => {
       {loading && users.length === 0 ? (
         <TeamManagementSkeleton />
       ) : (
-        <div className="bg-white mx-6 dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
+        <div className="bg-white mx-6 mb-8 dark:bg-[#071131] rounded-2xl border border-slate-200 dark:border-blue-950/40 shadow-sm overflow-hidden text-slate-800 dark:text-slate-100">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full min-w-[700px]">
               <thead className="bg-slate-50/50 dark:bg-transparent border-b border-slate-200 dark:border-blue-950/40">
@@ -506,7 +505,7 @@ export const TeamManagement: React.FC = () => {
                                   className={cn(
                                     "w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0",
                                     isChecked
-                                      ? "border-blue-500 bg-blue-500 shadow-sm shadow-blue-500/50"
+                                      ? "border-[#0B1957] bg-[#0B1957] dark:border-blue-500 dark:bg-blue-500 shadow-sm shadow-[#0B1957]/20 dark:shadow-blue-500/50"
                                       : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-[#030a21] group-hover:border-slate-400 dark:group-hover:border-slate-500"
                                   )}
                                 >
@@ -531,16 +530,20 @@ export const TeamManagement: React.FC = () => {
                       <td className="px-6 py-6">
                         <div className="flex flex-col gap-1.5">
                           <button
+                            type="button"
+                            role="switch"
+                            aria-checked={!!user.maskPhoneNumber}
+                            aria-label="Toggle Phone Masking"
                             onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
                             className={cn(
-                              "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                              user.maskPhoneNumber ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-800"
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none",
+                              user.maskPhoneNumber ? "lad-toggle-on" : "lad-toggle-off"
                             )}
                           >
                             <span
                               className={cn(
-                                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                                user.maskPhoneNumber ? "translate-x-5" : "translate-x-0"
+                                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out",
+                                user.maskPhoneNumber ? "translate-x-6" : "translate-x-1"
                               )}
                             />
                           </button>
@@ -701,16 +704,19 @@ export const TeamManagement: React.FC = () => {
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={!!newUser.maskPhoneNumber}
+                aria-label="Toggle Mask Phone Numbers"
                 onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
                 className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none mt-1 outline-none",
-                  newUser.maskPhoneNumber ? "bg-[#0B1957] dark:bg-blue-500" : "bg-gray-200 dark:bg-zinc-800"
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none mt-1 outline-none",
+                  newUser.maskPhoneNumber ? "lad-toggle-on" : "lad-toggle-off"
                 )}
               >
                 <span
                   className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                    newUser.maskPhoneNumber ? "translate-x-5" : "translate-x-0"
+                    "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out",
+                    newUser.maskPhoneNumber ? "translate-x-6" : "translate-x-1"
                   )}
                 />
               </button>

@@ -489,9 +489,9 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
   if (loading) return null;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-      <h3 className="text-lg font-semibold text-gray-900">When a human takes over a chat</h3>
-      <p className="text-sm text-gray-600 mt-1 mb-4">
+    <div className="bg-white dark:bg-[#071131] rounded-2xl border border-gray-200 dark:border-blue-950/40 p-6 mb-6 shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">When a human takes over a chat</h3>
+      <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 mb-4 leading-relaxed">
         Once one of your agents replies to a customer, the AI stops replying in that chat
         so it never talks over them. Choose whether it ever picks the chat back up.
       </p>
@@ -499,14 +499,14 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
       <label className="flex items-start gap-3 mb-3 cursor-pointer">
         <input
           type="radio"
-          className="mt-1"
+          className="mt-1 accent-[#0B1957] dark:accent-blue-500 cursor-pointer"
           checked={policy === 'permanent'}
           disabled={saving}
           onChange={() => save('permanent', days)}
         />
         <span>
-          <span className="font-medium text-gray-900">Keep it with the agent</span>
-          <span className="block text-sm text-gray-600">
+          <span className="font-medium text-gray-900 dark:text-white">Keep it with the agent</span>
+          <span className="block text-sm text-gray-600 dark:text-slate-300 mt-0.5 leading-relaxed">
             The chat stays human-handled until someone turns the AI back on from the
             conversation. Recommended - a customer mid-conversation with a person is
             never handed back to the bot.
@@ -517,14 +517,14 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
       <label className="flex items-start gap-3 cursor-pointer">
         <input
           type="radio"
-          className="mt-1"
+          className="mt-1 accent-[#0B1957] dark:accent-blue-500 cursor-pointer"
           checked={policy === 'expire'}
           disabled={saving}
           onChange={() => save('expire', days)}
         />
         <span>
-          <span className="font-medium text-gray-900">Give it back to the AI after a while</span>
-          <span className="block text-sm text-gray-600">
+          <span className="font-medium text-gray-900 dark:text-white">Give it back to the AI after a while</span>
+          <span className="block text-sm text-gray-600 dark:text-slate-300 mt-0.5 leading-relaxed">
             If the agent has not replied for this many days, the AI resumes.
           </span>
           <span className="flex items-center gap-2 mt-2">
@@ -540,9 +540,9 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
                 if (clamped !== days) setDays(clamped);
                 if (policy === 'expire') save('expire', clamped);
               }}
-              className="w-20 px-2 py-1 border border-gray-300 rounded disabled:bg-gray-100"
+              className="w-20 px-2.5 py-1 border border-gray-300 dark:border-blue-900/50 bg-white dark:bg-[#030a21] text-gray-900 dark:text-white rounded-lg disabled:bg-gray-100 dark:disabled:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-600">days</span>
+            <span className="text-sm text-gray-600 dark:text-slate-300">days</span>
           </span>
         </span>
       </label>
@@ -1338,14 +1338,13 @@ export function ChatSettings() {
   }
 
   return (
-    <div className="space-y-6 relative text-gray-900 dark:text-white">
-      {/* ── Sticky "Test in Playground" button ─────────────────────── */}
+    <div className="space-y-6 relative text-gray-900 dark:text-white pb-16 mb-8">
       {/* ── Test in Playground button ─────────────────────── */}
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end pt-4 pb-1 pr-4 sm:pr-0">
         <button
           type="button"
           onClick={() => setPlaygroundOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] dark:bg-blue-600 rounded-xl shadow-md hover:opacity-90 dark:hover:bg-blue-700 transition-all active:scale-95"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#0B1957] dark:bg-blue-600 rounded-xl shadow-md hover:opacity-90 dark:hover:bg-blue-700 transition-all active:scale-95 cursor-pointer"
           title="Open the AI Playground to test your prompts, knowledge base, and shareable assets"
         >
           <FlaskConical className="h-4 w-4" />

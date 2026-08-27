@@ -979,9 +979,9 @@ export const IntegrationsSettings: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="pl-6 pr-4 sm:px-8 pt-4 pb-2">
+        <div className="space-y-6 pb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mx-6 pt-4 pb-2">
+            <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
                 Integrations
               </h2>
@@ -995,14 +995,14 @@ export const IntegrationsSettings: React.FC = () => {
                 placeholder="Search integrations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 sm:h-9 text-sm"
+                className="pl-9 h-10 sm:h-9 text-sm rounded-xl"
               />
             </div>
           </div>
 
           {/* AI-Replies toggle feedback - only surfaces on failure (mirrors LinkedIn). */}
           {aiToggleToast && (
-            <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
+            <div className={`mx-6 flex items-center gap-2 rounded-lg border p-3 text-sm ${
               aiToggleToast.kind === 'ok'
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
                 : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
@@ -1011,7 +1011,7 @@ export const IntegrationsSettings: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4 sm:px-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 px-6 pb-12 mb-8">
             {filtered.map((integration) => {
               const isCreditGated = CREDIT_GATED_IDS.has(integration.id);
               const isAlreadyConnected = statusMap[integration.id] === 'connected';
