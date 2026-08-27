@@ -18,6 +18,8 @@ interface TemplateSelectorProps {
   onTemplateSelect: (template: LinkedInMessageTemplate | null) => void;
   onManageClick: () => void;
   className?: string;
+  triggerClassName?: string;
+  manageButtonClassName?: string;
 }
 
 export default function TemplateSelector({
@@ -25,6 +27,8 @@ export default function TemplateSelector({
   onTemplateSelect,
   onManageClick,
   className = '',
+  triggerClassName = '',
+  manageButtonClassName = '',
 }: TemplateSelectorProps) {
   const { data: templates, isLoading, error } = useLinkedInMessageTemplates({ is_active: true });
 
@@ -58,7 +62,7 @@ export default function TemplateSelector({
           onValueChange={handleValueChange}
           disabled={isLoading}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className={`w-full ${triggerClassName}`}>
             {isLoading ? (
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -108,7 +112,7 @@ export default function TemplateSelector({
         variant="outline"
         size="sm"
         onClick={onManageClick}
-        className="mt-6"
+        className={`mt-6 ${manageButtonClassName}`}
         title="Manage Templates"
       >
         <Settings2 className="h-4 w-4" />

@@ -1354,7 +1354,7 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-background dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
           {/* Added padding and matching sub-borders to the dialog header line */}
           <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40 dark:bg-[#081331]">
             <div className="flex items-center gap-3">

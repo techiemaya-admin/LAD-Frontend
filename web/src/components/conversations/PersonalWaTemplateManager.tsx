@@ -198,7 +198,7 @@ function TemplateFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#000724] border-slate-200 dark:border-slate-800/60 rounded-2xl shadow-2xl custom-scrollbar outline-none focus:outline-none max-md:w-[80vw] max-md:max-w-[80vw] max-md:max-h-[78vh] max-md:p-0">
-        <DialogHeader className="bg-slate-50 dark:bg-[#000724] px-5 md:px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl text-left shrink-0">
+        <DialogHeader className="bg-white dark:bg-[#000724] px-5 md:px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl text-left shrink-0">
           <div className="text-slate-900 dark:text-white font-bold text-base md:text-lg tracking-tight">
             {initial.name ? 'Edit Template' : 'New Template'}
           </div>
@@ -480,7 +480,7 @@ function TemplateFormDialog({
         </div>
 
         {/* Action Buttons Footer Container */}
-        <DialogFooter className="bg-slate-50 dark:bg-[#000724] px-4 md:px-6 py-4 border-t border-slate-200 dark:border-slate-800/80 rounded-b-2xl mt-4 shrink-0 flex flex-row items-center justify-end">
+        <DialogFooter className="bg-white dark:bg-[#000724] px-4 md:px-6 py-4 border-t border-slate-200 dark:border-slate-800/80 rounded-b-2xl mt-4 shrink-0 flex flex-row items-center justify-end">
           <Button
             onClick={() => onSave(form)}
             disabled={saving || uploading || !form.name.trim() || !form.content.trim()}

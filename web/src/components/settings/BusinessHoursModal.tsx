@@ -37,7 +37,7 @@ const CustomTimePicker = ({ value, onChange }: { value: string; onChange: (v: st
     <div className="relative" ref={ref}>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-gray-50 dark:bg-slate-800/60 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 dark:text-slate-100 cursor-pointer transition-all flex items-center justify-between ${
+        className={`w-full bg-white dark:bg-slate-800/60 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 dark:text-slate-100 cursor-pointer transition-all flex items-center justify-between ${
           isOpen 
           ? 'border-[#0B1957] dark:border-[#2B7CFF] ring-2 ring-[#0B1957]/10 dark:ring-[#2B7CFF]/20' 
           : 'border-gray-200 dark:border-slate-700/60 hover:border-[#0B1957]/50 dark:hover:border-[#2B7CFF]/60'}`}
@@ -95,7 +95,7 @@ const CustomTimezoneSelect = ({
     <div className="relative" ref={ref}>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-gray-50 dark:bg-slate-800/60 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 dark:text-slate-100 cursor-pointer transition-all flex items-center justify-between ${
+        className={`w-full bg-white dark:bg-slate-800/60 border rounded-xl px-3.5 py-2.5 text-sm font-medium text-gray-800 dark:text-slate-100 cursor-pointer transition-all flex items-center justify-between ${
           isOpen
             ? 'border-[#0B1957] dark:border-[#2B7CFF] ring-2 ring-[#0B1957]/10 dark:ring-[#2B7CFF]/20'
             : 'border-gray-200 dark:border-slate-700/60 hover:border-[#0B1957]/50 dark:hover:border-[#2B7CFF]/60'
@@ -229,7 +229,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
         onClick={e => e.stopPropagation()}
       >
         {/* STICKY TOP HEADER (Close button aligns with heading) */}
-        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#081331]/95 backdrop-blur-md p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
+        <div className="sticky top-0 z-20 bg-white dark:bg-[#081331] p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
           <div className="flex items-center justify-between gap-3">
             {/* Header Info */}
             <div className="flex items-center gap-3 min-w-0">
@@ -255,7 +255,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
         </div>
 
         {/* SCROLLABLE FORM BODY */}
-        <div className="p-5 sm:p-8 pt-6 sm:pt-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-white dark:bg-[#071131]">
+        <div className="p-5 sm:p-8 pt-6 sm:pt-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-background dark:bg-[#000724]">
           {/* Operating Hours */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400 mb-2.5">Operating Hours</p>
@@ -298,7 +298,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
                   onClick={() => applyPreset(preset)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${currentPreset === preset
                     ? 'bg-[#0B1957]/8 border-[#0B1957] text-[#0B1957] dark:bg-[#2B7CFF]/20 dark:border-[#2B7CFF] dark:text-[#2B7CFF]'
-                    : 'bg-gray-50 dark:bg-slate-800/40 border-gray-200 dark:border-slate-700/60 text-gray-500 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-700 dark:hover:text-slate-200'
+                    : 'bg-white dark:bg-slate-800/40 border-gray-200 dark:border-slate-700/60 text-gray-500 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-700 dark:hover:text-slate-200'
                     }`}
                 >
                   {PRESET_LABELS[preset]}
@@ -316,7 +316,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
                     onClick={() => toggleDay(i)}
                     className={`aspect-square rounded-xl text-[11px] font-semibold border transition-all flex flex-col items-center justify-center gap-0.5 ${active
                       ? 'bg-[#0B1957]/10 border-[#0B1957] text-[#0B1957] dark:bg-[#2B7CFF]/20 dark:border-[#2B7CFF] dark:text-[#2B7CFF] shadow-sm'
-                      : 'bg-gray-50 dark:bg-slate-800/40 border-gray-200 dark:border-slate-700/60 text-gray-400 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-600 hover:text-gray-600 dark:hover:text-slate-300'
+                      : 'bg-white dark:bg-slate-800/40 border-gray-200 dark:border-slate-700/60 text-gray-400 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-600 hover:text-gray-600 dark:hover:text-slate-300'
                       }`}
                   >
                     <span>{d}</span>
@@ -329,7 +329,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
           </div>
 
           {/* Summary */}
-          <div className="bg-[#0B1957]/5 dark:bg-[#2B7CFF]/10 border border-[#0B1957]/15 dark:border-[#2B7CFF]/20 rounded-xl px-4 py-3.5 flex items-center gap-3">
+          <div className="bg-white dark:bg-[#2B7CFF]/10 border border-[#0B1957]/15 dark:border-[#2B7CFF]/20 rounded-xl px-4 py-3.5 flex items-center gap-3">
             <span className="text-xl">📋</span>
             <div>
               <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase tracking-wider font-medium">Schedule Summary</p>

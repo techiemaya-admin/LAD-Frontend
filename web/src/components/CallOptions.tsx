@@ -1129,7 +1129,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-transparent dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
@@ -1191,7 +1191,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#081331] dark:border-blue-950/40">
+          <DialogActions className="px-8 pb-8 pt-4 bg-white dark:bg-[#081331] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 
