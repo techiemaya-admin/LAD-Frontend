@@ -73,9 +73,11 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
     try {
       for (const suggestion of toAdd) {
         const body = JSON.stringify({
-          ...suggestion,
+          name: suggestion.name,
+          description: suggestion.description,
+          minimum_cost: suggestion.minimum_cost,
+          requirement_config_ids: suggestion.requirement_configs?.map((obj: any) => obj.id || obj) || [],
           tenant_id: tenantId,
-          requirement_configs: suggestion.requirement_configs?.map((obj: any) => obj.id) || [],
         });
         await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/concepts`, {
           method: 'POST',

@@ -652,7 +652,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-xs sm:text-sm outline-none appearance-none"
                       >
                         <option value="discount">Discount</option>
-                        <option value="markup">Surcharge</option>
+                        <option value="surcharge">Surcharge</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                     </div>
