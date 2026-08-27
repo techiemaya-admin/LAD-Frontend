@@ -499,7 +499,8 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
       <label className="flex items-start gap-3 mb-3 cursor-pointer">
         <input
           type="radio"
-          className="mt-1 accent-[#0B1957] dark:accent-blue-500 cursor-pointer"
+          name="handoff_policy"
+          className="mt-1 accent-[#0B1957] dark:accent-blue-500 dark:[color-scheme:dark] cursor-pointer"
           checked={policy === 'permanent'}
           disabled={saving}
           onChange={() => save('permanent', days)}
@@ -517,7 +518,8 @@ function HumanMuteCard({ showToast }: { showToast: (msg: string, type: 'success'
       <label className="flex items-start gap-3 cursor-pointer">
         <input
           type="radio"
-          className="mt-1 accent-[#0B1957] dark:accent-blue-500 cursor-pointer"
+          name="handoff_policy"
+          className="mt-1 accent-[#0B1957] dark:accent-blue-500 dark:[color-scheme:dark] cursor-pointer"
           checked={policy === 'expire'}
           disabled={saving}
           onChange={() => save('expire', days)}
