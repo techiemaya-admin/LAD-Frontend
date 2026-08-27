@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { PricingRule, PricingRulesProps } from './types';
 
 export const PricingRules: React.FC<PricingRulesProps> = ({
@@ -28,7 +29,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
     const method = ruleData.id ? 'PUT' : 'POST';
     ruleData.tenant_id = tenantId;
 
-    const res = await fetch(url, {
+    const res = await fetchWithTenant(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ruleData),
@@ -47,7 +48,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
     if (!confirm('Are you sure you want to delete this pricing rule?')) return;
 
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${id}`, {
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/pricing-rules/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -98,7 +99,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
     }
     setIsAiLoading(true);
     try {
-      const suggestions = await fetch(
+      const suggestions = await fetchWithTenant(
         `${getApiBaseUrlForLocal()}/api/ai-response/suggest-pricing-rule/${tenantId}`
       );
       const resp = await suggestions.json();

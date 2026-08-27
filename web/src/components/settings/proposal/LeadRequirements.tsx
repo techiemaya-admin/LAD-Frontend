@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { RequirementConfig, PricingModelOption, LeadRequirementsProps } from './types';
 
 export const LeadRequirements: React.FC<LeadRequirementsProps> = ({
@@ -37,7 +38,7 @@ export const LeadRequirements: React.FC<LeadRequirementsProps> = ({
     if (!confirm('Are you sure you want to delete this configuration?')) return;
 
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${id}`, {
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -72,7 +73,7 @@ export const LeadRequirements: React.FC<LeadRequirementsProps> = ({
         : `${getApiBaseUrlForLocal()}/api/lead-requirement-config`;
       const method = editingConfig ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetchWithTenant(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configData),

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { Concept, ConceptManagementProps } from './types';
 
 export const ConceptManagement: React.FC<ConceptManagementProps> = ({
@@ -50,7 +51,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
     }
     setIsAiLoading(true);
     try {
-      const suggestions = await fetch(
+      const suggestions = await fetchWithTenant(
         `${getApiBaseUrlForLocal()}/api/ai-response/suggest-concepts/${tenantId}`
       );
       const resp = await suggestions.json();
@@ -76,7 +77,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
           tenant_id: tenantId,
           requirement_configs: suggestion.requirement_configs?.map((obj: any) => obj.id) || [],
         });
-        await fetch(`${getApiBaseUrlForLocal()}/api/concepts`, {
+        await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/concepts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: body,
@@ -112,7 +113,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
         : `${getApiBaseUrlForLocal()}/api/concepts`;
       const method = editingConcept ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetchWithTenant(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(conceptData),
@@ -138,7 +139,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
     if (!confirm('Are you sure you want to delete this concept?')) return;
 
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${id}`, {
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/concepts/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

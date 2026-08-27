@@ -76,7 +76,10 @@ export async function fetchWithTenant(
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const tenantId = getEffectiveTenantId();
-  if (tenantId) headers['X-Tenant-ID'] = tenantId;
+  if (tenantId) {
+    headers['X-Tenant-ID'] = tenantId;
+    headers['X-Tenant-Id'] = tenantId;
+  }
 
   return fetch(url, { ...options, headers });
 }

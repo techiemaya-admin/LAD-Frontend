@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { QuotationTemplate, Placeholder, QuotationTemplatesProps } from './types';
 
 export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
@@ -73,7 +74,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
       formData.append('is_default', String(isDefault));
       formData.append('file', pendingFile);
 
-      const response = await fetch(
+      const response = await fetchWithTenant(
         `${getApiBaseUrlForLocal()}/api/quotation-templates/upload/${tenantId}`,
         {
           method: 'POST',
@@ -109,7 +110,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
 
   const handlePreview = async (template: QuotationTemplate) => {
     try {
-      const response = await fetch(
+      const response = await fetchWithTenant(
         `${getApiBaseUrlForLocal()}/api/quotation-templates/${template.id}/preview`
       );
       if (!response.ok) throw new Error('Failed to fetch Quotation preview');
@@ -131,7 +132,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
 
   const handleSetDefault = async (id: string) => {
     try {
-      const res = await fetch(
+      const res = await fetchWithTenant(
         `${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}/set-default/${id}`,
         {
           method: 'PATCH',
@@ -154,7 +155,7 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this quotation template?')) return;
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${id}`, {
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/quotation-templates/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

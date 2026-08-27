@@ -5,6 +5,7 @@ import { Settings, Sparkles, DollarSign, FileText, ChevronDown, Loader2 } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTenant } from '@/contexts/TenantContext';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
+import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { LeadRequirements } from './LeadRequirements';
@@ -36,7 +37,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchConfigs = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/lead-requirement-config/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setRequirementConfigs(Array.isArray(data) ? data : []);
@@ -48,7 +49,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchConcepts = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/concepts/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/concepts/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setConcepts(Array.isArray(data) ? data : []);
@@ -60,7 +61,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchPricingRules = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/pricing-rules/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setPricingRules(Array.isArray(data) ? data : []);
@@ -72,7 +73,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchPricingModels = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/pricing-models/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/pricing-models/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setPricingModels(Array.isArray(data) ? data : []);
@@ -84,7 +85,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchQuotationTemplates = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/quotation-templates/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setQuotationTemplates(Array.isArray(data) ? data : []);
@@ -96,7 +97,7 @@ export const ProposalSettings: React.FC = () => {
 
   const fetchPlaceholders = async (tId: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tId}`);
+      const res = await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/template-placeholder/${tId}`);
       if (res.ok) {
         const data = await res.json();
         setPlaceholders(data.data || (Array.isArray(data) ? data : []));
