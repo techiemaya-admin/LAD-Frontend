@@ -481,7 +481,7 @@
 
   /* Light mode input focus override */
   :root input:focus-visible,
-  :root textarea:focus-visible,
+  :root textarea:focus-visible:not(.adv-chat-ta):not(.workflow-ai-prompt),
   :root select:focus-visible,
   :root [contenteditable="true"]:focus-visible {
     outline: none;
@@ -827,7 +827,7 @@ body {
 }
 
 .dark input:focus,
-.dark textarea:focus,
+.dark textarea:focus:not(.adv-chat-ta):not(.workflow-ai-prompt),
 .dark select:focus,
 .dark [data-slot="input"]:focus,
 .dark [data-slot="textarea"]:focus,
@@ -905,8 +905,8 @@ body {
 /* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
 .dark input:focus,
 .dark input:focus-visible,
-.dark textarea:focus:not(.adv-chat-ta),
-.dark textarea:focus-visible:not(.adv-chat-ta),
+.dark textarea:focus:not(.adv-chat-ta):not(.workflow-ai-prompt),
+.dark textarea:focus-visible:not(.adv-chat-ta):not(.workflow-ai-prompt),
 .dark select:focus,
 .dark select:focus-visible,
 .dark [data-slot="input"]:focus,
@@ -941,6 +941,24 @@ textarea.adv-chat-ta:focus-within,
   outline: none !important;
   ring: 0 !important;
   -webkit-ring-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+/* Workflow Builder > Build with AI composer keeps its resting border on focus. */
+.dark textarea.workflow-ai-prompt {
+  background-color: #050d28 !important;
+}
+
+textarea.workflow-ai-prompt:focus,
+textarea.workflow-ai-prompt:focus-visible,
+.dark textarea.workflow-ai-prompt:focus,
+.dark textarea.workflow-ai-prompt:focus-visible {
+  border-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   --tw-ring-color: transparent !important;
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
