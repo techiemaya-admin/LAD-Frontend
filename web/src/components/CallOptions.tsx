@@ -1111,12 +1111,12 @@ export function CallOptions(props: CallOptionsProps) {
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
-              className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
+              className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1129,7 +1129,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-transparent dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
