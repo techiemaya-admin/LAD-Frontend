@@ -18,6 +18,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RotateCcw, UserCog } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 const PERSONAS_API = '/api/whatsapp-conversations/personas';
 const USERS_API = '/api/users';
@@ -289,17 +296,26 @@ export function TeamPersonasCard({
                 <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
                   {a.display_phone_number || a.display_name || a.slug}
                 </span>
-                <select
-                  defaultValue=""
+                <Select
+                  value=""
                   disabled={busy === a.slug}
-                  onChange={(e) => e.target.value && assignNumber(a.slug, e.target.value)}
-                  className="px-3 py-1.5 text-xs font-semibold border border-gray-300 dark:border-blue-900/50 bg-white dark:bg-[#000724] text-[#0B1957] dark:text-sky-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-500 cursor-pointer shadow-sm"
+                  onValueChange={(val) => val && assignNumber(a.slug, val)}
                 >
-                  <option value="" className="text-gray-500 dark:text-slate-400 bg-white dark:bg-[#000724]">Assign to…</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id} className="text-[#0B1957] dark:text-sky-300 bg-white dark:bg-[#000724]">{nameOf(u)}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-8 w-fit min-w-[140px] px-3 text-xs font-semibold border border-gray-300 dark:border-blue-900/50 bg-white dark:bg-[#000724] text-[#0B1957] dark:text-sky-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0B1957] cursor-pointer shadow-sm">
+                    <SelectValue placeholder="Assign to…" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831] shadow-xl">
+                    {users.map((u) => (
+                      <SelectItem
+                        key={u.id}
+                        value={u.id}
+                        className="text-xs font-medium text-slate-800 dark:text-sky-300 focus:bg-[#0B1957] focus:text-white dark:focus:bg-[#1d4ed8] dark:focus:text-white cursor-pointer"
+                      >
+                        {nameOf(u)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </li>
             ))}
           </ul>
