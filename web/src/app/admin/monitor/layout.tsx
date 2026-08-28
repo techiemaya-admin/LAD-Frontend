@@ -51,13 +51,13 @@ export default function MonitorLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="platform-monitor mx-auto min-h-[calc(100vh-4rem)] max-w-7xl px-4 py-6 dark:text-white">
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Platform Observability</h1>
         <p className="text-sm text-gray-500">Internal monitoring across all tenants.</p>
       </div>
 
-      <nav className="mb-6 flex gap-1 border-b border-gray-200 dark:border-gray-800">
+      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-blue-950/40">
         {TABS.map((tab) => {
           const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
           const Icon = tab.icon;

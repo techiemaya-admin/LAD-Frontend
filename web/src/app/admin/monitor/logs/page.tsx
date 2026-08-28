@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useCloudLogs, type LogSeverity } from '@lad/frontend-features/lad-monitor';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const SEVERITIES: Array<LogSeverity | 'ALL'> = ['ALL', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
 
@@ -11,7 +12,7 @@ const SEV_STYLES: Record<string, string> = {
   CRITICAL: 'bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-200',
   WARNING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   INFO: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  DEFAULT: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  DEFAULT: 'bg-gray-100 text-gray-600 dark:bg-[#253456] dark:text-gray-400',
 };
 
 export default function MonitorLogsPage() {
@@ -28,30 +29,38 @@ export default function MonitorLogsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-base font-semibold text-gray-900 dark:text-gray-100">Cloud Run Logs</h2>
 
-        <select
+        <Select
           value={severity}
-          onChange={(e) => setSeverity(e.target.value as LogSeverity | 'ALL')}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+          onValueChange={(value) => setSeverity(value as LogSeverity | 'ALL')}
         >
-          {SEVERITIES.map((s) => (
-            <option key={s} value={s}>{s === 'ALL' ? 'All severities' : s}</option>
-          ))}
-        </select>
+          <SelectTrigger className="h-8 min-w-[140px] border-gray-200 bg-white text-xs text-gray-700 dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+            {SEVERITIES.map((s) => (
+              <SelectItem key={s} value={s}>{s === 'ALL' ? 'All severities' : s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <select
-          value={service}
-          onChange={(e) => setService(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        <Select
+          value={service || '__all__'}
+          onValueChange={(value) => setService(value === '__all__' ? '' : value)}
         >
-          <option value="">All services</option>
-          {services.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+          <SelectTrigger className="h-8 min-w-[140px] border-gray-200 bg-white text-xs text-gray-700 dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+            <SelectItem value="__all__">All services</SelectItem>
+            {services.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -74,9 +83,9 @@ export default function MonitorLogsPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <table className="min-w-full divide-y divide-gray-200 text-xs dark:divide-gray-800">
-          <thead className="bg-gray-50 text-left uppercase tracking-wide text-gray-500 dark:bg-gray-800/50">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+        <table className="min-w-full divide-y divide-gray-200 text-xs dark:divide-blue-950/40">
+          <thead className="bg-gray-50 text-left uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
             <tr>
               <th className="px-3 py-2 font-medium">Time</th>
               <th className="px-3 py-2 font-medium">Severity</th>
@@ -84,16 +93,16 @@ export default function MonitorLogsPage() {
               <th className="px-3 py-2 font-medium">Message</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
             {loading && entries.length === 0 ? (
               Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i}><td colSpan={4} className="px-3 py-2"><div className="h-4 animate-pulse rounded bg-gray-100 dark:bg-gray-800" /></td></tr>
+                <tr key={i}><td colSpan={4} className="px-3 py-2"><div className="h-4 animate-pulse rounded bg-gray-100 dark:bg-[#253456]" /></td></tr>
               ))
             ) : entries.length === 0 ? (
               <tr><td colSpan={4} className="px-3 py-8 text-center text-gray-400">No log entries</td></tr>
             ) : (
               entries.map((e, i) => (
-                <tr key={e.id || i} className="align-top hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <tr key={e.id || i} className="align-top hover:bg-gray-50 dark:hover:bg-[#253456]">
                   <td className="whitespace-nowrap px-3 py-2 text-gray-500">
                     {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '-'}
                   </td>

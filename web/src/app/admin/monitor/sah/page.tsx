@@ -20,14 +20,14 @@ export default function MonitorSahPage() {
           <button
             onClick={() => recompute()}
             disabled={recomputing}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
           >
             <Calculator className={`h-3.5 w-3.5 ${recomputing ? 'animate-pulse' : ''}`} />
             {recomputing ? 'Recomputing…' : 'Recompute'}
           </button>
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -44,11 +44,11 @@ export default function MonitorSahPage() {
       {loading && !data ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-[#253456]" />
           ))}
         </div>
       ) : isEmpty ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 dark:border-blue-950/40 dark:bg-[#071131]">
           No SAH events yet. Run migration 016, then click <span className="font-medium">Recompute</span> (or wait for the nightly job)
           to derive handoffs from bookings and attribute cost.
         </div>
@@ -65,7 +65,7 @@ export default function MonitorSahPage() {
           {data && data.byType.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
               {data.byType.map((t) => (
-                <span key={t.type} className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                <span key={t.type} className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600 dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-300">
                   {t.type}: <span className="font-semibold">{t.sah_count}</span> · {money(t.avg_cost_per_sah)}/SAH
                 </span>
               ))}
@@ -73,9 +73,9 @@ export default function MonitorSahPage() {
           ) : null}
 
           <h3 className="mb-2 mt-6 text-sm font-semibold text-gray-900 dark:text-gray-100">By tenant</h3>
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">
-              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-800/50">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-blue-950/40">
+              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
                 <tr>
                   <th className="px-4 py-3 font-medium">Tenant</th>
                   <th className="px-4 py-3 font-medium">SAHs</th>
@@ -85,9 +85,9 @@ export default function MonitorSahPage() {
                   <th className="px-4 py-3 font-medium">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
                 {data!.byTenant.map((t) => (
-                  <tr key={t.tenant_id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                  <tr key={t.tenant_id} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t.tenant_name || t.tenant_id}</td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.sah_count}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{money(t.avg_cost_per_sah)}</td>
