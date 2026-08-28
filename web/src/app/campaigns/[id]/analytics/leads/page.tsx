@@ -470,7 +470,7 @@ export default function CampaignLeadsPage() {
           <div className="mb-4 flex items-center text-xs sm:hidden">
             <button
               onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-              className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400"
+              className="flex items-center gap-1.5 text-[#0B1957] dark:text-blue-400"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Back to campaign leads</span>
