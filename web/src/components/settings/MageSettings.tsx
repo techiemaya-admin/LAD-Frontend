@@ -1110,10 +1110,17 @@ export const MageSettings: React.FC = () => {
                   Otherwise it waits for the next run.
                 </label>
 
+                {/* Filled once a file is chosen. The outline version was being
+                    read as disabled even when it was ready to click, because
+                    nothing about it changed when the input was filled in. */}
                 <button
                   onClick={uploadWorkOrder}
                   disabled={!uploadFile || busy === 'upload'}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    uploadFile && busy !== 'upload'
+                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                      : 'border border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   {busy === 'upload' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1122,6 +1129,15 @@ export const MageSettings: React.FC = () => {
                   )}
                   {uploadRunNow ? 'Upload and generate' : 'Upload and queue'}
                 </button>
+
+                {uploadFile && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ready: <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {uploadFile.name}
+                    </span>{' '}
+                    ({(uploadFile.size / 1024).toFixed(0)} KB)
+                  </p>
+                )}
               </div>
 
               {/* the queue */}
