@@ -3,6 +3,7 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogClose,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -16,7 +17,7 @@ import {
   Twitter, Github, Youtube, Instagram, Globe,
   BookOpen, Mic, Trophy, Newspaper, Presentation,
   Linkedin, ThumbsUp, MessageSquare, FileText,
-  RefreshCw, Clock,
+  RefreshCw, Clock, X,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -261,18 +262,18 @@ export default function ProfileSummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] rounded-2xl overflow-y-auto p-0">
+      <DialogContent showCloseButton={false} className="max-h-[90vh] rounded-2xl overflow-y-auto p-0">
 
         {/* ── Header ── */}
-        <DialogHeader className="flex-row items-center gap-4 p-6 pb-4 border-b sticky top-0 z-10">
-          <Avatar className="w-14 h-14 border-[3px] border-[#0b1957] shrink-0">
+        <DialogHeader className="flex-row items-start sm:items-center gap-2 sm:gap-4 p-3 sm:p-6 pb-3 sm:pb-4 border-b sticky top-0 z-10">
+          <Avatar className="w-10 h-10 sm:w-14 sm:h-14 border-2 sm:border-[3px] border-[#0b1957] shrink-0">
             <AvatarImage src={employee?.photo_url} alt={employeeName} />
             <AvatarFallback className="bg-[#0b1957] text-white">
-              <User className="w-8 h-8" />
+              <User className="w-5 h-5 sm:w-8 sm:h-8" />
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <DialogTitle className="font-bold text-[#1E293B] dark:text-white m-0 truncate">
+          <div className="flex-1 min-w-0 pt-2 sm:pt-3">
+            <DialogTitle className="text-base sm:text-2xl leading-6 sm:leading-8 font-bold text-[#1E293B] dark:text-white m-0 truncate">
               {employeeName}
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -300,6 +301,17 @@ export default function ProfileSummaryDialog({
               </div>
             )}
           </div>
+          <DialogClose asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Close"
+              className="mt-1 sm:mt-3 h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+          </DialogClose>
         </DialogHeader>
 
         {/* ── Body ── */}
@@ -455,7 +467,7 @@ export default function ProfileSummaryDialog({
         </div>
 
         {/* ── Footer ── */}
-        <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 flex items-center gap-3">
+        <DialogFooter className={`px-6 pb-6 pt-4 border-t sticky bottom-0 flex items-center gap-3 ${!loading && dataAgeDays != null && dataAgeDays > 0 && onRefresh ? '' : 'hidden'}`}>
           {/* "Get Latest Data" - shown when cached data is being displayed */}
           {!loading && dataAgeDays != null && dataAgeDays > 0 && onRefresh && (
             <Button
@@ -472,12 +484,6 @@ export default function ProfileSummaryDialog({
               {refreshLoading ? 'Refreshing…' : 'Get Latest Data'}
             </Button>
           )}
-          <Button
-            onClick={onClose}
-            className="bg-[#0b1957] hover:bg-[#0a1440] font-semibold px-6 ml-auto"
-          >
-            Close
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

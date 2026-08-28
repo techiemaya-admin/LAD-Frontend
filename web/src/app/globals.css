@@ -902,6 +902,13 @@ body {
   color: #ffffff !important;
 }
 
+/* Destructive campaign action overrides the global blue menu highlight. */
+.dark [role="menuitem"].campaign-delete-action:focus,
+.dark [role="menuitem"].campaign-delete-action[data-highlighted] {
+  background-color: rgb(69 10 10 / 0.6) !important;
+  color: #fca5a5 !important;
+}
+
 /* Enforce blue focus ring / border (primary/50) for all input, textarea, and select fields in dark mode */
 .dark input:focus,
 .dark input:focus-visible,
