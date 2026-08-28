@@ -74,7 +74,6 @@ interface EmployeeCardProps {
   onViewSummary?: (employee: any) => void;
   profileSummary?: string | null;
   hideUnlockFeatures?: boolean; // New prop to hide unlock buttons for inbound campaigns
-  compactOnMobile?: boolean;
 }
 export default function EmployeeCard({
   employee,
@@ -88,7 +87,6 @@ export default function EmployeeCard({
   onViewSummary,
   profileSummary,
   hideUnlockFeatures = false, // Default to false
-  compactOnMobile = false,
 }: EmployeeCardProps) {
   const [summaryExpanded, setSummaryExpanded] = React.useState(false);
   if (!employee) return null;
@@ -149,23 +147,23 @@ export default function EmployeeCard({
         ${employeeViewMode === 'grid' ? 'hover:-translate-y-1' : 'hover:-translate-y-0.5'}
       `}
     >
-      <CardContent className={employeeViewMode === 'grid' ? (compactOnMobile ? 'p-4 sm:p-6' : 'p-6') : 'p-5'}>
+      <CardContent className={employeeViewMode === 'grid' ? 'p-6' : 'p-5'}>
         <div
           className={`
             flex items-center w-full
             ${employeeViewMode === 'grid' 
-              ? `${compactOnMobile ? 'flex-col gap-2 sm:gap-3' : 'flex-col gap-3'} justify-center`
+              ? 'flex-col gap-3 justify-center' 
               : 'flex-row gap-8 justify-between'
             }
           `}
         >
           {/* Avatar - Top (for grid view) */}
           {employeeViewMode === 'grid' && (
-            <div className={cn('flex justify-center w-full', compactOnMobile ? 'mb-2 sm:mb-4' : 'mb-4')}>
-              <Avatar className={cn('border-4 shadow-md flex-shrink-0', compactOnMobile ? 'h-16 w-16 sm:h-[90px] sm:w-[90px]' : 'h-[90px] w-[90px]')}>
+            <div className="flex justify-center mb-4 w-full">
+              <Avatar className="w-[90px] h-[90px] border-4 shadow-md flex-shrink-0">
                 <AvatarImage src={employee.photo_url} alt={employeeName} />
                 <AvatarFallback className="bg-gray-200 dark:bg-[#253456]">
-                  <User className={cn('text-gray-500 dark:text-[#7a8ba3]', compactOnMobile ? 'h-8 w-8 sm:h-12 sm:w-12' : 'h-12 w-12')} />
+                  <User className="w-12 h-12 text-gray-500 dark:text-[#7a8ba3]" />
                 </AvatarFallback>
               </Avatar>
             </div>
@@ -173,8 +171,7 @@ export default function EmployeeCard({
           {/* Name & Title - Center aligned for grid */}
           <div
             className={`
-              flex flex-col w-full
-              ${compactOnMobile ? 'gap-1.5 sm:gap-2' : 'gap-2'}
+              flex flex-col gap-2 w-full
               ${employeeViewMode === 'grid' ? 'items-center text-center' : 'items-start text-left'}
             `}
           >
@@ -189,8 +186,7 @@ export default function EmployeeCard({
             )}
             <h3
               className={`
-                font-bold text-[#0b1957] dark:text-white leading-tight w-full
-                ${compactOnMobile ? 'text-sm sm:text-[1.05rem]' : 'text-[1.05rem]'}
+                font-bold text-[1.05rem] text-[#0b1957] dark:text-white leading-tight w-full
                 ${employeeViewMode === 'grid' ? 'line-clamp-2 break-words' : 'whitespace-nowrap overflow-hidden text-ellipsis'}
               `}
             >
@@ -200,7 +196,7 @@ export default function EmployeeCard({
               <div
                 className={`
                   flex flex-col gap-1 w-full min-w-0
-                  ${compactOnMobile ? 'text-xs sm:text-sm' : 'text-sm'} text-gray-600 dark:text-[#7a8ba3]
+                  text-sm text-gray-600 dark:text-[#7a8ba3]
                   ${employeeViewMode === 'grid' ? 'items-center text-center' : 'items-start text-left'}
                 `}
               >
