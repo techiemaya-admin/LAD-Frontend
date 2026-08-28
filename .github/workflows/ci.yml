@@ -36,6 +36,62 @@ jobs:
         run: npm run lint
 
   # ---------------------------------------------------------------------------
+  # Production build gate (next build --webpack). BLOCKING.
+  #
+  # Motivation: on 2026-08-27 #827 ("dev turbopack HMR optimization") removed the
+  # webpack alias
+  #     '@lad/frontend-features$': path.resolve(__dirname, '../sdk')
+  # which had been bypassing the sdk's `exports` field. Nothing in CI builds the
+  # app, so it merged green, and the next deploy died with
+  #     Module not found: Package path . is not exported from @lad/frontend-features
+  #     > Build failed because of webpack errors
+  # stage was blocked until #994 added the missing "." export.
+  #
+  # Lint and tsc could not have caught it: the code is valid TypeScript and valid
+  # lint — only module RESOLUTION was broken, and only under webpack. Turbopack
+  # resolves differently, so `next dev` stayed happy throughout. That is the shape
+  # of this whole class of bug: a bundler/config change that passes dev and breaks
+  # the production build.
+  #
+  # This gate BLOCKS, unlike type-check. A failure here is not technical debt to
+  # burn down — it means the deploy WILL fail, with certainty, because this runs
+  # the same command the Dockerfile does.
+  #
+  # No env is set deliberately: every NEXT_PUBLIC_* has a default in the
+  # Dockerfile and next.config.mjs falls back with `|| ''`, so a bare build is
+  # representative. If a future change makes the build genuinely require a
+  # variable, this job failing is the correct signal — the Docker build would
+  # need that variable too.
+  # ---------------------------------------------------------------------------
+  build:
+    name: build (next build --webpack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # Monorepo uses npm workspaces — the only lockfile is at the repo root.
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        # Must run at the workspace root so the sdk workspace is linked into
+        # node_modules — which is precisely the resolution path this job exists
+        # to exercise.
+        run: npm ci
+
+      - name: Build
+        working-directory: web
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        # The same command the Dockerfile runs (`npm run build` -> next build
+        # --webpack). Kept identical on purpose: a gate that builds differently
+        # from the deploy can pass while the deploy fails.
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
   # Type-check gate (tsc --noEmit).
   #
   # Motivation: twice in one day a *missing export* reached users as a runtime
