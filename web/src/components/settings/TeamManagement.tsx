@@ -537,7 +537,7 @@ export const TeamManagement: React.FC = () => {
                             onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
                             className={cn(
                               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none",
-                              user.maskPhoneNumber ? "lad-toggle-on" : "lad-toggle-off"
+                              user.maskPhoneNumber ? "bg-[#0B1957] dark:bg-blue-500" : "bg-gray-200 dark:bg-zinc-800"
                             )}
                           >
                             <span
@@ -710,7 +710,7 @@ export const TeamManagement: React.FC = () => {
                 onClick={() => setNewUser({ ...newUser, maskPhoneNumber: !newUser.maskPhoneNumber })}
                 className={cn(
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none mt-1 outline-none",
-                  newUser.maskPhoneNumber ? "lad-toggle-on" : "lad-toggle-off"
+                  newUser.maskPhoneNumber ? "bg-[#0B1957] dark:bg-blue-500" : "bg-gray-200 dark:bg-zinc-800"
                 )}
               >
                 <span
