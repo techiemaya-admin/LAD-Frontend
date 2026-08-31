@@ -75,7 +75,6 @@ export const LeadRequirements: React.FC<LeadRequirementsProps> = ({
 
       const res = await fetchWithTenant(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configData),
       });
 

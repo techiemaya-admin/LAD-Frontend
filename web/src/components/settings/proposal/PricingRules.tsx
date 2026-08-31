@@ -28,10 +28,8 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
       : `${getApiBaseUrlForLocal()}/api/pricing-rules`;
     const method = ruleData.id ? 'PUT' : 'POST';
     ruleData.tenant_id = tenantId;
-
     const res = await fetchWithTenant(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ruleData),
     });
 
@@ -319,7 +317,7 @@ export const PricingRules: React.FC<PricingRulesProps> = ({
 
                 <div className="flex items-center justify-between pt-1.5 border-t border-gray-50 dark:border-gray-700">
                   <p className="text-[8px] sm:text-[9px] italic text-gray-400 dark:text-gray-400 font-medium truncate max-w-[80%]">
-                    "{generateDescription(rule)}"
+                    &quot;{generateDescription(rule)}&quot;
                   </p>
                   <button
                     onClick={() => toggleActive(rule)}

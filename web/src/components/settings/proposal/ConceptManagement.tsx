@@ -81,7 +81,6 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
         });
         await fetchWithTenant(`${getApiBaseUrlForLocal()}/api/concepts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: body,
         });
       }
@@ -117,7 +116,6 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
 
       const res = await fetchWithTenant(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(conceptData),
       });
 
@@ -323,7 +321,7 @@ export const ConceptManagement: React.FC<ConceptManagementProps> = ({
             {concepts.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-[#9CA3AF]">
-                  No concepts found. Click "Add Concept" to create one.
+                  No concepts found. Click &quot;Add Concept&quot; to create one.
                 </td>
               </tr>
             ) : (

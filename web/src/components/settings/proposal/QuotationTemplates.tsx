@@ -136,7 +136,6 @@ export const QuotationTemplates: React.FC<QuotationTemplatesProps> = ({
         `${getApiBaseUrlForLocal()}/api/quotation-templates/${tenantId}/set-default/${id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_default: true }),
         }
       );
