@@ -323,7 +323,7 @@ export const TeamManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-6 sm:pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="pl-6 pr-4 sm:px-8 pt-4 pb-2">
@@ -534,7 +534,7 @@ export const TeamManagement: React.FC = () => {
                             onClick={() => toggleMaskPhone(user.id, !!user.maskPhoneNumber)}
                             className={cn(
                               "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                              user.maskPhoneNumber ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-800"
+                              user.maskPhoneNumber ? "bg-[#0B1957] dark:bg-blue-500" : "bg-gray-200 dark:bg-zinc-800"
                             )}
                           >
                             <span
