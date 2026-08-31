@@ -157,15 +157,21 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
         aria-modal="true"
         aria-labelledby="recurring-zoho-campaign-title"
       >
-        <div className="bg-white rounded-lg flex items-center justify-between p-4 border-b border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Repeat className="h-5 w-5 text-primary" />
-            <div>
-              <div id="recurring-zoho-campaign-title" className="text-sm font-semibold text-foreground">Recurring Zoho campaign</div>
-              <p className="text-xs text-muted-foreground">Imports new Zoho contacts daily and runs them through your sequence.</p>
+        <div className="bg-white rounded-t-xl p-4 border-b border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Repeat className="h-5 w-5 text-primary shrink-0" />
+              <div id="recurring-zoho-campaign-title" className="text-sm font-semibold text-foreground truncate">
+                Recurring Zoho campaign
+              </div>
             </div>
+            <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer p-0.5">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+          <p className="text-xs text-muted-foreground mt-1">
+            Imports new Zoho contacts daily and runs them through your sequence.
+          </p>
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto flex-1 bg-background">
