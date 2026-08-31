@@ -21,6 +21,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
+import { useLineListEditor } from '@/components/pipelines/useLineListEditor';
+
 import type { KnobDefinition, KnobValue } from '../types';
 
 interface Props {
@@ -30,16 +32,12 @@ interface Props {
   disabled?: boolean;
 }
 
-/** `list` and `multiselect` are stored as arrays; the textarea edits them by line. */
-const toLines = (v: KnobValue): string =>
-  Array.isArray(v) ? v.join('\n') : '';
-
-const fromLines = (s: string): string[] =>
-  s.split('\n').map((l) => l.trim()).filter(Boolean);
-
 export function KnobField({ def, value, onChange, disabled }: Props) {
   const id = `knob-${def.key}`;
   const set = (v: KnobValue) => onChange(def.key, v);
+  // `list` and `multiselect` are stored as arrays and edited one per line.
+  // The normalisation must NOT run between keystrokes — see the hook.
+  const lineList = useLineListEditor(value, set);
 
   const help = def.help ? (
     <p className="mt-1 text-xs text-muted-foreground">{def.help}</p>
@@ -148,9 +146,8 @@ export function KnobField({ def, value, onChange, disabled }: Props) {
           id={id}
           rows={4}
           placeholder="One per line"
-          value={toLines(value)}
-          onChange={(e) => set(fromLines(e.target.value))}
           disabled={disabled}
+          {...lineList}
         />
       );
       break;
