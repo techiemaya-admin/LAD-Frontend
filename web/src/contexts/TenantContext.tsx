@@ -27,8 +27,6 @@ function loadTenantsFromAuth(): Tenant[] {
     const raw = safeStorage.getItem('user');
     if (!raw) return [];
     const user = JSON.parse(raw);
-    console.log("user:: ");
-    console.log(user)
     if (Array.isArray(user.tenants)) {
       return user.tenants.map((t: { id: string; name: string }) => ({
         id: t.id,
