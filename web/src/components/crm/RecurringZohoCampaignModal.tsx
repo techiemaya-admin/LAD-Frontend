@@ -262,7 +262,6 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
         </div>
 
         <div className="bg-white rounded-lg flex items-center justify-end gap-2 p-4 border-t border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
-          <Button variant="ghost" onClick={onClose} disabled={creating}>Cancel</Button>
           <Button
             onClick={handleCreate}
             disabled={creating || !connected}
