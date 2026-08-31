@@ -980,9 +980,6 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                 </div>
                 {!isRecording && recordingStep === "idle" && (
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)} disabled={isCloning} className="border-input dark:border-blue-900/50 dark:text-slate-300">
-                      Cancel
-                    </Button>
                     <Button onClick={handleCloneSubmit} disabled={isCloning || !cloneName || !cloneFile} className="gradient-primary dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white">
                       {isCloning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cloning...</> : 'Clone Selected Region'}
                     </Button>
