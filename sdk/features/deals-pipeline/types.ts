@@ -74,7 +74,7 @@ export interface CreateLeadParams {
   assigned_to?: string | number | null;
   notes?: string | null;
   description?: string | null;
-  tags?: string[];
+  tags?: string[] | string | null;
   [key: string]: any;
 }
 
@@ -92,7 +92,7 @@ export interface UpdateLeadParams {
   assigned_to?: string | number | null;
   notes?: string | null;
   description?: string | null;
-  tags?: string[];
+  tags?: string[] | string | null;
   [key: string]: any;
 }
 

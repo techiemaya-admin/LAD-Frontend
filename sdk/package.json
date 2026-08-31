@@ -6,6 +6,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
     "./ai-icp-assistant": {
       "types": "./features/ai-icp-assistant/index.ts",
       "default": "./features/ai-icp-assistant/index.ts"
@@ -34,6 +38,10 @@
       "types": "./features/community-roi/index.ts",
       "default": "./features/community-roi/index.ts"
     },
+    "./community-roi/types": {
+      "types": "./features/community-roi/types.ts",
+      "default": "./features/community-roi/types.ts"
+    },    
     "./conversations": {
       "types": "./features/conversations/index.ts",
       "default": "./features/conversations/index.ts"
@@ -85,6 +93,10 @@
     "./settings": {
       "types": "./features/settings/index.ts",
       "default": "./features/settings/index.ts"
+    },
+    "./snapshots": {
+      "types": "./features/snapshots/index.ts",
+      "default": "./features/snapshots/index.ts"
     },
     "./voice-agent": {
       "types": "./features/voice-agent/index.ts",
