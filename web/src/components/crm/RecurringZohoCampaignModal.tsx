@@ -229,9 +229,15 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
           <div className="rounded-lg border border-border bg-white dark:border-blue-950/40 dark:bg-[#071131] p-3 space-y-3">
             <div className="text-sm font-medium text-foreground">Sequence</div>
 
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={liEnabled} onChange={(e) => setLiEnabled(e.target.checked)} className="h-4 w-4" />
-              <Linkedin className="h-4 w-4 text-blue-700" /> Send LinkedIn connection request
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={liEnabled}
+                onChange={(e) => setLiEnabled(e.target.checked)}
+                className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+              />
+              <Linkedin className="h-4 w-4 text-blue-700 shrink-0" />
+              <span>Send LinkedIn connection request</span>
             </label>
             {liEnabled && (
               <textarea className={`${field} min-h-[60px]`} value={liMessage} onChange={(e) => setLiMessage(e.target.value)}
@@ -239,15 +245,27 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
             )}
 
             {liEnabled && emailEnabled && (
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <input type="checkbox" checked={waitAccept} onChange={(e) => setWaitAccept(e.target.checked)} className="h-4 w-4" />
-                <Clock className="h-4 w-4 text-muted-foreground" /> Wait for connection accepted before emailing
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={waitAccept}
+                  onChange={(e) => setWaitAccept(e.target.checked)}
+                  className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+                />
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span>Wait for connection accepted before emailing</span>
               </label>
             )}
 
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={emailEnabled} onChange={(e) => setEmailEnabled(e.target.checked)} className="h-4 w-4" />
-              <Mail className="h-4 w-4 text-slate-600" /> Send email
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={emailEnabled}
+                onChange={(e) => setEmailEnabled(e.target.checked)}
+                className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+              />
+              <Mail className="h-4 w-4 text-slate-600 shrink-0" />
+              <span>Send email</span>
             </label>
             {emailEnabled && (
               <div className="space-y-2">
