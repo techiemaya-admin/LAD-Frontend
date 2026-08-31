@@ -30,8 +30,7 @@ export const GoogleAuthIntegration: React.FC = () => {
         return;
       }
       window.location.href = result.url;
-    } catch (error) {
-      console.error('[GoogleAuthIntegration] Error starting OAuth:', error);
+    } catch {
       alert('Failed to connect Google account');
     } finally {
       setIsActing(false);
@@ -42,8 +41,8 @@ export const GoogleAuthIntegration: React.FC = () => {
     setIsActing(true);
     try {
       await disconnect();
-    } catch (error) {
-      console.error('[GoogleAuthIntegration] Error disconnecting:', error);
+    } catch {
+      alert('Failed to disconnect Google account');
     } finally {
       setIsActing(false);
     }
@@ -140,8 +139,7 @@ export const GoogleAuthIntegration: React.FC = () => {
             <Button
               onClick={handleDisconnect}
               disabled={busy}
-              variant="destructive"
-              className="flex-1"
+              className="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white"
             >
               {busy ? (
                 <>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X, Power, Loader2, FolderOpen } from 'lucide-react';
+import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X, Power, Loader2, FolderOpen, ArrowLeft } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
@@ -620,9 +620,10 @@ export const IntegrationsSettings: React.FC = () => {
               setActiveView('grid');
               refreshStatuses();
             }}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors dark:text-slate-300"
+            className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white inline-flex items-center gap-2 transition-colors mx-3.5 sm:mx-4 my-1 cursor-pointer"
           >
-            &larr; Back to Integrations
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            Back to Integrations
           </button>
 
           {activeView === 'whatsapp-ai' && (

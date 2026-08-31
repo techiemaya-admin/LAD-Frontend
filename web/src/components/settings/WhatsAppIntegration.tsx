@@ -799,11 +799,11 @@ export const WhatsAppIntegration: React.FC = () => {
                   : 'Generate QR'}
           </Button>
         ) : (
-          <Button
-            variant="destructive"
+          <button
+            type="button"
             onClick={handleLogout}
             disabled={loading}
-            className="w-full h-11 font-semibold rounded-xl transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full h-11 font-semibold rounded-xl text-white bg-red-600 hover:bg-red-700 active:bg-red-800 transition-all flex items-center justify-center cursor-pointer border-none disabled:opacity-50"
           >
             {loading ? (
               <Loader2 className="animate-spin mr-2 h-4 w-4" />
@@ -811,7 +811,7 @@ export const WhatsAppIntegration: React.FC = () => {
               <LogOut className="mr-2 h-4 w-4" />
             )}
             Disconnect
-          </Button>
+          </button>
         )}
 
         {/* Auto-Assign Settings */}
@@ -874,7 +874,23 @@ export const WhatsAppIntegration: React.FC = () => {
                 className="flex-1 h-9 px-3 text-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white rounded-md focus:ring-1 focus:ring-indigo-500/30"
                 onFocus={() => { if (teamMembers.length === 0) loadTeamMembers(); }}
                     >
-                      <SelectValue placeholder="Select assignment..." />
+                      {bulkAssignUserId === 'ai_agent' ? (
+                        <span className="flex items-center gap-2 text-sm">
+                          <img
+                            src="/logo.svg"
+                            alt="LAD"
+                            className="h-4 w-4 object-contain block dark:hidden shrink-0"
+                          />
+                          <img
+                            src="/logo-white.svg"
+                            alt="LAD"
+                            className="h-4 w-4 object-contain hidden dark:block shrink-0"
+                          />
+                          AI Agent (release assignment)
+                        </span>
+                      ) : (
+                        <SelectValue placeholder="Select assignment..." />
+                      )}
                     </SelectTrigger>
 
                     <SelectContent className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl min-w-[200px]">
@@ -883,7 +899,19 @@ export const WhatsAppIntegration: React.FC = () => {
                           value="ai_agent"
                           className="text-sm text-[#172560] dark:text-white focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:bg-blue-600/20 dark:data-[state=checked]:text-white cursor-pointer rounded-lg relative flex items-center justify-between w-full py-2 pl-3 pr-9 [&>span]:w-full [&>span:has(svg)]:hidden *:[data-slot=select-item-indicator]:hidden"
                       >
-                        <span className="flex items-center gap-2">🤖 AI Agent (release assignment)</span>
+                        <span className="flex items-center gap-2">
+                          <img
+                            src="/logo.svg"
+                            alt="LAD"
+                            className="h-4 w-4 object-contain block group-data-[state=checked]:hidden group-data-[highlighted]:hidden group-focus:hidden dark:hidden shrink-0"
+                          />
+                          <img
+                            src="/logo-white.svg"
+                            alt="LAD"
+                            className="h-4 w-4 object-contain hidden group-data-[state=checked]:block group-data-[highlighted]:block group-focus:block dark:block shrink-0"
+                          />
+                          AI Agent (release assignment)
+                        </span>
                         {bulkAssignUserId === "ai_agent" && (
                             <Check className="w-4 h-4 text-white dark:text-[#000724] absolute right-3 top-1/2 -translate-y-1/2 z-50 stroke-[3]" />
                         )}
@@ -946,7 +974,7 @@ export const WhatsAppIntegration: React.FC = () => {
                   value="unassigned"
                   checked={bulkAssignFilter === 'unassigned'}
                   onChange={() => setBulkAssignFilter('unassigned')}
-                  className="cursor-pointer h-3.5 w-3.5 accent-[#0b1957] dark:accent-primary"
+                  className="cursor-pointer h-3.5 w-3.5 accent-[#0b1957] dark:accent-blue-500 dark:[color-scheme:dark] bg-transparent border-0 border-transparent outline-none ring-0 shadow-none"
                   />
                   <span className="group-hover:text-[#0b1957] dark:group-hover:text-white transition-colors">
                 {bulkAssignUserId === 'ai_agent' ? 'Assigned chats only' : 'Unassigned chats only'}
@@ -959,7 +987,7 @@ export const WhatsAppIntegration: React.FC = () => {
                   value="all"
                   checked={bulkAssignFilter === 'all'}
                   onChange={() => setBulkAssignFilter('all')}
-                  className="cursor-pointer h-3.5 w-3.5 accent-[#0b1957] dark:accent-primary"
+                  className="cursor-pointer h-3.5 w-3.5 accent-[#0b1957] dark:accent-blue-500 dark:[color-scheme:dark] bg-transparent border-0 border-transparent outline-none ring-0 shadow-none"
                   />
                   <span className="group-hover:text-[#0b1957] dark:group-hover:text-white transition-colors">
                 All active chats
@@ -1159,54 +1187,75 @@ export const WhatsAppIntegration: React.FC = () => {
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800 max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-white font-bold">Enable auto-assign for saved contacts?</DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-300 leading-relaxed text-sm pt-1">
-              When enabled, new conversations from your saved WhatsApp contacts will be automatically assigned to a Human Agent. Messages from unsaved numbers will continue to be handled by the AI Agent.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-xl bg-amber-50/60 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40 p-3.5 text-xs text-amber-800 dark:text-amber-400 font-medium leading-relaxed">
+        <DialogContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800 max-w-md rounded-2xl p-6 text-left space-y-4 max-sm:[&_[data-slot=dialog-close]]:hidden">
+          <div className="text-left sm:pr-8">
+            <DialogTitle className="text-slate-900 dark:text-white font-bold text-base leading-tight text-left">
+              Enable auto-assign for saved contacts?
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-slate-500 dark:text-slate-300 leading-relaxed text-sm text-left space-y-1">
+            <span className="block">
+              When enabled, new conversations from your saved WhatsApp contacts will be automatically assigned to a Human Agent.
+            </span>
+            <span className="block">
+              Messages from unsaved numbers will continue to be handled by the AI Agent.
+            </span>
+          </DialogDescription>
+          <div className="rounded-xl bg-amber-50/60 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40 p-3.5 text-xs text-amber-800 dark:text-amber-400 font-medium leading-relaxed text-left">
             This means the AI will not respond to messages from your saved contacts. A human agent must handle those conversations manually.
           </div>
-          <DialogFooter className="gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              className="sm:hidden border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl h-10 px-4 cursor-pointer"
+            >
+              Cancel
+            </Button>
             <Button onClick={confirmAutoAssign} disabled={autoAssignSaving} className="bg-[#0b1957] dark:bg-primary hover:bg-[#0b1957]/90 dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold rounded-xl h-10 px-4 cursor-pointer">
               {autoAssignSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
               Yes, enable auto-assign
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Bulk Assign Confirmation Dialog */}
       <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
-        <DialogContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800 max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-white font-bold">
+        <DialogContent className="bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800 max-w-md rounded-2xl p-6 text-left space-y-4 max-sm:[&_[data-slot=dialog-close]]:hidden">
+          <div className="text-left sm:pr-8">
+            <DialogTitle className="text-slate-900 dark:text-white font-bold text-base leading-tight text-left">
               {bulkAssignUserId === 'ai_agent'
                 ? `Release ${bulkAssignFilter === 'all' ? 'all active' : 'assigned'} chats to AI Agent?`
                 : `Assign ${bulkAssignFilter === 'all' ? 'all active' : 'unassigned'} chats?`}
             </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-300 leading-relaxed text-sm pt-1">
-              {bulkAssignUserId === 'ai_agent'
-                ? bulkAssignFilter === 'all'
-                  ? 'All active conversations will have their team member assignment removed. The AI Agent will resume responding to these chats.'
-                  : 'All currently assigned conversations will be released. The AI Agent will resume responding to these chats.'
-                : (() => {
-                    const member = teamMembers.find((m) => m.user_id === bulkAssignUserId);
-                    const name = member?.name || 'the selected team member';
-                    return bulkAssignFilter === 'all'
-                      ? `All active conversations will be assigned to ${name}. This will override any existing assignments.`
-                      : `All conversations not yet assigned to anyone will be assigned to ${name}.`;
-                  })()}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={`rounded-xl p-3.5 text-xs font-medium leading-relaxed border ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 dark:text-emerald-400' : 'bg-blue-50/60 border-blue-200 text-blue-800 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400'}`}>
+          </div>
+          <DialogDescription className="text-slate-500 dark:text-slate-300 leading-relaxed text-sm text-left">
+            {bulkAssignUserId === 'ai_agent'
+              ? bulkAssignFilter === 'all'
+                ? 'All active conversations will have their team member assignment removed. The AI Agent will resume responding to these chats.'
+                : 'All currently assigned conversations will be released. The AI Agent will resume responding to these chats.'
+              : (() => {
+                  const member = teamMembers.find((m) => m.user_id === bulkAssignUserId);
+                  const name = member?.name || 'the selected team member';
+                  return bulkAssignFilter === 'all'
+                    ? `All active conversations will be assigned to ${name}. This will override any existing assignments.`
+                    : `All conversations not yet assigned to anyone will be assigned to ${name}.`;
+                })()}
+          </DialogDescription>
+          <div className={`rounded-xl p-3.5 text-xs font-medium leading-relaxed border text-left ${bulkAssignUserId === 'ai_agent' ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 dark:text-emerald-400' : 'bg-blue-50/60 border-blue-200 text-blue-800 dark:bg-indigo-950/20 dark:border-indigo-900/40 dark:text-indigo-400'}`}>
             {bulkAssignUserId === 'ai_agent'
               ? 'The AI Agent will automatically start handling messages in the released conversations.'
               : 'Assigned team members will receive a copy of incoming messages on their own WhatsApp so they can reply directly.'}
           </div>
-          <DialogFooter className="gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkAssignDialog(false)}
+              className="sm:hidden border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl h-10 px-4 cursor-pointer"
+            >
+              Cancel
+            </Button>
             <Button
               onClick={handleBulkAssign}
               disabled={bulkAssigning}
@@ -1215,7 +1264,7 @@ export const WhatsAppIntegration: React.FC = () => {
               {bulkAssigning && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
               {bulkAssignUserId === 'ai_agent' ? 'Yes, release to AI Agent' : 'Yes, assign chats'}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
