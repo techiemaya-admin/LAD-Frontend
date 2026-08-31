@@ -963,6 +963,14 @@ textarea.adv-chat-ta:focus-within,
 }
 
 /* Platform Monitor chart overlays follow the shared navy card theme. */
+.platform-monitor tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.dark .platform-monitor tbody tr:hover {
+  background-color: #1a2a43;
+}
+
 .dark .platform-monitor .recharts-default-tooltip {
   background-color: #071131 !important;
   border-color: rgba(30, 58, 138, 0.4) !important;

@@ -80,7 +80,7 @@ export default function MonitorMigrationsPage() {
                 </tr>
               </thead>
               <tbody className="px-4">
-                <tr className="border-b border-gray-100 bg-gray-50/50 dark:border-blue-950/40 dark:bg-[#1a2a43]">
+                <tr className="border-b border-gray-100 dark:border-blue-950/40">
                   <td className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200">{data.core.name}</td>
                   <td className="px-4 py-2"><StatusBadge status={data.core.status} /></td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.missing.join(', ') || '-'}</td>

@@ -67,7 +67,7 @@ export default function MonitorLayout({ children }: { children: React.ReactNode 
               href={tab.href}
               className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                 active
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  ? 'border-[#0b1957] text-[#0b1957]'
                   : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
               }`}
             >
