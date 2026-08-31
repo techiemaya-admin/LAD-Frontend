@@ -622,7 +622,7 @@ export default function CampaignLeadsPage() {
 
       {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
       <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-        <DialogContent className="w-[calc(100%-1.5rem)] max-w-[calc(100%-1.5rem)] sm:w-full sm:max-w-2xl bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100%-1.5rem)] max-w-[calc(100%-1.5rem)] sm:w-full sm:max-w-2xl bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden [&>[data-slot=dialog-close]]:top-5 sm:[&>[data-slot=dialog-close]]:top-6">
           <DialogHeader className="shrink-0 pr-12 sm:pr-16">
             <DialogTitle className="text-lg sm:text-2xl text-[#0b1957] dark:text-white">
               <span className="inline-flex items-center gap-1.5 sm:gap-2">
@@ -630,7 +630,7 @@ export default function CampaignLeadsPage() {
                 Manual Follow-up
               </span>
               {followupContext?.leadName && (
-                <span className="block sm:inline text-slate-500 dark:text-slate-400 font-normal text-sm sm:text-base mt-1 sm:mt-0 sm:ml-1">
+                <span className="block text-slate-500 dark:text-slate-400 font-normal text-sm sm:text-base mt-1">
                   → {followupContext.leadName}
                   {followupContext.company ? `, ${followupContext.company}` : ''}
                 </span>
