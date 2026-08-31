@@ -383,14 +383,14 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl [&>[data-slot=dialog-close]]:top-5 sm:[&>[data-slot=dialog-close]]:top-6">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center shrink-0">
               <CalendarClock className="w-5 h-5 text-[#0b1957] dark:text-indigo-300" />
             </div>
             <div>
-              <DialogTitle>Scheduled Follow-ups</DialogTitle>
+              <DialogTitle className="text-lg sm:text-2xl">Scheduled Follow-ups</DialogTitle>
               <DialogDescription>
                 Connection accepted leads. Schedule or remove upcoming LinkedIn follow-ups.
               </DialogDescription>
