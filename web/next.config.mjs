@@ -8,9 +8,16 @@ const require = createRequire(import.meta.url);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['@lad/frontend-features'],
   // ✅ REQUIRED when importing ../sdk
   experimental: {
-    externalDir: true,
+    optimizePackageImports: [
+      'lucide-react',
+      '@tabler/icons-react',
+      'recharts',
+      'date-fns',
+      'framer-motion',
+    ],
     // Raise the middleware/proxy request-body cap (Next default 10MB) so large
     // multipart uploads survive the middleware layer. Media uploads (e.g.
     // LinkedIn template videos) are capped at 25MB by the backend; 30MB leaves
@@ -34,8 +41,8 @@ const nextConfig = {
       ...config.resolve.alias,
       '@tanstack/react-query': path.resolve(__dirname, '../node_modules/@tanstack/react-query'),
       '@tanstack/query-core': path.resolve(__dirname, '../node_modules/@tanstack/query-core'),
+      '@lad/shared': path.resolve(__dirname, '../sdk/shared'),
       'chart.js': path.resolve(__dirname, 'node_modules/chart.js/dist/chart.js'),
-      '@lad/frontend-features$': path.resolve(__dirname, '../sdk'),
       '@livekit/components-react': path.resolve(__dirname, '../node_modules/@livekit/components-react'),
       '@livekit/components-styles': path.resolve(__dirname, '../node_modules/@livekit/components-styles'),
       'livekit-client': path.resolve(__dirname, '../node_modules/livekit-client'),
@@ -49,14 +56,15 @@ const nextConfig = {
     return config;
   },
 
-  // Allow Turbopack build - use relative paths (Turbopack doesn't support absolute paths)
+  // Turbopack monorepo build & HMR configuration
   turbopack: {
+    root: path.resolve(__dirname, '..'),
     resolveAlias: {
       // Force all @tanstack/react-query imports to use root node_modules (monorepo setup)
       '@tanstack/react-query': '../node_modules/@tanstack/react-query',
       '@tanstack/query-core': '../node_modules/@tanstack/query-core',
+      '@lad/shared': '../sdk/shared',
       'chart.js': './node_modules/chart.js/dist/chart.js',
-      '@lad/frontend-features$': '../sdk',
       '@livekit/components-react': '../node_modules/@livekit/components-react',
       '@livekit/components-styles': '../node_modules/@livekit/components-styles',
       'livekit-client': '../node_modules/livekit-client',

@@ -621,7 +621,7 @@ export default function CampaignLeadsPage() {
 
       {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
       <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-        <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-[#0b1957] dark:text-white">
               <Send className="w-5 h-5" />

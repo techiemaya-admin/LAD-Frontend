@@ -122,6 +122,9 @@ export function VoiceAgentSettings() {
             provider: v.provider,
             voice_sample_url: v.voice_sample_url,
             provider_voice_id: v.provider_voice_id,
+            // Needed by the Fish Audio tuning controls in VoiceLibrary; without it the
+            // selects would always fall back to their defaults regardless of what is stored.
+            provider_config: v.provider_config ?? undefined,
           })));
         }
         

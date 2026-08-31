@@ -587,7 +587,7 @@ export function Sidebar() {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 hover:bg-white/10 active:scale-95 transition text-sm text-sidebar-foreground"
+              className="w-full flex items-center justify-start gap-2 rounded-xl px-4 py-2 text-red-500 hover:bg-red-500/10 active:scale-95 transition text-sm"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -717,7 +717,7 @@ export function Sidebar() {
                       "absolute inset-0 z-0 rounded-2xl",
                       "transition-all duration-400 ease-[cubic-bezier(.19,1,.22,1)]",
                       selfActive
-                        ? "bg-primary/95"
+                        ? "bg-primary"
                         : childOnPath
                           ? "bg-primary/10 backdrop-blur-sm"  // soft tint - works on light & dark
                           : "bg-transparent group-hover:bg-white/10 group-hover:backdrop-blur-sm group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]",

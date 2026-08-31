@@ -1064,8 +1064,8 @@ export function CallLogModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden dark:bg-[#000c3b] dark:border-gray-800">
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden dark:bg-[#000724] dark:border-blue-950/40">
+        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-blue-950/40 dark:bg-[#081331]">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-full bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/60 shadow-sm">
               <PhoneCall className="h-6 w-6 text-orange-600 dark:text-orange-400" />

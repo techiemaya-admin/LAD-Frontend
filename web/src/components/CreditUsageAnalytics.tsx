@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Phone, Search, Brain, Linkedin, BarChart3, Sparkles, MessageCircle, Zap } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-import { getWalletUsageAnalytics } from '../../../sdk/features/billing/api';
+import { getWalletUsageAnalytics } from '@lad/frontend-features/billing';
+
 interface FeatureUsage {
   featureName: string;
   totalCredits: number;

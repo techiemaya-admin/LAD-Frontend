@@ -7,7 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '../../hooks/use-toast';
-import { Voice } from '@/types/agent';
+import {
+  Voice,
+  FishLatencyMode,
+  FishOutputFormat,
+  FISH_LATENCY_MODES,
+  FISH_OUTPUT_FORMATS,
+} from '@/types/agent';
 import { cn } from '@/lib/utils';
 import { safeStorage } from '@lad/shared/storage';
 import {
@@ -146,6 +152,72 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
 
   // Cloning states
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+
+  // Fish Audio per-voice tuning, persisted to voice_agent_voices.provider_config —
+  // the same column resolve_voice() reads when building the TTS engine.
+  const [isSavingVoiceConfig, setIsSavingVoiceConfig] = useState(false);
+
+  /**
+   * Persist Fish Audio tuning onto the voice row.
+   *
+   * PUT /api/voice-agent/settings/voices/:id -> backend updateVoice, which accepts
+   * provider_config. resolve_voice() forwards latency_mode / output_format from it to
+   * the worker; before that allowlist was widened these values saved but were ignored
+   * at call time.
+   *
+   * This is a property of the VOICE, so it applies to every agent using it.
+   */
+  const saveVoiceProviderConfig = async (
+    voice: Voice,
+    patch: { latency_mode?: FishLatencyMode; output_format?: FishOutputFormat },
+  ) => {
+    const previous = voice.provider_config ?? {};
+    // Write both spellings: rows created elsewhere use latency/format, while the plugin
+    // and env vars use latency_mode/output_format. resolve_voice accepts either.
+    const nextConfig = {
+      ...previous,
+      ...(patch.latency_mode ? { latency: patch.latency_mode, latency_mode: patch.latency_mode } : {}),
+      ...(patch.output_format ? { format: patch.output_format, output_format: patch.output_format } : {}),
+    };
+
+    const applyLocally = (config: Record<string, unknown>) => {
+      setVoices((prev) => prev.map((v) => (v.id === voice.id ? { ...v, provider_config: config } : v)));
+      setSelectedVoice((prev) => (prev && prev.id === voice.id ? { ...prev, provider_config: config } : prev));
+    };
+    applyLocally(nextConfig);
+    setIsSavingVoiceConfig(true);
+
+    try {
+      const token = safeStorage.getItem('token');
+      const response = await fetch(`/api/voice-agent/settings/voices/${voice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ provider_config: nextConfig }),
+      });
+
+      if (!response.ok) {
+        throw new Error((await response.text()) || 'Failed to save voice settings');
+      }
+
+      toast({
+        title: 'Voice settings saved',
+        description: 'Applies to the next call placed with this voice.',
+      });
+    } catch (error) {
+      applyLocally(previous); // roll back so the UI never claims a save that failed
+      toast({
+        title: 'Could not save voice settings',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingVoiceConfig(false);
+    }
+  };
   const [isCloning, setIsCloning] = useState(false);
   const [cloneName, setCloneName] = useState("");
   const [cloneDesc, setCloneDesc] = useState("");
@@ -178,6 +250,9 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
   const [audioDuration, setAudioDuration] = useState(0);
   const [isWsPlaying, setIsWsPlaying] = useState(false);
   const [cloneGender, setCloneGender] = useState("neutral");
+  // Which backend performs the clone. Cartesia remains the default so existing
+  // behaviour is unchanged; Fish returns a model id that doubles as the reference_id.
+  const [cloneProvider, setCloneProvider] = useState<'cartesia' | 'fishaudio'>('cartesia');
 
   const initWaveSurfer = () => {
     if (waveformRef.current && !wavesurferRef.current) {
@@ -544,7 +619,9 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
       return;
     }
 
-    if (cloneMode === "instant" && (trimEnd - trimStart) > 15.5) {
+    // Cartesia instant cloning caps the clip at 15s. Fish has no such ceiling — it
+    // wants ~10s or more — so this guard is deliberately Cartesia-only.
+    if (cloneProvider === 'cartesia' && cloneMode === "instant" && (trimEnd - trimStart) > 15.5) {
       toast({
         title: "Audio Too Long",
         description: "Instant Voice Cloning requires a maximum of 15 seconds of audio. Please trim your clip.",
@@ -583,6 +660,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
       formData.append("mode", cloneMode);
       formData.append("enhance", cloneEnhance ? "true" : "false");
       formData.append("gender", cloneGender);
+      formData.append("provider", cloneProvider);
       const response = await fetch(`${baseUrl}/voices/clone`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -591,7 +669,13 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
 
       if (!response.ok) {
         if (response.status === 402 || response.status === 403 || response.status === 429) {
-          throw new Error("You've exhausted your Cartesia voice cloning quota. Please upgrade your Cartesia account.");
+          // The backend already distinguishes these; keep the message provider-accurate
+          // rather than blaming Cartesia for a Fish rate limit.
+          throw new Error(
+            cloneProvider === 'fishaudio'
+              ? "Fish Audio refused the request — free accounts are capped at 5 concurrent clones. Try again shortly."
+              : "You've exhausted your Cartesia voice cloning quota. Please upgrade your Cartesia account."
+          );
         }
         const errText = await response.text();
         throw new Error(errText || "Failed to clone voice");
@@ -605,7 +689,9 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
         description: newVoiceData.description,
         gender: cloneGender,
         accent: newVoiceData.language || cloneLanguage,
-        provider: "cartesia",
+        // Trust the backend's echoed provider; falling back to the chosen one keeps
+        // the library correct even against an older API that does not echo it.
+        provider: newVoiceData.provider || cloneProvider,
         provider_voice_id: newVoiceData.provider_voice_id
       };
       
@@ -668,6 +754,38 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                   </DialogDescription>
                 </DialogHeader>
                 <div ref={dialogScrollContainerRef} className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2 custom-scrollbar">
+                  {/* Cloning backend. Cartesia is the default; Fish returns a model id
+                      that doubles as the reference_id, so a Fish clone becomes an ordinary
+                      voice row usable by any agent. */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="clone-provider">Cloning Provider</Label>
+                    <div className="flex bg-muted/50 rounded-lg p-1 border border-border dark:bg-slate-900/80 dark:border-blue-900/40">
+                      {([
+                        { value: 'cartesia', label: 'Cartesia' },
+                        { value: 'fishaudio', label: 'Fish Audio' },
+                      ] as const).map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setCloneProvider(option.value)}
+                          className={cn(
+                            "flex-1 text-xs font-medium py-1.5 rounded-md transition-all",
+                            cloneProvider === option.value
+                              ? "bg-background shadow-sm text-foreground dark:bg-blue-600 dark:text-white dark:shadow-sm"
+                              : "text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-white"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground dark:text-slate-400">
+                      {cloneProvider === 'fishaudio'
+                        ? 'Fish Audio works best with about 10 seconds or more of clear, single-speaker audio.'
+                        : 'Cartesia instant cloning accepts up to 15 seconds of audio.'}
+                    </p>
+                  </div>
+
                   <div className="grid gap-2">
                     <Label htmlFor="name">Voice Name</Label>
                     <Input 
@@ -1061,6 +1179,85 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                     <div><span className="font-medium text-foreground dark:text-slate-300">Dialect / Accent:</span> {CLONE_LANGUAGES.find(l => l.value === selectedVoice.accent)?.label || selectedVoice.accent || 'Default (US Accent)'}</div>
                   </div>
                 </div>
+
+                {/* Fish Audio tuning. Rendered only for Fish voices: latency_mode and
+                    output_format are meaningless to the other TTS providers, and the
+                    backend only reads them on the fishaudio branch of build_tts_engine. */}
+                {selectedVoice.provider === 'fishaudio' && (
+                  <div className="p-4 rounded-lg border bg-muted/20 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-4 w-4 text-muted-foreground" />
+                      <h4 className="text-sm font-semibold text-foreground dark:text-white">Fish Audio Settings</h4>
+                      {isSavingVoiceConfig && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground dark:text-slate-400">
+                      Applies to every agent using this voice, from the next call onward.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fish-latency" className="text-foreground dark:text-white">Latency Mode</Label>
+                        <Select
+                          value={
+                            selectedVoice.provider_config?.latency_mode ??
+                            selectedVoice.provider_config?.latency ??
+                            'balanced'
+                          }
+                          onValueChange={(value) =>
+                            saveVoiceProviderConfig(selectedVoice, { latency_mode: value as FishLatencyMode })
+                          }
+                          disabled={isSavingVoiceConfig}
+                        >
+                          <SelectTrigger id="fish-latency">
+                            <SelectValue placeholder="Balanced" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FISH_LATENCY_MODES.map((mode) => (
+                              <SelectItem key={mode.value} value={mode.value}>
+                                <span className="font-medium">{mode.label}</span>
+                                <span className="ml-2 text-xs text-muted-foreground">{mode.hint}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground dark:text-slate-400">
+                          How quickly the agent starts speaking, traded against audio quality.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="fish-format" className="text-foreground dark:text-white">Output Format</Label>
+                        <Select
+                          value={
+                            selectedVoice.provider_config?.output_format ??
+                            selectedVoice.provider_config?.format ??
+                            'pcm'
+                          }
+                          onValueChange={(value) =>
+                            saveVoiceProviderConfig(selectedVoice, { output_format: value as FishOutputFormat })
+                          }
+                          disabled={isSavingVoiceConfig}
+                        >
+                          <SelectTrigger id="fish-format">
+                            <SelectValue placeholder="PCM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FISH_OUTPUT_FORMATS.map((format) => (
+                              <SelectItem key={format.value} value={format.value}>
+                                {format.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground dark:text-slate-400">
+                          PCM is recommended for telephony. Opus is fixed at 48 kHz.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">

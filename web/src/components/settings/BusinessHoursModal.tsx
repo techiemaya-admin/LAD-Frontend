@@ -225,13 +225,11 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[560px] max-h-[calc(100dvh-5rem)] sm:max-h-[85dvh] flex flex-col bg-white dark:bg-[#071131] border border-transparent dark:border-[#2B7CFF]/20 rounded-2xl shadow-2xl overflow-hidden font-sans"
+        className="relative w-full max-w-[560px] max-h-[calc(100dvh-5rem)] sm:max-h-[85dvh] flex flex-col bg-white dark:bg-[#000724] border border-transparent dark:border-blue-950/40 rounded-2xl shadow-2xl overflow-hidden font-sans"
         onClick={e => e.stopPropagation()}
       >
-        
-
         {/* STICKY TOP HEADER (Close button aligns with heading) */}
-        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#081331] backdrop-blur-md p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-slate-800/60 flex-shrink-0">
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#081331]/95 backdrop-blur-md p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
           <div className="flex items-center justify-between gap-3">
             {/* Header Info */}
             <div className="flex items-center gap-3 min-w-0">

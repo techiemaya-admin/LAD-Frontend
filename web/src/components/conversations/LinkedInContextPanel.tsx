@@ -315,6 +315,15 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
   const [pmTenantEnabled, setPmTenantEnabled] = useState(false);
   const [pmSaving, setPmSaving] = useState(false);
 
+  // What is ACTUALLY happening for this lead. The per-lead switch is a pause on
+  // top of the tenant-wide setting, so it can only ever turn monitoring OFF —
+  // never on. Rendering `!pmPaused` alone showed the control ON while the row's
+  // own subtitle read "Off tenant-wide", and left it clickable, so a click
+  // flipped a flag that changed nothing. That is the "toggle is not working"
+  // report: it was working, it just could not matter.
+  const pmEffectivelyOn = pmTenantEnabled && pmPaused === false;
+  const pmDisabled = pmPaused === null || pmSaving || !pmTenantEnabled;
+
   useEffect(() => {
     if (!followupSupported) { setPmPaused(false); return; }
     const q = new URLSearchParams({
@@ -336,6 +345,9 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
 
   const togglePostMonitoring = async () => {
     if (pmPaused === null || !followupSupported) return;
+    // Nothing to toggle while the tenant-wide switch is off — writing the flag
+    // would persist a preference the user cannot see the effect of.
+    if (!pmTenantEnabled) return;
     const next = !pmPaused;
     setPmSaving(true);
     setPmPaused(next); // optimistic
@@ -681,19 +693,27 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
               <button
                 type="button"
                 role="switch"
-                aria-checked={!pmPaused}
+                aria-checked={pmEffectivelyOn}
                 onClick={togglePostMonitoring}
-                disabled={pmPaused === null || pmSaving}
+                disabled={pmDisabled}
+                title={
+                  !pmTenantEnabled
+                    ? 'Post monitoring is off for the whole workspace. Enable it in Settings → Chat → LinkedIn first.'
+                    : undefined
+                }
                 className={cn(
                   'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
-                  !pmPaused ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700',
-                  pmSaving && 'opacity-60'
+                  pmEffectivelyOn ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700',
+                  pmSaving && 'opacity-60',
+                  // Off tenant-wide: show it as unavailable rather than merely off,
+                  // so it does not read as a switch the user simply failed to flip.
+                  !pmTenantEnabled && 'opacity-50 cursor-not-allowed'
                 )}
               >
                 <span
                   className={cn(
                     'inline-block h-4 w-4 mt-0.5 ml-0.5 rounded-full bg-white transition-transform',
-                    !pmPaused && 'translate-x-4'
+                    pmEffectivelyOn && 'translate-x-4'
                   )}
                 />
               </button>

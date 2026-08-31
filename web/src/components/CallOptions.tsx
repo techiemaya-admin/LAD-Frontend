@@ -855,7 +855,7 @@ export function CallOptions(props: CallOptionsProps) {
                         type="button"
                         aria-label={`View summary for row ${idx}`}
                         onClick={() => selectedSummaryIndex === idx ? onRadioChange(null) : onRadioChange(idx)}
-                        className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50
+                        className={`inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50 dark:hover:bg-[#0A123C]
                         ${selectedSummaryIndex === idx ? "bg-gray-100 border-gray-400" : ""}`}
                       >
                         {selectedSummaryIndex === idx ? (
@@ -868,7 +868,7 @@ export function CallOptions(props: CallOptionsProps) {
                         type="button"
                         aria-label={`Edit summary for row ${idx}`}
                         onClick={() => openEditorFor(idx)}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-gray-50 dark:hover:bg-[#0A123C]"
                       >
                         <SquarePen className="w-4 h-4" />
                       </button>
@@ -1103,20 +1103,20 @@ export function CallOptions(props: CallOptionsProps) {
       </CardContent>
       {/* Summary editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="dark:bg-[#071131] dark:border-blue-950/40">
-          <DialogHeader className="dark:bg-[#071131] dark:border-blue-950/40">
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="dark:bg-[#000724] dark:border-blue-950/40">
+          <DialogHeader className="dark:bg-[#081331] dark:border-blue-950/40">
+            <DialogTitle className="flex items-center gap-2 dark:text-white text-[#0b1957]">
               <SquarePen className="w-4 h-4" /> Edit Profile
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input className="dark:bg-slate-800/50 dark:border-blue-950/40" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
-              className="dark:bg-slate-800/50 dark:border-blue-950/40"
+              className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1129,7 +1129,7 @@ export function CallOptions(props: CallOptionsProps) {
                     ? { ...v, company_sales_summary: e.target.value, summary: e.target.value }
                     : { ...v, sales_summary: e.target.value, summary: e.target.value }
                 ))}
-                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-slate-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
+                className="w-full h-24 p-3 pr-12 text-sm border border-gray-200 dark:border-blue-950/40 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#7a8ba3]"
                 placeholder="Enter summary to save..."
               />
               <button
@@ -1181,7 +1181,7 @@ export function CallOptions(props: CallOptionsProps) {
                     setIsRephrasing(false);
                   }
                 }}
-                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-slate-800/50 hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
+                className="absolute right-2 top-2 p-2 rounded-md bg-gray-100 dark:bg-[#071131] hover:bg-gray-200 dark:hover:bg-slate-800/70 border border-gray-300 dark:border-blue-950/40 text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white"
               >
                 {isRephrasing ? (
                   <span className="animate-spin text-gray-600">⏳</span>
@@ -1191,7 +1191,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#071131] dark:border-blue-950/40">
+          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#081331] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 

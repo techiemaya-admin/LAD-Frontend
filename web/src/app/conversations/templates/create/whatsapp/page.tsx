@@ -450,9 +450,13 @@ export default function WhatsAppTemplateCreatePage() {
               <h2 className="text-base font-semibold text-[#1E293B] dark:text-white">Template name and language</h2>
             </div>
             <div className="p-6 space-y-4">
-              {accounts.length > 1 && (
+              {/* See CreateWabaTemplateModal: shown for one number too, because a
+                  template is bound to the number it was submitted against and the
+                  fallback is otherwise invisible. */}
+              {accounts.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">WhatsApp number</label>
+                  {accounts.length > 1 ? (
                   <select
                     value={effectiveAccountId}
                     onChange={e => setAccountId(e.target.value)}
@@ -464,8 +468,17 @@ export default function WhatsAppTemplateCreatePage() {
                       </option>
                     ))}
                   </select>
+                  ) : (
+                    <div
+                      className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-[#F8FAFC] dark:bg-[#000724] text-[#1E293B] dark:text-white"
+                      data-testid="waba-template-single-account"
+                    >
+                      {targetAccount?.display_phone_number || targetAccount?.display_name || targetAccount?.slug}
+                    </div>
+                  )}
                   <p className="text-[11px] text-[#94A3B8] dark:text-gray-500 mt-1">
-                    Templates belong to one number. Meta reviews this one against the number you pick.
+                    Templates belong to one number. Meta reviews this one against{' '}
+                    {accounts.length > 1 ? 'the number you pick' : 'this number'}.
                   </p>
                 </div>
               )}

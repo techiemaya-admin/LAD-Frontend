@@ -20,6 +20,9 @@ interface FormData {
   slug: string;
   email: string;
   planTier: string;
+  industry: string;
+  vertical: string;
+  snapshotPipelines: string[];
   environment: 'develop' | 'stage';
 
   // Step 2 - Admin User
@@ -124,12 +127,32 @@ const FALLBACK_ESSENTIAL_CAPABILITIES = [
   'view_conversations', 'view_followups',
 ];
 
+interface SnapshotPipelineMeta {
+  key: string;
+  goal: string | null;
+  engine: string | null;
+  /** 'live' | 'planned'. A planned pipeline can be entitled but cannot be switched on. */
+  state: string | null;
+}
+
+interface VerticalMeta {
+  key: string;
+  description: string | null;
+  version: string | null;
+  status: string | null;
+  pipelines: SnapshotPipelineMeta[];
+}
+
 interface TenantFormMeta {
   features: string[];
   feature_flags: string[];
   capabilities: string[];
   essential_features: string[];
   essential_capabilities: string[];
+  /** The real plan_tier enum. See PLAN_TIERS below for why this is not local. */
+  plan_tiers?: string[];
+  /** Verticals with a deployed manifest. Absent on an older backend. */
+  verticals?: VerticalMeta[];
 }
 
 const STEPS = [
@@ -141,7 +164,14 @@ const STEPS = [
   { id: 6, label: 'Review',   icon: ClipboardList },
 ];
 
-const PLAN_TIERS = ['starter', 'professional', 'enterprise', 'custom'];
+// FALLBACK ONLY — the live list comes from /meta.
+//
+// This was the THIRD copy of the plan tiers, and like the other two it was
+// wrong: 'custom' is not a member of the plan_tier enum, so choosing it failed
+// the insert exactly as the backend's own 'trial' default did. The enum is
+// (free, starter, professional, enterprise); this list exists so the form
+// still renders against a backend that predates /meta returning them.
+const PLAN_TIERS_FALLBACK = ['free', 'starter', 'professional', 'enterprise'];
 
 const defaultForm = (): FormData => ({
   companyName: '',
@@ -149,6 +179,14 @@ const defaultForm = (): FormData => ({
   email: '',
   planTier: 'professional',
   environment: 'develop',
+  // The tenant's OWN sector, for prompt grounding. NOT the same thing as
+  // `vertical` below, and never derived from it: a software company selling to
+  // gyms has industry 'SaaS' and would never be vertical 'wellness'.
+  industry: '',
+  // The product edition. '' means the general-purpose product, which is what
+  // every tenant created through this form has been until now.
+  vertical: '',
+  snapshotPipelines: [] as string[],
   adminFirstName: '',
   adminLastName: '',
   adminEmail: '',
@@ -294,7 +332,33 @@ function TagGroup({ items, selected, onChange, locked = [] }: {
 
 // ─── Step Components ──────────────────────────────────────────────────────────
 
-function StepCompany({ form, set }: { form: FormData; set: (k: keyof FormData, v: any) => void }) {
+function StepCompany({ form, set, meta }: {
+  form: FormData; set: (k: keyof FormData, v: any) => void; meta: TenantFormMeta | null;
+}) {
+  const verticals = meta?.verticals ?? [];
+  const chosen = verticals.find(v => v.key === form.vertical) || null;
+  const planTiers = meta?.plan_tiers?.length ? meta.plan_tiers : PLAN_TIERS_FALLBACK;
+
+  /**
+   * Choosing an edition pre-selects the pipelines that can actually run.
+   *
+   * `planned` ones are offered but never auto-selected: they are entitle-able
+   * (a commercial decision) yet setPipelineActive refuses to switch them on,
+   * so defaulting them ON would hand a new tenant a switch that does nothing.
+   */
+  const pickVertical = (key: string) => {
+    set('vertical', key);
+    const v = verticals.find(x => x.key === key);
+    set('snapshotPipelines', v ? v.pipelines.filter(p => p.state === 'live').map(p => p.key) : []);
+  };
+
+  const togglePipeline = (key: string) => {
+    const has = form.snapshotPipelines.includes(key);
+    set('snapshotPipelines', has
+      ? form.snapshotPipelines.filter(k => k !== key)
+      : [...form.snapshotPipelines, key]);
+  };
+
   const handleName = (v: string) => {
     set('companyName', v);
     if (!form.slug || form.slug === toSlug(form.companyName)) {
@@ -316,7 +380,10 @@ function StepCompany({ form, set }: { form: FormData; set: (k: keyof FormData, v
           <TextInput value={form.email} onChange={v => set('email', v)} placeholder="billing@acme.com" type="email" />
         </FieldRow>
         <FieldRow label="Plan Tier">
-          <SelectInput value={form.planTier} onChange={v => set('planTier', v)} options={PLAN_TIERS} />
+          <SelectInput value={form.planTier} onChange={v => set('planTier', v)} options={planTiers} />
+        </FieldRow>
+        <FieldRow label="Industry" hint="The tenant's own sector — grounds the agent's prompts">
+          <TextInput value={form.industry} onChange={v => set('industry', v)} placeholder="Fitness & Wellness" />
         </FieldRow>
         <FieldRow label="Environment" required hint="Determines which core schema to use">
           <div className="flex gap-3">
@@ -337,6 +404,65 @@ function StepCompany({ form, set }: { form: FormData; set: (k: keyof FormData, v
           </div>
         </FieldRow>
       </div>
+
+      {/* ── Industry edition ────────────────────────────────────────────────
+          Separate from `industry` above and never derived from it: this is the
+          PRODUCT edition, a curated set of pipelines, whereas industry is the
+          tenant's own sector. Absent on an older backend, in which case this
+          block does not render and the tenant is created on the general-purpose
+          product exactly as before. */}
+      {verticals.length > 0 && (
+        <div className="mt-4 border-t border-gray-800 pt-5">
+          <FieldRow label="Industry Edition" hint="A curated set of pipelines. Leave blank for the standard product.">
+            <SelectInput
+              value={form.vertical}
+              onChange={pickVertical}
+              options={['', ...verticals.map(v => v.key)]}
+            />
+          </FieldRow>
+
+          {chosen && (
+            <div className="mt-3">
+              <div className="text-sm text-gray-300">{chosen.description || chosen.key}</div>
+              <div className="text-xs text-gray-500 mb-3">
+                Manifest {chosen.version}{chosen.status ? ` \u00b7 ${chosen.status}` : ''}
+              </div>
+              <div className="text-sm font-medium text-gray-200 mb-2">Pipelines to entitle</div>
+              <div className="flex flex-col gap-2">
+                {chosen.pipelines.map(pipe => {
+                  const planned = pipe.state === 'planned';
+                  const selected = form.snapshotPipelines.includes(pipe.key);
+                  return (
+                    <button
+                      key={pipe.key}
+                      type="button"
+                      disabled={planned}
+                      onClick={() => togglePipeline(pipe.key)}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm text-left transition-all
+                        ${planned
+                          ? 'bg-[#161a26] border-gray-800 text-gray-600 cursor-not-allowed'
+                          : selected
+                            ? 'bg-purple-900/40 border-purple-500 text-purple-200'
+                            : 'bg-[#1e2333] border-gray-700 text-gray-300 hover:border-gray-600'}`}
+                    >
+                      <span>
+                        {pipe.key}
+                        {pipe.goal ? <span className="text-gray-500"> &middot; {pipe.goal}</span> : null}
+                      </span>
+                      {planned ? (
+                        /* Said here rather than discovered later: this pipeline
+                           can be sold, but its switch is refused server-side
+                           until it ships, so selecting it would buy nothing. */
+                        <span className="text-[11px] uppercase tracking-wide text-gray-600">Not built yet</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {form.slug && (
         <div className="mt-2 p-3 bg-[#1e2333] border border-gray-700 rounded-lg text-xs font-mono text-gray-400">
@@ -958,6 +1084,13 @@ export default function TenantOnboardPage() {
           company_email:  form.email,
           plan_tier:      form.planTier,
           environment:    form.environment,
+          industry:       form.industry || undefined,
+          // Omitted entirely when no edition was chosen. Sending vertical:''
+          // would fail provision.js's format check, which is stricter than
+          // "falsy means none".
+          ...(form.vertical
+            ? { vertical: form.vertical, snapshot_pipelines: form.snapshotPipelines }
+            : {}),
           status:         'active',
           // Admin user
           admin_first_name: form.adminFirstName,
@@ -1155,7 +1288,7 @@ export default function TenantOnboardPage() {
               />
             ) : (
               <>
-                {step === 1 && <StepCompany form={form} set={set} />}
+                {step === 1 && <StepCompany form={form} set={set} meta={meta} />}
                 {step === 2 && <StepAdmin form={form} set={set} />}
                 {step === 3 && <StepDatabase form={form} set={set} />}
                 {step === 4 && <StepWaba form={form} set={set} />}

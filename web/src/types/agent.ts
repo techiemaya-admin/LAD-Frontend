@@ -34,6 +34,39 @@ export interface AgentFormData {
   outbound_starter_prompt: string;
 }
 
+/**
+ * Provider-specific tuning stored on the voice row (voice_agent_voices.provider_config).
+ * Only keys on the backend allowlist in resolve_voice() reach the worker.
+ */
+export interface VoiceProviderConfig {
+  model?: string;
+  speed?: number;
+  pitch?: number;
+  /** Fish Audio: quality vs time-to-first-audio. DB rows use "latency". */
+  latency?: FishLatencyMode;
+  latency_mode?: FishLatencyMode;
+  /** Fish Audio: audio container. DB rows use "format". */
+  format?: FishOutputFormat;
+  output_format?: FishOutputFormat;
+  [key: string]: unknown;
+}
+
+export type FishLatencyMode = 'normal' | 'balanced' | 'low';
+export type FishOutputFormat = 'wav' | 'pcm' | 'mp3' | 'opus';
+
+export const FISH_LATENCY_MODES: { value: FishLatencyMode; label: string; hint: string }[] = [
+  { value: 'low', label: 'Low', hint: 'Fastest reply, slightly lower audio quality' },
+  { value: 'balanced', label: 'Balanced', hint: 'Default trade-off' },
+  { value: 'normal', label: 'Normal', hint: 'Best quality, slowest to start speaking' },
+];
+
+export const FISH_OUTPUT_FORMATS: { value: FishOutputFormat; label: string }[] = [
+  { value: 'pcm', label: 'PCM (recommended for calls)' },
+  { value: 'wav', label: 'WAV' },
+  { value: 'mp3', label: 'MP3' },
+  { value: 'opus', label: 'Opus (48 kHz only)' },
+];
+
 export interface Voice {
   id: string;
   description: string;
@@ -42,6 +75,7 @@ export interface Voice {
   provider: string;
   voice_sample_url: string;
   provider_voice_id: string;
+  provider_config?: VoiceProviderConfig;
 }
 
 export const DEFAULT_AGENT_FORM: AgentFormData = {

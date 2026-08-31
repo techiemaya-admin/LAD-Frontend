@@ -396,9 +396,18 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Basic Info</h3>
 
-                {accounts.length > 1 && (
+                {/* Shown whenever there is a number at all, not only when there are
+                    several. A template is submitted to Meta against ONE number and
+                    cannot be moved afterwards, so which number that is belongs on
+                    screen even when there is no choice to make — a single-number
+                    tenant otherwise submits against a silent `accounts[0]` fallback
+                    and finds out where it landed only when approval comes back on
+                    the wrong WABA. It also keeps the form from changing shape the
+                    day a second number is connected. */}
+                {accounts.length > 0 && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium">WhatsApp number <span className="text-red-500">*</span></label>
+                    {accounts.length > 1 ? (
                     <Select value={effectiveAccountId} onValueChange={setAccountId}>
                       <SelectTrigger className="w-full h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors">
                         <SelectValue placeholder="Select number" />
@@ -411,8 +420,17 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         ))}
                       </SelectContent>
                     </Select>
+                    ) : (
+                      <div
+                        className="w-full h-8 px-3 flex items-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100"
+                        data-testid="waba-template-single-account"
+                      >
+                        {targetAccount?.display_phone_number || targetAccount?.display_name || targetAccount?.slug}
+                      </div>
+                    )}
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                      Templates belong to one number. This one is submitted to Meta for approval on the number you pick.
+                      Templates belong to one number. This one is submitted to Meta for approval on{' '}
+                      {accounts.length > 1 ? 'the number you pick' : 'this number'}.
                     </p>
                   </div>
                 )}
