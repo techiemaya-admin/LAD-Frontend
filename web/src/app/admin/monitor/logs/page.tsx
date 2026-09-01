@@ -83,9 +83,9 @@ export default function MonitorLogsPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-transparent shadow-sm dark:border-blue-950/40">
         <table className="min-w-full divide-y divide-gray-200 text-xs dark:divide-blue-950/40">
-          <thead className="bg-gray-50 text-left uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
+          <thead className="bg-slate-50/70 text-left uppercase tracking-wide text-gray-500 dark:bg-[#071131]">
             <tr>
               <th className="px-3 py-2 font-medium">Time</th>
               <th className="px-3 py-2 font-medium">Severity</th>
@@ -93,7 +93,7 @@ export default function MonitorLogsPage() {
               <th className="px-3 py-2 font-medium">Message</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+          <tbody className="divide-y divide-slate-100 dark:divide-[#262831]">
             {loading && entries.length === 0 ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i}><td colSpan={4} className="px-3 py-2"><div className="h-4 animate-pulse rounded bg-gray-100 dark:bg-[#253456]" /></td></tr>
@@ -102,7 +102,7 @@ export default function MonitorLogsPage() {
               <tr><td colSpan={4} className="px-3 py-8 text-center text-gray-400">No log entries</td></tr>
             ) : (
               entries.map((e, i) => (
-                <tr key={e.id || i} className="align-top hover:bg-gray-50 dark:hover:bg-[#253456]">
+                <tr key={e.id || i} className="align-top bg-transparent hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                   <td className="whitespace-nowrap px-3 py-2 text-gray-500">
                     {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '-'}
                   </td>

@@ -78,9 +78,9 @@ export default function MonitorCronsPage() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-transparent shadow-sm dark:border-blue-950/40">
         <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-blue-950/40">
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
+          <thead className="bg-slate-50/70 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#071131]">
             <tr>
               <th className="px-4 py-3 font-medium">Job</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -90,7 +90,7 @@ export default function MonitorCronsPage() {
               <th className="px-4 py-3 font-medium">Last error</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+          <tbody className="divide-y divide-slate-100 dark:divide-[#262831]">
             {loading && !data ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <tr key={i}><td colSpan={6} className="px-4 py-3"><div className="h-5 animate-pulse rounded bg-gray-100 dark:bg-[#253456]" /></td></tr>
@@ -103,7 +103,7 @@ export default function MonitorCronsPage() {
               </tr>
             ) : (
               data.jobs.map((job) => (
-                <tr key={job.jobName} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
+                <tr key={job.jobName} className="bg-transparent hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                   <td className="px-4 py-3 font-mono text-gray-900 dark:text-gray-100">{job.jobName}</td>
                   <td className="px-4 py-3"><JobStatus job={job} /></td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{relativeTime(job.secondsSinceBeat)}</td>

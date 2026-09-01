@@ -33,9 +33,9 @@ export default function MonitorTenantsPage() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-transparent shadow-sm dark:border-blue-950/40">
         <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-blue-950/40">
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
+          <thead className="bg-slate-50/70 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#071131]">
             <tr>
               <th className="px-4 py-3 font-medium">Tenant</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -53,7 +53,7 @@ export default function MonitorTenantsPage() {
               <th className="px-4 py-3 font-medium">Last login</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+          <tbody className="divide-y divide-slate-100 dark:divide-[#262831]">
             {loading && data.length === 0 ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
@@ -68,7 +68,7 @@ export default function MonitorTenantsPage() {
               </tr>
             ) : (
               data.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
+                <tr key={t.id} className="bg-transparent hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900 dark:text-gray-100">{t.name}</div>
                     <div className="text-xs capitalize text-gray-400">{t.plan}</div>

@@ -142,9 +142,9 @@ export default function MonitorLlmCostPage() {
             {/* By feature */}
             <div>
               <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">Top features</h3>
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-transparent shadow-sm dark:border-blue-950/40">
                 <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-blue-950/40">
-                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
+                  <thead className="bg-slate-50/70 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#071131]">
                     <tr>
                       <th className="px-4 py-3 font-medium">Feature</th>
                       <th className="px-4 py-3 font-medium">Model</th>
@@ -152,9 +152,9 @@ export default function MonitorLlmCostPage() {
                       <th className="px-4 py-3 font-medium">Cost</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#262831]">
                     {data!.byFeature.slice(0, 10).map((f, i) => (
-                      <tr key={`${f.feature_key}-${f.model}-${i}`} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
+                      <tr key={`${f.feature_key}-${f.model}-${i}`} className="bg-transparent hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">{f.feature_key}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-500">{f.model}</td>
                         <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{f.calls.toLocaleString()}</td>
@@ -171,18 +171,18 @@ export default function MonitorLlmCostPage() {
               <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
                 <Building2 className="h-3.5 w-3.5 text-gray-400" /> Top tenants
               </h3>
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-transparent shadow-sm dark:border-blue-950/40">
                 <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-blue-950/40">
-                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#1a2a43]">
+                  <thead className="bg-slate-50/70 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-[#071131]">
                     <tr>
                       <th className="px-4 py-3 font-medium">Tenant</th>
                       <th className="px-4 py-3 font-medium">Calls</th>
                       <th className="px-4 py-3 font-medium">Cost</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-blue-950/40">
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#262831]">
                     {data!.byTenant.slice(0, 10).map((t) => (
-                      <tr key={t.tenant_id} className="hover:bg-gray-50 dark:hover:bg-[#253456]">
+                      <tr key={t.tenant_id} className="bg-transparent hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">{t.tenant_name || t.tenant_id}</td>
                         <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{t.calls.toLocaleString()}</td>
                         <td className="px-4 py-2.5 font-semibold text-gray-900 dark:text-gray-100">{money(t.cost)}</td>

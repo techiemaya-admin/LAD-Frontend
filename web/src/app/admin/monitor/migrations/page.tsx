@@ -69,9 +69,9 @@ export default function MonitorMigrationsPage() {
             API-only super-admin action (<code>POST /api/admin/monitor/migrations/run</code>, dry-run by default).
           </p>
 
-          <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-transparent dark:border-blue-950/40">
             <table className="w-full min-w-[560px]">
-              <thead className="bg-gray-50 dark:bg-[#1a2a43]">
+              <thead className="bg-slate-50/70 dark:bg-[#071131]">
                 <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 dark:border-blue-950/40 dark:text-gray-400">
                   <th className="px-4 py-2">Target</th>
                   <th className="px-4 py-2">Status</th>
@@ -80,14 +80,14 @@ export default function MonitorMigrationsPage() {
                 </tr>
               </thead>
               <tbody className="px-4">
-                <tr className="border-b border-gray-100 dark:border-blue-950/40">
+                <tr className="bg-transparent border-b border-slate-100 dark:border-[#262831] hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                   <td className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200">{data.core.name}</td>
                   <td className="px-4 py-2"><StatusBadge status={data.core.status} /></td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.missing.join(', ') || '-'}</td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{data.core.ledgerPresent ? `${data.core.ledgerVersions.length} recorded` : 'no ledger'}</td>
                 </tr>
                 {[...data.tenants].sort((a, b) => (a.status === b.status ? 0 : a.status === 'behind' ? -1 : 1)).map((t) => (
-                  <tr key={t.target} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-blue-950/40 dark:hover:bg-[#253456]">
+                  <tr key={t.target} className="bg-transparent border-b border-slate-100 last:border-0 dark:border-[#262831] hover:bg-[#f5f7fd] dark:hover:bg-[#0e1a3a] transition-colors">
                     <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{t.name}</td>
                     <td className="px-4 py-2"><StatusBadge status={t.status} /></td>
                     <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{t.missing.length ? t.missing.join(', ') : <span className="text-emerald-500">-</span>}</td>
