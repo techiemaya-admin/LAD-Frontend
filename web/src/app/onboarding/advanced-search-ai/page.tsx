@@ -604,6 +604,103 @@ function resolveProfileUrl(item: any): string {
  * scored 1/100 is noise either way. Idempotent, so applying it again at a
  * render site is harmless.
  */
+/** One progress tick from the prospect-search stream. */
+type ProspectProgress = { phase: string; done: number; total: number; latest?: string | null };
+
+/**
+ * POST /prospect-search, reading progress as it arrives.
+ *
+ * The search takes 73-119s in production — Claude discovery plus several
+ * sequential web lookups per company — and used to return nothing until it was
+ * finished, so the chat showed one motionless line for two minutes and read as a
+ * hang. Passing `onProgress` opts into a newline-delimited JSON stream and gets
+ * real counts as they happen.
+ *
+ * Returns the same `{ok, status, data}` a plain fetch would, so the branches at
+ * the call sites are unchanged. Without `onProgress` — or against a backend that
+ * ignores the flag — it falls back to one JSON body, which is what "Get More" and
+ * the lead-preview panel still do.
+ */
+async function runProspectSearch(
+    body: Record<string, unknown>,
+    onProgress?: (p: ProspectProgress) => void,
+): Promise<{ ok: boolean; status: number; data: any }> {
+    const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, stream: Boolean(onProgress) }),
+    });
+
+    const ctype = resp.headers.get('content-type') || '';
+    if (!onProgress || !ctype.includes('ndjson') || !resp.body) {
+        const data = await resp.json().catch(() => null);
+        return { ok: resp.ok && data?.success !== false, status: resp.status, data };
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let final: any = null;
+
+    const consume = (line: string) => {
+        if (!line.trim()) return;
+        let evt: any;
+        // A chunk can split mid-line, so an unparseable fragment is expected —
+        // never let one throw away a search that has already been paid for.
+        try { evt = JSON.parse(line); } catch { return; }
+        if (evt.type === 'progress') onProgress(evt as ProspectProgress);
+        else if (evt.type === 'result' || evt.type === 'error') final = evt;
+    };
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';   // keep the trailing partial line for the next chunk
+        lines.forEach(consume);
+    }
+    consume(buf);
+
+    if (!final) {
+        // The stream ended without a verdict — a dropped connection, not an empty
+        // result. Saying "no matches" here would repeat the bug one layer down.
+        return {
+            ok: false,
+            status: resp.status,
+            data: { success: false, error: 'The search ended before returning a result.' },
+        };
+    }
+    return { ok: final.type !== 'error' && final.success !== false, status: resp.status, data: final };
+}
+
+/** Live text for the "still working" bubble. Real counts, never a fake animation. */
+function prospectProgressText(p: ProspectProgress | null): string {
+    if (!p || p.phase === 'discovering') {
+        return `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts.\n\n⚡ *Identifying companies...*`;
+    }
+    const at = p.latest ? ` — latest: **${p.latest}**` : '';
+    return `🔍 **Finding specific companies and decision makers for you...**\n\nResearching each prospect across the web, LinkedIn and company databases.\n\n⚡ *Researched **${p.done} of ${p.total}** prospects${at}*`;
+}
+
+/**
+ * Say what the size clause did — including when it could not be verified.
+ *
+ * "…with 50 to 200 employees" was previously parsed by nothing and applied by
+ * nothing, and the silence is what made it a bug rather than a limitation. A
+ * filter that ran and a filter that never existed must not look the same.
+ */
+function sizeConstraintNote(sc: any): string {
+    if (!sc || !sc.applied) return '';
+    const bits: string[] = [`📏 **Size filter applied:** ${sc.requested}.`];
+    if (sc.excluded > 0) bits.push(`${sc.excluded} compan${sc.excluded === 1 ? 'y' : 'ies'} outside that range excluded.`);
+    if (sc.unverified > 0) {
+        bits.push(`${sc.unverified} kept without a published headcount — I could not verify their size, so check those before reaching out.`);
+    }
+    if (sc.excluded === 0 && sc.unverified === 0) bits.push('All results are within range.');
+    return `\n\n${bits.join(' ')}`;
+}
+
 function normalizeIcpScore(raw: unknown): number | undefined {
     if (raw === null || raw === undefined || raw === '') return undefined;
     const n = Number(raw); // pg NUMERIC can arrive as a string
@@ -5286,20 +5383,28 @@ export default function AdvancedSearchAIPage() {
                             setSeenProspectIds([]);
                             setLeads([]);
 
+                            // A stable id so the stream can rewrite this one bubble in
+                            // place, rather than stacking a new message per tick.
+                            const progressId = `a-gps-${Date.now()}`;
+                            setMessages(p => p.concat({
+                                id: progressId, role: 'ai', text: prospectProgressText(null), ts: new Date(),
+                            }));
+
                             try {
-                                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
+                                const { ok: respOk, status: respStatus, data: d } = await runProspectSearch(
+                                    {
                                         query: prospectQuery,
                                         icpProfile: businessProfile,
                                         sessionId: `gps-${Date.now()}`,
                                         seenIds: [],
                                         batchSize: leadCount,
-                                    }),
-                                });
-                                const d = await resp.json();
+                                    },
+                                    (prog) => setMessages(p => p.map(m => (
+                                        m.id === progressId ? { ...m, text: prospectProgressText(prog) } : m
+                                    ))),
+                                );
                                 setIsSearching(false);
+                                setMessages(p => p.filter(m => m.id !== progressId));
                                 if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                                     const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
                                         id: item.id || `gps-${idx}`,
@@ -5330,15 +5435,15 @@ export default function AdvancedSearchAIPage() {
                                     setTotalResults(d.total || prospectLeads.length);
                                     setMessages(p => p.concat({
                                         id: `a-sr-${Date.now()}`, role: 'ai',
-                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.${sizeConstraintNote(d.sizeConstraint)}\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
                                         ts: new Date(),
                                     }));
-                                } else if (!resp.ok || d.success === false) {
+                                } else if (!respOk || d?.success === false) {
                                     // A server-side failure is NOT an empty result set. The
                                     // endpoint returns JSON on 500, so resp.json() succeeds and
                                     // this used to fall through to "try rephrasing" - telling
                                     // people to reword a query that was never the problem.
-                                    console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                                    console.error('[ProspectSearch] server error', respStatus, d?.error, d?.detail);
                                     setMessages(p => p.concat({
                                         id: `a-err-${Date.now()}`, role: 'ai',
                                         text: `⚠️ The search failed on our side - this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
@@ -5354,7 +5459,9 @@ export default function AdvancedSearchAIPage() {
                             } catch (prospectErr) {
                                 setIsSearching(false);
                                 console.error('[ProspectSearch] error', prospectErr);
-                                setMessages(p => p.concat({
+                                // Drop the progress bubble too - a "researched 6 of 10" line
+                                // left frozen above an error reads as a partial result.
+                                setMessages(p => p.filter(m => m.id !== progressId).concat({
                                     id: `a-err-${Date.now()}`, role: 'ai',
                                     text: `⚠️ Prospect search failed. Please try again or rephrase your query.`,
                                     ts: new Date(),
@@ -5402,9 +5509,12 @@ export default function AdvancedSearchAIPage() {
                 // This catches cases where the backend classified the intent as CONTEXT_SEARCH
                 // or extracted LinkedIn keywords instead of detecting the generic pattern.
                 if (shouldRunSearch && isGenericCompanySearchQuery(text)) {
+                    // Stable id: the stream rewrites THIS bubble as prospects land, so
+                    // the two minutes stop looking like a hang.
+                    const gpsProgressId = `a-gps-${Date.now()}`;
                     setMessages(p => p.filter(m => m.id !== lid).concat({
-                        id: `a-${Date.now()}`, role: 'ai',
-                        text: `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts. This may take a moment as I research each prospect.\n\n⚡ *Searching across the web, LinkedIn, and company databases...*`,
+                        id: gpsProgressId, role: 'ai',
+                        text: prospectProgressText(null),
                         ts: new Date(),
                     }));
                     setIsSearching(true);
@@ -5415,19 +5525,20 @@ export default function AdvancedSearchAIPage() {
                     setLeads([]);
 
                     try {
-                        const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
+                        const { ok: respOk, status: respStatus, data: d } = await runProspectSearch(
+                            {
                                 query: text,
                                 icpProfile: businessProfile,
                                 sessionId: `gps-${Date.now()}`,
                                 seenIds: [],
                                 batchSize: leadCount,
-                            }),
-                        });
-                        const d = await resp.json();
+                            },
+                            (prog) => setMessages(p => p.map(m => (
+                                m.id === gpsProgressId ? { ...m, text: prospectProgressText(prog) } : m
+                            ))),
+                        );
                         setIsSearching(false);
+                        setMessages(p => p.filter(m => m.id !== gpsProgressId));
                         if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                             const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
                                 id: item.id || `gps-${idx}`,
@@ -5458,13 +5569,13 @@ export default function AdvancedSearchAIPage() {
                             const strongMatches = prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length;
                             setMessages(p => p.concat({
                                 id: `a-sr-${Date.now()}`, role: 'ai',
-                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.${sizeConstraintNote(d.sizeConstraint)}\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
                                 ts: new Date(),
                             }));
-                        } else if (!resp.ok || d.success === false) {
+                        } else if (!respOk || d?.success === false) {
                             // See the sibling handler above: a 500 returns JSON, so this branch
                             // must be split out or a server crash reads as "no matches".
-                            console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                            console.error('[ProspectSearch] server error', respStatus, d?.error, d?.detail);
                             setMessages(p => p.concat({
                                 id: `a-err-${Date.now()}`, role: 'ai',
                                 text: `⚠️ The search failed on our side - this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
@@ -5480,7 +5591,9 @@ export default function AdvancedSearchAIPage() {
                     } catch (prospectErr) {
                         setIsSearching(false);
                         console.error('[ProspectSearch] error', prospectErr);
-                        setMessages(p => p.concat({
+                        // Drop the progress bubble too - a "researched 6 of 10" line left
+                        // frozen above an error reads as a partial result.
+                        setMessages(p => p.filter(m => m.id !== gpsProgressId).concat({
                             id: `a-err-${Date.now()}`, role: 'ai',
                             text: `⚠️ Prospect search failed. Please try again.`,
                             ts: new Date(),
