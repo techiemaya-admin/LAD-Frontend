@@ -1165,7 +1165,7 @@ export const MageSettings: React.FC = () => {
 
         <Tile
           icon={<IconTypography stroke={1.75} />}
-          title="Shortcuts"
+          title="Keywords"
           hint="Short words that expand into a longer brief"
         >
           {Object.keys(keywords).length ? (
@@ -1185,7 +1185,7 @@ export const MageSettings: React.FC = () => {
               None yet. Useful because a filename is a poor place to write a brief.
             </p>
           )}
-          <ManageButton onClick={() => setModal('shortcuts')} hint="Add or remove shortcuts" />
+          <ManageButton onClick={() => setModal('shortcuts')} hint="Add or remove keywords" />
         </Tile>
 
         <Tile
@@ -1434,7 +1434,7 @@ export const MageSettings: React.FC = () => {
       )}
 
       {modal === 'shortcuts' && (
-        <Modal title="Shortcuts" onClose={() => setModal(null)}>
+        <Modal title="Keywords" onClose={() => setModal(null)}>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Name a file or write a brief using a shortcut and the agent receives the full
             text it stands for.
