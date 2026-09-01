@@ -151,6 +151,135 @@ type ModalId = 'request' | 'brand' | 'audience' | 'assets' | 'shortcuts' | 'driv
  */
 const ACTION_WIDTH = 'clamp(7rem, 8.6vw, 8.75rem)';
 
+// ── render helpers, at module scope ─────────────────────────────────────────
+//
+// Declared OUTSIDE the component on purpose. A component defined inside a
+// render body is a brand new type on every render, so React unmounts and
+// remounts its whole subtree each time state changes. In a modal that means
+// every input loses focus after a single keystroke.
+
+/** Palette names resolve here so a shortcut colour stays legible in both themes. */
+const SWATCH: Record<string, string> = {
+  coral: '#D85A30', teal: '#1D9E75', purple: '#7F77DD', blue: '#378ADD',
+  green: '#639922', amber: '#BA7517', pink: '#D4537E', gray: '#888780',
+};
+const CATEGORY_TINTS = ['#7F77DD', '#1D9E75', '#D85A30', '#378ADD', '#639922', '#D4537E'];
+
+const relative = (iso?: string | null): string => {
+  if (!iso) return 'never';
+  const secs = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (!Number.isFinite(secs) || secs < 0) return 'just now';
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
+};
+
+
+/**
+ * One tile. Kept small on purpose: the tile previews, the modal edits.
+ *
+ * Everything is sized against the viewport rather than in fixed pixels, so the
+ * ratio between icon, heading and body holds at any width. clamp() rather than
+ * raw vw: raw viewport units go unreadable on a narrow window and oversized on
+ * a large monitor, and this card lives in a panel whose width we do not own.
+ * The icon is sized from the wrapper so call sites stay plain.
+ */
+const Tile: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
+  span?: boolean;
+  children: React.ReactNode;
+}> = ({ icon, title, hint, action, span, children }) => (
+  <div
+    className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 flex flex-col ${
+      span ? 'sm:col-span-2 lg:col-span-3' : ''
+    }`}
+    style={{
+      padding: 'clamp(0.85rem, 1.1vw, 1.25rem)',
+      // A floor on the six small tiles so the last line of body text is not
+      // sitting flush on top of the Manage button. Without it a tile with one
+      // short line and a tile with three collapse to different heights, and
+      // the short one leaves no breathing room at all.
+      minHeight: span ? undefined : 'clamp(11rem, 13vw, 13.5rem)',
+    }}
+  >
+    <div
+      className="flex items-center"
+      style={{ gap: 'clamp(0.4rem, 0.6vw, 0.6rem)', marginBottom: 'clamp(0.6rem, 0.8vw, 0.9rem)' }}
+    >
+      <span
+        className="text-gray-500 dark:text-gray-400 shrink-0 [&>svg]:w-[1.45em] [&>svg]:h-[1.45em]"
+        style={{ fontSize: 'clamp(0.95rem, 1.05vw, 1.15rem)' }}
+        title={hint}
+      >
+        {icon}
+      </span>
+      <span
+        className="font-semibold text-gray-900 dark:text-gray-100 truncate"
+        style={{ fontSize: 'clamp(0.85rem, 0.95vw, 1rem)' }}
+      >
+        {title}
+      </span>
+      {action && <span className="ml-auto shrink-0">{action}</span>}
+    </div>
+    <div className="flex-1 flex flex-col">{children}</div>
+  </div>
+);
+
+/**
+ * Wrapped rather than bare: `margin-top: auto` pins the button to the bottom of
+ * the tile, but when the body text is long enough to fill the tile that auto
+ * margin collapses to nothing and the last line sits flush on the button. The
+ * wrapper carries the push AND a padding floor, so the gap survives either way.
+ */
+const ManageButton: React.FC<{ onClick: () => void; label?: string; hint: string }> = ({
+  onClick, label = 'Manage', hint,
+}) => (
+  <div style={{ marginTop: 'auto', paddingTop: 'clamp(0.85rem, 1.2vw, 1.15rem)' }}>
+    <button
+      onClick={onClick}
+      title={hint}
+      className="font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      style={{
+        fontSize: 'clamp(0.72rem, 0.8vw, 0.82rem)',
+        padding: 'clamp(0.3rem, 0.45vw, 0.42rem) clamp(0.6rem, 0.8vw, 0.85rem)',
+      }}
+    >
+      {label}
+    </button>
+  </div>
+);
+
+/** Shared modal shell. */
+const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
+  title, onClose, children,
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto"
+    onClick={onClose}
+  >
+    <div
+      className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-2xl my-8 shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <button
+          onClick={onClose}
+          title="Close"
+          className="ml-auto text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  </div>
+);
+
 export const MageSettings: React.FC = () => {
   const [modal, setModal] = useState<ModalId | null>(null);
   const [profiles, setProfiles] = useState<BrandProfile[]>([]);
@@ -596,23 +725,6 @@ export const MageSettings: React.FC = () => {
 
   // ── render helpers ────────────────────────────────────────────────────────
 
-  /** Palette names resolve here so a shortcut colour stays legible in both themes. */
-  const SWATCH: Record<string, string> = {
-    coral: '#D85A30', teal: '#1D9E75', purple: '#7F77DD', blue: '#378ADD',
-    green: '#639922', amber: '#BA7517', pink: '#D4537E', gray: '#888780',
-  };
-  const CATEGORY_TINTS = ['#7F77DD', '#1D9E75', '#D85A30', '#378ADD', '#639922', '#D4537E'];
-
-  const relative = (iso?: string | null): string => {
-    if (!iso) return 'never';
-    const secs = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-    if (!Number.isFinite(secs) || secs < 0) return 'just now';
-    if (secs < 60) return `${secs}s ago`;
-    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-    return `${Math.floor(secs / 86400)}d ago`;
-  };
-
   const defaultProfile = profiles.find((p) => p.is_default) || null;
   const brandColors = defaultProfile?.colors || null;
 
@@ -627,7 +739,7 @@ export const MageSettings: React.FC = () => {
     const raw = icp?.summary || icp?.description || '';
     if (!raw) return '';
     const pick = (label: string) => {
-      const m = raw.match(new RegExp(`${label}\\s*:\\s*([^:]+?)(?=\\s+[A-Z][a-z]+(?:\\s[a-z]+)*\\s*:|$)`));
+      const m = raw.match(new RegExp(`${label}\s*:\s*([^:]+?)(?=\s+[A-Z][a-z]+(?:\s[a-z]+)*\s*:|$)`));
       return m ? m[1].trim().replace(/\s+/g, ' ') : '';
     };
     const industry = pick('Industry');
@@ -635,110 +747,6 @@ export const MageSettings: React.FC = () => {
     const line = [industry, where].filter(Boolean).join(' · ');
     return line || raw.slice(0, 90);
   })();
-
-  /**
-   * One tile. Kept small on purpose: the tile previews, the modal edits.
-   *
-   * Everything is sized against the viewport rather than in fixed pixels, so the
-   * ratio between icon, heading and body holds at any width. clamp() rather than
-   * raw vw: raw viewport units go unreadable on a narrow window and oversized on
-   * a large monitor, and this card lives in a panel whose width we do not own.
-   * The icon is sized from the wrapper so call sites stay plain.
-   */
-  const Tile: React.FC<{
-    icon: React.ReactNode;
-    title: string;
-    hint?: string;
-    action?: React.ReactNode;
-    span?: boolean;
-    children: React.ReactNode;
-  }> = ({ icon, title, hint, action, span, children }) => (
-    <div
-      className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 flex flex-col ${
-        span ? 'sm:col-span-2 lg:col-span-3' : ''
-      }`}
-      style={{
-        padding: 'clamp(0.85rem, 1.1vw, 1.25rem)',
-        // A floor on the six small tiles so the last line of body text is not
-        // sitting flush on top of the Manage button. Without it a tile with one
-        // short line and a tile with three collapse to different heights, and
-        // the short one leaves no breathing room at all.
-        minHeight: span ? undefined : 'clamp(11rem, 13vw, 13.5rem)',
-      }}
-    >
-      <div
-        className="flex items-center"
-        style={{ gap: 'clamp(0.4rem, 0.6vw, 0.6rem)', marginBottom: 'clamp(0.6rem, 0.8vw, 0.9rem)' }}
-      >
-        <span
-          className="text-gray-500 dark:text-gray-400 shrink-0 [&>svg]:w-[1.45em] [&>svg]:h-[1.45em]"
-          style={{ fontSize: 'clamp(0.95rem, 1.05vw, 1.15rem)' }}
-          title={hint}
-        >
-          {icon}
-        </span>
-        <span
-          className="font-semibold text-gray-900 dark:text-gray-100 truncate"
-          style={{ fontSize: 'clamp(0.85rem, 0.95vw, 1rem)' }}
-        >
-          {title}
-        </span>
-        {action && <span className="ml-auto shrink-0">{action}</span>}
-      </div>
-      <div className="flex-1 flex flex-col">{children}</div>
-    </div>
-  );
-
-  /**
-   * Wrapped rather than bare: `margin-top: auto` pins the button to the bottom of
-   * the tile, but when the body text is long enough to fill the tile that auto
-   * margin collapses to nothing and the last line sits flush on the button. The
-   * wrapper carries the push AND a padding floor, so the gap survives either way.
-   */
-  const ManageButton: React.FC<{ onClick: () => void; label?: string; hint: string }> = ({
-    onClick, label = 'Manage', hint,
-  }) => (
-    <div style={{ marginTop: 'auto', paddingTop: 'clamp(0.85rem, 1.2vw, 1.15rem)' }}>
-      <button
-        onClick={onClick}
-        title={hint}
-        className="font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        style={{
-          fontSize: 'clamp(0.72rem, 0.8vw, 0.82rem)',
-          padding: 'clamp(0.3rem, 0.45vw, 0.42rem) clamp(0.6rem, 0.8vw, 0.85rem)',
-        }}
-      >
-        {label}
-      </button>
-    </div>
-  );
-
-  /** Shared modal shell. */
-  const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-    title, onClose, children,
-  }) => (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-2xl my-8 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-          <button
-            onClick={onClose}
-            title="Close"
-            className="ml-auto text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -1121,22 +1129,14 @@ export const MageSettings: React.FC = () => {
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Every image and video the agent has produced for you.
           </p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => openGallery(false)}
-              title="Show the last 90 days"
-              className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Open
-            </button>
-            <button
-              onClick={() => openGallery(true)}
-              title="Include everything, however old"
-              className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Show all
-            </button>
-          </div>
+          {/* One button, positioned like Manage on the other five tiles. The
+              older "Show all" was redundant: the gallery carries its own
+              full-history control via onLoadFullHistory. */}
+          <ManageButton
+            onClick={() => openGallery(false)}
+            label="Show recents"
+            hint="Open the gallery. It can load your full history from inside."
+          />
         </Tile>
 
         <Tile
