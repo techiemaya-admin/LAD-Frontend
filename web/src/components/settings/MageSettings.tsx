@@ -321,6 +321,10 @@ export const MageSettings: React.FC = () => {
   const [kwKey, setKwKey] = useState('');
   const [kwValue, setKwValue] = useState('');
   const [kwColor, setKwColor] = useState('teal');
+  // Which shortcut the form is currently editing, if any. The same form does
+  // both jobs because the write is an upsert: saving an existing token updates
+  // it rather than creating a duplicate.
+  const [editingKeyword, setEditingKeyword] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState('');
   const [previewResult, setPreviewResult] = useState<KeywordPreview | null>(null);
 
@@ -670,8 +674,24 @@ export const MageSettings: React.FC = () => {
 
   // ── keywords ──────────────────────────────────────────────────────────────
 
+  const clearKeywordForm = () => {
+    setEditingKeyword(null);
+    setKwKey('');
+    setKwValue('');
+    setKwColor('teal');
+  };
+
+  /** Load an existing shortcut into the form so it can be changed in place. */
+  const startEditKeyword = (token: string, value: string) => {
+    setEditingKeyword(token);
+    setKwKey(token);
+    setKwValue(value);
+    setKwColor(keywordColors[token] || 'teal');
+  };
+
   const saveKeyword = async () => {
     if (!kwKey.trim() || !kwValue.trim()) return;
+    const token = kwKey.trim();
     setBusy('keyword');
     setError('');
     try {
@@ -679,14 +699,15 @@ export const MageSettings: React.FC = () => {
         method: 'POST',
         headers: headers(true),
         // color is a palette name, not a hex, so it resolves per theme.
-        body: JSON.stringify({ key: kwKey.trim(), value: kwValue.trim(), color: kwColor }),
+        // The endpoint upserts, so this same call both adds and edits.
+        body: JSON.stringify({ key: token, value: kwValue.trim(), color: kwColor }),
       });
       if (!res.ok) throw new Error(await readError(res, 'Could not save the keyword.'));
       const data = await res.json();
       setKeywords(data.mappings || {});
-      setKeywordColors((prev) => ({ ...prev, [kwKey.trim()]: kwColor }));
-      setKwKey('');
-      setKwValue('');
+      setKeywordColors((prev) => ({ ...prev, [token]: kwColor }));
+      setNotice(editingKeyword ? `Updated ${token}.` : `Added ${token}.`);
+      clearKeywordForm();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save the keyword.');
     } finally {
@@ -702,6 +723,9 @@ export const MageSettings: React.FC = () => {
         headers: headers(),
       });
       if (res.ok) setKeywords((await res.json()).mappings || {});
+      // Deleting the one currently loaded in the form would otherwise leave it
+      // sitting there in edit mode, saving back a shortcut just removed.
+      if (editingKeyword === key) clearKeywordForm();
     } catch {
       setError('Could not delete the keyword.');
     } finally {
@@ -1420,8 +1444,16 @@ export const MageSettings: React.FC = () => {
               value={kwKey}
               onChange={(e) => setKwKey(e.target.value)}
               placeholder="launch-poster"
-              title="No spaces. Hyphens are fine."
-              className="w-40 text-sm font-mono rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2"
+              // Locked while editing. Saving under a different token would create
+              // a second shortcut and leave the original behind, because the
+              // write is an upsert keyed on the token itself.
+              disabled={!!editingKeyword}
+              title={
+                editingKeyword
+                  ? 'A shortcut cannot be renamed. Delete it and add a new one instead.'
+                  : 'No spaces. Hyphens are fine.'
+              }
+              className="w-40 text-sm font-mono rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60"
             />
             <input
               value={kwValue}
@@ -1443,12 +1475,20 @@ export const MageSettings: React.FC = () => {
                 style={{ background: SWATCH[name] }}
               />
             ))}
+            {editingKeyword && (
+              <button
+                onClick={clearKeywordForm}
+                className="ml-auto text-sm px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancel
+              </button>
+            )}
             <button
               onClick={saveKeyword}
               disabled={!kwKey.trim() || !kwValue.trim() || busy === 'keyword'}
-              className="ml-auto text-sm font-medium px-3 py-1.5 rounded-lg bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-50"
+              className={`${editingKeyword ? '' : 'ml-auto'} text-sm font-medium px-3 py-1.5 rounded-lg bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-50`}
             >
-              {busy === 'keyword' ? 'Saving…' : 'Add'}
+              {busy === 'keyword' ? 'Saving…' : editingKeyword ? 'Save changes' : 'Add'}
             </button>
           </div>
 
@@ -1465,6 +1505,17 @@ export const MageSettings: React.FC = () => {
                   />
                   <span className="font-mono text-xs text-gray-800 dark:text-gray-200 shrink-0">{token}</span>
                   <span className="flex-1 text-xs text-gray-500 dark:text-gray-400 truncate" title={value}>{value}</span>
+                  <button
+                    onClick={() => startEditKeyword(token, value)}
+                    title="Edit what this shortcut expands to"
+                    className={`transition-colors ${
+                      editingKeyword === token
+                        ? 'text-[#0b1957] dark:text-blue-300'
+                        : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => deleteKeyword(token)}
                     title="Delete this shortcut"
