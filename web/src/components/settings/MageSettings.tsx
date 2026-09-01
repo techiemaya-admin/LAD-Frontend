@@ -1507,20 +1507,26 @@ export const MageSettings: React.FC = () => {
         </Modal>
       )}
 
+      {/* Both of these draw their own panel, so they need a bare overlay and
+          nothing else. Without it the gallery lays out in the grid as a seventh
+          tile, and wrapping the DNA viewer in Modal puts a second titled box
+          around a component that already has one. */}
       {showGallery && (
-        <AgentBuilderGallery
-          images={galleryImages}
-          videos={galleryVideos}
-          loading={galleryLoading}
-          onBack={() => setShowGallery(false)}
-          onClose={() => setShowGallery(false)}
-          isFullHistory={false}
-          onLoadFullHistory={() => openGallery(true)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <AgentBuilderGallery
+            images={galleryImages}
+            videos={galleryVideos}
+            loading={galleryLoading}
+            onBack={() => setShowGallery(false)}
+            onClose={() => setShowGallery(false)}
+            isFullHistory={false}
+            onLoadFullHistory={() => openGallery(true)}
+          />
+        </div>
       )}
 
       {viewingDna && (
-        <Modal title={viewingDna.brand_name || 'Brand profile'} onClose={() => setViewingDna(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
           <AgentBuilderBrandDNA
             brandDna={viewingDna}
             onClose={() => setViewingDna(null)}
@@ -1529,7 +1535,7 @@ export const MageSettings: React.FC = () => {
             hideButtons
             phase={viewingDna.from_crawl ? 'Business DNA' : 'Business DNA, described not crawled'}
           />
-        </Modal>
+        </div>
       )}
 
       {showWizard && (
