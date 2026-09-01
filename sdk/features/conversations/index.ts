@@ -66,6 +66,7 @@ export type {
 // Agent-response feedback (thumbs + learned corrections)
 export {
   submitMessageFeedback,
+  teachFromHumanReply,
   getConversationFeedback,
   listLearnedCorrections,
   setCorrectionActive,
@@ -76,5 +77,7 @@ export type {
   MessageFeedback,
   SubmitFeedbackRequest,
   SubmitFeedbackResponse,
+  TeachFromReplyRequest,
+  TeachFromReplyResponse,
   LearnedCorrection,
 } from './feedback';
