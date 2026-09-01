@@ -155,7 +155,7 @@ function EmptyState({ icon, title, subtitle, ctaLabel, onCta }: {
       <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-6">{subtitle}</p>
       <button
         onClick={onCta}
-        className="px-5 py-2.5 bg-[#0b1957] dark:bg-[#071131] dark:border dark:border-blue-950/40 text-white rounded-xl hover:bg-[#0a1540] dark:hover:bg-[#0f1b3e] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all inline-flex items-center gap-2"
+        className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 dark:hover:bg-primary/80 font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all inline-flex items-center gap-2"
       >
         <Plus className="w-4 h-4" /> {ctaLabel}
       </button>
@@ -496,7 +496,7 @@ export default function TemplatesPage() {
           </div>
           <button
             onClick={createButton.onClick}
-            className="px-4 py-2 bg-[#0b1957] dark:bg-[#071131] dark:border dark:border-blue-950/40 text-white rounded-xl hover:bg-[#0a1540] dark:hover:bg-[#0f1b3e] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] w-full sm:w-auto flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 dark:hover:bg-primary/80 font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] w-full sm:w-auto flex items-center justify-center gap-2"
           >
             {createButton.icon}
             {createButton.label}

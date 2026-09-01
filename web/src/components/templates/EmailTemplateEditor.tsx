@@ -558,15 +558,15 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
               {editorMode && (
                 <div className="flex-shrink-0 bg-white dark:bg-[#000724] border-b border-gray-150 dark:border-[#262831] px-4 py-2 flex items-center justify-between gap-3">
                   <span className="text-[10px] sm:text-xs text-gray-400 dark:text-[#7a8ba3] font-bold uppercase tracking-wider shrink-0">Editing with:</span>
-                  <div className="flex-1 max-w-[240px] xs:max-w-[280px] sm:max-w-xs bg-gray-100/80 dark:bg-[#0C1936] p-0.5 rounded-lg border border-gray-200/60 dark:border-[#262831] flex" onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="flex-1 max-w-[240px] xs:max-w-[280px] sm:max-w-xs bg-white dark:bg-[#000724] p-0.5 rounded-lg border border-slate-200 dark:border-[#262831] flex gap-1" onMouseDown={(e) => e.stopPropagation()}>
                     {EDITOR_OPTIONS.map(({ mode: m, icon }) => (
                       <button
                         key={m}
                         onClick={() => { setEditorMode(m); setMountedEditors((prev) => new Set([...prev, m])); }}
-                        className={`flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-md text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
+                        className={`flex-1 h-7 px-1.5 rounded-md inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-medium transition-colors cursor-pointer ${
                           editorMode === m
-                            ? 'bg-white dark:bg-[#253456] text-[#0B1957] dark:text-[#60a5fa] shadow-xs border border-gray-200/20 dark:border-[#262831]'
-                            : 'text-gray-500 dark:text-[#7a8ba3] hover:text-gray-900 dark:hover:text-white'
+                            ? 'text-white bg-[#0B1957] dark:bg-[#2563eb]'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0e1d4d]'
                         }`}
                       >
                       <div className="w-3.5 h-3.5 flex items-center justify-center [&>svg]:!w-3 [&>svg]:!h-3 sm:[&&>svg]:!w-3.5 sm:[&&>svg]:!h-3.5 flex-shrink-0">
@@ -597,9 +597,9 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                         <button
                           key={m}
                           onClick={() => { setEditorMode(m); setMountedEditors((prev) => new Set([...prev, m])); }}
-                          className="w-full flex items-start gap-4 p-5 bg-white dark:bg-[#0C1936] rounded-2xl border-2 border-gray-100 dark:border-[#262831] hover:border-blue-400 dark:hover:border-[#60a5fa]/50 hover:shadow-xs text-left transition-all group cursor-pointer"
+                          className="w-full flex items-start gap-4 p-5 bg-white dark:bg-[#0C1936] rounded-2xl border-2 border-gray-100 dark:border-blue-950/40 hover:border-[#0b1957] dark:hover:border-[#2b7cff] hover:shadow-xs text-left transition-all group cursor-pointer"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#253456] group-hover:bg-blue-50 dark:group-hover:bg-[#253456] flex items-center justify-center text-gray-500 dark:text-[#7a8ba3] group-hover:text-blue-600 dark:group-hover:text-[#60a5fa] transition-colors flex-shrink-0 mt-0.5">
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#253456] group-hover:bg-blue-50 dark:group-hover:bg-[#253456] flex items-center justify-center text-gray-500 dark:text-[#7a8ba3] group-hover:text-[#0b1957] dark:group-hover:text-[#2b7cff] transition-colors flex-shrink-0 mt-0.5">
                             {icon}
                           </div>
                           <div>
@@ -717,12 +717,19 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                   <label className={labelCls}>
                     Category <span className="text-red-400 normal-case font-normal tracking-normal">*</span>
                   </label>
-                  <select name="category" value={template.category || ''} onChange={handleInput} className={inputCls}>
-                    <option value="" className="dark:bg-[#0C1936]">Select category</option>
-                    {CATEGORIES.map(({ value, label }) => (
-                      <option key={value} value={value} className="dark:bg-[#0C1936]">{label}</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={template.category || undefined}
+                    onValueChange={(value) => set('category', value)}
+                  >
+                    <SelectTrigger className={cn(inputCls, 'h-auto focus:ring-[#0b1957] focus-visible:border-[#0b1957] focus-visible:ring-[#0b1957]')}>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Description */}
