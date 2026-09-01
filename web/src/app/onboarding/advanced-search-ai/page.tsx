@@ -91,7 +91,10 @@ interface LeadProfile {
     locked?: boolean;
     phone?: string;
     email?: string;
-    icp_score?: number;
+    // null = the model returned no verdict for this lead. Distinct from undefined,
+    // which means scoring has not finished yet (defer_icp).
+    icp_score?: number | null;
+    icp_scored?: boolean;
     match_level?: 'strong' | 'moderate' | 'weak';
     icp_reasoning?: string;
     enriched_profile?: {
@@ -701,6 +704,20 @@ function sizeConstraintNote(sc: any): string {
     return `\n\n${bits.join(' ')}`;
 }
 
+/**
+ * Did the model actually judge this lead?
+ *
+ * Three states, and collapsing any two of them is how four leads came to be shown
+ * as a confident "0%" and filtered out of their own search:
+ *   number     — a verdict, including a genuine 0
+ *   null       — scoring ran and returned nothing for this person
+ *   undefined  — scoring has not finished yet (defer_icp); shown as "Scoring…"
+ */
+function isLeadUnscored(lead: { icp_score?: number | null; icp_scored?: boolean }): boolean {
+    if (lead.icp_scored === false) return true;
+    return lead.icp_score === null;
+}
+
 function normalizeIcpScore(raw: unknown): number | undefined {
     if (raw === null || raw === undefined || raw === '') return undefined;
     const n = Number(raw); // pg NUMERIC can arrive as a string
@@ -714,7 +731,7 @@ function normalizeIcpScore(raw: unknown): number | undefined {
  * Using the score directly ensures the badge colour reflects what the user sees.
  * Normalises first - a 0-1 score would otherwise never be 'strong'.
  */
-function scoreToMatchLevel(score: number | undefined): 'strong' | 'moderate' {
+function scoreToMatchLevel(score: number | null | undefined): 'strong' | 'moderate' {
     if ((normalizeIcpScore(score) ?? 0) >= 70) return 'strong';
     return 'moderate'; // yellow for everything else - never show red on lead badges
 }
@@ -1262,6 +1279,10 @@ export default function AdvancedSearchAIPage() {
     const [leads, setLeads] = useState<LeadProfile[]>([]);
     const [filteredLeads, setFilteredLeads] = useState<LeadProfile[]>([]);   // below ICP threshold
     const [showFilteredLeads, setShowFilteredLeads] = useState(false);        // toggle "Show all"
+    // The threshold the BACKEND actually applied. The banner used to hardcode "50"
+    // while /search/unified was filtering on whatever icp_min_score we sent, so the
+    // number on screen could describe a rule nothing had run.
+    const [icpThresholdApplied, setIcpThresholdApplied] = useState<number | null>(null);
     // True between "leads rendered" and "ICP scores arrived" when the search ran
     // with defer_icp. Drives the pulsing dot that stands in for the score chip.
     const [icpScoringPending, setIcpScoringPending] = useState(false);
@@ -5421,7 +5442,8 @@ export default function AdvancedSearchAIPage() {
                                         locked: idx >= 5,
                                         phone: item.phone || item.company_phone || '',
                                         email: item.email || '',
-                                        icp_score: normalizeIcpScore(item.icp_score),
+                                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                        icp_scored: item.icp_scored,
                                         match_level: item.match_level || undefined,
                                         icp_reasoning: item.icp_reasoning || undefined,
                                         enriched_profile: item.enriched_profile || undefined,
@@ -5555,7 +5577,8 @@ export default function AdvancedSearchAIPage() {
                                 locked: idx >= 5,
                                 phone: item.phone || item.company_phone || '',
                                 email: item.email || '',
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -5976,6 +5999,9 @@ export default function AdvancedSearchAIPage() {
                     setSearchCursor(nextCursor);
                     setCursorHistory([null, nextCursor]); // page1=null(start), page2=nextCursor
                     icpWasApplied = !!d.icp_applied;
+                    setIcpThresholdApplied(
+                        typeof d.icp_min_score === 'number' ? d.icp_min_score : null,
+                    );
                     excludedAlreadyContacted = Number(d.excluded_already_contacted) || 0;
                     searchRateLimited = !!d.rate_limited;
                     searchModule = d.module_used || '';
@@ -5997,7 +6023,8 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: idx >= 5,
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -6141,7 +6168,8 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: false,
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -6577,7 +6605,8 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: idx >= 5,
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -6926,7 +6955,8 @@ export default function AdvancedSearchAIPage() {
                         locked: (existingCount + idx) >= 5,
                         phone: item.phone || '',
                         email: item.email || '',
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -7017,7 +7047,8 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: (existingCount + idx) >= 5,
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -8355,7 +8386,18 @@ export default function AdvancedSearchAIPage() {
                                                         ) : (
                                                             <span className="adv-lead-name text-gray-900 dark:text-gray-100 font-bold text-[14px]">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
                                                         )}
-                                                        {!targetingFiltersActive && lead.icp_score !== undefined && (
+                                                        {/* The model returned no verdict for this lead. Showing "0%" here
+                                                            claimed a judgement that was never made — and the same coercion
+                                                            filtered the lead out of its own search. */}
+                                                        {!targetingFiltersActive && isLeadUnscored(lead) && (
+                                                          <span
+                                                            className="inline-flex items-center gap-[3px] px-[8px] py-[2px] rounded-[12px] text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                                            title="The AI did not return a score for this lead. It has not been judged either way — review it yourself."
+                                                          >
+                                                            ○ Not scored
+                                                          </span>
+                                                        )}
+                                                        {!targetingFiltersActive && typeof lead.icp_score === 'number' && (
                                                           <span className={`inline-flex items-center gap-[3px] px-[8px] py-[2px] rounded-[12px] text-[11px] font-bold ${scoreToMatchLevel(lead.icp_score) === 'strong' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300'}`}>
                                                                 {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
                                                             </span>
@@ -8513,7 +8555,7 @@ export default function AdvancedSearchAIPage() {
                                         }}>
                                             <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                                                Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+                                                Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} the AI scored below {icpThresholdApplied ?? 50}
                                             </span>
                                             <button
                                                 onClick={() => setShowFilteredLeads(v => !v)}
@@ -8563,7 +8605,7 @@ export default function AdvancedSearchAIPage() {
                                                                         background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
                                                                         color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                                     }}>
-                                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
+                                                                        {isLeadUnscored(lead) ? '○' : (scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡')} {isLeadUnscored(lead) ? 'Not scored' : `${normalizeIcpScore(lead.icp_score)}%`}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -11715,7 +11757,7 @@ function CheckpointFormInline({
                 const fb = leadFeedback[l.id];
                 if (fb) acc.push({ lead_id: l.id, name: l.name, headline: l.headline, company: l.current_company, rating: fb, icp_score: l.icp_score });
                 return acc;
-            }, [] as { lead_id: string; name: string; headline: string; company: string; rating: string; icp_score?: number }[]);
+            }, [] as { lead_id: string; name: string; headline: string; company: string; rating: string; icp_score?: number | null }[]);
 
             // Build checkpoint selections object
             const checkpointSelections = buildCheckpointSelections();
