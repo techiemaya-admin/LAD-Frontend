@@ -4,6 +4,7 @@
  * This is the only place that makes direct HTTP calls for billing
  */
 import { apiClient } from '../../shared/apiClient';
+import type { RecurringPlan, RecurringStatus } from './types';
 export interface CreditsBalance {
   walletId: string;
   tenantId: string;
@@ -92,14 +93,14 @@ export const getWalletBalance = getCreditsBalance;
 /**
  * Get pricing for a specific component
  */
-export async function getPricing(params: {
-  category: string;
-  provider: string;
-  model: string;
-  unit: string;
-}): Promise<PricingItem> {
+export async function getPricing<T = PricingItem[] | PricingItem | any>(params?: {
+  category?: string;
+  provider?: string;
+  model?: string;
+  unit?: string;
+}): Promise<T> {
   const response = await apiClient.get('/api/billing/pricing', { params });
-  return response.data.price;
+  return response.data.price ?? response.data.prices ?? response.data.pricing ?? response.data;
 }
 /**
  * Get cost quote before charging
@@ -135,16 +136,23 @@ export async function topUpCredits(params: {
 export async function listUsage(params?: {
   from?: string;
   to?: string;
+  startDate?: string;
+  endDate?: string;
   featureKey?: string;
   status?: string;
   limit?: number;
   offset?: number;
 }): Promise<{
   events: UsageEvent[];
-  summary: UsageSummary;
+  summary?: UsageSummary;
+  total?: number;
 }> {
-  const response = await apiClient.get('/api/billing/usage', { params });
-  return response.data.usage;
+  const { startDate, endDate, from, to, ...rest } = params || {};
+  const query: Record<string, any> = { ...rest };
+  if (from || startDate) query.from = from || startDate;
+  if (to || endDate) query.to = to || endDate;
+  const response = await apiClient.get('/api/billing/usage', { params: query });
+  return response.data.usage ?? response.data;
 }
 /**
  * Recharge wallet via package selection
@@ -210,10 +218,17 @@ export async function cancelRecurring(kind: 'monthly' | 'auto_recharge'): Promis
 export async function getUsageAggregation(params?: {
   from?: string;
   to?: string;
+  startDate?: string;
+  endDate?: string;
   featureKey?: string;
-}): Promise<UsageAggregation[]> {
-  const response = await apiClient.get('/api/billing/usage/aggregation', { params });
-  return response.data.aggregation;
+  groupBy?: string;
+}): Promise<any> {
+  const { startDate, endDate, from, to, ...rest } = params || {};
+  const query: Record<string, any> = { ...rest };
+  if (from || startDate) query.from = from || startDate;
+  if (to || endDate) query.to = to || endDate;
+  const response = await apiClient.get('/api/billing/usage/aggregation', { params: query });
+  return response.data.aggregation ?? response.data;
 }
 /**
  * List ledger transactions
