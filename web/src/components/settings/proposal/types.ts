@@ -41,7 +41,12 @@ export interface Placeholder {
   is_loop: boolean;
 }
 
-export type ProposalSubTabId = 'lead_config' | 'concepts' | 'pricing_rules' | 'quotation-templates';
+export type ProposalSubTabId =
+  | 'lead_config'
+  | 'concepts'
+  | 'pricing_rules'
+  | 'quotation-templates'
+  | 'email_integration';
 
 export interface LeadRequirementsProps {
   requirementConfigs: RequirementConfig[];
@@ -71,3 +76,9 @@ export interface QuotationTemplatesProps {
   tenantId: string;
   onRefresh: () => void | Promise<void>;
 }
+
+export interface ProposalEmailIntegrationProps {
+  tenantId: string;
+  onStatusChange?: (status: { connected: boolean; email?: string }) => void;
+}
+

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Sparkles, DollarSign, FileText, ChevronDown, Loader2 } from 'lucide-react';
+import { Settings, Sparkles, DollarSign, FileText, ChevronDown, Loader2, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getApiBaseUrlForLocal } from '@/lib/api-utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { logger } from '@/lib/logger';
@@ -12,6 +13,8 @@ import { LeadRequirements } from './LeadRequirements';
 import { ConceptManagement } from './ConceptManagement';
 import { PricingRules } from './PricingRules';
 import { QuotationTemplates } from './QuotationTemplates';
+import { ProposalEmailIntegration } from './ProposalEmailIntegration';
+
 import {
   RequirementConfig,
   Concept,
@@ -24,6 +27,7 @@ import {
 
 export const ProposalSettings: React.FC = () => {
   const { tenant } = useTenant();
+  const { user } = useAuth();
   const tenantId = tenant?.id || '';
 
   const [proposalSubTab, setProposalSubTab] = useState<ProposalSubTabId | ''>('lead_config');
@@ -33,7 +37,11 @@ export const ProposalSettings: React.FC = () => {
   const [pricingModels, setPricingModels] = useState<PricingModelOption[]>([]);
   const [quotationTemplates, setQuotationTemplates] = useState<QuotationTemplate[]>([]);
   const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
+  const [emailStatus, setEmailStatus] = useState<{ connected: boolean; email?: string }>({
+    connected: false,
+  });
   const [isLoading, setIsLoading] = useState(false);
+
 
   const fetchConfigs = async (tId: string) => {
     try {
@@ -107,6 +115,45 @@ export const ProposalSettings: React.FC = () => {
     }
   };
 
+  const handleEmailStatusChange = useCallback(
+    (status: { connected: boolean; email?: string }) => {
+      setEmailStatus((prev) => {
+        if (prev.connected === status.connected && prev.email === status.email) {
+          return prev;
+        }
+        return status;
+      });
+    },
+    []
+  );
+
+  const fetchEmailStatus = async (tId: string) => {
+    try {
+      const headers: Record<string, string> = {
+        'X-Tenant-Id': tId,
+      };
+      if (user?.id) {
+        headers['X-User-Id'] = user.id;
+      }
+      const res = await fetchWithTenant(
+        `${getApiBaseUrlForLocal()}/api/social-integration/email/google/status`,
+        { headers }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.connected) {
+          handleEmailStatusChange({ connected: true, email: data.email });
+          return;
+        }
+      }
+      handleEmailStatusChange({ connected: false });
+    } catch (error) {
+      logger.error('Failed to fetch email status', error);
+      handleEmailStatusChange({ connected: false });
+    }
+  };
+
+
   const fetchAllDetails = useCallback(async (targetTenantId?: string) => {
     const idToUse = targetTenantId || tenantId;
     if (!idToUse || idToUse === 'default') return;
@@ -120,13 +167,15 @@ export const ProposalSettings: React.FC = () => {
         fetchPricingModels(idToUse),
         fetchQuotationTemplates(idToUse),
         fetchPlaceholders(idToUse),
+        fetchEmailStatus(idToUse),
       ]);
     } catch (error) {
       logger.error('[Proposal Settings] Failed to fetch details', error);
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, user?.id]);
+
 
   useEffect(() => {
     if (tenantId && tenantId !== 'default') {
@@ -160,6 +209,14 @@ export const ProposalSettings: React.FC = () => {
       count: `${quotationTemplates.length} ${
         quotationTemplates.length === 1 ? 'template' : 'templates'
       }`,
+    },
+    {
+      id: 'email_integration' as ProposalSubTabId,
+      label: 'Email integration',
+      icon: Mail,
+      count: emailStatus.connected
+        ? `Connected: ${emailStatus.email}`
+        : 'Not connected',
     },
   ];
 
@@ -251,12 +308,21 @@ export const ProposalSettings: React.FC = () => {
                         onRefresh={() => fetchQuotationTemplates(tenantId)}
                       />
                     )}
+
+                    {sub.id === 'email_integration' && (
+                      <ProposalEmailIntegration
+                        tenantId={tenantId}
+                        onStatusChange={handleEmailStatusChange}
+                      />
+                    )}
+
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         );
+
       })}
     </div>
   );
