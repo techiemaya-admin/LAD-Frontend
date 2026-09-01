@@ -180,16 +180,19 @@ const AIGoalsPanel: React.FC = () => {
       title="AI Goals"
       titleIcon={Target}
       blurb="Every AI reply (DM + comment) will be biased toward whichever active goal best matches the message."
+      headerAction={
+        !showCreate ? (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 px-3.5 sm:px-4 h-9 sm:h-10 text-xs sm:text-sm font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span className="hidden sm:inline">New goal</span>
+            <span className="inline sm:hidden">Add goal</span>
+          </button>
+        ) : null
+      }
     >
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#0b1957] hover:bg-[#0b1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 px-4 h-10 text-sm font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" /> New goal
-        </button>
-      </div>
-
       {loading && <Loader />}
       {error && <ErrorBanner message={error} />}
 
@@ -363,36 +366,34 @@ const inputClass =
     'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-blue-700 focus:ring-0 focus-visible:ring-0 transition-all dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400';
 
 const Field: React.FC<{ label: string; className?: string; icon?: React.ElementType; children: React.ReactNode }> = ({ label, className, icon: Icon, children }) => {
-  const renderChild = () => {
-    if (!Icon) return children;
-    if (React.isValidElement(children)) {
-      const childProps = { ...(children.props as any) };
-      childProps.className = cn(childProps.className, 'pl-10');
-      return React.cloneElement(children, childProps);
-    }
-    return children;
-  };
-
   return (
     <label className={`block ${className || ''}`}>
       <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
         {Icon ? <Icon className="h-3.5 w-3.5 text-slate-400" /> : null}
         <span>{label}</span>
       </div>
-      <div className={Icon ? 'relative' : ''}>
-        {Icon ? <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /> : null}
-        {renderChild()}
+      <div>
+        {children}
       </div>
     </label>
   );
 };
 
-const Section: React.FC<{ title: string; titleIcon?: React.ElementType; blurb: string; children: React.ReactNode }> = ({ title, titleIcon: TitleIcon, blurb, children }) => (
+const Section: React.FC<{
+  title: string;
+  titleIcon?: React.ElementType;
+  blurb: string;
+  headerAction?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, titleIcon: TitleIcon, blurb, headerAction, children }) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]/80">
     <div className="mb-6">
-      <div className="flex items-center gap-2 mb-2">
-        {TitleIcon ? <TitleIcon className="h-5 w-5 text-[#0b1957]" /> : null}
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          {TitleIcon ? <TitleIcon className="h-5 w-5 text-[#0b1957]" /> : null}
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+        </div>
+        {headerAction}
       </div>
       <p className="mt-1 text-sm text-slate-600 leading-relaxed dark:text-slate-300">{blurb}</p>
     </div>

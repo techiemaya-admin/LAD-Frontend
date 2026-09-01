@@ -22,6 +22,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Plus, Trash2, RefreshCw, Loader2, CheckCircle2, AlertCircle, Power, Eye, EyeOff,
   X as XIcon, Instagram as InstagramIcon, Pencil,
   Lock, List, Hash, Building2, Edit3, Key,
@@ -349,25 +356,30 @@ export const InstagramTenantOnboarding: React.FC = () => {
 
       {/* ── Existing accounts ─────────────────────────────────────── */}
       <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-blue-950/40 dark:bg-[#071131]">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <InstagramIcon className="h-5 w-5 text-[#E1306C]" />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Connected Instagram accounts</h2>
+        <div className="mb-4 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <InstagramIcon className="h-5 w-5 text-[#E1306C] shrink-0" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                <span className="hidden sm:inline">Connected Instagram accounts</span>
+                <span className="inline sm:hidden">Connected accounts</span>
+              </h2>
             </div>
-            <p className="text-sm text-slate-600 mt-0.5 dark:text-slate-300">
-              Each account links an Instagram identity (Meta or direct login) to this tenant.
-            </p>
+            <button
+              type="button"
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 p-2 sm:px-3 sm:py-1.5 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#071131]/80 dark:text-slate-200 dark:hover:bg-[#0c1b43] shrink-0 cursor-pointer"
+              title="Refresh accounts"
+              aria-label="Refresh accounts"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => load(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#071131]/80 dark:text-slate-200 dark:hover:bg-[#0c1b43]"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Each account links an Instagram identity (Meta or direct login) to this tenant.
+          </p>
         </div>
 
         {loading ? (
@@ -461,9 +473,55 @@ export const InstagramTenantOnboarding: React.FC = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Provider toggle */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Line 1: Display name & Instagram username */}
+            <Field label="Display name" icon={Edit3}>
+              <Input
+                value={form.display_name}
+                onChange={(v) => setForm((f) => ({ ...f, display_name: v }))}
+                placeholder="e.g. Acme Studio"
+              />
+            </Field>
+            <Field label="Instagram username" icon={InstagramIcon}>
+              <Input
+                value={form.instagram_username}
+                onChange={(v) => setForm((f) => ({ ...f, instagram_username: v }))}
+                placeholder="e.g. acmestudio"
+              />
+            </Field>
+
+            {/* Line 2: Tenant ID & AI Model */}
+            <Field label="Tenant ID" icon={Hash}>
+              <Input
+                value={form.tenant_id}
+                onChange={(v) => setForm((f) => ({ ...f, tenant_id: v }))}
+                placeholder="e.g. e0a3e9ca-3f46-4bb0-ac10-a91b5c1d20b5"
+                mono
+              />
+            </Field>
+
+            <Field label="AI Model" icon={List}>
+              <Select
+                value={form.ai_model}
+                onValueChange={(val) => setForm((f) => ({ ...f, ai_model: val }))}
+              >
+                <SelectTrigger className="w-full h-10 px-3 pl-11 text-sm bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white border border-slate-200 dark:border-blue-950/40 rounded-lg focus:ring-1 focus:ring-indigo-500/30">
+                  <SelectValue placeholder="Select AI model" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl max-h-60">
+                  {AI_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          {/* Line 3 (desktop) / Line 5 (mobile): Provider toggle */}
           <FieldGroup label="Provider">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {(['meta', 'unipile'] as Provider[]).map((p) => {
                 const active = form.provider === p;
                 return (
@@ -471,7 +529,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                     key={p}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, provider: p }))}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition cursor-pointer ${
                       active
                         ? 'border-blue-950/40 bg-[#0b1957] text-white shadow-sm dark:bg-[#0b1957]'
                         : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-blue-950/40 dark:bg-[#071131]/70 dark:text-slate-200 dark:hover:bg-[#0c1b43]'
@@ -493,62 +551,21 @@ export const InstagramTenantOnboarding: React.FC = () => {
             </div>
           </FieldGroup>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Display name" icon={Edit3}>
-              <Input
-                value={form.display_name}
-                onChange={(v) => setForm((f) => ({ ...f, display_name: v }))}
-                placeholder="e.g. Acme Studio"
-              />
-            </Field>
-            <Field label="Instagram username" icon={InstagramIcon}>
-              <Input
-                value={form.instagram_username}
-                onChange={(v) => setForm((f) => ({ ...f, instagram_username: v }))}
-                placeholder="e.g. acmestudio"
-              />
-            </Field>
-
-            <Field label="Tenant ID" icon={Hash} full>
-              <Input
-                value={form.tenant_id}
-                onChange={(v) => setForm((f) => ({ ...f, tenant_id: v }))}
-                placeholder="e.g. e0a3e9ca-3f46-4bb0-ac10-a91b5c1d20b5"
-                mono
-              />
-            </Field>
-
-            <Field label="AI Model" icon={List}>
-              <select
-                value={form.ai_model}
-                onChange={(e) => setForm((f) => ({ ...f, ai_model: e.target.value }))}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-0 dark:border-blue-950/40 dark:bg-slate-800/50 dark:text-white"
-              >
-                {AI_MODELS.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-white text-slate-900 dark:bg-[#071131] dark:text-white">
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <div className="flex items-end justify-end pb-1">
-              <button
-                type="button"
-                onClick={() => setShowSecrets((s) => !s)}
-                className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                {showSecrets ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                {showSecrets ? 'Hide secrets' : 'Show secrets'}
-              </button>
-            </div>
-          </div>
-
           {/* Provider-specific credentials */}
           {form.provider === 'meta' ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4 dark:border-blue-950/40 dark:bg-[#071131]">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Meta Graph API credentials
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Meta Graph API credentials
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSecrets((s) => !s)}
+                  className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white cursor-pointer"
+                >
+                  {showSecrets ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showSecrets ? 'Hide secrets' : 'Show secrets'}
+                </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="App ID" icon={Building2} required>
