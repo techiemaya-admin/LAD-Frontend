@@ -626,7 +626,7 @@ export const IntegrationsSettings: React.FC = () => {
           </button>
 
           {activeView === 'whatsapp-ai' && (
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
               {/* Self-serve path - Meta Embedded Signup via our Tech Provider app. */}
               <WhatsAppEmbeddedSignup />
               {/* Fallback - bring-your-own Meta app, for tenants provisioned that way. */}
