@@ -39,6 +39,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { AgentFormData, LANGUAGES, GENDERS, Voice } from '@/types/agent';
+import { useToast } from '../../hooks/use-toast';
+import { safeStorage } from '@lad/shared/storage';
 import { PromptEditor } from './PromptEditor';
 import { VoicePreview } from './VoicePreview';
 import { CharacterCounter } from './CharacterCounter';
@@ -107,8 +109,73 @@ export function AgentForm({
   const filteredVoices = voices.filter((v: Voice) => v.gender === formData.gender);
 
   // Local state for Universal Agent Settings (Voice Dynamics and Background Ambiance)
+  const { toast } = useToast();
   const [speed, setSpeed] = React.useState<number>(1.0);
   const [pitch, setPitch] = React.useState<number>(0.0);
+  const [isSavingDynamics, setIsSavingDynamics] = React.useState(false);
+
+  // The voice these dynamics belong to. speed/pitch/volume are stored on
+  // voice_agent_voices.provider_config, which is the only place resolve_voice()
+  // reads them from — voice_agents.configs is not consulted for TTS at all.
+  const selectedVoiceForDynamics = React.useMemo(
+    () => voices.find((v) => v.id === formData.voice_id),
+    [voices, formData.voice_id],
+  );
+
+  // Hydrate the sliders from the selected voice so they show what is actually
+  // stored. Previously they always rendered their defaults, which made an
+  // unsaved 1.00x look identical to a saved 1.00x.
+  React.useEffect(() => {
+    const cfg = selectedVoiceForDynamics?.provider_config;
+    setSpeed(typeof cfg?.speed === 'number' ? cfg.speed : 1.0);
+    setPitch(typeof cfg?.pitch === 'number' ? cfg.pitch : 0.0);
+    setVolume(typeof cfg?.volume === 'number' ? cfg.volume : 1.0);
+  }, [selectedVoiceForDynamics]);
+
+  /**
+   * Persist voice dynamics onto the selected voice.
+   *
+   * These sliders were previously local state only — never added to formData,
+   * never sent on save — so nothing the user changed here had any effect.
+   *
+   * Saved per VOICE rather than per agent because that is the column the engine
+   * reads; the card notes that it is shared by agents using the same voice.
+   */
+  const saveVoiceDynamics = React.useCallback(
+    async (patch: { speed?: number; pitch?: number; volume?: number }) => {
+      const voice = selectedVoiceForDynamics;
+      if (!voice) return;
+
+      const nextConfig = { ...(voice.provider_config ?? {}), ...patch };
+      setIsSavingDynamics(true);
+      try {
+        const token = safeStorage.getItem('token');
+        const response = await fetch(`/api/voice-agent/settings/voices/${voice.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+          body: JSON.stringify({ provider_config: nextConfig }),
+        });
+        if (!response.ok) {
+          throw new Error((await response.text()) || 'Failed to save voice dynamics');
+        }
+        // Keep the in-memory voice in step so a re-render does not revert the slider.
+        voice.provider_config = nextConfig;
+      } catch (error) {
+        toast({
+          title: 'Could not save voice dynamics',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSavingDynamics(false);
+      }
+    },
+    [selectedVoiceForDynamics, toast],
+  );
   const [volume, setVolume] = React.useState<number>(1.0);
   const [bgSoundOn, setBgSoundOn] = React.useState<boolean>(false);
   const [bgSoundUrl, setBgSoundUrl] = React.useState<string>('/office_chatter_loud.mp3');
@@ -372,7 +439,19 @@ export function AgentForm({
             <div className="space-y-6 md:pr-4">
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-1">Voice Dynamics</h3>
-                <p className="text-xs text-muted-foreground">Standardized, provider-independent settings for pitch, speed, and volume.</p>
+                <p className="text-xs text-muted-foreground">
+                  Saved on the selected voice, so they apply to every agent using it.
+                </p>
+                {!selectedVoiceForDynamics && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                    Select a voice above to enable these controls.
+                  </p>
+                )}
+                {selectedVoiceForDynamics?.provider === 'cartesia' && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Cartesia supports speed and loudness. Pitch has no effect on Cartesia voices.
+                  </p>
+                )}
               </div>
 
               {/* Speed */}
@@ -388,7 +467,10 @@ export function AgentForm({
                 </div>
                 <Slider 
                   value={speed} 
-                  onValueChange={setSpeed} 
+                  onValueChange={setSpeed}
+                  onMouseUp={() => saveVoiceDynamics({ speed: speed })}
+                  onTouchEnd={() => saveVoiceDynamics({ speed: speed })}
+                  disabled={isSavingDynamics || !selectedVoiceForDynamics} 
                   min={0.5} 
                   max={2.0} 
                   step={0.05} 
@@ -416,7 +498,10 @@ export function AgentForm({
                 </div>
                 <Slider 
                   value={pitch} 
-                  onValueChange={setPitch} 
+                  onValueChange={setPitch}
+                  onMouseUp={() => saveVoiceDynamics({ pitch: pitch })}
+                  onTouchEnd={() => saveVoiceDynamics({ pitch: pitch })}
+                  disabled={isSavingDynamics || !selectedVoiceForDynamics} 
                   min={-1.0} 
                   max={1.0} 
                   step={0.1} 
@@ -441,7 +526,10 @@ export function AgentForm({
                 </div>
                 <Slider 
                   value={volume} 
-                  onValueChange={setVolume} 
+                  onValueChange={setVolume}
+                  onMouseUp={() => saveVoiceDynamics({ volume: volume })}
+                  onTouchEnd={() => saveVoiceDynamics({ volume: volume })}
+                  disabled={isSavingDynamics || !selectedVoiceForDynamics} 
                   min={0.5} 
                   max={2.0} 
                   step={0.05} 
