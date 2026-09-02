@@ -405,6 +405,9 @@ export const MageSettings: React.FC = () => {
   const mountedRef = useRef(true);
   const [changeTarget, setChangeTarget] = useState<string | null>(null);
   const [changeText, setChangeText] = useState('');
+  // The change box renders below the profile list, so with a dozen profiles it
+  // opens off screen and the pencil looks like it did nothing.
+  const changeBoxRef = useRef<HTMLTextAreaElement>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [viewingDna, setViewingDna] = useState<ViewedDna | null>(null);
   const [dnaLoading, setDnaLoading] = useState<string>('');
@@ -695,6 +698,22 @@ export const MageSettings: React.FC = () => {
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  // Bring the change box into view and put the cursor in it when a profile's
+  // pencil is clicked. It sits below the whole profile list, so on a tenant with
+  // a dozen profiles it opens out of sight and the click reads as doing nothing.
+  //
+  // Runs after the render that mounts the box, so the ref is attached by now.
+  useEffect(() => {
+    if (!changeTarget) return;
+    const box = changeBoxRef.current;
+    if (!box) return;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Focus after the scroll starts rather than before: focusing first makes the
+    // browser jump to the element instantly, which undoes the smooth scroll.
+    const t = window.setTimeout(() => box.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(t);
+  }, [changeTarget]);
 
   /**
    * Start a run and deliberately ignore what comes back.
@@ -1565,6 +1584,7 @@ export const MageSettings: React.FC = () => {
                 What should change about {changeTarget}?
               </p>
               <textarea
+                ref={changeBoxRef}
                 value={changeText}
                 onChange={(e) => setChangeText(e.target.value)}
                 rows={3}
