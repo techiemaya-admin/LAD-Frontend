@@ -185,10 +185,10 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
       {MEDIA_SECTIONS.map((section) => (
         <div
           key={section.key}
-          className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden"
+          className="border border-gray-200 dark:border-blue-950/40 rounded-lg overflow-hidden"
         >
           {/* Section header */}
-          <div className="bg-gray-50 dark:bg-[#000c3b] px-3 py-2 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-2">
+          <div className="bg-gray-50 dark:bg-[#000c3b] px-3 py-2 border-b border-gray-200 dark:border-blue-950/40 flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-tight">
                 {section.icon} {section.label}
@@ -223,7 +223,7 @@ export default function EmailMediaLibrary({ onInsert }: EmailMediaLibraryProps) 
                 {images[section.key].map((img) => (
                   <div
                     key={img.url}
-                    className="relative group rounded border border-gray-200 dark:border-gray-800 overflow-hidden cursor-grab active:cursor-grabbing"
+                    className="relative group rounded border border-gray-200 dark:border-blue-950/40 overflow-hidden cursor-grab active:cursor-grabbing"
                     draggable
                     onDragStart={(e) => {
                       const html = buildHtml(section.key, img.url, img.name);

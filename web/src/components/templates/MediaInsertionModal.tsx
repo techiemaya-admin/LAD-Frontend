@@ -166,7 +166,7 @@ export default function MediaInsertionModal({
                         className={`p-3 rounded-lg border-2 cursor-pointer transition ${
                           selectedMedia?.id === media.id
                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-500'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-[#000724]'
+                            : 'border-gray-200 dark:border-blue-950/40 hover:border-gray-300 dark:hover:border-blue-950/40 bg-white dark:bg-[#000724]'
                         }`}
                       >
                         <img
@@ -186,7 +186,7 @@ export default function MediaInsertionModal({
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-6 text-center">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-6 text-center">
                   <p className="text-gray-600 dark:text-gray-400 mb-3">No media uploaded yet</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">
                     Upload an image in the media section first, then use this tool to insert it
@@ -205,7 +205,7 @@ export default function MediaInsertionModal({
                     value={altText}
                     onChange={(e) => setAltText(e.target.value)}
                     placeholder="Describe the image content..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-blue-950/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder-gray-400"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                     This text is shown if the image fails to load and helps with accessibility
@@ -215,7 +215,7 @@ export default function MediaInsertionModal({
 
               {/* Preview */}
               {selectedMedia && (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-4">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Preview:</p>
                   <img
                     src={selectedMedia.url}
@@ -227,7 +227,7 @@ export default function MediaInsertionModal({
 
               {/* HTML Preview */}
               {selectedMedia && (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-3">
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-400 mb-1">Generated HTML:</p>
                   <code className="text-xs text-gray-600 dark:text-gray-300 break-all">
                     &lt;img src=&quot;{selectedMedia.url}&quot; alt=&quot;{altText || selectedMedia.name}&quot; /&gt;

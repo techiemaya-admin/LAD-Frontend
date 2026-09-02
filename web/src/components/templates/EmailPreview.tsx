@@ -60,7 +60,7 @@ export default function EmailPreview({
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="color-scheme" content="light">
+      <meta name="color-scheme" content="${isDark ? 'dark' : 'light'}">
       <style>
         /* Modern customized scrollbar tracking inside the preview iframe */
         ::-webkit-scrollbar {
@@ -146,11 +146,11 @@ export default function EmailPreview({
           color: #f3f4f6 !important;
         }
         html[data-theme="dark"] .email-container {
-          background-color: #000c3b !important;
+          background-color: #071131 !important;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }
         html[data-theme="dark"] .email-header {
-          border-bottom: 1px solid #1e293b !important;
+          border-bottom: 1px solid rgba(23, 37, 84, 0.4) !important;
         }
         html[data-theme="dark"] .email-subject {
           color: #ffffff !important;
@@ -167,11 +167,11 @@ export default function EmailPreview({
         html[data-theme="dark"] .email-body a {
           color: #38bdf8 !important;
         }
-        html[data-theme="dark"] ::webkit-scrollbar-track {
+        html[data-theme="dark"] ::-webkit-scrollbar-track {
           background: #000724;
         }
-        html[data-theme="dark"] ::webkit-scrollbar-thumb {
-          background: #1e293b;
+        html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+          background: #172554;
         }
 
         /* No OS-level dark media query - theme is driven solely by parent app class */
@@ -207,7 +207,7 @@ export default function EmailPreview({
     <div className="flex flex-col gap-4 bg-transparent">
       {/* Device Selector */}
       {showDeviceSelector && (
-        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
+        <div className="flex gap-2 border-b border-gray-200 dark:border-blue-950/40 pb-3">
           <button
             onClick={() => setDevice('mobile')}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
@@ -250,7 +250,7 @@ export default function EmailPreview({
 
       {/* Preview Container */}
       <div
-        className="border-2 border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden bg-gray-50 dark:bg-[#000724]"
+        className="border-2 border-gray-200 dark:border-blue-950/40 rounded-lg overflow-hidden bg-gray-50 dark:bg-[#000724]"
         style={{
           width: device === 'desktop' ? '100%' : getDeviceWidth(),
           margin: '0 auto',
