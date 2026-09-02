@@ -62,20 +62,9 @@ export default function EmailPreview({
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta name="color-scheme" content="light">
       <style>
-        /* Modern customized scrollbar tracking inside the preview iframe */
+        /* Hide scrollbars completely in preview */
         ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
+          display: none;
         }
 
         html, body {
@@ -85,6 +74,9 @@ export default function EmailPreview({
           line-height: 1.6;
           margin: 0;
           padding: 16px;
+          overflow: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           transition: background-color 0.2s ease, color 0.2s ease;
         }
         .email-container {
@@ -146,7 +138,7 @@ export default function EmailPreview({
           color: #f3f4f6 !important;
         }
         html[data-theme="dark"] .email-container {
-          background-color: #000c3b !important;
+          background-color: #071131 !important;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }
         html[data-theme="dark"] .email-header {
@@ -167,12 +159,7 @@ export default function EmailPreview({
         html[data-theme="dark"] .email-body a {
           color: #38bdf8 !important;
         }
-        html[data-theme="dark"] ::webkit-scrollbar-track {
-          background: #000724;
-        }
-        html[data-theme="dark"] ::webkit-scrollbar-thumb {
-          background: #1e293b;
-        }
+
 
         /* No OS-level dark media query - theme is driven solely by parent app class */
       </style>
@@ -213,7 +200,7 @@ export default function EmailPreview({
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               device === 'mobile'
                 ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-900'
-                : 'bg-gray-100 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
+                : 'bg-gray-100 dark:bg-[#071131] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
             }`}
           >
             📱 Mobile (375px)
@@ -223,7 +210,7 @@ export default function EmailPreview({
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               device === 'tablet'
                 ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-900'
-                : 'bg-gray-100 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
+                : 'bg-gray-100 dark:bg-[#071131] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
             }`}
           >
             📊 Tablet (768px)
@@ -233,7 +220,7 @@ export default function EmailPreview({
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               device === 'desktop'
                 ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-900'
-                : 'bg-gray-100 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
+                : 'bg-gray-100 dark:bg-[#071131] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#0b1957]/50'
             }`}
           >
             💻 Desktop
@@ -257,15 +244,23 @@ export default function EmailPreview({
         }}
       >
         <iframe
-                key={renderingKey}
+          key={renderingKey}
           sandbox="allow-same-origin allow-scripts allow-forms"
           srcDoc={htmlWithStyles}
+          scrolling="no"
+          onLoad={(e) => {
+            const doc = e.currentTarget.contentDocument;
+            if (doc?.documentElement?.scrollHeight) {
+              e.currentTarget.style.height = `${doc.documentElement.scrollHeight}px`;
+            }
+          }}
           style={{
             width: '100%',
-            height: device === 'mobile' ? '600px' : device === 'tablet' ? '800px' : '600px',
+            minHeight: device === 'mobile' ? '450px' : '350px',
             border: 'none',
             display: 'block',
-        }}
+            overflow: 'hidden',
+          }}
           title="Email Preview"
         />
       </div>
@@ -275,7 +270,7 @@ export default function EmailPreview({
         <p className="text-sm text-blue-800 dark:text-blue-400 mb-2 font-semibold">💡 Supported Placeholders:</p>
         <div className="flex flex-wrap gap-2">
           {['{{first_name}}', '{{last_name}}', '{{company}}', '{{title}}', '{{email}}'].map((placeholder) => (
-            <span key={placeholder} className="inline-block bg-white dark:bg-[#000c3b] border border-blue-200 dark:border-blue-800 px-2 py-1 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">
+            <span key={placeholder} className="inline-block bg-white dark:bg-[#071131] border border-blue-200 dark:border-blue-800 px-2 py-1 rounded text-xs text-blue-700 dark:text-blue-300 font-mono">
               {placeholder}
             </span>
           ))}

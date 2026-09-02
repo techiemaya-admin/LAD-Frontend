@@ -116,7 +116,7 @@ export default function CreateInstagramTemplateModal({
               </DialogDescription>
             </div>
           </div>
-          <DialogClose className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-blue-900/50 bg-gray-50 dark:bg-[#000c3b] text-gray-500 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/60 transition-colors focus:outline-none cursor-pointer">
+          <DialogClose className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-blue-900/50 bg-gray-50 dark:bg-[#071131] text-gray-500 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/60 transition-colors focus:outline-none cursor-pointer">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
@@ -133,7 +133,7 @@ export default function CreateInstagramTemplateModal({
               placeholder="e.g. Welcome DM"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={`w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
+              className={`w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
             />
             {errors.name && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -158,7 +158,7 @@ export default function CreateInstagramTemplateModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
-              className={`w-full bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#DD2A7B] focus:ring-[#DD2A7B] ${errors.content ? 'border-red-500' : ''}`}
+              className={`w-full bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#DD2A7B] focus:ring-[#DD2A7B] ${errors.content ? 'border-red-500' : ''}`}
             />
             {errors.content && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -180,7 +180,7 @@ export default function CreateInstagramTemplateModal({
               placeholder="https://… image or video to attach"
               value={mediaUrl}
               onChange={(e) => setMediaUrl(e.target.value)}
-              className="w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
+              className="w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
             />
           </div>
 
@@ -192,12 +192,12 @@ export default function CreateInstagramTemplateModal({
               placeholder="Internal note about this template"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
+              className="w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
             />
           </div>
 
           {/* Default toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-900/50 rounded-xl bg-gray-50/50 dark:bg-[#000c3b]">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-900/50 rounded-xl bg-gray-50/50 dark:bg-[#071131]">
             <div className="space-y-0.5">
               <Label htmlFor="ig-default" className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">Set as Default Template</Label>
               <p className="text-xs text-gray-500 dark:text-slate-400">Used automatically for new campaigns</p>

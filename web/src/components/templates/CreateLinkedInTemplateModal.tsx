@@ -248,7 +248,7 @@ export default function CreateLinkedInTemplateModal({
               </DialogDescription>
             </div>
           </div>
-          <DialogClose className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-blue-900/50 bg-gray-50 dark:bg-[#000c3b] text-gray-500 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/60 transition-colors focus:outline-none cursor-pointer">
+          <DialogClose className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-blue-900/50 bg-gray-50 dark:bg-[#071131] text-gray-500 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/60 transition-colors focus:outline-none cursor-pointer">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
@@ -265,7 +265,7 @@ export default function CreateLinkedInTemplateModal({
               placeholder="e.g. Sales Outreach - Enterprise"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={`w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#0A66C2] focus:ring-[#0A66C2] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
+              className={`w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#0A66C2] focus:ring-[#0A66C2] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
             />
             {errors.name && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -282,7 +282,7 @@ export default function CreateLinkedInTemplateModal({
               placeholder="When to use this template…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#0A66C2] focus:ring-[#0A66C2] rounded-lg min-w-0"
+              className="w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#0A66C2] focus:ring-[#0A66C2] rounded-lg min-w-0"
             />
           </div>
 
@@ -293,10 +293,10 @@ export default function CreateLinkedInTemplateModal({
               id="li-type"
               value={templateType}
               onChange={(e) => handleTypeChange(e.target.value)}
-              className="w-full h-11 px-3.5 py-2.5 text-sm bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border border-gray-200 dark:border-blue-900/50 rounded-lg focus-visible:outline-none focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] cursor-pointer"
+              className="w-full h-11 px-3.5 py-2.5 text-sm bg-white dark:bg-[#071131] text-gray-900 dark:text-white border border-gray-200 dark:border-blue-900/50 rounded-lg focus-visible:outline-none focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] cursor-pointer"
             >
               {LINKEDIN_TEMPLATE_TYPES.map((t) => (
-                <option key={t.value} value={t.value} className="bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white">{t.label}</option>
+                <option key={t.value} value={t.value} className="bg-white dark:bg-[#071131] text-gray-900 dark:text-white">{t.label}</option>
               ))}
             </select>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
@@ -324,9 +324,9 @@ export default function CreateLinkedInTemplateModal({
                     onChange={(e) => { if (e.target.value) insertVariable(e.target.value); e.currentTarget.selectedIndex = 0; }}
                     className="h-8 pl-3 pr-7 text-xs bg-[#0A66C2]/10 dark:bg-[#0A66C2]/20 text-[#0A66C2] dark:text-[#38BDF8] border border-[#0A66C2]/20 dark:border-[#0A66C2]/40 font-medium rounded-md cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#0A66C2] appearance-none"
                   >
-                    <option value="" className="bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white">+ Add variable</option>
+                    <option value="" className="bg-white dark:bg-[#071131] text-gray-900 dark:text-white">+ Add variable</option>
                     {VARIABLE_OPTIONS.map((v) => (
-                      <option key={v.token} value={v.token} className="bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white">{v.label}</option>
+                      <option key={v.token} value={v.token} className="bg-white dark:bg-[#071131] text-gray-900 dark:text-white">{v.label}</option>
                     ))}
                   </select>
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#0A66C2] dark:text-[#38BDF8] text-[10px]">▼</span>
@@ -343,7 +343,7 @@ export default function CreateLinkedInTemplateModal({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={isConnection ? 4 : 6}
-              className={`w-full bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#0A66C2] focus:ring-[#0A66C2] ${errors.body ? 'border-red-500' : ''}`}
+              className={`w-full bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#0A66C2] focus:ring-[#0A66C2] ${errors.body ? 'border-red-500' : ''}`}
             />
             {errors.body && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -367,7 +367,7 @@ export default function CreateLinkedInTemplateModal({
                 className="hidden"
               />
               {mediaUrl ? (
-                <div className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-[#000c3b] border border-gray-200 dark:border-blue-900/50 rounded-xl">
+                <div className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-[#071131] border border-gray-200 dark:border-blue-900/50 rounded-xl">
                   {mediaType === 'image' ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={mediaUrl} alt={mediaFilename || 'attachment'} className="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-blue-900/60" />
@@ -392,7 +392,7 @@ export default function CreateLinkedInTemplateModal({
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingMedia}
-                  className="w-full h-11 justify-start bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 border-gray-200 dark:border-blue-900/50 hover:bg-gray-50 dark:hover:bg-blue-950/40 hover:text-gray-900 dark:hover:text-white rounded-xl"
+                  className="w-full h-11 justify-start bg-white dark:bg-[#071131] text-gray-600 dark:text-slate-300 border-gray-200 dark:border-blue-900/50 hover:bg-gray-50 dark:hover:bg-blue-950/40 hover:text-gray-900 dark:hover:text-white rounded-xl"
                 >
                   {uploadingMedia ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Paperclip className="mr-2 h-4 w-4" />}
                   {uploadingMedia ? 'Uploading…' : 'Attach image, video, voice note, or document'}
@@ -410,7 +410,7 @@ export default function CreateLinkedInTemplateModal({
           )}
 
           {/* Default toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-900/50 rounded-xl bg-gray-50/50 dark:bg-[#000c3b]">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-900/50 rounded-xl bg-gray-50/50 dark:bg-[#071131]">
             <div className="space-y-0.5">
               <Label htmlFor="li-default" className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">Set as Default Template</Label>
               <p className="text-xs text-gray-500 dark:text-slate-400">Used automatically for new campaigns</p>

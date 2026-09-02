@@ -156,7 +156,7 @@ export default function AIEmailGeneratorQuestionnaire({
       </div>
 
       {/* Question Card */}
-      <div className="bg-white dark:bg-[#000c3b] rounded-lg border border-gray-200 dark:border-gray-800 p-8 mb-8 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-gray-800 p-8 mb-8 shadow-sm">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{currentQuestion?.title}</h2>
         <p className="text-gray-600 dark:text-gray-400 mb-6">{currentQuestion?.description}</p>
 
@@ -211,7 +211,7 @@ export default function AIEmailGeneratorQuestionnaire({
         <button
           onClick={handleBack}
           disabled={step === 1}
-          className="px-6 py-2.5 border border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-[#000c3b] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0b1957]/30 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all cursor-pointer"
+          className="px-6 py-2.5 border border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-[#071131] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0b1957]/30 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all cursor-pointer"
         >
           ← Back
         </button>

@@ -139,11 +139,11 @@ function statusBadgeVariant(
 function statusBadgeClass(status: string): string {
   switch (status) {
     case 'running':
-      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800';
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-100 dark:border-blue-800';
     case 'queued':
       return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900/50';
     default:
-      return '';
+      return 'dark:text-white';
   }
 }
 
@@ -526,7 +526,7 @@ function ComposeBroadcastDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-zinc-800 focus:outline-none focus-visible:ring-0 focus:ring-0">
-        <DialogHeader className="flex-col items-start lg:flex-row lg:items-center gap-1 lg:gap-4 mb-6 pr-10 lg:pr-0 pt-6">
+        <DialogHeader className="flex-col items-start gap-1 mb-6 pr-10 lg:pr-0 pt-6">
           <DialogTitle>New broadcast</DialogTitle>
           <DialogDescription className="text-[13px] sm:text-sm">
             Send the same message to many recipients via a connected Gmail or Outlook account.
@@ -577,7 +577,7 @@ function ComposeBroadcastDialog({
                   onClick={() => setMode('manual')}
                   className={`px-2 py-1 rounded transition-colors ${
                     mode === 'manual'
-                      ? 'bg-primary text-primary-foreground font-medium'
+                      ? 'bg-primary text-primary-foreground font-medium dark:text-white'
                       : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
@@ -590,7 +590,7 @@ function ComposeBroadcastDialog({
                   onClick={() => setMode('group')}
                   className={`px-2 py-1 rounded transition-colors ${
                     mode === 'group'
-                      ? 'bg-primary text-primary-foreground font-medium'
+                      ? 'bg-primary text-primary-foreground font-medium dark:text-white'
                       : 'text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300'
                   }`}
                 >
@@ -638,7 +638,7 @@ function ComposeBroadcastDialog({
                       groupsList.map((g) => (
                         <SelectItem key={g.id} value={g.id}>
                           {g.name}
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground group-hover:text-white group-focus:text-white group-data-[highlighted]:text-white group-data-[state=checked]:text-white transition-colors">
                             {' '}
                             · {g.member_count} member
                             {g.member_count === 1 ? '' : 's'}
@@ -690,6 +690,7 @@ function ComposeBroadcastDialog({
                 htmlContent={body}
                 subject={subject}
                 onContentChange={setBody}
+                theme="black"
               />
             </div>
             <p className="mt-3.5 text-xs text-muted-foreground">
@@ -1016,7 +1017,8 @@ export function EmailBroadcastsSentList() {
               : `${list.length} broadcast${list.length === 1 ? '' : 's'}`}
         </div>
         <Button size="sm" onClick={() => setComposeOpen(true)}>
-          <Pencil className="h-3.5 w-3.5 mr-1.5" /> New broadcast
+          <Pencil className="h-3.5 w-3.5 mr-1.5 dark:text-white" /> 
+          <span className='dark:text-white'>New broadcast</span>
         </Button>
       </div>
 
