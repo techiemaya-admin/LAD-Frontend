@@ -27,7 +27,7 @@ const STATUS_TABS: { value: SignupStatus | undefined; label: string }[] = [
 const SOURCE_META: Record<SignupSource, { label: string; cls: string; Icon: React.ElementType }> = {
   inmail: { label: 'InMail', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300', Icon: Linkedin },
   pdf: { label: 'PDF', cls: 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300', Icon: FileText },
-  landing: { label: 'Organic', cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', Icon: Globe },
+  landing: { label: 'Organic', cls: 'bg-slate-100 text-slate-600 dark:bg-[#253456] dark:text-slate-300', Icon: Globe },
   referral: { label: 'Referral', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300', Icon: Users },
   other: { label: 'Other', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300', Icon: HelpCircle },
 };
@@ -59,7 +59,7 @@ export default function MonitorSignupsPage() {
         </h2>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -87,15 +87,15 @@ export default function MonitorSignupsPage() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-1">
+      <div className="mb-4 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-slate-200 bg-white p-0.5 dark:border-blue-950/40 dark:bg-[#000724]">
         {STATUS_TABS.map((t) => (
           <button
             key={t.label}
             onClick={() => setStatus(t.value)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`inline-flex h-7 flex-shrink-0 items-center rounded-full px-2.5 text-[11.5px] font-medium transition-colors ${
               status === t.value
-                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                ? 'bg-[#0B1957] text-white dark:bg-[#2563eb]'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-[#0e1d4d]'
             }`}
           >
             {t.label}
@@ -113,7 +113,7 @@ export default function MonitorSignupsPage() {
       ) : null}
 
       {!loading && data.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-200 py-12 text-center dark:border-gray-700">
+        <div className="rounded-lg border border-dashed border-gray-200 py-12 text-center dark:border-blue-950/40">
           <Inbox className="mx-auto h-6 w-6 text-gray-400" />
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No signups yet.</p>
         </div>
@@ -125,7 +125,7 @@ export default function MonitorSignupsPage() {
           return (
             <div
               key={s.id}
-              className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+              className="rounded-lg border border-gray-200 bg-white p-3 dark:border-blue-950/40 dark:bg-[#071131]"
             >
               <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
                 <div className="min-w-0 flex-1">
@@ -158,7 +158,7 @@ export default function MonitorSignupsPage() {
                     </a>
                   ) : null}
                   {s.playbook ? (
-                    <p className="mt-2 rounded-lg bg-gray-50 p-2.5 text-xs leading-relaxed text-gray-700 dark:bg-gray-950 dark:text-gray-300">
+                    <p className="mt-2 rounded-lg bg-gray-50 p-2.5 text-xs leading-relaxed text-gray-700 dark:bg-[#000724] dark:text-gray-300">
                       {s.playbook}
                     </p>
                   ) : null}
@@ -168,7 +168,7 @@ export default function MonitorSignupsPage() {
                   value={s.status}
                   disabled={savingId === s.id}
                   onChange={(e) => save(s.id, e.target.value as SignupStatus).catch(() => {})}
-                  className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50 dark:border-blue-950/40 dark:bg-[#253456] dark:text-gray-200"
                 >
                   {(['new', 'contacted', 'accepted', 'declined', 'spam'] as SignupStatus[]).map((v) => (
                     <option key={v} value={v}>
