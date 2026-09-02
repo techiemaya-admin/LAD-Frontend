@@ -60,8 +60,23 @@ import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationMo
 const WORKER_URL =
   process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
 
+/**
+ * What to show for a profile: its website address, or the folder name when the
+ * backend has never recorded one. Never the raw folder when we have better.
+ */
+function label(p: { display_domain?: string | null; domain: string }): string {
+  return p.display_domain || p.domain;
+}
+
 interface BrandProfile {
+  /** The storage folder name. An internal key: never show this to a customer. */
   domain: string;
+  /**
+   * The website address, for display. Folder names replace every punctuation
+   * mark with an underscore and cannot be turned back, so the backend keeps the
+   * real address alongside. Falls back to the folder name when we never had one.
+   */
+  display_domain?: string | null;
   is_default: boolean;
   from_crawl: boolean;
   brand_name?: string | null;
@@ -404,6 +419,9 @@ export const MageSettings: React.FC = () => {
   // full 20-minute budget fetching for a component nobody is looking at.
   const mountedRef = useRef(true);
   const [changeTarget, setChangeTarget] = useState<string | null>(null);
+  // The address to put in the change box heading. changeTarget stays the folder
+  // name because that is what the endpoint keys on.
+  const changeTargetLabel = profiles.find((p) => p.domain === changeTarget);
   const [changeText, setChangeText] = useState('');
   // The change box renders below the profile list, so with a dozen profiles it
   // opens off screen and the pencil looks like it did nothing.
@@ -572,7 +590,7 @@ export const MageSettings: React.FC = () => {
         body: JSON.stringify({ domain: changeTarget, request: changeText.trim() }),
       });
       if (!res.ok) throw new Error(await readError(res, 'Could not apply the changes.'));
-      setNotice(`Updated ${changeTarget}.`);
+      setNotice(`Updated ${changeTargetLabel ? label(changeTargetLabel) : changeTarget}.`);
       setChangeText('');
       setChangeTarget(null);
       await loadOverview();
@@ -1236,10 +1254,10 @@ export const MageSettings: React.FC = () => {
           ) : defaultProfile ? (
             <>
               <div className="text-sm text-gray-900 dark:text-gray-100">
-                {defaultProfile.brand_name || defaultProfile.domain}
+                {defaultProfile.brand_name || label(defaultProfile)}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {defaultProfile.tagline || defaultProfile.domain}
+                {defaultProfile.tagline || label(defaultProfile)}
               </div>
               {brandColors && (
                 <div className="flex items-center gap-1.5 mt-2">
@@ -1548,10 +1566,10 @@ export const MageSettings: React.FC = () => {
                   </button>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm text-gray-900 dark:text-gray-100 truncate">
-                      {p.brand_name || p.domain}
+                      {p.brand_name || label(p)}
                     </span>
                     <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {p.tagline || p.domain}
+                      {p.tagline || label(p)}
                     </span>
                   </span>
                   {/* Only the default profile carries colours, because it is the
@@ -1581,7 +1599,7 @@ export const MageSettings: React.FC = () => {
           {changeTarget && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                What should change about {changeTarget}?
+                What should change about {changeTargetLabel ? label(changeTargetLabel) : changeTarget}?
               </p>
               <textarea
                 ref={changeBoxRef}
