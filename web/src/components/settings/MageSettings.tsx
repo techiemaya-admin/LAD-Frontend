@@ -67,7 +67,15 @@ interface BrandProfile {
   brand_name?: string | null;
   tagline?: string | null;
   asset_count: number;
-  /** Swatches for the tile. Parsed server-side, so this costs no extra request. */
+  /** When it was extracted, from the index file. Absent until MAGe indexes it. */
+  extracted_at?: string | null;
+  /** False for a profile the extractor has not yet written a row for. */
+  indexed?: boolean;
+  /**
+   * Swatches for the tile, and ONLY populated for the default profile. Every
+   * other row would need its whole profile opened to fill this in, which is what
+   * made loading the card read every profile the tenant has.
+   */
   colors?: { primary?: string; background?: string; accent?: string } | null;
 }
 
@@ -1314,7 +1322,10 @@ export const MageSettings: React.FC = () => {
                       {p.tagline || p.domain}
                     </span>
                   </span>
-                  {p.colors?.primary && (
+                  {/* Only the default profile carries colours, because it is the
+                      only one the card renders swatches for. Fetching them for
+                      every row meant opening every profile just to draw a list. */}
+                  {p.is_default && p.colors?.primary && (
                     <span
                       className="w-3.5 h-3.5 rounded border border-gray-200 dark:border-gray-700 shrink-0"
                       style={{ background: p.colors.primary }}
