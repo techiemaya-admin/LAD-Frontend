@@ -159,6 +159,68 @@ type ModalId = 'request' | 'brand' | 'audience' | 'assets' | 'shortcuts' | 'driv
  */
 const ACTION_WIDTH = 'clamp(7rem, 8.6vw, 8.75rem)';
 
+/**
+ * Turn the extractor's internal commentary into something a customer can read.
+ *
+ * The status endpoint returns MAGe's own progress notes, written for a log:
+ * "Initializing Playwright scraper", "Launching headless browser context". On
+ * failure `message` carries the raw exception, stack trace and all, and that was
+ * being printed straight onto the settings page. A missing API key read as a
+ * Python traceback.
+ *
+ * Matched on substrings rather than exact text because these strings are written
+ * for humans reading logs, not as a stable contract, and they change freely.
+ * Anything unrecognised falls back to a neutral line rather than leaking.
+ */
+// Order matters: first match wins. "Brand DNA synthesized successfully" contains
+// both a synthesis word and a success word, so the terminal patterns sit first.
+const EXTRACTION_STAGES: Array<[RegExp, string]> = [
+  [/complet|success|synthesized/i,        'Finished'],
+  [/queuing|queue/i,                      'Queued'],
+  [/playwright|browser|headless/i,        'Opening your website'],
+  [/screenshot/i,                         'Capturing screenshots'],
+  [/download/i,                           'Collecting images'],
+  [/scrap|crawl|dom|asset candidates/i,   'Reading the page'],
+  [/synthes|gemini|brand dna|visual parser/i, 'Building your brand profile'],
+  [/upload|gcs|storage/i,                 'Saving'],
+];
+
+export function extractionLabel(message?: string, status?: string): string {
+  if (status === 'completed') return 'Finished';
+  if (status === 'failed' || status === 'error') return 'Could not finish';
+  for (const [pattern, label] of EXTRACTION_STAGES) {
+    if (message && pattern.test(message)) return label;
+  }
+  return 'Working on it';
+}
+
+/**
+ * A short, actionable reason for a failed extraction.
+ *
+ * Never the raw error. Customers cannot act on a traceback, and it exposes how
+ * the service is built. Anything we do not recognise becomes a generic line;
+ * the real error is still in the worker logs where it belongs.
+ */
+export function extractionFailureReason(message?: string): string {
+  const m = message || '';
+  if (/api.?key|GEMINI_API_KEY|GOOGLE_API_KEY/i.test(m)) {
+    return 'Media generation is not configured on this environment. Contact support.';
+  }
+  if (/timeout|timed out/i.test(m)) {
+    return 'That site took too long to respond. Try again, or check the address.';
+  }
+  if (/dns|name resolution|could not resolve|connection|unreachable/i.test(m)) {
+    return 'We could not reach that address. Check the URL and try again.';
+  }
+  if (/403|401|forbidden|unauthor/i.test(m)) {
+    return 'That site blocked us from reading it.';
+  }
+  if (/404|not found/i.test(m)) {
+    return 'That page does not exist. Check the address.';
+  }
+  return 'Something went wrong reading that site. Try again, or use "No website" instead.';
+}
+
 // ── render helpers, at module scope ─────────────────────────────────────────
 //
 // Declared OUTSIDE the component on purpose. A component defined inside a
@@ -760,6 +822,14 @@ export const MageSettings: React.FC = () => {
   const defaultProfile = profiles.find((p) => p.is_default) || null;
   const brandColors = defaultProfile?.colors || null;
 
+  // A run is in flight from the moment it is triggered until the status turns
+  // terminal, not just while the trigger request is open. The trigger returns a
+  // run id in under a second while the work continues for minutes, so keying off
+  // `busy` alone would re-enable the field almost immediately.
+  const extractionRunning =
+    busy === 'extract' ||
+    (!!extractRun && !['completed', 'failed', 'error'].includes(String(extractRun.status)));
+
   /**
    * One readable line for the Audience tile.
    *
@@ -1274,15 +1344,20 @@ export const MageSettings: React.FC = () => {
               value={extractUrl}
               onChange={(e) => setExtractUrl(e.target.value)}
               placeholder="https://yourcompany.com"
-              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+              // Held while a run is in flight, with the address still readable,
+              // so it is obvious which site is being analysed and a second run
+              // cannot be started on top of the first.
+              disabled={extractionRunning}
+              title={extractionRunning ? 'Analysing this site. One at a time.' : undefined}
+              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60 disabled:cursor-not-allowed"
             />
             <button
               onClick={startExtraction}
-              disabled={!extractUrl.trim() || busy === 'extract'}
+              disabled={!extractUrl.trim() || extractionRunning}
               title="Read a website and build a brand profile from it"
               className="text-sm font-medium px-3 py-2 rounded-lg bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
             >
-              {busy === 'extract' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add from URL'}
+              {extractionRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add from URL'}
             </button>
             <button
               onClick={() => { setModal(null); setShowWizard(true); }}
@@ -1293,11 +1368,48 @@ export const MageSettings: React.FC = () => {
             </button>
           </div>
 
-          {extractRun && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              {extractRun.message || extractRun.status}
-            </div>
-          )}
+          {extractRun && (() => {
+            const failed = extractRun.status === 'failed' || extractRun.status === 'error';
+            const done = extractRun.status === 'completed';
+            const pct = done ? 100 : Math.max(4, Math.min(extractRun.progress ?? 8, 99));
+            return (
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-900/60 px-3 py-2.5 mb-3">
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  {failed ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  ) : done ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0b1957] dark:text-blue-400 shrink-0" />
+                  )}
+                  <span className={
+                    failed ? 'text-red-600 dark:text-red-400'
+                    : done ? 'text-green-700 dark:text-green-400'
+                    : 'text-gray-700 dark:text-gray-200'
+                  }>
+                    {/* Never extractRun.message. That is MAGe's internal log line,
+                        and on failure it is the raw exception. */}
+                    {failed
+                      ? extractionFailureReason(extractRun.message)
+                      : extractionLabel(extractRun.message, extractRun.status)}
+                  </span>
+                  {!failed && (
+                    <span className="ml-auto text-gray-400 tabular-nums">{pct}%</span>
+                  )}
+                </div>
+                {!failed && (
+                  <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        done ? 'bg-green-600' : 'bg-[#0b1957] dark:bg-blue-500'
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {profiles.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">
