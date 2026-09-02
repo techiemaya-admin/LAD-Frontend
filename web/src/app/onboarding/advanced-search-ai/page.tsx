@@ -12425,7 +12425,7 @@ function CheckpointFormInline({
 
                                                             <div className="flex items-center gap-2">
                                                                 <span>{acc.display_name}</span>
-                                                                <span className="text-[10px] opacity-70 bg-gray-100 dark:bg-emerald-900 px-1.5 py-0.5 rounded">
+                                                                <span className="text-[10px] bg-slate-100 text-slate-600 dark:bg-emerald-900/70 dark:text-emerald-200 px-1.5 py-0.5 rounded border border-slate-200 dark:border-emerald-700/60 group-data-[highlighted]:!bg-white/20 group-data-[highlighted]:!text-white group-data-[highlighted]:!border-white/25 group-data-[state=checked]:!bg-white/20 group-data-[state=checked]:!text-white group-data-[state=checked]:!border-white/25">
             {acc.account_type === 'business_api' ? 'Business API' : 'Personal'}
           </span>
                                                             </div>
