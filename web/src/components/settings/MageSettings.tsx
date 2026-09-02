@@ -160,6 +160,31 @@ type ModalId = 'request' | 'brand' | 'audience' | 'assets' | 'shortcuts' | 'driv
 const ACTION_WIDTH = 'clamp(7rem, 8.6vw, 8.75rem)';
 
 /**
+ * A placeholder shaped like the value it stands in for.
+ *
+ * The card used to sit behind a single "Loading MAGe settings" spinner until
+ * every section had arrived. The layout is known before any of the data is, so
+ * it is drawn immediately and each value fills in as its section lands.
+ */
+const Bar: React.FC<{ w: string; h?: string; className?: string }> = ({
+  w, h = '0.75rem', className = '',
+}) => (
+  <span
+    aria-hidden="true"
+    className={`block rounded bg-gray-200 dark:bg-gray-700/60 animate-pulse ${className}`}
+    style={{ width: w, height: h }}
+  />
+);
+
+/** Two stacked lines, the shape most tile bodies take. */
+const TextSkeleton: React.FC = () => (
+  <>
+    <Bar w="62%" h="0.85rem" className="mb-1.5" />
+    <Bar w="88%" />
+  </>
+);
+
+/**
  * Turn the extractor's internal commentary into something a customer can read.
  *
  * The status endpoint returns MAGe's own progress notes, written for a log:
@@ -876,16 +901,16 @@ export const MageSettings: React.FC = () => {
     return line || raw.slice(0, 90);
   })();
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 p-6 text-sm text-gray-500 dark:text-gray-400">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Loading MAGe settings…
-      </div>
-    );
-  }
+  // No full-card spinner. The layout is known before any of the data is, so the
+  // card is drawn straight away and each tile fills in as its section lands.
 
   const queued = queue?.queued ?? 0;
+  // Each section arrives on its own, so each tile knows independently whether it
+  // is still waiting rather than the whole card sharing one flag.
+  const brandPending = loading && !defaultProfile;
+  const icpPending = loading && !icp;
+  const assetsPending = loading && !assets;
+  const keywordsPending = loading && !Object.keys(keywords).length;
 
   return (
     <div
@@ -946,19 +971,26 @@ export const MageSettings: React.FC = () => {
               : 'Drive has not been synced yet'
           }
         >
+          {/* Stays neutral until the answer is known. Saying "not connected"
+              while still loading is a claim we cannot yet make, and it is the
+              alarming direction to get wrong. */}
           <span
             className={`w-2 h-2 rounded-full ${
-              queue?.last_synced ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+              !queue ? 'bg-gray-300 dark:bg-gray-600 animate-pulse'
+              : queue.last_synced ? 'bg-green-500'
+              : 'bg-gray-300 dark:bg-gray-600'
             }`}
           />
           <span className="text-gray-600 dark:text-gray-300">
-            {queue?.last_synced ? 'Drive connected' : 'Drive not connected'}
+            {!queue ? 'Checking Drive' : queue.last_synced ? 'Drive connected' : 'Drive not connected'}
           </span>
         </span>
 
-        <span className="text-xs text-gray-500 dark:text-gray-400" title="Requests waiting to run">
-          {queued} queued
-        </span>
+        {queue && (
+          <span className="text-xs text-gray-500 dark:text-gray-400" title="Requests waiting to run">
+            {queued} queued
+          </span>
+        )}
 
         {jobs?.active_run && (
           <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -1068,12 +1100,18 @@ export const MageSettings: React.FC = () => {
                 >
                   {label}
                 </div>
-                <div
-                  className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums leading-tight"
-                  style={{ fontSize: 'clamp(1.05rem, 1.3vw, 1.35rem)' }}
-                >
-                  {n}
-                </div>
+                {/* From /auto-media/jobs, a separate request to the overview, so
+                    these fill on their own rather than waiting for the rest. */}
+                {!jobs ? (
+                  <Bar w="1.5rem" h="1.15rem" className="mt-1" />
+                ) : (
+                  <div
+                    className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums leading-tight"
+                    style={{ fontSize: 'clamp(1.05rem, 1.3vw, 1.35rem)' }}
+                  >
+                    {n}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1085,6 +1123,17 @@ export const MageSettings: React.FC = () => {
               ...(jobs?.completed || []),
               ...(jobs?.closed || []),
             ].slice(0, 4);
+            // Only claim there is nothing once we actually know. Before the jobs
+            // call returns, rows is empty because it has not loaded, not because
+            // the queue is empty, and saying "Nothing yet" then is simply wrong.
+            if (!jobs) {
+              return (
+                <div className="space-y-2 py-1">
+                  <Bar w="72%" />
+                  <Bar w="54%" />
+                </div>
+              );
+            }
             if (!rows.length) {
               return (
                 <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -1156,7 +1205,16 @@ export const MageSettings: React.FC = () => {
           title="Brand profile"
           hint="What the agent believes your brand looks and sounds like"
         >
-          {defaultProfile ? (
+          {brandPending ? (
+            <>
+              <TextSkeleton />
+              <div className="flex items-center gap-1.5 mt-2">
+                <Bar w="1rem" h="1rem" />
+                <Bar w="1rem" h="1rem" />
+                <Bar w="1rem" h="1rem" />
+              </div>
+            </>
+          ) : defaultProfile ? (
             <>
               <div className="text-sm text-gray-900 dark:text-gray-100">
                 {defaultProfile.brand_name || defaultProfile.domain}
@@ -1195,7 +1253,9 @@ export const MageSettings: React.FC = () => {
           title="Audience"
           hint="Who the agent is writing for"
         >
-          {icp?.exists ? (
+          {icpPending ? (
+            <TextSkeleton />
+          ) : icp?.exists ? (
             <>
               {/* Record names like "AI Playground Profile" are internal and mean
                   nothing to a customer, so they are suppressed in favour of the
@@ -1226,9 +1286,13 @@ export const MageSettings: React.FC = () => {
           hint="Logos and photos the agent can borrow from"
         >
           <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
-              {assets?.total ?? 0}
-            </span>
+            {assetsPending ? (
+              <Bar w="2.5rem" h="1.3rem" />
+            ) : (
+              <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
+                {assets?.total ?? 0}
+              </span>
+            )}
             <span className="text-xs text-gray-500 dark:text-gray-400">the agent can draw on</span>
           </div>
           <div className="mt-2 space-y-1">
@@ -1242,9 +1306,14 @@ export const MageSettings: React.FC = () => {
                 <span className="text-gray-400 tabular-nums">{c.count}</span>
               </div>
             ))}
-            {!assets?.categories?.length && (
+            {assetsPending ? (
+              <>
+                <Bar w="70%" className="mb-1.5" />
+                <Bar w="55%" />
+              </>
+            ) : !assets?.categories?.length ? (
               <p className="text-xs text-gray-400 dark:text-gray-500">Nothing uploaded yet.</p>
-            )}
+            ) : null}
           </div>
           <ManageButton onClick={() => setModal('assets')} hint="Upload, describe or remove reference images" />
         </Tile>
@@ -1272,7 +1341,13 @@ export const MageSettings: React.FC = () => {
           title="Keywords"
           hint="Short words that expand into a longer brief"
         >
-          {Object.keys(keywords).length ? (
+          {keywordsPending ? (
+            <div className="space-y-1.5">
+              <Bar w="58%" />
+              <Bar w="44%" />
+              <Bar w="66%" />
+            </div>
+          ) : Object.keys(keywords).length ? (
             <div className="space-y-1">
               {Object.keys(keywords).slice(0, 3).map((token) => (
                 <div key={token} className="flex items-center gap-2 text-xs" title={keywords[token]}>
