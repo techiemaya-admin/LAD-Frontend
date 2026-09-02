@@ -452,7 +452,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 hidden xl:inline-flex"
+            className="h-7 w-7 hidden xl:inline-flex dark:hover:bg-zinc-400/10"
             onClick={onClose}
             aria-label="Close contact info"
           >
@@ -717,13 +717,13 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
 
           {/* Business Profile */}
           <div className="mb-6">
-            <h5 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Business Profile</h5>
             {profileLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : businessProfile ? (
               <div className="space-y-3 p-3 rounded-lg bg-muted/30 dark:bg-[#1e2a30]">
+                <h5 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Business Profile</h5>
                 {businessProfile.company_name && (
                   <div className="flex items-start gap-3 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -1182,7 +1182,7 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
             <Bell className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
             <span className="text-[16px] text-foreground dark:text-white flex-1">Mute notifications</span>
-            <Switch />
+            <Switch className="data-[state=checked]:bg-emerald-400 dark:data-[state=checked]:bg-emerald-600" />
           </div>
           <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
             <Clock className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
