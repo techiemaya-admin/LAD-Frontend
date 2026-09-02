@@ -175,6 +175,9 @@ const ACTION_WIDTH = 'clamp(7rem, 8.6vw, 8.75rem)';
 // Order matters: first match wins. "Brand DNA synthesized successfully" contains
 // both a synthesis word and a success word, so the terminal patterns sit first.
 const EXTRACTION_STAGES: Array<[RegExp, string]> = [
+  // Our own line, set while the profile list is being refreshed after the
+  // extractor reports done. Sits first so it is never shadowed.
+  [/adding it to your profiles/i,         'Adding it to your profiles'],
   [/complet|success|synthesized/i,        'Finished'],
   [/queuing|queue/i,                      'Queued'],
   [/playwright|browser|headless/i,        'Opening your website'],
@@ -603,15 +606,33 @@ export const MageSettings: React.FC = () => {
             continue;
           }
           const data = await res.json();
-          setExtractRun({ run_id: runId, ...data });
-          if (['completed', 'failed', 'error'].includes(String(data.status))) {
-            // Refresh the list so the profile just built shows up in it, and
-            // free the field for the next site. On a failure the address is
-            // kept, since the usual next move is to correct it and retry.
-            await loadOverview();
-            if (data.status === 'completed') setExtractUrl('');
-            return;
+          const terminal = ['completed', 'failed', 'error'].includes(String(data.status));
+
+          if (!terminal) {
+            setExtractRun({ run_id: runId, ...data });
+            continue;
           }
+
+          // Refresh the list BEFORE announcing the run is finished.
+          //
+          // The status came from local state and appeared instantly, while the
+          // list waited on a request taking several seconds, so "Finished" showed
+          // up and the new profile did not arrive until noticeably later. Saying
+          // it is done while it is visibly not is worse than taking a moment
+          // longer to say it, so the run stays "working" until the list agrees.
+          setExtractRun({
+            run_id: runId,
+            ...data,
+            status: 'running',
+            message: 'Adding it to your profiles',
+          });
+          await loadOverview();
+
+          setExtractRun({ run_id: runId, ...data });
+          // Free the field for the next site. A failure keeps the address, since
+          // the usual next move is to correct it and try again.
+          if (data.status === 'completed') setExtractUrl('');
+          return;
         } catch {
           // Transient, so keep polling.
         }
