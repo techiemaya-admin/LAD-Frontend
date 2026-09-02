@@ -565,7 +565,8 @@ export const MageSettings: React.FC = () => {
       if (!res.ok) throw new Error(await readError(res, 'Could not start the extraction.'));
       const data = await res.json();
       setExtractRun({ ...data, status: 'running' });
-      setExtractUrl('');
+      // The address deliberately stays in the field, held rather than cleared,
+      // so it is obvious which site is being analysed while it runs.
       pollExtraction(data.run_id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not start the extraction.');
@@ -604,7 +605,11 @@ export const MageSettings: React.FC = () => {
           const data = await res.json();
           setExtractRun({ run_id: runId, ...data });
           if (['completed', 'failed', 'error'].includes(String(data.status))) {
+            // Refresh the list so the profile just built shows up in it, and
+            // free the field for the next site. On a failure the address is
+            // kept, since the usual next move is to correct it and retry.
             await loadOverview();
+            if (data.status === 'completed') setExtractUrl('');
             return;
           }
         } catch {
