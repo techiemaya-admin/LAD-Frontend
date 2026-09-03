@@ -264,6 +264,8 @@ interface ChatMsg {
     sources?: Array<{ title: string; url: string }>;
     leadDetailForm?: boolean;
     outreach_journey?: OutreachStep[];
+    abmData?: any;
+    nextBestActions?: any;
     /**
      * Live progress for an async lead-import discovery job. Rewritten in place on
      * every poll (the message keeps a stable id), so the user watches one bar
@@ -3309,7 +3311,7 @@ export default function AdvancedSearchAIPage() {
                     const uiPhase = mb.uiPayload?.phase;
                     const isPhaseMatch = mPhase === uiPhase;
                     const mQuestion = m.payload?.question || m.payload?.title || m.text;
-                    const uiQuestion = mb.uiPayload?.question || mb.uiPayload?.title;
+                    const uiQuestion = mb.uiPayload?.question || (mb.uiPayload as any)?.title;
                     const isQuestionMatch = mQuestion === uiQuestion;
                     return isStepTypeMatch && isPhaseMatch && isQuestionMatch;
                 });
@@ -3326,7 +3328,7 @@ export default function AdvancedSearchAIPage() {
                     const uiPhase = mb.uiPayload?.phase;
                     const isPhaseMatch = mPhase === uiPhase;
                     const mQuestion = lastMsg.payload?.question || lastMsg.payload?.title || lastMsg.text;
-                    const uiQuestion = mb.uiPayload?.question || mb.uiPayload?.title;
+                    const uiQuestion = mb.uiPayload?.question || (mb.uiPayload as any)?.title;
                     const isQuestionMatch = mQuestion === uiQuestion;
                     return isStepTypeMatch && isPhaseMatch && isQuestionMatch;
                 })();
@@ -5576,7 +5578,7 @@ export default function AdvancedSearchAIPage() {
                         setPendingLocationRequest({
                             intent: previewIntent,
                             originalQuery: text,
-                            abmType: extractedAbmType,
+                            abmType: extractedAbmType || '',
                             personName: extractedPersonName ?? undefined,
                             companyName: extractedCompanyName ?? undefined,
                         });
@@ -7256,7 +7258,7 @@ export default function AdvancedSearchAIPage() {
                             if (val === "[SHOW_GALLERY]") {
                                 mb.fetchGallery();
                             } else {
-                                submitMediaInput(val, val);
+                                submitMediaInput(val || '', val);
                             }
                         }}
                     />
@@ -8126,7 +8128,7 @@ export default function AdvancedSearchAIPage() {
                                 {inboundMode && inboundLeads.length > 0 && (
                                     <div className="adv-leads-list">
                                         {inboundLeads.map((lead, i) => (
-                                          <div key={i} className="adv-lead-card flex items-start gap-3 p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                          <div key={i} className="adv-lead-card flex items-start gap-3 p-4 rounded-xl border border-gray-100 dark:border-blue-900/40 bg-white dark:bg-[#071131] hover:bg-gray-50 dark:hover:bg-[#0b1957] transition-colors mb-2">
                                               {inboundLeadIds[i] && (
                                                   <input
                                                       type="checkbox"
@@ -8189,31 +8191,24 @@ export default function AdvancedSearchAIPage() {
                                                       </div>
                                                     )}
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <div className="flex items-center gap-1.5 flex-shrink-0">
                                                     <Button
                                                       variant="ghost"
                                                       size="icon"
                                                       onClick={() => openEditLead(i)}
-                                                      className="h-5 w-5"
-
+                                                      className="h-7 w-7 p-0 rounded-lg text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/80 active:scale-95 transition-all cursor-pointer"
+                                                      title="Edit lead"
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
                                                     <Button
                                                       variant="ghost"
                                                       size="icon"
-                                                        onClick={() => openDeleteConfirmation(i)}
-                                                        className="h-5 w-5 text-destructive"
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.background = '#fecaca';
-                                                            e.currentTarget.style.borderColor = '#fca5a5';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.background = '#fee2e2';
-                                                            e.currentTarget.style.borderColor = '#fecaca';
-                                                        }}
+                                                      onClick={() => openDeleteConfirmation(i)}
+                                                      className="h-7 w-7 p-0 rounded-lg bg-transparent text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-95 transition-all cursor-pointer border-0 shadow-none"
+                                                      title="Delete lead"
                                                     >
-                                                        <Trash2 className="h-5 w-5" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -8225,7 +8220,7 @@ export default function AdvancedSearchAIPage() {
                                 {!inboundMode && (
                                     <div className="adv-leads-list">
                                         {leads.map((lead, i) => (
-                                            <div key={i} className={`adv-lead-card flex items-center gap-[14px] p-[14px_16px] border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${lead.locked ? 'adv-lead-locked' : ''}`}>
+                                            <div key={i} className={`adv-lead-card flex items-center gap-[14px] p-[14px_16px] rounded-xl border border-gray-100 dark:border-blue-900/40 bg-white dark:bg-[#071131] hover:bg-gray-50 dark:hover:bg-[#0b1957] transition-colors mb-2 ${lead.locked ? 'adv-lead-locked' : ''}`}>
                                                 {lead.profile_picture ? (
                                                     <img src={lead.profile_picture} alt={lead.name} className="w-[42px] h-[42px] rounded-full object-cover flex-shrink-0" />
                                                 ) : (
@@ -10125,13 +10120,13 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, a
                       )}
                       <div className="adv-action-btns flex flex-nowrap gap-2 justify-between">
                           <button
-                            className="adv-act-btn adv-act-btn-refine flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[12.5px] font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-blue-600 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            className="adv-act-btn adv-act-btn-refine flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-gray-200 dark:border-blue-900/50 bg-white dark:bg-[#071131] text-[12.5px] font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-blue-600/30 hover:text-gray-900 dark:hover:text-white transition-colors"
                             onClick={() => onOpt('Refine my targeting criteria')}
                           >
                               Refine
                           </button>
                           <button
-                            className="adv-act-btn adv-act-btn-journey flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-[#0b1957] dark:border-blue-400 bg-white dark:bg-gray-800 text-[12.5px] font-bold text-[#0b1957] dark:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors tracking-[0.01em]"
+                            className="adv-act-btn adv-act-btn-journey flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-[#0b1957] dark:border-blue-400/60 bg-white dark:bg-[#071131] text-[12.5px] font-bold text-[#0b1957] dark:text-blue-300 hover:bg-gray-50 dark:hover:bg-blue-600 dark:hover:text-white transition-colors tracking-[0.01em]"
                             onClick={onStartCheckpoints}
                           >
                               Configure manually
@@ -10639,16 +10634,26 @@ function AiPersoToggle({ checked, onChange, accent = 'indigo', size = 'sm', disa
     return (
         <button type="button" role="switch" aria-checked={checked} disabled={disabled}
             onClick={(e) => { e.stopPropagation(); if (!disabled) onChange(!checked); }}
+            className={`relative rounded-full p-0 flex-shrink-0 border-none transition-all ${
+                disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+            } ${
+                checked
+                    ? accent === 'indigo' ? 'bg-[#4338ca] dark:bg-blue-600' : 'bg-[#7c3aed] dark:bg-purple-600'
+                    : 'bg-slate-300 dark:bg-slate-700'
+            }`}
             style={{
-                width: W, height: H, borderRadius: 99, border: 'none', padding: 0, flexShrink: 0,
-                background: checked ? a.on : '#cbd5e1', position: 'relative',
-                cursor: disabled ? 'not-allowed' : 'pointer', transition: 'background .2s',
+                width: W, height: H,
                 boxShadow: checked ? `0 0 0 3px ${a.on}22` : 'none',
             }}>
-            <span style={{
-                position: 'absolute', top: 2, left: checked ? W - TH - 2 : 2, width: TH, height: TH,
-                borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-            }} />
+            <span
+                className="absolute bg-white rounded-full transition-all duration-200 shadow-sm"
+                style={{
+                    top: 2,
+                    left: checked ? W - TH - 2 : 2,
+                    width: TH,
+                    height: TH,
+                }}
+            />
         </button>
     );
 }
@@ -10657,22 +10662,28 @@ function AiPersoRow({ icon, title, desc, checked, onChange, accent = 'indigo', d
     icon: React.ReactNode; title: string; desc: string; checked: boolean; onChange: (v: boolean) => void;
     accent?: 'indigo' | 'violet'; disabled?: boolean;
 }) {
-    const a = AI_PERSO_ACCENTS[accent];
     return (
         <div role="button" aria-pressed={checked} onClick={() => { if (!disabled) onChange(!checked); }}
-            style={{
-                display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px',
-                background: checked ? a.tint : '#fff', border: `1px solid ${checked ? a.border : '#e5e7eb'}`,
-                borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1,
-                transition: 'background .15s, border-color .15s',
-            }}>
-            <div style={{
-                width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: 'grid', placeItems: 'center',
-                background: checked ? a.chip : '#f3f4f6', color: checked ? a.on : '#94a3b8', transition: 'background .15s, color .15s',
-            }}>{icon}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{title}</div>
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1, lineHeight: 1.35 }}>{desc}</div>
+            className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl transition-all border ${
+                disabled ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'
+            } ${
+                checked
+                    ? accent === 'indigo'
+                        ? 'bg-[#eef2ff] dark:bg-blue-950/40 border-[#c7d2fe] dark:border-blue-800/60'
+                        : 'bg-[#f5f3ff] dark:bg-purple-950/30 border-[#ddd6fe] dark:border-purple-800/60'
+                    : 'bg-white dark:bg-[#000c3b] border-gray-200 dark:border-blue-900/40 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+            }`}
+        >
+            <div className={`w-[30px] h-[30px] rounded-lg flex-shrink-0 grid place-items-center transition-colors ${
+                checked
+                    ? accent === 'indigo'
+                        ? 'bg-[#e0e7ff] dark:bg-blue-900/50 text-[#4338ca] dark:text-blue-300'
+                        : 'bg-[#ede9fe] dark:bg-purple-900/50 text-[#7c3aed] dark:text-purple-300'
+                    : 'bg-gray-100 dark:bg-blue-950/50 text-gray-400 dark:text-slate-400'
+            }`}>{icon}</div>
+            <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold text-gray-900 dark:text-white">{title}</div>
+                <div className="text-[11.5px] text-gray-500 dark:text-slate-400 mt-0.5 leading-snug">{desc}</div>
             </div>
             <AiPersoToggle checked={checked} onChange={onChange} accent={accent} disabled={disabled} />
         </div>
@@ -11818,7 +11829,7 @@ function CheckpointFormInline({
                 // destructive replace) - otherwise the edited workflow silently doesn't
                 // save and the campaign shows "No actions". Status + leads are left
                 // untouched so the running/draft state and existing leads are preserved.
-                await updateCampaign(editingCampaignId, { name: payload.name, config: payload.config });
+                await updateCampaign(editingCampaignId, { name: payload.name, config: payload.config } as any);
                 // The steps endpoint passes steps straight to CampaignStepModel.bulkCreate,
                 // which reads step.type + step.order (NOT order_index). The create path maps
                 // these first; mirror that here so step_type/step_order aren't NULL → 500.
@@ -11975,15 +11986,14 @@ function CheckpointFormInline({
 
                 {/* Question header */}
                 <div
-                  className="text-gray-900 dark:text-gray-100"
-                  style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px', lineHeight: 1.4 }}
+                  className="text-[15px] font-semibold text-gray-900 dark:text-white mb-4 leading-[1.4]"
                 >
                     {q.question}
                 </div>
-                <div className="adv-checkpoint-box" style={baseBox}>
+                <div className="adv-checkpoint-box bg-white dark:bg-[#071131] border border-[#e0eaf5] dark:border-blue-900/50 rounded-2xl p-6 max-w-[520px] w-full shadow-[0_4px_20px_rgba(23,37,96,0.06)] dark:shadow-2xl animate-[fadeUp_0.3s_ease_both]">
                     {/* Step 0: ICP Threshold */}
                     {step === 0 && (
-                        <div className="flex flex-col dark:bg-[#000724]" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {[
                                 { value: '80', label: 'Above 80%', desc: 'Only top-tier matches' },
                                 { value: '75', label: 'Above 75%', desc: 'High quality leads' },
@@ -12002,12 +12012,18 @@ function CheckpointFormInline({
                                     onClick={() => setIcpThreshold(opt.value)}
                                     className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
                                       selected
-                                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
-                                        : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#000724] hover:border-gray-300 dark:hover:border-gray-700'
+                                        ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                        : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] hover:border-gray-300 dark:hover:border-blue-700/60'
                                     }`}
                                   >
-                                      <div style={numBadge(i + 1, selected)}>{selected ? '✓' : i + 1}</div>
-                                      <div style={{ flex: 1 }}>
+                                      <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                          selected
+                                              ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                              : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                      }`}>
+                                          {selected ? '✓' : i + 1}
+                                      </div>
+                                      <div className="flex-1">
                                           <div className="font-semibold text-gray-900 dark:text-gray-100">
                                               {opt.label}
                                           </div>
@@ -12030,8 +12046,7 @@ function CheckpointFormInline({
 
                     {/* Step 1: Campaign Channels */}
                     {step === 1 && (
-                        <div className="flex flex-col gap-2 dark:bg-[#000724]"
-                             style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {/* "Let Agent Deal" - one-click auto-build across connected channels */}
                             {!isDirectContact && (
                                 <div style={{ marginBottom: '2px' }}>
@@ -12086,7 +12101,7 @@ function CheckpointFormInline({
                             {/* Channel Configuration Sequential UI */}
                             {isInChannelConfiguration && (
                               <div
-                                className="bg-gray-50 dark:bg-[#000724] border-gray-200 dark:border-gray-800"
+                                className="bg-gray-50 dark:bg-[#000c3b] border-gray-200 dark:border-blue-900/50"
                                 style={{ marginTop: '12px', padding: '16px', borderRadius: '12px', border: '2px solid' }}
                               >
                                   {/* Step indicator */}
@@ -12129,21 +12144,29 @@ function CheckpointFormInline({
                                 { id: 'email', label: 'Email', desc: isDirectContact ? 'Send an email to this contact' : 'Send a follow-up email to the lead', icon: '✉️', disabled: isDirectContact && !hasEmail },
                                 { id: 'whatsapp', label: 'WhatsApp', desc: isDirectContact ? 'Send a WhatsApp message to this contact' : 'Send a WhatsApp message', icon: '💬', disabled: isDirectContact && !hasPhone },
                                 { id: 'voice_call', label: 'Voice Call', desc: isDirectContact ? 'Trigger an AI voice call to this contact' : 'Trigger an AI voice call', icon: '📞', disabled: isDirectContact && !hasPhone },
-                            ].filter(ch => !ch.disabled).map((ch, i) => (
-                              <div key={ch.id} onClick={() => toggleNextChannel(ch.id)} className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
-                                  nextChannels.includes(ch.id)
-                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-[#2563eb]'
-                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#000724] hover:border-gray-300 dark:hover:border-gray-700'
-                                }`}
-                              >
-                                  <div style={numBadge(i + 1, nextChannels.includes(ch.id))}>{nextChannels.includes(ch.id) ? '✓' : i + 1}</div>
-                                  <div style={{ flex: 1 }}>
-                                      <div className="font-semibold text-gray-900 dark:text-slate-300">{ch.icon} {ch.label}</div>
-                                      <div className="text-[12px] text-gray-500 dark:text-slate-300 mt-[2px]">{ch.desc}</div>
-                                  </div>
-                              </div>
-                            ))}
-
+                            ].filter(ch => !ch.disabled).map((ch, i) => {
+                              const isSelected = nextChannels.includes(ch.id);
+                              return (
+                                <div key={ch.id} onClick={() => toggleNextChannel(ch.id)} className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70'
+                                      : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] hover:border-gray-300 dark:hover:border-blue-700/60'
+                                  }`}
+                                >
+                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                        isSelected
+                                            ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                            : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                    }`}>
+                                        {isSelected ? '✓' : i + 1}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div className="font-semibold text-gray-900 dark:text-gray-100">{ch.icon} {ch.label}</div>
+                                        <div className="text-[12px] text-gray-500 dark:text-slate-400 mt-[2px]">{ch.desc}</div>
+                                    </div>
+                                </div>
+                              );
+                            })}
 
                             {/* Email Config (inline when email selected) */}
                             {nextChannels.includes('email') && (isInChannelConfiguration ? currentChannelBeingConfigured === 'email' : true) && (
@@ -12315,11 +12338,9 @@ function CheckpointFormInline({
                               >
                                   {/* Per-Channel Delay Configuration */}
                                   <div
-                                    className="dark:border-gray-800"
-                                    style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb' }}
+                                    className="dark:border-blue-900/50 mb-4 pb-4 border-b border-gray-200"
                                   >
                                       <div
-                                        className="dark:text-gray-300 text-[#374151]"
                                         style={{ fontSize: '12px', fontWeight: 600,  marginBottom: '10px' }}
                                       >⏱️ Delay before next step (Optional)</div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -12361,19 +12382,23 @@ function CheckpointFormInline({
                                                 if (channelConfigStep > 0) setChannelConfigStep(channelConfigStep - 1);
                                             }}
                                             disabled={channelConfigStep === 0}
-                                            style={{ padding: '10px 16px', background: channelConfigStep === 0 ? '#f3f4f6' : '#fff', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: channelConfigStep === 0 ? '#9ca3af' : '#374151', cursor: channelConfigStep === 0 ? 'not-allowed' : 'pointer' }}>
+                                            className={`px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all border ${
+                                                channelConfigStep === 0
+                                                    ? 'bg-gray-100 dark:bg-[#000c3b]/50 border-gray-200 dark:border-blue-900/30 text-gray-400 dark:text-slate-600 cursor-not-allowed opacity-50'
+                                                    : 'bg-white dark:bg-[#000c3b] border-gray-300 dark:border-blue-900/50 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/60 cursor-pointer shadow-sm'
+                                            }`}>
                                             ← Back
                                         </button>
                                         {channelConfigStep < selectedChannelsList.length - 1 ? (
                                             <button
                                                 onClick={() => setChannelConfigStep(channelConfigStep + 1)}
-                                                style={{ padding: '10px 16px', background: '#0b1957', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                className="px-4 py-2.5 bg-[#0b1957] dark:bg-blue-600 hover:bg-[#122479] dark:hover:bg-blue-500 text-white rounded-lg text-[13px] font-semibold cursor-pointer transition-all border-none shadow-sm">
                                                 Next → ({selectedChannelsList.length - channelConfigStep - 1} remaining)
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => setStep(step + 1)}
-                                                style={{ padding: '10px 16px', background: '#10b981', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                                                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[13px] font-semibold cursor-pointer transition-all border-none shadow-sm">
                                                 Continue →
                                             </button>
                                         )}
@@ -13503,63 +13528,58 @@ function CheckpointFormInline({
                                             setEnableAiPersonalization(next);
                                         };
                                         return (
-                                            <div style={{ marginTop: '16px' }}>
+                                            <div className="mt-4">
                                                 {/* Master header - one tap toggles the whole feature */}
                                                 <div role="button" aria-pressed={anyOn} onClick={toggleAll}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', cursor: 'pointer',
-                                                        borderRadius: anyOn ? '14px 14px 0 0' : 14,
-                                                        background: anyOn ? 'linear-gradient(135deg,#eef2ff 0%,#f5f3ff 100%)' : '#f8fafc',
-                                                        border: `1px solid ${anyOn ? '#c7d2fe' : '#e5e7eb'}`,
-                                                        borderBottom: anyOn ? '1px solid transparent' : '1px solid #e5e7eb',
-                                                        transition: 'background .2s',
-                                                    }}>
-                                                    <div style={{
-                                                        width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
-                                                        background: anyOn ? 'linear-gradient(135deg,#4338ca,#7c3aed)' : '#eef2ff',
-                                                        boxShadow: anyOn ? '0 2px 8px rgba(67,56,202,0.30)' : 'none', transition: 'background .2s',
-                                                    }}>
-                                                        <img src={anyOn ? '/logo-white.svg' : '/logo.svg'} alt="LAD" style={{ width: 20, height: 20, display: 'block' }} />
+                                                    className={`flex items-center gap-3 p-3 transition-all cursor-pointer border ${
+                                                        anyOn
+                                                            ? 'rounded-t-2xl border-b-transparent bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-blue-950/60 dark:to-purple-950/40 border-indigo-200 dark:border-blue-900/60'
+                                                            : 'rounded-2xl bg-[#f8fafc] dark:bg-[#000c3b] border-gray-200 dark:border-blue-900/40'
+                                                    }`}
+                                                >
+                                                    <div className={`w-[34px] h-[34px] rounded-xl flex-shrink-0 grid place-items-center transition-all ${
+                                                        anyOn
+                                                            ? 'bg-gradient-to-br from-[#4338ca] to-[#7c3aed] shadow-[0_2px_8px_rgba(67,56,202,0.3)]'
+                                                            : 'bg-[#eef2ff] dark:bg-blue-950/80'
+                                                    }`}>
+                                                        <img src={anyOn ? '/logo-white.svg' : '/logo.svg'} alt="LAD" className="w-5 h-5 block" />
                                                     </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#4338ca' }}>AI Daily Personalisation</div>
-                                                        <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 1 }}>Unique messages per lead, powered by live data</div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[13.5px] font-bold text-[#4338ca] dark:text-blue-300">AI Daily Personalisation</div>
+                                                        <div className="text-[11.5px] text-gray-500 dark:text-slate-400 mt-0.5">Unique messages per lead, powered by live data</div>
                                                     </div>
                                                     <AiPersoToggle checked={anyOn} onChange={toggleAll} accent="indigo" size="lg" />
                                                 </div>
 
                                                 {anyOn && (
-                                                    <div style={{
-                                                        border: '1px solid #c7d2fe', borderTop: 'none', borderRadius: '0 0 14px 14px',
-                                                        background: '#fcfcff', padding: 13, display: 'flex', flexDirection: 'column', gap: 16,
-                                                    }}>
+                                                    <div className="border border-t-0 border-indigo-200 dark:border-blue-900/60 rounded-b-2xl bg-[#fcfcff] dark:bg-[#071131] p-3.5 flex flex-col gap-4">
                                                         {/* Group 1 - live data the agent gathers per lead */}
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: '#4338ca' }}>Live data sources</div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="text-[10.5px] font-bold tracking-wider uppercase text-[#4338ca] dark:text-blue-400">Live data sources</div>
                                                             <AiPersoRow icon={<Globe size={16} />} title="Refresh web presence daily" desc="Re-runs Google search for articles, news & social profiles per lead" checked={enableDailyWebPresence} onChange={setEnableDailyWebPresence} accent="indigo" />
                                                             <AiPersoRow icon={<Newspaper size={16} />} title="Fetch live LinkedIn posts" desc="Pulls the lead's recent LinkedIn posts before each send" checked={enableDailyPosts} onChange={setEnableDailyPosts} accent="indigo" />
                                                         </div>
 
                                                         {/* Group 2 - how the agent writes each message */}
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: '#7c3aed' }}>AI message generation</div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="text-[10.5px] font-bold tracking-wider uppercase text-[#7c3aed] dark:text-purple-400">AI message generation</div>
                                                             <AiPersoRow icon={<Sparkles size={16} />} title="AI-generate unique message per lead"
                                                                 desc={noSource ? 'Enable a live data source above first' : 'AI writes a personalised connect + follow-up from live web & post data'}
                                                                 checked={enableAiPersonalization} onChange={setEnableAiPersonalization} accent="violet" disabled={noSource} />
 
                                                             {enableAiPersonalization && !noSource && (
                                                                 <>
-                                                                    <div style={{ display: 'flex', gap: 8, fontSize: 11.5, color: '#6d28d9', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 9, padding: '9px 11px', lineHeight: 1.5 }}>
-                                                                        <Check size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                                                                    <div className="flex gap-2 text-[11.5px] text-[#6d28d9] dark:text-purple-300 bg-[#faf5ff] dark:bg-purple-950/40 border border-[#e9d5ff] dark:border-purple-800/60 rounded-xl p-3 leading-relaxed">
+                                                                        <Check size={15} className="flex-shrink-0 mt-0.5 text-purple-600 dark:text-purple-400" />
                                                                         <span>Leave the message box empty and each lead gets a <strong>unique AI-generated message</strong> from their live web presence &amp; LinkedIn posts. <strong>Write a message and it is sent as written</strong> - AI only fills the <code>{'{{web_insight}}'}</code>-style placeholders inside it.</span>
                                                                     </div>
 
                                                                     {/* Nested granular control - clearly a child of the toggle above */}
-                                                                    <div style={{ marginLeft: 8, paddingLeft: 14, borderLeft: '2px solid #ddd6fe', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                                        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#7c3aed' }}>Which messages?</div>
+                                                                    <div className="ml-2 pl-3.5 border-l-2 border-[#ddd6fe] dark:border-purple-800/60 flex flex-col gap-2">
+                                                                        <div className="text-[10.5px] font-bold tracking-wider uppercase text-[#7c3aed] dark:text-purple-400">Which messages?</div>
                                                                         <AiPersoRow icon={<UserPlus size={16} />} title="Connection request" desc="Personalised connect note per lead" checked={enableAiConnectionPersonalization} onChange={setEnableAiConnectionPersonalization} accent="violet" />
                                                                         <AiPersoRow icon={<MessageSquare size={16} />} title="Connection acceptance message" desc="Personalised acceptance message per lead" checked={enableAiFollowupPersonalization} onChange={setEnableAiFollowupPersonalization} accent="violet" />
-                                                                        <div style={{ fontSize: 11, color: '#9ca3af', paddingLeft: 2 }}>Unchecked messages use your static template.</div>
+                                                                        <div className="text-[11px] text-gray-400 dark:text-slate-400 pl-0.5">Unchecked messages use your static template.</div>
                                                                     </div>
                                                                 </>
                                                             )}
@@ -13692,13 +13712,11 @@ function CheckpointFormInline({
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 placeholder="e.g. Q3 Outreach Strategy"
-                                className="flex-1 border border-[#e0eaf5] rounded-[10px] px-[14px] py-[10px] text-[14px] outline-none bg-[#fafbff] font-inherit min-w-0
-                       dark:bg-[#060b21] dark:border-[#1e3a8a] dark:text-gray-100 dark:placeholder-gray-600"
+                                className="flex-1 border border-[#e0eaf5] dark:border-blue-900/50 rounded-[10px] px-[14px] py-[10px] text-[14px] outline-none bg-[#fafbff] dark:bg-[#000c3b] dark:text-gray-100 dark:placeholder-gray-500 font-inherit min-w-0"
                               />
                               <button
                                 onClick={suggestName}
-                                className="bg-[#e8ecfa] border-[1.5px] border-[#0b1957] rounded-[10px] px-[14px] text-[12px] font-bold text-[#0b1957] cursor-pointer whitespace-nowrap flex-shrink-0 transition-all
-                       dark:bg-[#2563eb] dark:border-blue-500 dark:text-slate-300 hover:bg-[#dbeafe] dark:hover:bg-blue-900/50"
+                                className="bg-[#e8ecfa] border-[1.5px] border-[#0b1957] rounded-[10px] px-[14px] text-[12px] font-bold text-[#0b1957] cursor-pointer whitespace-nowrap flex-shrink-0 transition-all dark:bg-blue-600 dark:border-blue-500 dark:text-white hover:bg-[#dbeafe] dark:hover:bg-blue-500"
                               >
                                   ✨ Suggest
                               </button>
@@ -13771,42 +13789,40 @@ function CheckpointFormInline({
                     const isFirstStep = skipsIcp ? step <= 1 : step <= 0;
                     return (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', maxWidth: '520px' }}>
-                            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{dispStep}/{dispTotal}</div>
+                            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>{`${dispStep}/${dispTotal}`}</div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <button
                                     disabled={isFirstStep}
                                     onClick={handleBack}
-                                    style={{
-                                        width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e5e7eb',
-                                        background: isFirstStep ? '#f9fafb' : '#fff', cursor: isFirstStep ? 'default' : 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                    }}
+                                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+                                        isFirstStep
+                                            ? 'border-gray-200 dark:border-blue-900/30 bg-gray-50 dark:bg-[#000c3b]/50 text-gray-400 dark:text-slate-600 cursor-default opacity-50'
+                                            : 'border-gray-200 dark:border-blue-900/50 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-blue-950/60 cursor-pointer shadow-sm'
+                                    }`}
                                 >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isFirstStep ? '#d1d5db' : '#0b1957'} strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                                 </button>
                                 {step < totalSteps - 1 ? (
                                     <button
                                         disabled={!canNext()}
                                         onClick={handleNext}
-                                        style={{
-                                            width: '36px', height: '36px', borderRadius: '10px', border: 'none',
-                                            background: canNext() ? '#0b1957' : '#e5e7eb', cursor: canNext() ? 'pointer' : 'default',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
-                                        }}
+                                        className={`w-9 h-9 rounded-xl border-none flex items-center justify-center transition-all ${
+                                            canNext()
+                                                ? 'bg-[#0b1957] dark:bg-blue-600 hover:bg-[#122479] dark:hover:bg-blue-500 text-white cursor-pointer shadow-sm'
+                                                : 'bg-gray-200 dark:bg-slate-800 text-gray-400 dark:text-slate-500 cursor-default'
+                                        }`}
                                     >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
                                     </button>
                                 ) : (
                                     <button
                                         disabled={!canNext() || launching || !creditsOk}
                                         onClick={launchCampaign}
-                                        style={{
-                                            padding: '8px 20px', borderRadius: '10px', border: 'none',
-                                            background: canNext() && !launching && creditsOk ? '#10b981' : '#e5e7eb',
-                                            color: canNext() && !launching && creditsOk ? '#fff' : '#9ca3af',
-                                            fontSize: '13px', fontWeight: 700, cursor: canNext() && !launching && creditsOk ? 'pointer' : 'default',
-                                            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
-                                        }}
+                                        className={`px-5 py-2.5 rounded-xl border-none text-[13px] font-bold transition-all flex items-center gap-1.5 ${
+                                            canNext() && !launching && creditsOk
+                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-md'
+                                                : 'bg-gray-200 dark:bg-slate-800 text-gray-400 dark:text-slate-500 cursor-default'
+                                        }`}
                                     >
                                         {launching ? 'Launching...' : 'Launch Campaign'}
                                     </button>
@@ -13863,24 +13879,6 @@ function TargetingFormInline({
     // Sync skillsRaw when the component re-opens with pre-existing skills
     React.useEffect(() => { setSkillsRaw(skills.join(', ')); }, [step === 5]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const baseBox: React.CSSProperties = {
-        background: '#fff', border: '1px solid #e0eaf5', borderRadius: '16px', padding: '24px',
-        maxWidth: '520px', boxShadow: '0 4px 20px rgba(23,37,96,0.06)', animation: 'fadeUp 0.3s ease both',
-    };
-
-    const optStyle = (selected: boolean): React.CSSProperties => ({
-        display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-        border: `2px solid ${selected ? '#0b1957' : '#e5e7eb'}`, background: selected ? '#e8ecfa' : '#fff',
-        borderRadius: '12px', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
-        fontSize: '14px', fontWeight: 500, color: selected ? '#0b1957' : '#374151',
-    });
-
-    const numBadge = (n: number, selected: boolean): React.CSSProperties => ({
-        width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '12px', fontWeight: 700, flexShrink: 0, border: `2px solid ${selected ? '#0b1957' : '#d1d5db'}`,
-        background: selected ? '#0b1957' : 'transparent', color: selected ? '#fff' : '#6b7280',
-    });
-
     const toggleSelection = (arr: string[], item: string, setter: any) => {
         if (arr.includes(item)) {
             setter(arr.filter(x => x !== item));
@@ -13894,42 +13892,44 @@ function TargetingFormInline({
     );
 
     return (
-        <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
+        <div className="adv-bubble adv-bubble-ai fadeUp mb-4">
             <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
-            <div style={{ flex: 1, maxWidth: '540px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <div className="adv-ai-name">Targeting Filters</div>
+            <div className="flex-1 max-w-[540px]">
+                <div className="flex justify-between items-center mb-2">
+                    <div className="adv-ai-name text-xs font-bold text-[#0b1957] dark:text-blue-300 uppercase tracking-wider">Targeting Filters</div>
                     <button onClick={() => setStep(-1)}
-                        style={{
-                            background: 'none', border: 'none', cursor: 'pointer', padding: '0',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af'
-                        }}>
+                        className="bg-transparent border-0 cursor-pointer p-0 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px', lineHeight: 1.4 }}>
+                <div className="text-[15px] font-semibold text-gray-900 dark:text-white mb-4 leading-[1.4]">
                     {q.question}
                 </div>
 
-                <div style={baseBox}>
+                <div className="bg-white dark:bg-[#071131] border border-[#e0eaf5] dark:border-blue-900/50 rounded-2xl p-6 max-w-[520px] shadow-[0_4px_20px_rgba(23,37,96,0.06)] dark:shadow-2xl animate-[fadeUp_0.3s_ease_both]">
                     {/* Step 0: Nationality */}
                     {step === 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className="flex flex-col gap-3">
                             <input
                                 type="text" placeholder="Search nationalities..." value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                style={{
-                                    width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px',
-                                    fontSize: '14px', marginBottom: '8px'
-                                }}
+                                className="w-full px-3 py-2.5 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border border-gray-200 dark:border-blue-900/50 rounded-lg text-sm mb-2 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
                             />
-                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
                                 {filteredNationalities.slice(0, 10).map((nat) => {
                                     const selected = nationality.includes(nat);
                                     return (
                                         <div key={nat} onClick={() => toggleSelection(nationality, nat, setNationality)}
-                                            style={optStyle(selected)}>
-                                            <div style={numBadge(nationality.indexOf(nat) + 1 || 0, selected)}>
+                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all w-full text-sm font-medium border-2 ${
+                                                selected
+                                                    ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                                    : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+                                            }`}>
+                                            <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                                selected
+                                                    ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                                    : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                            }`}>
                                                 {selected ? '✓' : '○'}
                                             </div>
                                             <div>{nat}</div>
@@ -13942,13 +13942,21 @@ function TargetingFormInline({
 
                     {/* Step 1: Experience Level */}
                     {step === 1 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {EXPERIENCE_LEVELS.map((level) => {
                                 const selected = experienceLevel.includes(level);
                                 return (
                                     <div key={level} onClick={() => toggleSelection(experienceLevel, level, setExperienceLevel)}
-                                        style={optStyle(selected)}>
-                                        <div style={numBadge(experienceLevel.indexOf(level) + 1 || 0, selected)}>
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all w-full text-sm font-medium border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                                : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+                                        }`}>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                                : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                        }`}>
                                             {selected ? '✓' : '○'}
                                         </div>
                                         <div>{level}</div>
@@ -13960,13 +13968,21 @@ function TargetingFormInline({
 
                     {/* Step 2: Company Size */}
                     {step === 2 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {COMPANY_SIZES.map((size) => {
                                 const selected = companySize.includes(size);
                                 return (
                                     <div key={size} onClick={() => toggleSelection(companySize, size, setCompanySize)}
-                                        style={optStyle(selected)}>
-                                        <div style={numBadge(companySize.indexOf(size) + 1 || 0, selected)}>
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all w-full text-sm font-medium border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                                : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+                                        }`}>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                                : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                        }`}>
                                             {selected ? '✓' : '○'}
                                         </div>
                                         <div>{size}</div>
@@ -13978,13 +13994,21 @@ function TargetingFormInline({
 
                     {/* Step 3: Company Age */}
                     {step === 3 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {COMPANY_AGES.map((age) => {
                                 const selected = companyAge.includes(age);
                                 return (
                                     <div key={age} onClick={() => toggleSelection(companyAge, age, setCompanyAge)}
-                                        style={optStyle(selected)}>
-                                        <div style={numBadge(companyAge.indexOf(age) + 1 || 0, selected)}>
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all w-full text-sm font-medium border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                                : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+                                        }`}>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                                : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                        }`}>
                                             {selected ? '✓' : '○'}
                                         </div>
                                         <div>{age}</div>
@@ -13996,13 +14020,21 @@ function TargetingFormInline({
 
                     {/* Step 4: Education */}
                     {step === 4 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                             {EDUCATION_OPTIONS.map((edu) => {
                                 const selected = education.includes(edu);
                                 return (
                                     <div key={edu} onClick={() => toggleSelection(education, edu, setEducation)}
-                                        style={optStyle(selected)}>
-                                        <div style={numBadge(education.indexOf(edu) + 1 || 0, selected)}>
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all w-full text-sm font-medium border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70 text-[#0b1957] dark:text-blue-200'
+                                                : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b] text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-blue-950/30'
+                                        }`}>
+                                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 border-2 ${
+                                            selected
+                                                ? 'border-[#0b1957] dark:border-blue-500 bg-[#0b1957] dark:bg-blue-600 text-white'
+                                                : 'border-gray-300 dark:border-slate-600 bg-transparent text-gray-500 dark:text-slate-400'
+                                        }`}>
                                             {selected ? '✓' : '○'}
                                         </div>
                                         <div>{edu}</div>
@@ -14020,12 +14052,9 @@ function TargetingFormInline({
                                 value={skillsRaw}
                                 onChange={e => setSkillsRaw(e.target.value)}
                                 onBlur={e => setSkills(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                style={{
-                                    width: '100%', minHeight: '100px', padding: '12px', border: '1px solid #e5e7eb',
-                                    borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical'
-                                }}
+                                className="w-full min-h-[100px] p-3 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border border-gray-200 dark:border-blue-900/50 rounded-lg text-sm font-sans resize-y placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
                             />
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+                            <div className="text-[11px] text-gray-400 dark:text-slate-400 mt-1.5">
                                 Separate multiple skills with commas - e.g. <em>Gas Detector, HVAC Controls, BMS</em>
                             </div>
                         </div>
@@ -14033,42 +14062,32 @@ function TargetingFormInline({
 
                     {/* Step 6: Posted Recently */}
                     {step === 6 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div className="flex flex-col gap-4">
                             {/* Toggle card */}
                             <div
                                 onClick={() => setPostedRecently(!postedRecently)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                    padding: '16px 18px', borderRadius: '12px', cursor: 'pointer',
-                                    border: `2px solid ${postedRecently ? '#0b1957' : '#e5e7eb'}`,
-                                    background: postedRecently ? '#e8ecfa' : '#fff',
-                                    transition: 'all 0.15s',
-                                }}
+                                className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all border-2 ${
+                                    postedRecently
+                                        ? 'border-[#0b1957] dark:border-blue-500 bg-[#e8ecfa] dark:bg-blue-950/70'
+                                        : 'border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000c3b]'
+                                }`}
                             >
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: 600, color: postedRecently ? '#0b1957' : '#111827' }}>
+                                <div className="flex flex-col gap-1">
+                                    <div className={`text-sm font-semibold ${postedRecently ? 'text-[#0b1957] dark:text-blue-200' : 'text-gray-900 dark:text-white'}`}>
                                         📢 Posted on LinkedIn in last 3 months
                                     </div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+                                    <div className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
                                         Only show leads who have been active - posted, shared, or commented recently.
                                         <br />
-                                        <span style={{ color: '#f59e0b', fontWeight: 500 }}>⚠ Sales Navigator only</span> - ignored for Classic API accounts.
+                                        <span className="text-amber-500 font-medium">⚠ Sales Navigator only</span> - ignored for Classic API accounts.
                                     </div>
                                 </div>
                                 {/* Toggle switch */}
-                                <div style={{
-                                    width: '44px', height: '24px', borderRadius: '12px', flexShrink: 0, marginLeft: '16px',
-                                    background: postedRecently ? '#0b1957' : '#d1d5db', transition: 'background 0.2s', position: 'relative',
-                                }}>
-                                    <div style={{
-                                        width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
-                                        position: 'absolute', top: '3px', transition: 'left 0.2s',
-                                        left: postedRecently ? '23px' : '3px',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                                    }} />
+                                <div className={`w-11 h-6 rounded-full shrink-0 ml-4 transition-colors relative ${postedRecently ? 'bg-[#0b1957] dark:bg-blue-600' : 'bg-gray-300 dark:bg-slate-700'}`}>
+                                    <div className={`w-[18px] h-[18px] rounded-full bg-white absolute top-[3px] transition-all shadow-sm ${postedRecently ? 'left-[23px]' : 'left-[3px]'}`} />
                                 </div>
                             </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.5 }}>
+                            <div className="text-[11px] text-gray-400 dark:text-slate-400 leading-relaxed">
                                 This filter is <strong>not saved</strong> between sessions - you must re-enable it each time you want it applied. It will not be auto-applied to campaigns or prospecting.
                             </div>
                         </div>
@@ -14076,28 +14095,25 @@ function TargetingFormInline({
 
                     {/* Step 7: Review */}
                     {step === 7 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {nationality.length > 0 && <div><strong>Nationalities:</strong> {nationality.join(', ')}</div>}
-                            {experienceLevel.length > 0 && <div><strong>Experience Level:</strong> {experienceLevel.join(', ')}</div>}
-                            {companySize.length > 0 && <div><strong>Company Size:</strong> {companySize.join(', ')}</div>}
-                            {companyAge.length > 0 && <div><strong>Company Age:</strong> {companyAge.join(', ')}</div>}
-                            {education.length > 0 && <div><strong>Education:</strong> {education.join(', ')}</div>}
-                            {skills.length > 0 && <div><strong>Skills:</strong> {skills.join(', ')}</div>}
-                            {postedRecently && <div><strong>Activity:</strong> Posted on LinkedIn in last 3 months ✅</div>}
+                        <div className="flex flex-col gap-3 text-sm text-gray-800 dark:text-slate-200">
+                            {nationality.length > 0 && <div><strong className="text-gray-900 dark:text-white">Nationalities:</strong> {nationality.join(', ')}</div>}
+                            {experienceLevel.length > 0 && <div><strong className="text-gray-900 dark:text-white">Experience Level:</strong> {experienceLevel.join(', ')}</div>}
+                            {companySize.length > 0 && <div><strong className="text-gray-900 dark:text-white">Company Size:</strong> {companySize.join(', ')}</div>}
+                            {companyAge.length > 0 && <div><strong className="text-gray-900 dark:text-white">Company Age:</strong> {companyAge.join(', ')}</div>}
+                            {education.length > 0 && <div><strong className="text-gray-900 dark:text-white">Education:</strong> {education.join(', ')}</div>}
+                            {skills.length > 0 && <div><strong className="text-gray-900 dark:text-white">Skills:</strong> {skills.join(', ')}</div>}
+                            {postedRecently && <div><strong className="text-gray-900 dark:text-white">Activity:</strong> Posted on LinkedIn in last 3 months ✅</div>}
                             {nationality.length === 0 && experienceLevel.length === 0 && companySize.length === 0 && companyAge.length === 0 && education.length === 0 && skills.length === 0 && !postedRecently && (
-                                <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>No additional filters selected</div>
+                                <div className="text-gray-400 dark:text-slate-400 italic">No additional filters selected</div>
                             )}
                         </div>
                     )}
 
                     {/* Skip Button - Inside the box */}
                     {step < totalSteps - 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                        <div className="flex justify-end mt-3 pt-3 border-t border-gray-200 dark:border-blue-900/40">
                             <button onClick={() => setStep(step + 1)}
-                                style={{
-                                    padding: '8px 14px', background: '#f9fafb', border: '1px solid #e5e7eb',
-                                    borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#6b7280', cursor: 'pointer'
-                                }}>
+                                className="px-3.5 py-2 bg-gray-50 dark:bg-[#000c3b] border border-gray-200 dark:border-blue-900/50 rounded-lg text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-blue-950/60 cursor-pointer transition-colors">
                                 Skip this
                             </button>
                         </div>
@@ -14105,44 +14121,32 @@ function TargetingFormInline({
                 </div>
 
                 {/* Navigation Buttons */}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                <div className="flex gap-3 mt-4 justify-between items-center max-w-[520px]">
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
                         Step {step + 1} of {totalSteps}
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div className="flex gap-2.5">
                         {step > 0 && (
                             <button onClick={() => setStep(step - 1)}
-                                style={{
-                                    padding: '10px 14px', background: '#f3f4f6', border: '1px solid #e5e7eb',
-                                    borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
+                                className="p-2.5 bg-gray-100 dark:bg-[#000c3b] border border-gray-200 dark:border-blue-900/50 rounded-xl text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-blue-950/60 cursor-pointer flex items-center justify-center transition-colors">
                                 <ChevronLeft size={18} />
                             </button>
                         )}
                         {step < totalSteps - 1 && (
                             <button onClick={() => setStep(step + 1)}
-                                style={{
-                                    padding: '10px 14px', background: '#0b1957', color: '#fff', border: 'none',
-                                    borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
+                                className="px-4 py-2.5 bg-[#0b1957] dark:bg-blue-600 hover:bg-[#122479] dark:hover:bg-blue-500 text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center transition-colors">
                                 <ChevronRight size={18} />
                             </button>
                         )}
                         {step === totalSteps - 1 && (
                             <button onClick={onConfirm} disabled={loading}
-                                style={{
-                                    padding: '8px 16px', background: loading ? '#d1d5db' : '#10b981', color: '#fff', border: 'none',
-                                    borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer'
-                                }}>
+                                className={`px-4 py-2 text-white rounded-lg text-xs font-semibold transition-colors ${loading ? 'bg-gray-400 cursor-default' : 'bg-emerald-600 hover:bg-emerald-500 cursor-pointer'}`}>
                                 {loading ? 'Refining...' : 'Confirm & Refine'}
                             </button>
                         )}
                     </div>
                 </div>
             </div>
-
         </div>
     );
 }
@@ -14622,10 +14626,10 @@ function AgentBuilderTrendOptions({
                                                 <div className="text-[11px] text-slate-600 leading-relaxed font-medium markdown-content">
                                                     <ReactMarkdown
                                                         components={{
-                                                            h3: ({ ...props }) => <h3 className="text-xs font-bold text-[#0b1957] mt-2 mb-1" {...props} />,
-                                                            p: ({ ...props }) => <p className="text-[11px] text-slate-600 leading-relaxed mb-2" {...props} />,
-                                                            ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-                                                            li: ({ ...props }) => <li className="text-[11px] text-slate-600 leading-relaxed" {...props} />,
+                                                            h3: ({ node, ...props }: any) => <h3 className="text-xs font-bold text-[#0b1957] mt-2 mb-1" {...props} />,
+                                                            p: ({ node, ...props }: any) => <p className="text-[11px] text-slate-600 leading-relaxed mb-2" {...props} />,
+                                                            ul: ({ node, ...props }: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                                                            li: ({ node, ...props }: any) => <li className="text-[11px] text-slate-600 leading-relaxed" {...props} />,
                                                         }}
                                                     >
                                                         {sec.content}
@@ -14661,10 +14665,10 @@ function AgentBuilderTrendOptions({
                                                     >
                                                         <ReactMarkdown
                                                             components={{
-                                                                h3: ({ ...props }) => <h3 className="text-xs font-bold text-[#0b1957] mt-2 mb-1" {...props} />,
-                                                                p: ({ ...props }) => <p className="text-[11px] text-slate-600 leading-relaxed mb-2" {...props} />,
-                                                                ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-                                                                li: ({ ...props }) => <li className="text-[11px] text-slate-600 leading-relaxed" {...props} />,
+                                                                h3: ({ node, ...props }: any) => <h3 className="text-xs font-bold text-[#0b1957] mt-2 mb-1" {...props} />,
+                                                                p: ({ node, ...props }: any) => <p className="text-[11px] text-slate-600 leading-relaxed mb-2" {...props} />,
+                                                                ul: ({ node, ...props }: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                                                                li: ({ node, ...props }: any) => <li className="text-[11px] text-slate-600 leading-relaxed" {...props} />,
                                                             }}
                                                         >
                                                             {sec.content}
@@ -14725,7 +14729,7 @@ function MediaStepWidget({
     msg: any; 
     isActive: boolean; 
     mb: any; 
-    submitMediaInput: (text: string, valueToSend?: string | string[]) => void; 
+    submitMediaInput: (text: string, valueToSend?: string | string[], customRefs?: any[]) => void; 
     userSelectionText?: string;
 }) {
     switch (msg.step) {
@@ -15862,8 +15866,8 @@ const css = `
             .dark .adv-panel-body { background: #000724; }
             .dark .adv-panel-title { color: #ffffff; }
             .dark .adv-panel-desc { background: #1A2A43; color: #e5e7eb; border-color: #000724; }
-            .dark .adv-lead-card { background: transparent; }
-            .dark .adv-lead-card:hover { background: #253456; }
+            .dark .adv-lead-card { background: #071131; }
+            .dark .adv-lead-card:hover { background: #0b1957; }
             .dark .adv-lead-name { color: #ffffff; }
             .dark .adv-lead-title { color: #7a8ba3; }
             .dark .adv-lead-company { color: #b8c4d6; }
