@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,7 @@ import FollowupTouchesEditor, {
 import {
   CalendarClock, Clock, Loader2, Plus, Trash2, Linkedin, Search,
   CheckCircle2, ChevronUp, ChevronDown, CalendarPlus, FileText, Film, Music,
-  Save, SlidersHorizontal,
+  Save, SlidersHorizontal, X,
 } from 'lucide-react';
 
 interface SelectedMedia {
@@ -383,18 +383,29 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center shrink-0">
-              <CalendarClock className="w-5 h-5 text-[#0b1957] dark:text-indigo-300" />
+      <DialogContent showCloseButton={false} className="sm:max-w-3xl">
+        <DialogHeader className="px-4 py-3.5 sm:px-8 sm:py-5 border-b border-gray-100 dark:border-blue-950/40 shrink-0">
+          <div className="flex items-center justify-between gap-3 w-full">
+            {/* Header Info (Icon + Heading & Subheading) */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center shrink-0">
+                <CalendarClock className="w-5 h-5 text-[#0b1957] dark:text-indigo-300" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
+                  Scheduled Follow-ups
+                </DialogTitle>
+                <DialogDescription className="text-[12px] sm:text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Connection accepted leads. Schedule or remove upcoming LinkedIn follow-ups.
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle>Scheduled Follow-ups</DialogTitle>
-              <DialogDescription>
-                Connection accepted leads. Schedule or remove upcoming LinkedIn follow-ups.
-              </DialogDescription>
-            </div>
+
+            {/* Close Button aligned with heading in same line */}
+            <DialogClose className="flex items-center justify-center p-2 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer shrink-0 -mr-1">
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </div>
         </DialogHeader>
 
