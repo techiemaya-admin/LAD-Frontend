@@ -957,15 +957,15 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
 
       {/* ── Full-screen preview modal ── */}
       {showPreview && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-[#071131] text-gray-900 dark:text-white rounded-2xl shadow-2xl flex flex-col w-full max-w-3xl max-h-[90vh] border border-gray-100 dark:border-blue-950/40">
-            <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-[#071131] border-b border-gray-100 dark:border-blue-950/40 rounded-t-2xl">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-[#000724] rounded-2xl shadow-2xl flex flex-col w-full max-w-3xl max-h-[90vh] border border-gray-100 dark:border-blue-950/40">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-blue-950/40">
               <div>
                 <p className="font-semibold text-gray-900 dark:text-white">Email Preview</p>
                 {template.subject && <p className="text-xs text-gray-400 dark:text-[#7a8ba3] mt-0.5">Subject: {template.subject}</p>}
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-[#030a21]/60 border border-transparent dark:border-blue-950/40 rounded-lg p-0.5">
+                <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-[#253456] rounded-lg p-0.5">
                   {([
                     { id: 'mobile',  icon: <Smartphone className="w-4 h-4" />, label: '375px'  },
                     { id: 'tablet',  icon: <Tablet className="w-4 h-4" />,     label: '768px'  },
@@ -974,20 +974,20 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                     <button
                       key={id}
                       onClick={() => setDevice(id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${device === id ? 'bg-white dark:bg-[#0C1936] text-blue-600 dark:text-[#60a5fa] shadow-xs' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white'}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${device === id ? 'bg-white dark:bg-[#0C1936] text-blue-600 dark:text-[#60a5fa] shadow-xs' : 'text-gray-500 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white'}`}
                     >
                       {icon}
                       <span className="hidden sm:inline">{label}</span>
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setShowPreview(false)} className="p-2 rounded-xl text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#030a21]/60 transition-colors cursor-pointer">
+                <button onClick={() => setShowPreview(false)} className="p-2 rounded-xl text-gray-400 dark:text-[#7a8ba3] hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#253456] transition-colors cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
             {/* ── Test email send bar ── */}
-            <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 dark:border-blue-950/40 bg-amber-50/70 dark:bg-[#030a21]/60 space-y-2">
+            <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 dark:border-blue-950/40 bg-amber-50/70 dark:bg-amber-950/20 space-y-2">
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 w-full">
                 <Send className="w-3.5 h-3.5 shrink-0" />
                 Send a test email to verify before using this template
@@ -1058,8 +1058,8 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
               )}
             </div>
 
-            <div className="flex-1 overflow-auto p-6 bg-[#F8F9FE] dark:bg-[#000724] rounded-b-2xl">
-              <div className={`mx-auto bg-white dark:bg-[#071131] rounded-xl shadow-xs transition-all duration-300 ${device === 'mobile' ? 'max-w-[375px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-full'}`}>
+            <div className="flex-1 overflow-auto p-6 bg-[#F8F9FE] dark:bg-[#000724]">
+              <div className={`mx-auto bg-white dark:bg-[#0C1936] rounded-xl shadow-xs transition-all duration-300 ${device === 'mobile' ? 'max-w-[375px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-full'}`}>
                 <EmailPreview htmlContent={previewHtml} subject={template.subject} showDeviceSelector={false} />
               </div>
             </div>

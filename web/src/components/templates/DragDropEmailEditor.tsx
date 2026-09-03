@@ -580,7 +580,7 @@ function FooterBlockEditor({ local, set, inputCls, labelCls }: {
       {/* Live preview */}
       <div>
         <label className={labelCls}>Preview</label>
-        <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-blue-950/40 text-center py-5 px-4" style={{ background: local.bgColor || '#f3f4f6' }}>
+        <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-blue-950/40 text-center py-5 px-4 dark:!bg-[#030a21]" style={{ background: local.bgColor || '#f3f4f6' }}>
           {/* Social icons */}
           <div className="flex justify-center gap-2 mb-3">
             {SOCIAL_ICONS.filter(s => socials[s.key]).map(({ key, label, Icon, color }) => (
@@ -598,10 +598,10 @@ function FooterBlockEditor({ local, set, inputCls, labelCls }: {
               </div>
             )}
           </div>
-          {local.companyName && <p className="text-xs font-bold mb-0.5" style={{ color: local.textColor || '#374151' }}>{local.companyName}</p>}
-          {local.address && <p className="text-[11px] mb-2" style={{ color: local.textColor || '#6b7280' }}>{local.address}</p>}
-          {local.unsubscribeText && <p className="text-[10px] text-gray-400 mb-1">{local.unsubscribeText}</p>}
-          {local.unsubscribeLabel && <span className="text-[10px] text-gray-400 underline">{local.unsubscribeLabel}</span>}
+          {local.companyName && <p className="text-xs font-bold mb-0.5 dark:!text-slate-200" style={{ color: local.textColor || '#374151' }}>{local.companyName}</p>}
+          {local.address && <p className="text-[11px] mb-2 dark:!text-slate-300" style={{ color: local.textColor || '#6b7280' }}>{local.address}</p>}
+          {local.unsubscribeText && <p className="text-[10px] text-gray-400 dark:text-slate-400 mb-1">{local.unsubscribeText}</p>}
+          {local.unsubscribeLabel && <span className="text-[10px] text-gray-400 dark:text-slate-400 underline">{local.unsubscribeLabel}</span>}
         </div>
       </div>
     </>
@@ -1566,7 +1566,7 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
         </button>
 
         {showPalette && (
-          <div className="absolute top-full left-0 mt-2 z-30 bg-white dark:bg-[#071131] rounded-2xl shadow-xl border border-gray-100 dark:border-blue-950/40 p-4 w-full">
+          <div className="absolute top-full left-0 mt-2 z-30 bg-white dark:bg-[#000c3b] rounded-2xl shadow-xl border border-gray-100 dark:border-blue-950/40 p-4 w-full">
             <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wide mb-3">Choose a block type</p>
             <div className="grid grid-cols-4 gap-2">
               {PALETTE.map(({ type, label, icon, desc }) => (
