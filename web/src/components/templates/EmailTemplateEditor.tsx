@@ -980,14 +980,14 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
               </div>
             </div>
             {/* ── Test email send bar ── */}
-            <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 dark:border-[#262831] bg-amber-50/70 dark:bg-amber-950/20 space-y-2">
+            <div className="flex-shrink-0 px-4 sm:px-6 py-3 border-b border-gray-100 dark:border-[#262831] bg-amber-50/70 dark:bg-amber-950/20 space-y-2">
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 w-full">
                 <Send className="w-3.5 h-3.5 shrink-0" />
                 Send a test email to verify before using this template
               </p>
 
               {/* Provider selector */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium shrink-0">Send via:</span>
                 {(
                   [
@@ -1012,14 +1012,14 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
               </div>
 
               {/* Email input + send */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="email"
                   placeholder="Enter email address…"
                   value={testEmailAddr}
                   onChange={(e) => { setTestEmailAddr(e.target.value); setTestResult(null); }}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSendTest(); }}
-                  className="flex-1 h-8 px-3 text-sm border border-amber-200 dark:border-amber-900 rounded-lg bg-white dark:bg-[#000724] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-300 placeholder-gray-400"
+                  className="flex-1 min-w-0 h-8 px-3 text-sm border border-amber-200 dark:border-amber-900 rounded-lg bg-white dark:bg-[#000724] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-300 placeholder-gray-400"
                 />
                 <button
                   onClick={handleSendTest}
@@ -1029,7 +1029,7 @@ export default function EmailTemplateEditor({ mode, initialTemplate, onBack }: E
                     !template.subject?.trim() ||
                     !previewHtml?.trim()
                   }
-                  className="flex items-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 cursor-pointer w-full sm:w-auto"
                 >
                   {sendingTest
                     ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending…</>

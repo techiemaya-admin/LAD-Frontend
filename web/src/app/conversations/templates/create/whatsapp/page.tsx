@@ -484,7 +484,7 @@ export default function WhatsAppTemplateCreatePage() {
               )}
 
               {/* Name + Language row */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">Name your template</label>
                   <div className="relative">
@@ -573,9 +573,9 @@ export default function WhatsAppTemplateCreatePage() {
             <div className="p-6 space-y-6">
 
               {/* Variable type + Media sample row */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">
+                  <label className="flex items-center text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">
                     Type of variable
                     <span className="ml-1.5 text-[#94A3B8] dark:text-gray-500 text-xs">ⓘ</span>
                   </label>
@@ -584,7 +584,7 @@ export default function WhatsAppTemplateCreatePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">
+                  <label className="flex items-center text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">
                     Media sample
                     <span className="ml-1 text-[#94A3B8] dark:text-gray-500 font-normal text-xs">· Optional</span>
                   </label>
@@ -838,7 +838,7 @@ export default function WhatsAppTemplateCreatePage() {
                     <Plus className="w-4 h-4" /> Add button <ChevronDown className="w-4 h-4 ml-0.5" />
                   </button>
                   {showBtnMenu && (
-                    <div className="absolute top-full left-0 mt-1 bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-lg z-10 overflow-hidden min-w-52">
+                    <div className="absolute bottom-full mb-1 md:bottom-auto md:top-full md:mt-1 md:mb-0 left-0 bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-xl z-40 overflow-hidden min-w-52">
                       {[
                         { type: 'QUICK_REPLY'   as ButtonType, label: 'Quick reply',        desc: 'Pre-set response button'  },
                         { type: 'URL'           as ButtonType, label: 'Visit website',       desc: 'Link to a URL'            },
