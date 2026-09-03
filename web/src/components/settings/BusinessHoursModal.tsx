@@ -230,10 +230,10 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
       >
         {/* STICKY TOP HEADER (Close button aligns with heading) */}
         <div className="sticky top-0 z-20 bg-white dark:bg-[#081331] p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             {/* Header Info */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0 mt-0.5">
                 🕐
               </div>
               <div className="min-w-0">
@@ -246,7 +246,7 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center justify-center p-2 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer flex-shrink-0 -mr-1"
+              className="flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer flex-shrink-0 -mr-1"
             >
               <XIcon className="h-5 w-5" />
               <span className="sr-only">Close</span>
