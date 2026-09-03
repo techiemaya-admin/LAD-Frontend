@@ -230,27 +230,34 @@ export const BusinessHoursModal: React.FC<BusinessHoursModalProps> = ({ initialD
       >
         {/* STICKY TOP HEADER (Close button aligns with heading) */}
         <div className="sticky top-0 z-20 bg-white dark:bg-[#081331] p-5 sm:p-8 pb-4 sm:pb-4 border-b border-gray-100 dark:border-blue-950/40 flex-shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            {/* Header Info */}
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0 mt-0.5">
-                🕐
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-slate-100 leading-tight tracking-tight">Business Hours</h2>
-                <p className="text-[12px] sm:text-[13px] text-gray-400 dark:text-slate-400 mt-0.5">Configure availability &amp; timezone</p>
-              </div>
+          <div className="flex items-start gap-3">
+            {/* Header Icon */}
+            <div className="w-10 h-10 rounded-xl bg-[#0B1957] dark:bg-[#2B7CFF]/20 text-white dark:text-[#2B7CFF] flex items-center justify-center text-lg shadow-md flex-shrink-0 mt-0.5">
+              🕐
             </div>
 
-            {/* Fixed Close Button aligned with Heading */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-xl transition-all focus:outline-none cursor-pointer flex-shrink-0 -mr-1"
-            >
-              <XIcon className="h-5 w-5" />
-              <span className="sr-only">Close</span>
-            </button>
+            {/* Header Title + Close Button Row & Subtitle */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-slate-100 leading-tight tracking-tight">
+                  Business Hours
+                </h2>
+
+                {/* Close Button aligned on the exact same line as Heading */}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center justify-center p-1 text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800/80 rounded-lg transition-all focus:outline-none cursor-pointer flex-shrink-0 -mr-1"
+                >
+                  <XIcon className="h-5 w-5" />
+                  <span className="sr-only">Close</span>
+                </button>
+              </div>
+
+              <p className="text-[12px] sm:text-[13px] text-gray-400 dark:text-slate-400 mt-0.5">
+                Configure availability &amp; timezone
+              </p>
+            </div>
           </div>
         </div>
 
