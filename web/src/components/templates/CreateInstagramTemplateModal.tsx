@@ -102,24 +102,26 @@ export default function CreateInstagramTemplateModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent showCloseButton={false} overlayClassName="bg-black/50 dark:bg-[#000724]/80 backdrop-blur-xs" className="w-[calc(100%-2rem)] sm:max-w-[660px] sm:w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#000724] text-gray-900 dark:text-white p-0 rounded-2xl sm:rounded-3xl shadow-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between px-4 pt-5 pb-4 sm:px-8 sm:pt-7 sm:pb-5 border-b border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331] shrink-0">
-          <div className="flex items-center gap-3 sm:gap-3.5">
-            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 shadow-md shadow-[#DD2A7B]/25 shrink-0">
+        <DialogHeader className="px-4 py-4 sm:px-8 sm:py-5 border-b border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331] shrink-0">
+          <div className="flex items-start gap-3 sm:gap-3.5 w-full">
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 shadow-md shadow-[#DD2A7B]/25 shrink-0 mt-0.5">
               <Instagram className="h-5 w-5 text-white" />
             </div>
-            <div className="flex flex-col">
-              <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                {editing ? 'Edit Instagram Template' : 'Create Instagram Template'}
-              </DialogTitle>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+                  {editing ? 'Edit Instagram Template' : 'Create Instagram Template'}
+                </DialogTitle>
+                <DialogClose className="border-0 bg-transparent p-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white opacity-70 hover:opacity-100 transition-opacity focus:outline-none cursor-pointer shrink-0">
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span className="sr-only">Close</span>
+                </DialogClose>
+              </div>
               <DialogDescription className="text-xs sm:text-sm text-gray-500 dark:text-slate-300 mt-0.5">
                 Reusable Instagram DM - no Meta approval required
               </DialogDescription>
             </div>
           </div>
-          <DialogClose className="border-0 bg-transparent p-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white opacity-70 hover:opacity-100 transition-opacity focus:outline-none cursor-pointer">
-            <X className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
         </DialogHeader>
 
         <div className="space-y-5 px-4 py-5 sm:px-8 sm:py-6 bg-background dark:bg-[#000724]">
