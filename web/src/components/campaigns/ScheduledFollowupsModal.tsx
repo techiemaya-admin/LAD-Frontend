@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,7 @@ import FollowupTouchesEditor, {
 import {
   CalendarClock, Clock, Loader2, Plus, Trash2, Linkedin, Search,
   CheckCircle2, ChevronUp, ChevronDown, CalendarPlus, FileText, Film, Music,
-  Save, SlidersHorizontal,
+  Save, SlidersHorizontal, X,
 } from 'lucide-react';
 
 interface SelectedMedia {
@@ -383,18 +383,24 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl [&>[data-slot=dialog-close]]:top-5 sm:[&>[data-slot=dialog-close]]:top-6">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center shrink-0">
-              <CalendarClock className="w-5 h-5 text-[#0b1957] dark:text-indigo-300" />
+      <DialogContent showCloseButton={false} className="sm:max-w-3xl">
+        <DialogHeader className="px-4 py-3.5 sm:px-8 sm:py-5 border-b border-gray-100 dark:border-blue-950/40">
+          <div className="flex items-start gap-3 w-full">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#0b1957]/10 flex items-center justify-center shrink-0 mt-0.5">
+              <CalendarClock className="w-4 h-4 sm:w-5 sm:h-5 text-[#0b1957] dark:text-indigo-300" />
             </div>
-            <div>
-              <DialogTitle className="text-lg sm:text-2xl">Scheduled Follow-ups</DialogTitle>
-              <DialogDescription>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                Scheduled Follow-ups
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Connection accepted leads. Schedule or remove upcoming LinkedIn follow-ups.
               </DialogDescription>
             </div>
+            <DialogClose className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer shrink-0">
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </div>
         </DialogHeader>
 
@@ -577,49 +583,65 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
                     className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] overflow-hidden"
                   >
                     {/* Lead header row */}
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      {lead.photo_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={lead.photo_url} alt={lead.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-[#0b1957]/10 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-[#0b1957] dark:text-indigo-200">{initialOf(lead)}</span>
+                    <div className="p-3 sm:py-3 sm:px-4">
+                      {/* Top row: Avatar + Name/Sub + Badge (on desktop: includes button on right) */}
+                      <div className="flex items-center gap-3">
+                        {lead.photo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={lead.photo_url} alt={lead.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-[#0b1957]/10 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-[#0b1957] dark:text-indigo-200">{initialOf(lead)}</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{lead.name}</p>
+                            {lead.linkedin_url && (
+                              <a
+                                href={lead.linkedin_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#0A66C2] hover:opacity-80 shrink-0"
+                                title="Open LinkedIn profile"
+                              >
+                                <Linkedin className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 dark:text-[#7a8ba3] truncate">
+                            {[lead.title, lead.company].filter(Boolean).join(' · ') || 'LinkedIn lead'}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{lead.name}</p>
-                          {lead.linkedin_url && (
-                            <a
-                              href={lead.linkedin_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#0A66C2] hover:opacity-80 shrink-0"
-                              title="Open LinkedIn profile"
-                            >
-                              <Linkedin className="w-3.5 h-3.5" />
-                            </a>
-                          )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={
+                              'text-xs px-2.5 py-1 rounded-full font-semibold ' +
+                              (pending.length > 0
+                                ? 'bg-[#0b1957]/10 text-[#0b1957] dark:bg-indigo-500/20 dark:text-indigo-200'
+                                : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500')
+                            }
+                          >
+                            {pending.length} scheduled
+                          </span>
+                          {/* Desktop button */}
+                          <Button
+                            size="sm"
+                            onClick={() => openScheduler(lead.campaignLeadId)}
+                            className="hidden sm:inline-flex h-8 rounded-xl bg-[#0b1957] hover:bg-[#0b1957]/90 text-white text-xs font-semibold gap-1"
+                          >
+                            {isSchedOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                            Schedule
+                          </Button>
                         </div>
-                        <p className="text-xs text-slate-400 dark:text-[#7a8ba3] truncate">
-                          {[lead.title, lead.company].filter(Boolean).join(' · ') || 'LinkedIn lead'}
-                        </p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={
-                            'text-xs px-2.5 py-1 rounded-full font-semibold ' +
-                            (pending.length > 0
-                              ? 'bg-[#0b1957]/10 text-[#0b1957] dark:bg-indigo-500/20 dark:text-indigo-200'
-                              : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500')
-                          }
-                        >
-                          {pending.length} scheduled
-                        </span>
+
+                      {/* Mobile +Schedule button */}
+                      <div className="mt-2.5 sm:hidden">
                         <Button
                           size="sm"
                           onClick={() => openScheduler(lead.campaignLeadId)}
-                          className="h-8 rounded-xl bg-[#0b1957] hover:bg-[#0b1957]/90 text-white text-xs font-semibold gap-1"
+                          className="w-full h-8.5 rounded-xl bg-[#0b1957] hover:bg-[#0b1957]/90 text-white text-xs font-semibold gap-1 justify-center"
                         >
                           {isSchedOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                           Schedule

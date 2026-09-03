@@ -13,15 +13,43 @@ import {
   AlertCircle, Linkedin, Phone, MessageCircle,
   Reply, MousePointerClick, BarChart, Activity, Rocket, Zap, Lightbulb,
   Megaphone, Gauge, Moon, Sun, Wifi, WifiOff, Loader2, RadioTower,
-  SquarePen, Sparkles, ChevronDown, ChevronUp, RefreshCw, CalendarClock
+  SquarePen, Sparkles, ChevronDown, ChevronUp, RefreshCw, CalendarClock,
+  Play, Pause, Square
 } from 'lucide-react';
 import { useCampaignAnalytics, useCampaignLeads } from '@lad/frontend-features/campaigns';
 import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
+import { getStatusColor, type CampaignStatus } from '@/components/campaigns/campaignUtils';
 import ScheduledFollowupsModal from '@/components/campaigns/ScheduledFollowupsModal';
 import { LiveBadge } from '@/components/LiveBadge';
 import { proxyPost } from '@/lib/api';
+
+const getStatusIconComponent = (status: CampaignStatus | string) => {
+  switch (status) {
+    case 'running': return <Play className="h-3 w-3" />;
+    case 'paused': return <Pause className="h-3 w-3" />;
+    case 'stopped': return <Square className="h-3 w-3" />;
+    case 'completed': return <CheckCircle className="h-3 w-3" />;
+    default: return null;
+  }
+};
+
+const getStatusBadgeClass = (status: CampaignStatus | string) => {
+  const color = getStatusColor(status as CampaignStatus);
+  switch (color) {
+    case 'success':
+      return 'bg-green-50 text-green-700 border-green-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50';
+    case 'warning':
+      return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/50';
+    case 'error':
+      return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/50';
+    case 'info':
+      return 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800/50';
+    default:
+      return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700/60';
+  }
+};
 
 const platformConfig = {
   linkedin: {
@@ -451,15 +479,14 @@ export default function CampaignAnalyticsPage() {
                   </h1>
 
 
-                  <Badge
-                    className={`h-5 rounded px-2 text-[10px] font-bold uppercase tracking-wide border-0 ${
-                      analytics.campaign.status === "running"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
-                    }`}
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium capitalize transition-colors ${getStatusBadgeClass(
+                      analytics.campaign.status
+                    )}`}
                   >
+                    {getStatusIconComponent(analytics.campaign.status)}
                     {analytics.campaign.status}
-                  </Badge>
+                  </span>
 
 
                   <LiveBadge
@@ -531,34 +558,14 @@ export default function CampaignAnalyticsPage() {
       </div>
 
       <div className="flex items-center gap-3 ml-11 flex-wrap">
-        <Badge
-          className={`capitalize dark:!bg-transparent dark:!border-transparent dark:!px-0 dark:!py-0 dark:!rounded-none dark:!shadow-none dark:!font-extrabold dark:tracking-wide ${
-            analytics.campaign.status === "running"
-              ? "dark:!text-emerald-400"
-              : "dark:!text-amber-300"
-          }`}
-          style={{
-            backgroundColor:
-              analytics.campaign.status === "running"
-                ? "#dbfce7"
-                : "#FEF3C7",
-            color:
-              analytics.campaign.status === "running"
-                ? "green"
-                : "#D97706",
-          }}
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium capitalize transition-colors ${getStatusBadgeClass(
+            analytics.campaign.status
+          )}`}
         >
-          <div
-            className="w-2 h-2 rounded-full mr-2 dark:!hidden"
-            style={{
-              backgroundColor:
-                analytics.campaign.status === "running"
-                  ? "#10B981"
-                  : "#F59E0B",
-            }}
-          />
+          {getStatusIconComponent(analytics.campaign.status)}
           {analytics.campaign.status}
-        </Badge>
+        </span>
 
         <LiveBadge
           isConnected={isConnected}
