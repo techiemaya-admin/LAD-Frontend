@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import { useWhatsAppAccounts } from '@lad/frontend-features/meta-onboarding';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ function ButtonRow({
     btn.type === 'URL'         ? 'Visit website' : 'Call phone';
 
   return (
-    <div className="p-3 border border-[#E2E8F0] dark:border-gray-800 rounded-lg space-y-2 bg-[#FAFBFC] dark:bg-[#000724]">
+    <div className="p-3 border border-[#E2E8F0] dark:border-blue-950/40 rounded-lg space-y-2 bg-[#FAFBFC] dark:bg-[#071131]">
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-[#64748B] dark:text-gray-400 w-24 shrink-0">{typeLabel}</span>
         <span className="text-xs text-[#94A3B8] dark:text-gray-500 shrink-0">Button text</span>
@@ -128,14 +129,15 @@ function ButtonRow({
       {btn.type === 'URL' && (
         <div className="flex items-center gap-2 pl-24 flex-wrap">
           <span className="text-xs text-[#94A3B8] dark:text-gray-500 shrink-0">URL type</span>
-          <select
-            value={btn.urlType}
-            onChange={e => onChange({ urlType: e.target.value as 'static' | 'dynamic' })}
-            className="px-2 py-1 border border-[#E2E8F0] dark:border-gray-800 rounded text-xs bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white focus:outline-none"
-          >
-            <option value="static" className="dark:bg-[#000c3b]">Static</option>
-            <option value="dynamic" className="dark:bg-[#000c3b]">Dynamic</option>
-          </select>
+          <Select value={btn.urlType} onValueChange={value => onChange({ urlType: value as 'static' | 'dynamic' })}>
+            <SelectTrigger size="sm" className="w-24 border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#071131] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="static">Static</SelectItem>
+              <SelectItem value="dynamic">Dynamic</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-xs text-[#94A3B8] dark:text-gray-500 shrink-0">Website URL</span>
           <input
             type="url"
@@ -445,8 +447,8 @@ export default function WhatsAppTemplateCreatePage() {
         <div className={`flex-1 p-5 md:p-8 space-y-6 min-w-0 max-w-4xl ${mobileTab === 'preview' ? 'hidden' : ''}`}>
 
           {/* ── Template name & language section ── */}
-          <div className={`bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'details' ? 'hidden md:block' : ''}`}>
-            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-gray-800 bg-[#F8F9FE] dark:bg-[#000c3b]">
+          <div className={`bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'details' ? 'hidden md:block' : ''}`}>
+            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8F9FE] dark:bg-[#071131]">
               <h2 className="text-base font-semibold text-[#1E293B] dark:text-white">Template name and language</h2>
             </div>
             <div className="p-6 space-y-4">
@@ -457,17 +459,18 @@ export default function WhatsAppTemplateCreatePage() {
                 <div>
                   <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">WhatsApp number</label>
                   {accounts.length > 1 ? (
-                  <select
-                    value={effectiveAccountId}
-                    onChange={e => setAccountId(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957] dark:focus:ring-blue-500/20 dark:focus:border-blue-500"
-                  >
+                  <Select value={effectiveAccountId} onValueChange={setAccountId}>
+                    <SelectTrigger className="w-full h-10 border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#071131] text-[#1E293B] dark:text-white">
+                      <SelectValue placeholder="Select WhatsApp number" />
+                    </SelectTrigger>
+                    <SelectContent>
                     {accounts.map(a => (
-                      <option key={a.id} value={a.id} className="dark:bg-[#000724]">
+                      <SelectItem key={a.id} value={a.id}>
                         {a.display_phone_number || a.display_name || a.slug}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                   ) : (
                     <div
                       className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-[#F8FAFC] dark:bg-[#000724] text-[#1E293B] dark:text-white"
@@ -506,13 +509,14 @@ export default function WhatsAppTemplateCreatePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">Select language</label>
-                  <select
-                    value={language}
-                    onChange={e => setLanguage(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957] dark:focus:ring-blue-500/20 dark:focus:border-blue-500"
-                  >
-                    {LANGUAGES.map(l => <option key={l.code} value={l.code} className="dark:bg-[#000724]">{l.label}</option>)}
-                  </select>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-full h-10 border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#071131] text-[#1E293B] dark:text-white">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map(l => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -526,10 +530,10 @@ export default function WhatsAppTemplateCreatePage() {
                         key={c.value}
                         type="button"
                         onClick={() => setCategory(c.value)}
-                        className={`text-sm font-semibold px-4 py-2 rounded-full border transition-all cursor-pointer ${
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                           category === c.value
-                            ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-[0_2px_8px_rgba(11,25,87,0.25)]'
-                            : 'bg-white dark:bg-[#000724] text-[#64748B] dark:text-gray-300 border-[#E2E8F0] dark:border-gray-800 hover:border-[#0b1957]/40 dark:hover:border-blue-500/40 hover:text-[#1E293B] dark:hover:text-white'
+                            ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
+                            : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
                         }`}
                       >
                         {c.label}
@@ -550,7 +554,7 @@ export default function WhatsAppTemplateCreatePage() {
                   <button
                     onClick={handleSubmit}
                     disabled={!canSubmit || submitting}
-                    className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#0b1957] text-white rounded-xl font-semibold text-sm hover:bg-[#0a1540] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)]  dark:hover:bg-white hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)]  dark:text-gray-900 dark:bg-gray-100 dark:shadow-none transition-all cursor-pointer"
+                    className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] dark:shadow-none transition-all cursor-pointer"
                   >
                     {submitting
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
@@ -562,8 +566,8 @@ export default function WhatsAppTemplateCreatePage() {
           </div>
 
           {/* ── Content section ── */}
-          <div className={`bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'content' ? 'hidden md:block' : ''}`}>
-            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-gray-800 bg-[#F8F9FE] dark:bg-[#000c3b]">
+          <div className={`bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 rounded-xl shadow-sm overflow-hidden ${mobileTab !== 'content' ? 'hidden md:block' : ''}`}>
+            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8F9FE] dark:bg-[#071131]">
               <h2 className="text-base font-semibold text-[#1E293B] dark:text-white">Content</h2>
               <p className="text-xs text-[#64748B] dark:text-gray-400 mt-0.5">
                 Add a header, body and footer for your template. Cloud API hosted by Meta will review variables and content.
@@ -579,31 +583,40 @@ export default function WhatsAppTemplateCreatePage() {
                     Type of variable
                     <span className="ml-1.5 text-[#94A3B8] dark:text-gray-500 text-xs">ⓘ</span>
                   </label>
-                  <select className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957] dark:focus:ring-blue-500/20 dark:focus:border-blue-500">
-                    <option className="dark:bg-[#000724]">Number</option>
-                  </select>
+                  <Select value="number">
+                    <SelectTrigger className="w-full h-10 border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#071131] text-[#1E293B] dark:text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="number">Number</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#1E293B] dark:text-white mb-1.5">
                     Media sample
                     <span className="ml-1 text-[#94A3B8] dark:text-gray-500 font-normal text-xs">· Optional</span>
                   </label>
-                  <select
+                  <Select
                     value={mediaType}
-                    onChange={e => {
-                      setMediaType(e.target.value as MediaType);
+                    onValueChange={value => {
+                      setMediaType(value as MediaType);
                       setMediaHandle('');
                       setMediaFileName('');
                       setUploadStatus('idle');
                       setUploadError('');
                     }}
-                    className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20 focus:border-[#0b1957] dark:focus:ring-blue-500/20 dark:focus:border-blue-500"
                   >
-                    <option value="NONE" className="dark:bg-[#000724]">None</option>
-                    <option value="IMAGE" className="dark:bg-[#000724]">Image</option>
-                    <option value="VIDEO" className="dark:bg-[#000724]">Video</option>
-                    <option value="DOCUMENT" className="dark:bg-[#000724]">Document</option>
-                  </select>
+                    <SelectTrigger className="w-full h-10 border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#071131] text-[#1E293B] dark:text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">None</SelectItem>
+                      <SelectItem value="IMAGE">Image</SelectItem>
+                      <SelectItem value="VIDEO">Video</SelectItem>
+                      <SelectItem value="DOCUMENT">Document</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -807,8 +820,8 @@ export default function WhatsAppTemplateCreatePage() {
 
           {/* ── Buttons section ── */}
       {(mobileTab === 'content' || typeof window === 'undefined' || window.innerWidth >= 768) && (
-          <div className="bg-white dark:bg-[#000c3b] border border-[#E2E8F0] dark:border-gray-800 rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-gray-800 bg-[#F8F9FE] dark:bg-[#000c3b]">
+          <div className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40 bg-[#F8F9FE] dark:bg-[#071131]">
               <h2 className="text-base font-semibold text-[#1E293B] dark:text-white">
                 Buttons
                 <span className="ml-1 text-[#94A3B8] dark:text-gray-500 font-normal text-sm">· Optional</span>
@@ -818,7 +831,7 @@ export default function WhatsAppTemplateCreatePage() {
               </p>
             </div>
 
-            <div className="p-6 space-y-3 bg-white dark:bg-[#000c3b]/10">
+            <div className="p-6 space-y-3 bg-white dark:bg-[#071131]">
               {buttons.map(btn => (
                 <ButtonRow
                   key={btn.id}
@@ -833,7 +846,7 @@ export default function WhatsAppTemplateCreatePage() {
                   <button
                     type="button"
                     onClick={() => setShowBtnMenu(v => !v)}
-                    className="flex items-center gap-2 px-4 py-2 border border-[#E2E8F0] dark:border-gray-800 rounded-lg text-sm font-medium text-[#1E293B] dark:text-gray-300 hover:border-[#0b1957]/40 dark:hover:border-blue-500/40 hover:bg-[#F8F9FE] dark:hover:bg-[#000c3b] transition-colors cursor-pointer bg-white dark:bg-[#000724]"
+                    className="flex items-center gap-2 px-4 py-2 border border-primary rounded-lg text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer bg-primary"
                   >
                     <Plus className="w-4 h-4" /> Add button <ChevronDown className="w-4 h-4 ml-0.5" />
                   </button>
@@ -1127,7 +1140,7 @@ export default function WhatsAppTemplateCreatePage() {
           <button
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}
-              className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0b1957] dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold text-sm hover:bg-[#0a1540] dark:hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] dark:shadow-none transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(11,25,87,0.3)] dark:shadow-none transition-all cursor-pointer"
           >
             {submitting
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>

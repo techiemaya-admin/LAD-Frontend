@@ -102,10 +102,10 @@ export default function ReadyToUseTemplates({
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
               selectedCategory === category
-                ? 'bg-primary dark:bg-blue-500 text-white'
-                : 'bg-gray-200 dark:bg-[#000c3b] text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-[#0b1957]/50'
+                ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
+                : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
             }`}
           >
             {category}
@@ -118,7 +118,7 @@ export default function ReadyToUseTemplates({
         {filteredTemplates.map((template) => (
           <div
             key={template.id}
-            className="bg-white dark:bg-[#000c3b] rounded-lg border border-gray-200 dark:border-gray-800 p-6 hover:shadow-lg dark:hover:shadow-[#0b1957]/10 transition-shadow"
+            className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6 hover:shadow-lg dark:hover:shadow-[#0b1957]/10 transition-shadow"
           >
             <div className="mb-4">
               <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
