@@ -105,8 +105,16 @@ export function AgentBuilderBrandDNA({
     </Link>
   );
 
+  // The checkerboard behind logos, so transparent areas read as transparent
+  // rather than as white artwork.
+  //
+  // The squares were #f1f5f9, which over white is exactly rgb(115, 155, 195) at
+  // 10% opacity. Writing it as that colour with an explicit alpha makes the
+  // strength of the pattern a single number to tune, and it is now 20%, ten
+  // points stronger, so the transparency is legible against a pale logo.
   const checkersStyle: React.CSSProperties = {
-    backgroundImage: "conic-gradient(#f1f5f9 25%, transparent 0 50%, #f1f5f9 0 75%, transparent 0)",
+    backgroundImage:
+      "conic-gradient(rgba(115, 155, 195, 0.2) 25%, transparent 0 50%, rgba(115, 155, 195, 0.2) 0 75%, transparent 0)",
     backgroundSize: "12px 12px",
     backgroundColor: "#ffffff"
   };
