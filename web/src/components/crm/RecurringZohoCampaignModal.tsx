@@ -146,7 +146,7 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
     }
   };
 
-  const field = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+  const field = 'w-full rounded-md border border-input bg-white px-3 py-2 text-sm';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 pt-16 sm:pt-4" onClick={onClose}>
@@ -157,18 +157,24 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
         aria-modal="true"
         aria-labelledby="recurring-zoho-campaign-title"
       >
-        <div className="flex items-center justify-between p-4 border-b border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Repeat className="h-5 w-5 text-primary" />
-            <div>
-              <div id="recurring-zoho-campaign-title" className="text-sm font-semibold text-foreground">Recurring Zoho campaign</div>
-              <p className="text-xs text-muted-foreground">Imports new Zoho contacts daily and runs them through your sequence.</p>
+        <div className="bg-white rounded-t-xl p-4 border-b border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Repeat className="h-5 w-5 text-primary shrink-0" />
+              <div id="recurring-zoho-campaign-title" className="text-sm font-semibold text-foreground truncate">
+                Recurring Zoho campaign
+              </div>
             </div>
+            <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer p-0.5">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+          <p className="text-xs text-muted-foreground mt-1">
+            Imports new Zoho contacts daily and runs them through your sequence.
+          </p>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 bg-background">
           {!connected && statusUnavailable && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
               Couldn&apos;t check your Zoho connection, so creating is paused. This isn&apos;t
@@ -185,16 +191,16 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Campaign name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zoho new-contacts outreach" />
+            <Input className="bg-white" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zoho new-contacts outreach" />
           </div>
 
           {/* Source */}
-          <div className="rounded-lg border border-border dark:border-blue-950/40 dark:bg-[#071131] p-3 space-y-3">
+          <div className="rounded-lg border border-border bg-white dark:border-blue-950/40 dark:bg-[#071131] p-3 space-y-3">
             <div className="text-sm font-medium text-foreground">Zoho source</div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Import from</label>
               <Select value={modules} onValueChange={(val) => setModules(val as 'contacts' | 'contacts_leads')}>
-                <SelectTrigger className="w-full text-sm">
+                <SelectTrigger className="w-full bg-white text-sm">
                   <SelectValue placeholder="Select import source" />
                 </SelectTrigger>
                 <SelectContent className="z-[100000]">
@@ -205,27 +211,33 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
             </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Only contacts with tag (optional)</label>
-              <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="e.g. Auto-Conversion Lead. Leave blank for all new." />
+              <Input className="bg-white" value={tag} onChange={(e) => setTag(e.target.value)} placeholder="e.g. Auto-Conversion Lead. Leave blank for all new." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">New contacts / day</label>
-                <Input type="number" value={perDay} onChange={(e) => setPerDay(e.target.value)} />
+                <Input type="number" className="bg-white" value={perDay} onChange={(e) => setPerDay(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Run for (days)</label>
-                <Input type="number" value={days} onChange={(e) => setDays(e.target.value)} />
+                <Input type="number" className="bg-white" value={days} onChange={(e) => setDays(e.target.value)} />
               </div>
             </div>
           </div>
 
           {/* Sequence */}
-          <div className="rounded-lg border border-border dark:border-blue-950/40 dark:bg-[#071131] p-3 space-y-3">
+          <div className="rounded-lg border border-border bg-white dark:border-blue-950/40 dark:bg-[#071131] p-3 space-y-3">
             <div className="text-sm font-medium text-foreground">Sequence</div>
 
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={liEnabled} onChange={(e) => setLiEnabled(e.target.checked)} className="h-4 w-4" />
-              <Linkedin className="h-4 w-4 text-blue-700" /> Send LinkedIn connection request
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={liEnabled}
+                onChange={(e) => setLiEnabled(e.target.checked)}
+                className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+              />
+              <Linkedin className="h-4 w-4 text-blue-700 shrink-0" />
+              <span>Send LinkedIn connection request</span>
             </label>
             {liEnabled && (
               <textarea className={`${field} min-h-[60px]`} value={liMessage} onChange={(e) => setLiMessage(e.target.value)}
@@ -233,24 +245,36 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
             )}
 
             {liEnabled && emailEnabled && (
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <input type="checkbox" checked={waitAccept} onChange={(e) => setWaitAccept(e.target.checked)} className="h-4 w-4" />
-                <Clock className="h-4 w-4 text-muted-foreground" /> Wait for connection accepted before emailing
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={waitAccept}
+                  onChange={(e) => setWaitAccept(e.target.checked)}
+                  className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+                />
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span>Wait for connection accepted before emailing</span>
               </label>
             )}
 
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={emailEnabled} onChange={(e) => setEmailEnabled(e.target.checked)} className="h-4 w-4" />
-              <Mail className="h-4 w-4 text-slate-600" /> Send email
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={emailEnabled}
+                onChange={(e) => setEmailEnabled(e.target.checked)}
+                className="h-4 w-4 rounded accent-[#0B1957] dark:accent-[#2563eb] cursor-pointer shrink-0"
+              />
+              <Mail className="h-4 w-4 text-slate-600 shrink-0" />
+              <span>Send email</span>
             </label>
             {emailEnabled && (
               <div className="space-y-2">
-                <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} placeholder="Email subject" />
+                <Input className="bg-white" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} placeholder="Email subject" />
                 <textarea className={`${field} min-h-[80px]`} value={emailBody} onChange={(e) => setEmailBody(e.target.value)}
                   placeholder="Email body. Leave blank to let Mr LAD draft it." />
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground">Delay before email (days)</label>
-                  <Input type="number" className="w-20" value={emailDelayDays} onChange={(e) => setEmailDelayDays(e.target.value)} />
+                  <Input type="number" className="w-20 bg-white" value={emailDelayDays} onChange={(e) => setEmailDelayDays(e.target.value)} />
                 </div>
               </div>
             )}
@@ -261,8 +285,7 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
           </p>
         </div>
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
-          <Button variant="ghost" onClick={onClose} disabled={creating}>Cancel</Button>
+        <div className="bg-white rounded-lg flex items-center justify-end gap-2 p-4 border-t border-border dark:border-blue-950/40 dark:bg-[#081331] flex-shrink-0">
           <Button
             onClick={handleCreate}
             disabled={creating || !connected}

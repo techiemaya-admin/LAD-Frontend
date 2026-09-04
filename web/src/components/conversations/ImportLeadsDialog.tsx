@@ -973,7 +973,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
           onValueChange={setActiveTab}
           className={cn(
             "flex-1 flex flex-col overflow-hidden",
-            isWhatsApp ? "bg-zinc-50/50 dark:bg-zinc-900" : "bg-gray-50/30 dark:bg-[#000724]"
+            isWhatsApp ? "bg-white dark:bg-zinc-900" : "bg-white dark:bg-[#000724]"
           )}
         >
           <TabsList className={cn(
@@ -1635,7 +1635,7 @@ export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channe
         {/* ── Footer ─────────────────────────────── */}
         <DialogActions className={cn(
           "border-t p-4 flex items-center justify-between",
-          isWhatsApp ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/90" : "border-gray-100 dark:border-slate-800/80 bg-gray-50/50 dark:bg-[#000724]"
+          isWhatsApp ? "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90" : "border-gray-100 dark:border-slate-800/80 bg-white dark:bg-[#000724]"
         )}>
           {!importResult?.success ? (
             <div className="flex flex-col w-full space-y-4">

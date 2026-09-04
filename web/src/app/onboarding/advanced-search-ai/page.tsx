@@ -9370,18 +9370,21 @@ export default function AdvancedSearchAIPage() {
             {/* Edit Inbound Lead Modal */}
             {editingLeadIndex !== null && editFormData && (
               <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={closeEditLead}>
-                  <div className="relative w-[90%] max-w-[500px] max-h-[80vh] overflow-auto rounded-2xl bg-white p-8 shadow-2xl dark:bg-[#101935] dark:text-white" onClick={(e) => e.stopPropagation()}>
+                  <div className="relative flex w-[90%] max-w-[500px] max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-blue-950/40 dark:bg-[#000724] dark:text-white" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-6 py-5 dark:border-blue-950/40 dark:bg-[#081331]">
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                        Edit Lead #{editingLeadIndex + 1}
+                      </h2>
                       <button
                         onClick={closeEditLead}
-                        className="absolute top-6 right-6 text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-400 dark:hover:text-white"
+                        aria-label="Close"
+                        className="border-0 bg-transparent p-0 text-xl leading-none text-slate-500 opacity-70 transition-opacity hover:text-slate-900 hover:opacity-100 focus:outline-none dark:text-slate-400 dark:hover:text-white"
                       >
                           ✕
                       </button>
+                    </div>
 
-                      <h2 className="mb-6 text-lg font-bold">
-                          Edit Lead #{editingLeadIndex + 1}
-                      </h2>
-
+                    <div className="flex-1 overflow-y-auto bg-background px-6 py-6 dark:bg-[#000724]">
                       <div className="grid gap-5">
                           {/* Reusable Input Helper Component logic would go here */}
                           {/* Updated Inputs Map */}
@@ -9405,7 +9408,7 @@ export default function AdvancedSearchAIPage() {
                                   value={editFormData[fieldKey]}
                                   onChange={(e) => updateEditField(fieldKey, e.target.value)}
                                   placeholder={field.placeholder} // Using the placeholder property here
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-colors focus:border-blue-500 focus:outline-none dark:border-[#262831] dark:bg-[#000724] dark:text-white dark:placeholder-gray-500"
+                                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition-colors focus:border-blue-500 focus:outline-none dark:border-blue-950/40 dark:bg-[#071131] dark:text-white dark:placeholder-gray-500"
                                 />
                             </div>
                             );
@@ -9419,15 +9422,16 @@ export default function AdvancedSearchAIPage() {
                               <textarea
                                 value={editFormData.notes}
                                 onChange={(e) => updateEditField('notes', e.target.value)}
-                                className="h-20 w-full resize-y rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-colors focus:border-blue-500 focus:outline-none dark:border-[#262831] dark:bg-[#000724] dark:text-white"
+                                className="h-20 w-full resize-y rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition-colors focus:border-blue-500 focus:outline-none dark:border-blue-950/40 dark:bg-[#071131] dark:text-white"
                               />
                           </div>
                       </div>
-                      <div className="mt-8">
+                    </div>
+                    <div className="flex shrink-0 justify-end border-t border-gray-100 bg-white px-6 py-5 dark:border-blue-950/40 dark:bg-[#081331]">
                           <button
                             onClick={saveEditedLead}
                             disabled={savingLead}
-                            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-xl bg-[#0B1957] px-8 py-3 text-sm font-bold text-white transition-all hover:bg-[#0B1957]/90 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
                           >
                               {savingLead ? 'Saving...' : 'Save Changes'}
                           </button>

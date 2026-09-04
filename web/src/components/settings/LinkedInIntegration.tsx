@@ -916,7 +916,7 @@ export const LinkedInIntegration: React.FC = () => {
       <Dialog open={showConnectionModal} onOpenChange={setShowConnectionModal}>
         <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0 bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800/80 outline-none focus:outline-none focus-visible:outline-none">
 
-          <DialogHeader className="bg-slate-50 dark:bg-[#000724] px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl">
+          <DialogHeader className="bg-white dark:bg-[#000724] px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-100 dark:bg-[#000724] p-2 rounded-lg mr-3 flex-shrink-0">
                 <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>

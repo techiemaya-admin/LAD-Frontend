@@ -1111,12 +1111,12 @@ export function CallOptions(props: CallOptionsProps) {
           </DialogHeader>
           <div className="grid gap-4 px-8 py-6">
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Phone</label>
-            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
+            <Input className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.to_number} onChange={(e) => setEditorValues((v) => ({ ...v, to_number: e.target.value.replace(/\s+/g, "") }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Name</label>
-            <Input className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
+            <Input className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white" value={editorValues.name || ""} onChange={(e) => setEditorValues((v) => ({ ...v, name: e.target.value }))} />
             <label className="text-xs text-gray-600 dark:text-[#7a8ba3]">Company</label>
             <Input
-              className="dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
+              className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white"
               value={editorValues.requested_id || ""}
               onChange={(e) => setEditorValues((v) => ({ ...v, requested_id: e.target.value }))}
               placeholder={dataType === 'employee' ? 'e.g. 57da3722a6da985435dbab61' : 'e.g. company-id'}
@@ -1191,7 +1191,7 @@ export function CallOptions(props: CallOptionsProps) {
               </button>
             </div>
           </div>
-          <DialogActions className="px-8 pb-8 pt-4 dark:bg-[#081331] dark:border-blue-950/40">
+          <DialogActions className="px-8 pb-8 pt-4 bg-white dark:bg-[#081331] dark:border-blue-950/40">
             <Button 
               onClick={saveEditor} 
               disabled={savingSummary} 
