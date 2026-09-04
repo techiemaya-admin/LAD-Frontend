@@ -490,6 +490,19 @@ export const MageSettings: React.FC = () => {
     })();
   }, [loadOverview]);
 
+  // ?panel=assets opens the Reference images panel on arrival.
+  //
+  // The brand DNA view tells a customer whose logo could not be extracted to
+  // add one to the Drive folder, and that view also renders inside the guided
+  // journey, where there is no panel to open. From there the link comes here,
+  // and this is what makes it land on the right panel rather than the top of
+  // the page. Read off window rather than useSearchParams so the component does
+  // not need a Suspense boundary of its own.
+  useEffect(() => {
+    const panel = new URLSearchParams(window.location.search).get('panel');
+    if (panel === 'assets') setModal('assets');
+  }, []);
+
   // Assigned in the body, not just the cleanup: StrictMode mounts, unmounts and
   // remounts, and a ref survives that, so a cleanup-only version would latch
   // false on the remount and stop every later poll from running.
@@ -1847,6 +1860,13 @@ export const MageSettings: React.FC = () => {
             onNext={() => setViewingDna(null)}
             hideButtons
             phase={viewingDna.from_crawl ? 'Business DNA' : 'Business DNA, described not crawled'}
+            // A missing logo tells the customer to add one to the Drive folder.
+            // We are already on the page that manages it, so open that panel
+            // here instead of sending them on a round trip through the URL.
+            onOpenReferenceImages={() => {
+              setViewingDna(null);
+              setModal('assets');
+            }}
           />
         </div>
       )}

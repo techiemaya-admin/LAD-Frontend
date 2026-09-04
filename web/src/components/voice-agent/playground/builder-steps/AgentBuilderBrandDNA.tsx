@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Sparkles, Copy, Check, BookOpen, Palette, Layers, ExternalLink, Type, ArrowLeft, ZoomIn } from "lucide-react";
+import Link from "next/link";
+import { X, Sparkles, Copy, Check, BookOpen, Palette, Layers, ExternalLink, Type, ArrowLeft, ZoomIn, ImageOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,6 +35,28 @@ export interface BrandDnaData {
   testimonials?: Array<{ quote: string; author?: string }>;
 }
 
+/**
+ * The two assets the extractor is meant to label as brand markers.
+ *
+ * When a crawl finds no logo it still writes these two entries, pointing at
+ * files it never saved, so the tiles render and then fail to load with no
+ * explanation. Rather than leave a broken thumbnail sitting there, we say
+ * plainly that nothing was labelled as the logo and tell the customer how to
+ * supply one themselves.
+ */
+const BRAND_MARKER_KEYS = new Set(["logo_main", "logo_icon"]);
+
+function isMissingBrandMarker(asset: BrandAsset, failed: boolean): boolean {
+  if (!BRAND_MARKER_KEYS.has(asset.key)) return false;
+  // Either the file is genuinely not there, or the extractor said so itself
+  // once it stops inventing an entry for a logo it never found.
+  return (
+    failed ||
+    !asset.url ||
+    /not extracted|failed to extract|no asset/i.test(asset.context || "")
+  );
+}
+
 export function AgentBuilderBrandDNA({
   brandDna,
   onClose,
@@ -42,6 +65,7 @@ export function AgentBuilderBrandDNA({
   onBack,
   hideButtons = false,
   fullBleed = false,
+  onOpenReferenceImages,
 }: {
   brandDna?: BrandDnaData;
   onClose?: () => void;
@@ -50,11 +74,36 @@ export function AgentBuilderBrandDNA({
   onBack?: () => void;
   hideButtons?: boolean;
   fullBleed?: boolean;
+  /**
+   * Opens the Reference images panel in place. The settings page already has
+   * that panel, so it passes this; everywhere else the guidance links across to
+   * settings instead.
+   */
+  onOpenReferenceImages?: () => void;
 }) {
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
   const [zoomedAsset, setZoomedAsset] = useState<BrandAsset | null>(null);
   const [loadedAssets, setLoadedAssets] = useState<Record<string, boolean>>({});
   const [failedAssets, setFailedAssets] = useState<Record<string, boolean>>({});
+
+  // Built once rather than inside the asset loop. Both missing markers can show
+  // it, and a JSX element is a plain descriptor, so sharing it is free.
+  const mageFolderLink = onOpenReferenceImages ? (
+    <button
+      type="button"
+      onClick={onOpenReferenceImages}
+      className="font-bold text-amber-900 underline underline-offset-2 hover:text-amber-950"
+    >
+      MAGe folder
+    </button>
+  ) : (
+    <Link
+      href="/settings?tab=media&panel=assets"
+      className="font-bold text-amber-900 underline underline-offset-2 hover:text-amber-950"
+    >
+      MAGe folder
+    </Link>
+  );
 
   const checkersStyle: React.CSSProperties = {
     backgroundImage: "conic-gradient(#f1f5f9 25%, transparent 0 50%, #f1f5f9 0 75%, transparent 0)",
@@ -376,7 +425,30 @@ export function AgentBuilderBrandDNA({
                   {categoryName}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
-                  {assetList.map((asset) => (
+                  {assetList.map((asset) => isMissingBrandMarker(asset, !!failedAssets[asset.key]) ? (
+                    <div
+                      key={asset.key}
+                      className="col-span-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3"
+                    >
+                      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                        <ImageOff className="size-4 text-amber-600" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-[11px] font-bold capitalize text-amber-900">
+                          {asset.key.replace(/_/g, " ")} not extracted
+                        </p>
+                        <p className="text-[10px] leading-relaxed text-amber-800/90">
+                          Nothing on the site was labelled as the{" "}
+                          {asset.key === "logo_icon" ? "icon" : "main logo"}. Please add it manually to
+                          your Google Drive {mageFolderLink}, named{" "}
+                          <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[9px] text-amber-900">
+                            {asset.key}
+                          </code>{" "}
+                          so the agent can find it.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
                     <div
                       key={asset.key}
                       className="group relative bg-slate-50 border border-slate-150 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col h-28 cursor-pointer"
