@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X, Power, Loader2, FolderOpen } from 'lucide-react';
+import { Search, Settings2, Linkedin, Instagram, Smartphone, Bot, Clock, Lock, Server, Truck, X, Power, Loader2, ChevronLeft } from 'lucide-react';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import { Input } from '@/components/ui/input';
 import { GoogleAuthIntegration } from './GoogleAuthIntegration';
@@ -15,10 +15,8 @@ import { TenantOnboarding } from './TenantOnboarding';
 import { WhatsAppEmbeddedSignup } from './WhatsAppEmbeddedSignup';
 import { GoHighLevelIntegration } from './GoHighLevelIntegration';
 import { ZohoIntegration } from './ZohoIntegration';
-import { MageSettings } from './MageSettings';
 import { useTenant } from '@/contexts/TenantContext';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
-import { safeStorage } from '@lad/shared/storage';
 
 type IntegrationView = 'grid' | string;
 
@@ -130,17 +128,6 @@ const INTEGRATIONS: IntegrationCard[] = [
     ),
     iconBg: 'bg-blue-50',
     category: 'Email & Calendar',
-  },
-  {
-    // Not an OAuth connection — we provision a Drive folder on our own account
-    // and share it with the user, so this asks nothing of their Google account.
-    // Distinct from the 'google' card above, which is their own Google sign-in.
-    id: 'brand-assets',
-    name: 'Media Generation Engine',
-    description: 'Brand DNA, reference imagery, generated media, and the shorthand the media agent understands.',
-    icon: <FolderOpen className="h-6 w-6 text-indigo-600" />,
-    iconBg: 'bg-indigo-50',
-    category: 'Content',
   },
   {
     id: 'custom-email',
@@ -480,30 +467,6 @@ export const IntegrationsSettings: React.FC = () => {
         setStatus('routemagic', 'disconnected');
       }
 
-      // Brand Assets folder — served by the playground worker, not the Next.js
-      // API, so this goes direct with the JWT rather than via fetchWithTenant.
-      //
-      // Deliberately last in this chain. Every other check hits our own API,
-      // but this one hits a Cloud Run service in asia-south1 that has no
-      // minScale, so a first visit after an idle period pays a cold start.
-      // Anywhere earlier and every integration below it waits behind that.
-      // Being last also means the timeout can be generous: ConnectionStatus has
-      // no "unknown", so timing out has to claim 'disconnected', and a short
-      // fuse would mislabel a connected folder whenever the worker was cold.
-      setStatus('brand-assets', 'loading');
-      try {
-        const workerUrl = process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
-        const token = safeStorage.getItem('token');
-        const res = await fetch(`${workerUrl}/brand-assets/status`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) { setStatus('brand-assets', 'disconnected'); }
-        else {
-          const data = await res.json();
-          setStatus('brand-assets', data?.asset_count > 0 || data?.drive_connected ? 'connected' : 'disconnected');
-        }
-      } catch { setStatus('brand-assets', 'disconnected'); }
     };
     checkAll();
   }, [setStatus]);
@@ -615,14 +578,22 @@ export const IntegrationsSettings: React.FC = () => {
     <>
       {activeView !== 'grid' ? (
         <div className="space-y-4">
+          {/* Shared by every integration sub-view, so it is fixed once here.
+              It was a bare text link with no padding and almost no hit area,
+              which read as unstyled rather than deliberate. */}
           <button
             onClick={() => {
               setActiveView('grid');
               refreshStatuses();
             }}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors dark:text-slate-300"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-200 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/60 dark:hover:border-slate-700 transition-colors font-medium"
+            style={{
+              fontSize: 'clamp(0.78rem, 0.86vw, 0.9rem)',
+              padding: 'clamp(0.35rem, 0.5vw, 0.5rem) clamp(0.6rem, 0.9vw, 0.9rem)',
+            }}
           >
-            &larr; Back to Integrations
+            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            Back to integrations
           </button>
 
           {activeView === 'whatsapp-ai' && (
@@ -650,7 +621,6 @@ export const IntegrationsSettings: React.FC = () => {
               }
             />
           )}
-          {activeView === 'brand-assets' && <MageSettings />}
           {activeView === 'linkedin' && <LinkedInIntegration />}
           {activeView === 'gohighlevel' && <GoHighLevelIntegration />}
           {activeView === 'zoho' && <ZohoIntegration />}
