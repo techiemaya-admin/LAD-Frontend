@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Building2,
   Mail,
@@ -48,6 +49,7 @@ import {
   ThumbsDown,
   Ban,
   Image as ImageIcon,
+  Bot,
 } from 'lucide-react';
 import { ChannelIcon } from './ChannelIcon';
 import { AssignmentPanel } from './AssignmentPanel';
@@ -198,6 +200,9 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
   // Notes state
   const [notes, setNotes] = useState<ConversationNote[]>([]);
   const [newNote, setNewNote] = useState('');
+  // Off by default, and reset after every save: sharing is a per-note decision,
+  // not a mode you can leave switched on and forget about.
+  const [shareNewNote, setShareNewNote] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteContent, setEditingNoteContent] = useState('');
 
@@ -395,22 +400,27 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
     try {
       const res = await fetchWithTenant(`${CONV_API}/${conversation.id}/notes?channel=${backendChannel}`, {
         method: 'POST',
-        body: JSON.stringify({ content: newNote.trim(), author_name: 'Agent' }),
+        body: JSON.stringify({
+          content: newNote.trim(),
+          author_name: 'Agent',
+          share_with_agent: shareNewNote,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setNotes((prev) => [data.data, ...prev]);
         setNewNote('');
+        setShareNewNote(false);
       }
     } catch {}
-  }, [newNote, conversation.id, backendChannel]);
+  }, [newNote, shareNewNote, conversation.id, backendChannel]);
 
   const updateNote = useCallback(
     async (noteId: string) => {
       if (!editingNoteContent.trim()) return;
       try {
         const res = await fetchWithTenant(`/api/whatsapp-conversations/notes/${noteId}?channel=${backendChannel}`, {
-          method: 'PUT',
+          method: 'PATCH',
           body: JSON.stringify({ content: editingNoteContent.trim() }),
         });
         const data = await res.json();
@@ -422,6 +432,25 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
       } catch {}
     },
     [editingNoteContent, backendChannel]
+  );
+
+  const toggleNoteSharing = useCallback(
+    async (noteId: string, next: boolean) => {
+      try {
+        const res = await fetchWithTenant(
+          `/api/whatsapp-conversations/notes/${noteId}?channel=${backendChannel}`,
+          { method: 'PATCH', body: JSON.stringify({ share_with_agent: next }) }
+        );
+        const data = await res.json();
+        // No optimistic flip. Showing "the agent can read this" when the save
+        // failed is the one wrong answer here — it invites someone to write
+        // the next note believing a control works that does not.
+        if (data.success) {
+          setNotes((prev) => prev.map((n) => (n.id === noteId ? data.data : n)));
+        }
+      } catch {}
+    },
+    [backendChannel]
   );
 
   const deleteNote = useCallback(async (noteId: string) => {
@@ -1014,6 +1043,20 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                   className="min-h-[60px] text-xs"
                 />
               </div>
+              <label className="flex items-start gap-2 mb-3 cursor-pointer">
+                <Checkbox
+                  checked={shareNewNote}
+                  onCheckedChange={(v) => setShareNewNote(v === true)}
+                  className="mt-0.5"
+                />
+                <span className="text-[11px] leading-snug">
+                  <span className="font-medium">Let the AI read this note</span>
+                  <span className="block text-muted-foreground">
+                    It will use this as background on the next reply. Leave off
+                    for anything you would not want it acting on.
+                  </span>
+                </span>
+              </label>
               <div className="flex justify-center mb-4">
                 <Button 
                   size="sm" 
@@ -1058,10 +1101,34 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
                         ) : (
                           <>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] text-muted-foreground">
-                                {note.author_name || 'Agent'} · {note.created_at ? formatDistanceToNow(new Date(note.created_at), { addSuffix: true }) : ''}
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                                <span>
+                                  {note.author_name || 'Agent'} · {note.created_at ? formatDistanceToNow(new Date(note.created_at), { addSuffix: true }) : ''}
+                                </span>
+                                {/* Always visible, never only on hover — who can
+                                    read a note is the thing you must be able to
+                                    check at a glance before writing the next one. */}
+                                {note.share_with_agent && (
+                                  <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400">
+                                    <Bot className="h-2.5 w-2.5" />
+                                    AI can read
+                                  </span>
+                                )}
                               </span>
                               <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  title={note.share_with_agent
+                                    ? 'Stop letting the AI read this note'
+                                    : 'Let the AI read this note'}
+                                  onClick={() => toggleNoteSharing(note.id, !note.share_with_agent)}
+                                >
+                                  <Bot
+                                    className={`h-2.5 w-2.5 ${note.share_with_agent ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
+                                  />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
