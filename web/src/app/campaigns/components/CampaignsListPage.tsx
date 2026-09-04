@@ -273,23 +273,22 @@ export default function CampaignsListPage() {
             Manage your multi-channel outreach campaigns
           </p>
         </div>
-        <div className="flex gap-3 flex-col sm:flex-row">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           {/* Refresh LinkedIn accepted connections */}
           <Button
             onClick={handleRefreshConnections}
             disabled={syncing}
             variant="outline"
-            className="bg-[#0b1957] dark:bg-[#2563eb] text-white dark:hover:text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60"
+            className="min-w-0 bg-[#0b1957] dark:bg-[#2563eb] text-xs sm:text-sm text-white dark:hover:text-white rounded-xl font-semibold px-2 sm:px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Refresh Connections"}
           </Button>
 
-          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={() => navigateTo("/conversations/templates/create")}
               disabled={isNavigating}
-              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="min-w-0 bg-[#0b1957] dark:bg-[#2563eb] text-xs sm:text-sm text-white rounded-xl font-semibold px-2 sm:px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/conversations/templates/create" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
@@ -302,7 +301,7 @@ export default function CampaignsListPage() {
             <Button
               onClick={() => navigateTo("/onboarding/advanced-search-ai")}
               disabled={isNavigating}
-              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="min-w-0 bg-[#0b1957] dark:bg-[#2563eb] text-xs sm:text-sm text-white rounded-xl font-semibold px-2 sm:px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/onboarding/advanced-search-ai" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
@@ -317,7 +316,7 @@ export default function CampaignsListPage() {
               onClick={() => navigateTo("/campaigns/workflow")}
               disabled={isNavigating}
               variant="outline"
-              className="bg-[#0b1957] dark:bg-[#2563eb] text-white rounded-xl font-semibold px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] flex-1 sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="min-w-0 bg-[#0b1957] dark:bg-[#2563eb] text-xs sm:text-sm text-white rounded-xl font-semibold px-2 sm:px-3 py-1.5 shadow-[0_4px_20px_rgba(11,25,87,0.3)] sm:w-auto hover:bg-[#0a1540] dark:hover:bg-[#1d4ed8] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] hover:cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isNavigating && navigatingTo === "/campaigns/workflow" ? (
                 <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
@@ -326,7 +325,6 @@ export default function CampaignsListPage() {
               )}
               Custom Accelerator
             </Button>
-          </div>
         </div>
       </div>
       {/* Stats Cards */}

@@ -161,7 +161,7 @@ export default function CampaignActionsMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => { onDelete(selectedCampaign.id); onClose(); }}
-          className="text-destructive"
+          className="campaign-delete-action text-red-500 hover:bg-red-500/10 hover:text-red-500 focus:bg-red-500/10 focus:text-red-500"
         >
           <Trash2 className="mr-2 h-4 w-4" /> Delete
         </DropdownMenuItem>
