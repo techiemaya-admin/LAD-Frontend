@@ -3297,7 +3297,7 @@ function WABASidebar({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-[#a2a2a2]" />
             <Input
               placeholder="Search or start a new chat"
-              className="pl-10 bg-[#f0f2f5] dark:bg-[#2e2f2f] border-0 rounded-full h-9 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-[#a2a2a2] focus-visible:ring-1 focus-visible:ring-transparent"
+              className="pl-10 bg-[#f0f2f5] dark:bg-[#2e2f2f] border-0 rounded-full h-9 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-[#a2a2a2] focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
               value={searchQuery || ''}
               onChange={(e) => onSearchChange(e.target.value)}
             />
@@ -3841,7 +3841,7 @@ function WABASidebar({
                 placeholder="Search name or number"
                 value={newChatSearch}
                 onChange={(e) => setNewChatSearch(e.target.value)}
-                className="pl-9 h-9 bg-secondary/50 dark:bg-[#2e2f2f] rounded-full border-0"
+                className="pl-9 h-9 bg-secondary/50 dark:bg-[#2e2f2f] rounded-full border-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                 autoFocus
               />
             </div>

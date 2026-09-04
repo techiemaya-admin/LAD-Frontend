@@ -73,7 +73,7 @@ export function BuilderBottomInput({
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
-          className="flex-1 bg-transparent border-none outline-none text-sm text-[#0b1957] placeholder:text-slate-400 px-2"
+          className="media-builder-prompt flex-1 bg-transparent border-none outline-none text-sm text-[#0b1957] placeholder:text-slate-400 px-2"
         />
 
         <div className="flex items-center gap-1.5 shrink-0 pr-1">

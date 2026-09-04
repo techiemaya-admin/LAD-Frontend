@@ -7851,7 +7851,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 type would be ambiguous. */}
             {!aiQuestions.length && (
               <div className="flex-shrink-0 border-t border-border dark:border-blue-950/40 p-3">
-                <div className="rounded-2xl border border-input dark:border-blue-950/40 bg-muted/40 dark:bg-[#030a21]/60 focus-within:bg-background focus-within:border-[#0b1957]/40 dark:focus-within:border-sky-400 transition-colors">
+                <div className="rounded-2xl border border-input dark:border-blue-950/40 bg-muted/40 dark:bg-[#050D28] transition-colors">
                   <textarea
                     ref={aiInputRef}
                     value={aiPrompt}
@@ -7861,7 +7861,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     }}
                     rows={3}
                     placeholder="Describe the workflow you want…"
-                    className="w-full max-h-[9rem] bg-transparent px-3 pt-2.5 pb-1 text-[13px] leading-snug outline-none resize-none overflow-y-auto placeholder:text-muted-foreground"
+                    className="workflow-ai-prompt w-full max-h-[9rem] bg-transparent px-3 pt-2.5 pb-1 text-[13px] leading-snug outline-none resize-none overflow-y-auto placeholder:text-muted-foreground"
                   />
                   <div className="flex items-center justify-between px-2 pb-2">
                     <span className="text-[10px] text-muted-foreground pl-1">Enter to send</span>
