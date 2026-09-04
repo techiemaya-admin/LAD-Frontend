@@ -18,6 +18,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RotateCcw, UserCog } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 const PERSONAS_API = '/api/whatsapp-conversations/personas';
 const USERS_API = '/api/users';
@@ -170,19 +177,19 @@ export function TeamPersonasCard({
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center gap-2 text-gray-600">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading team…
+      <div className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-2xl p-6 flex items-center gap-2 text-gray-600 dark:text-slate-300 shadow-sm">
+        <Loader2 className="h-4 w-4 animate-spin text-[#0B1957] dark:text-blue-400" /> Loading team…
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+    <div className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-2xl p-6 space-y-5 shadow-sm">
       <div className="flex items-start gap-3">
-        <UserCog className="h-5 w-5 text-indigo-600 mt-0.5 shrink-0" />
+        <UserCog className="h-5 w-5 text-[#0B1957] dark:text-blue-400 mt-0.5 shrink-0" />
         <div>
-          <h3 className="font-medium text-gray-900">Team personas</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Team personas</h3>
+          <p className="text-sm text-gray-600 dark:text-slate-300 mt-0.5 leading-relaxed">
             Give each person their own voice on their own WhatsApp number. Anything
             left blank keeps following the team settings above.
           </p>
@@ -190,10 +197,10 @@ export function TeamPersonasCard({
       </div>
 
       {users.length === 0 && (
-        <p className="text-sm text-gray-500">No team members yet.</p>
+        <p className="text-sm text-gray-500 dark:text-slate-400">No team members yet.</p>
       )}
 
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-gray-100 dark:divide-blue-950/40">
         {users.map((u) => {
           const has = !!overrides[u.id];
           const numbers = numbersByUser[u.id] || [];
@@ -201,8 +208,8 @@ export function TeamPersonasCard({
             <li key={u.id} className="py-3">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{nameOf(u)}</p>
-                  <p className="text-sm text-gray-500 truncate">
+                  <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{nameOf(u)}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
                     {numbers.length > 0
                       ? numbers.map((n) => n.display_phone_number || n.slug).join(', ')
                       : 'No number assigned'}
@@ -216,7 +223,7 @@ export function TeamPersonasCard({
                       type="button"
                       onClick={() => resetPersona(u.id)}
                       disabled={busy === u.id}
-                      className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 cursor-pointer"
                       title="Go back to the team default"
                     >
                       <RotateCcw className="h-3.5 w-3.5" /> Reset
@@ -225,7 +232,7 @@ export function TeamPersonasCard({
                   <button
                     type="button"
                     onClick={() => openEditor(u.id)}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                    className="px-3.5 py-1.5 text-xs font-semibold border border-gray-300 dark:border-blue-900/50 text-gray-700 dark:text-slate-200 bg-white dark:bg-[#030a21] rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer shadow-sm"
                   >
                     {has ? 'Edit persona' : 'Customise'}
                   </button>
@@ -233,11 +240,11 @@ export function TeamPersonasCard({
               </div>
 
               {openFor === u.id && (
-                <div className="mt-3 p-4 bg-gray-50 rounded border border-gray-200 space-y-3">
+                <div className="mt-3 p-4 bg-gray-50 dark:bg-[#030a21]/80 rounded-xl border border-gray-200 dark:border-blue-950/40 space-y-3">
                   <div className="grid gap-3 sm:grid-cols-2">
                     {FIELDS.map((f) => (
                       <label key={f.key} className="block">
-                        <span className="block text-sm text-gray-700 mb-1">{f.label}</span>
+                        <span className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">{f.label}</span>
                         <input
                           type="text"
                           value={String(draft[f.key] ?? '')}
@@ -245,27 +252,27 @@ export function TeamPersonasCard({
                           onChange={(e) =>
                             setDraft((d) => ({ ...d, [f.key]: e.target.value }))
                           }
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full px-3 py-1.5 border border-gray-300 dark:border-blue-900/50 bg-white dark:bg-[#000724] text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-500"
                         />
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     Leave a box empty to follow the team setting for that field.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-1">
                     <button
                       type="button"
                       onClick={savePersona}
                       disabled={busy === u.id}
-                      className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                      className="px-4 py-1.5 text-xs font-bold bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       {busy === u.id ? 'Saving…' : 'Save'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setOpenFor(null)}
-                      className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-white"
+                      className="px-3.5 py-1.5 text-xs font-medium border border-gray-300 dark:border-blue-900/50 text-gray-700 dark:text-slate-300 bg-white dark:bg-[#030a21] rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -278,28 +285,37 @@ export function TeamPersonasCard({
       </ul>
 
       {unassigned.length > 0 && (
-        <div className="pt-4 border-t border-gray-100">
-          <h4 className="text-sm font-medium text-gray-900 mb-1">Unassigned numbers</h4>
-          <p className="text-xs text-gray-500 mb-3">
+        <div className="pt-4 border-t border-gray-100 dark:border-blue-950/40">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Unassigned numbers</h4>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">
             These answer with the team default until somebody owns them.
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {unassigned.map((a) => (
               <li key={a.slug} className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-sm text-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
                   {a.display_phone_number || a.display_name || a.slug}
                 </span>
-                <select
-                  defaultValue=""
+                <Select
+                  value=""
                   disabled={busy === a.slug}
-                  onChange={(e) => e.target.value && assignNumber(a.slug, e.target.value)}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded"
+                  onValueChange={(val) => val && assignNumber(a.slug, val)}
                 >
-                  <option value="">Assign to…</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{nameOf(u)}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-8 w-fit min-w-[140px] px-3 text-xs font-semibold border border-gray-300 dark:border-blue-900/50 bg-white dark:bg-[#000724] text-[#0B1957] dark:text-sky-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0B1957] cursor-pointer shadow-sm">
+                    <SelectValue placeholder="Assign to…" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831] shadow-xl">
+                    {users.map((u) => (
+                      <SelectItem
+                        key={u.id}
+                        value={u.id}
+                        className="text-xs font-medium text-slate-800 dark:text-sky-300 focus:bg-[#0B1957] focus:text-white dark:focus:bg-[#1d4ed8] dark:focus:text-white cursor-pointer"
+                      >
+                        {nameOf(u)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </li>
             ))}
           </ul>

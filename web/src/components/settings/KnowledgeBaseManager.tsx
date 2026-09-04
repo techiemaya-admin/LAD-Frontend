@@ -419,16 +419,16 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
                     {msg.role === "bot" ? (
                       <ReactMarkdown
                         components={{
-                          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-semibold text-slate-900 dark:text-white" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
-                          li: ({node, ...props}) => <li className="pl-1" {...props} />,
-                          h1: ({node, ...props}) => <h1 className="font-bold text-lg mb-2 mt-4 first:mt-0 text-slate-900 dark:text-white" {...props} />,
-                          h2: ({node, ...props}) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0 text-slate-900 dark:text-white" {...props} />,
-                          h3: ({node, ...props}) => <h3 className="font-semibold text-base mb-2 mt-3 first:mt-0 text-slate-900 dark:text-white" {...props} />,
-                          a: ({node, ...props}) => <a className="text-purple-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                          code: ({node, className, ...props}) => {
+                          p: ({node, ref, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
+                          strong: ({node, ref, ...props}: any) => <strong className="font-semibold text-slate-900 dark:text-white" {...props} />,
+                          ul: ({node, ref, ...props}: any) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ref, ...props}: any) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
+                          li: ({node, ref, ...props}: any) => <li className="pl-1" {...props} />,
+                          h1: ({node, ref, ...props}: any) => <h1 className="font-bold text-lg mb-2 mt-4 first:mt-0 text-slate-900 dark:text-white" {...props} />,
+                          h2: ({node, ref, ...props}: any) => <h2 className="font-bold text-base mb-2 mt-4 first:mt-0 text-slate-900 dark:text-white" {...props} />,
+                          h3: ({node, ref, ...props}: any) => <h3 className="font-semibold text-base mb-2 mt-3 first:mt-0 text-slate-900 dark:text-white" {...props} />,
+                          a: ({node, ref, ...props}: any) => <a className="text-purple-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                          code: ({node, ref, className, ...props}: any) => {
                             const isInline = !className;
                             return isInline ? (
                               <code className="bg-slate-100 dark:bg-blue-950 text-purple-700 dark:text-blue-400 px-1 py-0.5 rounded text-xs font-mono" {...props} />
@@ -605,11 +605,12 @@ export default function KnowledgeBaseManager({ tenantId, userId }: KnowledgeBase
           <Button
             variant="outline"
             size="sm"
-            className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+            className="h-10 px-3 sm:h-12 sm:px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-xl sm:rounded-2xl shadow-lg transition-all font-bold flex items-center justify-center gap-2 shrink-0 border-none cursor-pointer"
             onClick={() => setShowCreateStore(true)}
+            title="New Folder"
           >
             <Plus className="h-5 w-5" />
-            New Folder
+            <span className="hidden sm:inline">New Folder</span>
           </Button>
         )}
       </div>
