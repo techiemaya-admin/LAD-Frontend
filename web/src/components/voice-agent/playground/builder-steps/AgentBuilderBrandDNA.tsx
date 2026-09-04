@@ -105,18 +105,11 @@ export function AgentBuilderBrandDNA({
     </Link>
   );
 
-  // The checkerboard behind logos, so transparent areas read as transparent
-  // rather than as white artwork.
-  //
-  // The squares were #f1f5f9, which over white is exactly rgb(115, 155, 195) at
-  // 10% opacity. Writing it as that colour with an explicit alpha makes the
-  // strength of the pattern a single number to tune, and it is now 20%, ten
-  // points stronger, so the transparency is legible against a pale logo.
-  const checkersStyle: React.CSSProperties = {
-    backgroundImage:
-      "conic-gradient(rgba(115, 155, 195, 0.2) 25%, transparent 0 50%, rgba(115, 155, 195, 0.2) 0 75%, transparent 0)",
-    backgroundSize: "12px 12px",
-    backgroundColor: "#ffffff"
+  // The backdrop behind logos. A plain light tint, not a checkerboard: white
+  // and pale artwork disappears against white, and the checker pattern competed
+  // with the logo it was meant to reveal.
+  const assetBackdropStyle: React.CSSProperties = {
+    backgroundColor: "#e2e8f0"
   };
 
   React.useEffect(() => {
@@ -465,7 +458,7 @@ export function AgentBuilderBrandDNA({
                       {/* Asset Preview Thumbnail */}
                       <div
                         className="flex-1 relative overflow-hidden flex items-center justify-center border-b border-slate-100"
-                        style={checkersStyle}
+                        style={assetBackdropStyle}
                       >
                         {/* Shimmer Loading Wireframe skeleton */}
                         {!loadedAssets[asset.key] && (
@@ -593,7 +586,7 @@ export function AgentBuilderBrandDNA({
                 className={`max-h-full max-w-full object-contain rounded-lg shadow-2xl border border-white/10 transition-opacity duration-300 ${
                   loadedAssets[zoomedAsset.key] ? "opacity-100" : "opacity-0"
                 }`}
-                style={checkersStyle}
+                style={assetBackdropStyle}
               />
             </div>
 
