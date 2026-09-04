@@ -108,6 +108,8 @@ export const ProposalEmailIntegration: React.FC<ProposalEmailIntegrationProps> =
   useEffect(() => {
     if (tenantId && tenantId !== 'default') {
       checkStatus();
+    } else {
+      setLoading(false);
     }
   }, [tenantId, checkStatus]);
 
@@ -171,6 +173,11 @@ export const ProposalEmailIntegration: React.FC<ProposalEmailIntegrationProps> =
 
   // 3. Initiate popup flow
   const handleConnect = async () => {
+    if (!tenantId || tenantId === 'default') {
+      toast.error('Please select a valid organization/tenant first.');
+      return;
+    }
+
     setError(null);
     setConnecting(true);
 
