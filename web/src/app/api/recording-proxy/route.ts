@@ -1,4 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";import { logger } from '@/lib/logger';import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import { logger } from '@/lib/logger';
+import { cookies } from "next/headers";
+
+/**
+ * Recording proxy — streams call-recording / voice-sample audio from GCS.
+ *
+ * Accepts EXACTLY two URL shapes, because that is all any caller sends
+ * (AgentAudioPlayer, VoicePreview, CallConfiguration, exportToExcel — every one
+ * builds either a gs:// URL or a storage.googleapis.com signed/public URL):
+ *
+ *   gs://bucket/object                      → public-HEAD probe, else backend
+ *                                             stream (token-authenticated there)
+ *   https://storage.googleapis.com/…        → fetched directly (signed URLs
+ *                                             carry their own auth in the query)
+ *
+ * Everything else is refused. This route USED to accept any http(s) URL and
+ * stream the response back with CORS *, which made the site an unauthenticated
+ * open web proxy — confirmed live with ?url=https://example.com/ returning that
+ * page's HTML to an anonymous caller. No caller ever needed that branch.
+ *
+ * The route itself stays public (it is listed in OPEN_ROUTES.public and voice
+ * previews play on pages without a session): the host lock, not a login wall,
+ * is what closes the proxy hole. A public GCS object fetched through here is
+ * one the caller could fetch from GCS directly anyway.
+ */
+
+/** The only upstream host recordings live on. Exact match — never substring. */
+const GCS_HOST = "storage.googleapis.com";
+
 export async function GET(req: NextRequest) {
   try {
     const url = req.nextUrl.searchParams.get("url");
@@ -11,10 +40,7 @@ export async function GET(req: NextRequest) {
 
     let targetUrl: string;
 
-    if (url.includes("storage.googleapis.com") || url.startsWith("http://") || url.startsWith("https://")) {
-      // Already a public/signed HTTPS URL - fetch directly
-      targetUrl = url;
-    } else if (url.startsWith("gs://")) {
+    if (url.startsWith("gs://")) {
       // Step 1: Try public GCS HTTPS URL (fast path - works if bucket/object is public)
       const publicUrl = "https://storage.googleapis.com/" + url.slice("gs://".length);
       let resolved = false;
@@ -84,7 +110,6 @@ export async function GET(req: NextRequest) {
             "Content-Type": backendResp.headers.get("Content-Type") || "audio/ogg",
             "Accept-Ranges": "bytes",
             "Cache-Control": "public, max-age=3600",
-            "Access-Control-Allow-Origin": "*",
           };
           const contentLength = backendResp.headers.get("Content-Length");
           if (contentLength) responseHeaders["Content-Length"] = contentLength;
@@ -104,10 +129,25 @@ export async function GET(req: NextRequest) {
         }
       }
     } else {
-      return NextResponse.json({ error: "Unsupported URL scheme" }, { status: 400 });
+      // The https form. Parse rather than substring-match: the old
+      // `url.includes("storage.googleapis.com")` classifier would have passed
+      // https://evil.example/storage.googleapis.com too.
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+      }
+      if (parsed.protocol !== "https:" || parsed.hostname !== GCS_HOST) {
+        return NextResponse.json(
+          { error: "Only gs:// and https://storage.googleapis.com URLs are supported" },
+          { status: 400 }
+        );
+      }
+      targetUrl = parsed.toString();
     }
 
-    // Fetch directly from targetUrl (public/signed HTTPS URL)
+    // Fetch directly from targetUrl (public/signed GCS HTTPS URL)
     const rangeHeader = req.headers.get("range");
     const fetchHeaders: HeadersInit = { 'Accept': 'audio/*' };
     if (rangeHeader) fetchHeaders['Range'] = rangeHeader;
@@ -141,9 +181,6 @@ export async function GET(req: NextRequest) {
       const responseHeaders: HeadersInit = {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Range",
         "Accept-Ranges": "bytes",
       };
       const contentLength = audioResp.headers.get("Content-Length");
@@ -172,15 +209,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Range",
-    },
-  });
 }
