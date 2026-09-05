@@ -547,7 +547,14 @@ export const MageSettings: React.FC = () => {
     setShowGallery(true);
     setGalleryLoading(true);
     try {
-      const qs = full ? 'max_age_days=' : 'max_age_days=90';
+      // "Everything" is expressed as a very large window, NOT an empty value.
+      //
+      // The worker declares `max_age_days: int | None = 90`, and FastAPI cannot
+      // parse "" as an int — `?max_age_days=` is a 422 (`int_parsing`), not
+      // None. Omitting the parameter is no good either: that just re-applies
+      // the 90-day default, which is the opposite of full history. So this
+      // asked for everything and reliably got a validation error instead.
+      const qs = full ? 'max_age_days=36500' : 'max_age_days=90';
       const res = await fetch(`${WORKER_URL}/playground-media/gallery?${qs}`, {
         headers: headers(),
       });
