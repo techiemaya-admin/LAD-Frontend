@@ -191,6 +191,20 @@ const Bar: React.FC<{ w: string; h?: string; className?: string }> = ({
   />
 );
 
+/**
+ * What a tile shows when its data could not be read.
+ *
+ * Deliberately not the same as the empty state. "You have nothing yet" and "we
+ * could not find out" are different claims, and only one of them is safe to
+ * make after a request failed. Telling a tenant with a full brand profile that
+ * they have none invites them to build the whole thing again.
+ */
+const Unavailable: React.FC<{ what: string }> = ({ what }) => (
+  <p className="text-xs text-amber-600 dark:text-amber-400">
+    Couldn&apos;t load {what}. Reopen this page to try again.
+  </p>
+);
+
 /** Two stacked lines, the shape most tile bodies take. */
 const TextSkeleton: React.FC = () => (
   <>
@@ -446,6 +460,17 @@ export const MageSettings: React.FC = () => {
   const [editingKeyword, setEditingKeyword] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState('');
   const [previewResult, setPreviewResult] = useState<KeywordPreview | null>(null);
+  /**
+   * The overview request failed and we hold no data for it.
+   *
+   * Kept separate from `error`, which is a dismissible banner: dismissing the
+   * banner must not turn "we could not read your settings" back into "you have
+   * no settings". Every tile keys its empty state on this, because absence of
+   * data is not evidence of absence.
+   */
+  const [overviewFailed, setOverviewFailed] = useState(false);
+  /** Same idea for the gallery, which loads separately. */
+  const [galleryFailed, setGalleryFailed] = useState(false);
 
   const headers = useCallback((json = false): Record<string, string> => {
     const token = safeStorage.getItem('token');
@@ -475,9 +500,12 @@ export const MageSettings: React.FC = () => {
       setKeywordColors(data?.keywords?.colors || {});
       setAssets(data?.assets || null);
       setQueue(data?.queue || null);
+      setOverviewFailed(false);
       return data;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load MAGe settings.');
+      // The tiles must not read this as "the tenant has nothing configured".
+      setOverviewFailed(true);
       return null;
     }
   }, [headers]);
@@ -519,7 +547,14 @@ export const MageSettings: React.FC = () => {
     setShowGallery(true);
     setGalleryLoading(true);
     try {
-      const qs = full ? 'max_age_days=' : 'max_age_days=90';
+      // "Everything" is expressed as a very large window, NOT an empty value.
+      //
+      // The worker declares `max_age_days: int | None = 90`, and FastAPI cannot
+      // parse "" as an int — `?max_age_days=` is a 422 (`int_parsing`), not
+      // None. Omitting the parameter is no good either: that just re-applies
+      // the 90-day default, which is the opposite of full history. So this
+      // asked for everything and reliably got a validation error instead.
+      const qs = full ? 'max_age_days=36500' : 'max_age_days=90';
       const res = await fetch(`${WORKER_URL}/playground-media/gallery?${qs}`, {
         headers: headers(),
       });
@@ -527,9 +562,23 @@ export const MageSettings: React.FC = () => {
         const data = await res.json();
         setGalleryImages(data.images || []);
         setGalleryVideos(data.videos || []);
+        setGalleryFailed(false);
+      } else {
+        // Previously this branch did not exist, so a 401/500 fell through to
+        // the viewer's own "No assets found" — telling a tenant with months of
+        // generated media that they had produced nothing. Drop whatever was
+        // held from a previous open too: stale content presented as current is
+        // the other half of the same lie.
+        setGalleryImages([]);
+        setGalleryVideos([]);
+        setGalleryFailed(true);
       }
     } catch {
-      // Leave the viewer open and empty rather than closing under the user.
+      // Leave the viewer open rather than closing under the user, but say why
+      // it is empty.
+      setGalleryImages([]);
+      setGalleryVideos([]);
+      setGalleryFailed(true);
     } finally {
       setGalleryLoading(false);
     }
@@ -893,12 +942,17 @@ export const MageSettings: React.FC = () => {
         method: 'DELETE',
         headers: headers(),
       });
-      if (res.ok) setKeywords((await res.json()).mappings || {});
+      // Only the catch used to report anything, and it fires solely on network
+      // exceptions — so a 401/403/500 left the row sitting there with no
+      // message at all, and the click read as a dead button.
+      if (!res.ok) throw new Error(await readError(res, 'Could not delete the keyword.'));
+      setKeywords((await res.json()).mappings || {});
       // Deleting the one currently loaded in the form would otherwise leave it
-      // sitting there in edit mode, saving back a shortcut just removed.
+      // sitting there in edit mode, saving back a shortcut just removed. Only
+      // once the server has actually accepted the delete.
       if (editingKeyword === key) clearKeywordForm();
-    } catch {
-      setError('Could not delete the keyword.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete the keyword.');
     } finally {
       setBusy('');
     }
@@ -922,6 +976,17 @@ export const MageSettings: React.FC = () => {
 
   const defaultProfile = profiles.find((p) => p.is_default) || null;
   const brandColors = defaultProfile?.colors || null;
+
+  /**
+   * Is anything covering the card?
+   *
+   * Every overlay in this file is `fixed inset-0 z-50`, and the error banner
+   * renders in the card's normal flow underneath — so a failure raised from
+   * inside a modal (delete a profile, save a keyword, the wizard) was drawn
+   * behind the dimmer and read as a silent no-op. When an overlay is open the
+   * banner is lifted above it instead.
+   */
+  const overlayOpen = !!modal || showWizard || showGallery || !!viewingDna;
 
   // A run is in flight from the moment it is triggered until the status turns
   // terminal, not just while the trigger request is open. The trigger returns a
@@ -997,14 +1062,26 @@ export const MageSettings: React.FC = () => {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+        <div
+          className={
+            overlayOpen
+              ? 'fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[min(38rem,calc(100vw-2rem))] shadow-lg flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-700 dark:text-red-300'
+              : 'flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-700 dark:text-red-300'
+          }
+        >
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <span className="flex-1">{error}</span>
           <button onClick={() => setError('')} title="Dismiss"><X className="w-4 h-4" /></button>
         </div>
       )}
       {notice && (
-        <div className="flex items-start gap-2 rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/30 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+        <div
+          className={
+            overlayOpen
+              ? 'fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[min(38rem,calc(100vw-2rem))] shadow-lg flex items-start gap-2 rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/30 px-3 py-2 text-sm text-green-700 dark:text-green-300'
+              : 'flex items-start gap-2 rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/30 px-3 py-2 text-sm text-green-700 dark:text-green-300'
+          }
+        >
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
           <span className="flex-1">{notice}</span>
           <button onClick={() => setNotice('')} title="Dismiss"><X className="w-4 h-4" /></button>
@@ -1290,6 +1367,16 @@ export const MageSettings: React.FC = () => {
                 </div>
               )}
             </>
+          ) : overviewFailed ? (
+            <Unavailable what="your brand profile" />
+          ) : profiles.length ? (
+            // Clearing the default is a supported one-click action (the filled
+            // star toggles it off), and it must not make the card claim the
+            // tenant has no brand at all while Manage lists every profile.
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {profiles.length} {profiles.length === 1 ? 'profile' : 'profiles'} saved, none set as
+              default. Pick one so the agent knows which brand to use.
+            </p>
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500">
               No brand profile yet. Add one so the agent stops inventing a brand.
@@ -1322,6 +1409,8 @@ export const MageSettings: React.FC = () => {
                 Saved as your ICP profile
               </div>
             </>
+          ) : overviewFailed ? (
+            <Unavailable what="your audience" />
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500">
               No audience saved. Without one the agent guesses who it is talking to.
@@ -1338,6 +1427,12 @@ export const MageSettings: React.FC = () => {
           <div className="flex items-baseline gap-2">
             {assetsPending ? (
               <Bar w="2.5rem" h="1.3rem" />
+            ) : overviewFailed ? (
+              // `assets?.total ?? 0` would print a confident 0 here. A dash is
+              // the honest rendering of a number we do not have.
+              <span className="font-semibold text-gray-400 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
+                —
+              </span>
             ) : (
               <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
                 {assets?.total ?? 0}
@@ -1361,6 +1456,8 @@ export const MageSettings: React.FC = () => {
                 <Bar w="70%" className="mb-1.5" />
                 <Bar w="55%" />
               </>
+            ) : overviewFailed ? (
+              <Unavailable what="your reference images" />
             ) : !assets?.categories?.length ? (
               <p className="text-xs text-gray-400 dark:text-gray-500">Nothing uploaded yet.</p>
             ) : null}
@@ -1409,6 +1506,8 @@ export const MageSettings: React.FC = () => {
                 </div>
               ))}
             </div>
+          ) : overviewFailed ? (
+            <Unavailable what="your keywords" />
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500">
               None yet. Useful because a filename is a poor place to write a brief.
@@ -1839,6 +1938,17 @@ export const MageSettings: React.FC = () => {
           around a component that already has one. */}
       {showGallery && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          {/* The gallery renders its own "No assets found" for an empty result
+              and has no error state of its own, so a failed load looked exactly
+              like an empty vault. Say which one it is, above it. */}
+          {galleryFailed && !galleryLoading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-[min(38rem,calc(100vw-2rem))] shadow-lg flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                Couldn&apos;t load your media. This is not an empty gallery — try again in a moment.
+              </span>
+            </div>
+          )}
           <AgentBuilderGallery
             images={galleryImages}
             videos={galleryVideos}
@@ -1920,6 +2030,10 @@ const MageWizard: React.FC<{
         headers: headers(true),
         body: JSON.stringify({ corpus: nextCorpus, answers: nextAnswers }),
       });
+      // Without this, a FastAPI error body ({detail: ...}) has no `done`, so it
+      // fell to the else branch and rendered a question card with no question
+      // in it — a blank prompt above an empty textarea.
+      if (!res.ok) throw new Error('wizard question failed');
       const data = await res.json();
       if (data.done) {
         await build(nextCorpus, nextAnswers);
@@ -1969,11 +2083,18 @@ const MageWizard: React.FC<{
         headers: headers(),
         body: form,
       });
+      // `build` below checks res.ok; this did not. On a 413 or a 500 the
+      // response carries no `corpus`, so the guidelines the user just pasted
+      // (and any files they attached) were dropped on the floor and the
+      // interview continued from an empty corpus — their material never reached
+      // the Business DNA and nothing told them so.
+      if (!res.ok) throw new Error('read failed');
       const data = await res.json();
-      setCorpus(data.corpus || '');
-      await advance(data.corpus || '', answers);
+      if (!data.corpus) throw new Error('read returned nothing');
+      setCorpus(data.corpus);
+      await advance(data.corpus, answers);
     } catch {
-      onError('Could not read the material you supplied.');
+      onError('Could not read the material you supplied. Nothing was saved — try again.');
       setWorking(false);
     }
   };
