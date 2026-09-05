@@ -3,7 +3,13 @@ import React, { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock } from 'lucide-react';
 interface RequireFeatureProps {
-  featureKey: string;
+  /**
+   * One key, or several acceptable spellings of the same entitlement. A list
+   * because tenant_features and feature_flags disagree on hyphen vs underscore
+   * and these call sites were written in the wrong vocabulary — see
+   * lib/page-permissions.ts. Any match passes.
+   */
+  featureKey: string | readonly string[];
   children: ReactNode;
   fallback?: ReactNode;
   showMessage?: boolean;
@@ -26,7 +32,8 @@ export const RequireFeature: React.FC<RequireFeatureProps> = ({
   showMessage = true,
 }) => {
   const { hasFeature } = useAuth();
-  if (hasFeature(featureKey)) {
+  const keys = Array.isArray(featureKey) ? featureKey : [featureKey as string];
+  if (keys.some((k) => hasFeature(k))) {
     return <>{children}</>;
   }
   if (fallback) {
@@ -42,11 +49,11 @@ export const RequireFeature: React.FC<RequireFeatureProps> = ({
       <p className="text-gray-600 mb-4">
         This feature is not included in your current plan.
         <br />
-        Upgrade your subscription to unlock <strong>{featureKey}</strong>.
+        Upgrade your subscription to unlock <strong>{keys[0]}</strong>.
       </p>
       <button className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
         Upgrade Plan
       </button>
     </div>
   );
-};
+};
