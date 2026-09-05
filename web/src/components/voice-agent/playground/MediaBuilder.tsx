@@ -207,7 +207,12 @@ export default function MediaBuilder({ onClose }: MediaBuilderProps) {
         )}
 
         <button
-          onClick={mb.fetchGallery}
+          // Wrapped, NOT passed by reference. `fetchGallery(loadAll = false)`
+          // takes its first argument as a boolean, and React hands an onClick
+          // handler the MouseEvent — which is truthy, so every click asked for
+          // the full-history variant and got a 422 back. The vault never opened
+          // from this button.
+          onClick={() => mb.fetchGallery()}
           disabled={mb.loadingGallery}
           className="mt-auto text-xs font-bold text-[#0b1957] hover:underline cursor-pointer flex items-center gap-1 active:scale-95 transition-all mb-2 dark:text-slate-300"
         >
