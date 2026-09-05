@@ -3049,7 +3049,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   }, [editingId, liOrganizations.length]);
 
   // Lazy-load Zoho field metadata when the write-back node is open, per module.
-  const zohoModule = configs[ZOHO_UPDATE_STEP_ID]?.module === 'Leads' ? 'Leads' : 'Contacts';
+  // Contacts and Leads are people; Accounts are companies, and their field
+  // list has nothing in common with either (no first name, no email).
+  const ZOHO_WRITEBACK_MODULES = ['Contacts', 'Leads', 'Accounts'] as const;
+  const zohoModule = ZOHO_WRITEBACK_MODULES.includes(configs[ZOHO_UPDATE_STEP_ID]?.module)
+    ? configs[ZOHO_UPDATE_STEP_ID]?.module as string
+    : 'Contacts';
   useEffect(() => {
     if (editingId !== ZOHO_UPDATE_STEP_ID) return;
     let cancelled = false;
@@ -3703,7 +3708,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         if (mappings.length) {
           steps.push({
             type: 'zoho_update', title: 'Update Zoho record', channel: 'linkedin', order_index: order++,
-            config: { module: zc.module === 'Leads' ? 'Leads' : 'Contacts', mappings },
+            config: { module: ['Contacts', 'Leads', 'Accounts'].includes(zc.module) ? zc.module : 'Contacts', mappings },
           });
         }
       }
@@ -4954,8 +4959,17 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const mappedCount = Object.values(zmap).filter(Boolean).length;
             return (<>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Update which record</label>
-                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => { setCfg(eid, { module: val }); updateWorkflowStep(eid, { description: `Write back to ${val}` }); }}>
-                  <option value="Contacts">Contacts</option><option value="Leads">Leads</option>
+                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => {
+                  // Drop the existing mapping. It is keyed by Zoho api_name, and
+                  // the save path writes EVERY key in it — not just the rows still
+                  // on screen — so a mapping left over from Contacts would be
+                  // posted invisibly to Accounts, where those fields do not exist.
+                  setCfg(eid, { module: val, map: {} });
+                  updateWorkflowStep(eid, { description: `Write back to ${val}` });
+                }}>
+                  <option value="Contacts">Contacts</option>
+                  <option value="Leads">Leads</option>
+                  <option value="Accounts">Accounts (companies)</option>
                 </CustomSelect></div>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Field mapping{mappedCount ? ` (${mappedCount})` : ''}</label>
@@ -4978,7 +4992,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   ))}
                 </div>
               )}
-              <p className="text-[11px] leading-snug text-muted-foreground">Runs when a lead finishes the sequence - writes the mapped workflow &amp; enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {(cfg.module || 'Contacts') === 'Accounts'
+                  ? 'Runs when a lead finishes the sequence - writes the mapped data onto the COMPANY the lead was found at, not the person. Only leads that came from the Zoho Accounts source carry an account to update; for anyone else this step is skipped. Only non-empty values are written; blank fields are left untouched.'
+                  : 'Runs when a lead finishes the sequence - writes the mapped workflow & enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.'}
+              </p>
             </>);
           })()}
 
