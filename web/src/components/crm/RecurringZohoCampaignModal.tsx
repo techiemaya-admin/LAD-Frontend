@@ -14,7 +14,10 @@ import { fetchWithTenant } from '@/lib/fetch-with-tenant';
  */
 export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [name, setName] = useState('');
-  const [modules, setModules] = useState<'contacts' | 'contacts_leads'>('contacts');
+  const [modules, setModules] = useState<'contacts' | 'contacts_leads' | 'accounts'>('contacts');
+  // Only meaningful for the accounts source: an account is a company, so the
+  // import needs a job title to find real people at each one.
+  const [accountTitle, setAccountTitle] = useState('');
   const [tag, setTag] = useState('');
   const [perDay, setPerDay] = useState('25');
   const [days, setDays] = useState('30');
@@ -74,6 +77,7 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
           source: 'zoho_contacts',
           zoho_modules: modules,
           zoho_tag: tag.trim() || undefined,
+          zoho_account_title: modules === 'accounts' ? (accountTitle.trim() || undefined) : undefined,
           leadGenerationLimit: Math.max(1, parseInt(perDay, 10) || 25),
         },
       },
@@ -102,6 +106,12 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
   const handleCreate = async () => {
     if (!name.trim()) { setError('Give the campaign a name.'); return; }
     if (!liEnabled && !emailEnabled) { setError('Enable at least one channel (LinkedIn or Email).'); return; }
+    // Without a title the accounts import has nobody to search for: the campaign
+    // would run every day and enrol zero leads without ever erroring.
+    if (modules === 'accounts' && !accountTitle.trim()) {
+      setError('Importing Zoho Accounts needs a job title to look for. An account is a company, not a person.');
+      return;
+    }
     setCreating(true); setError(null);
 
     const perDayN = Math.max(1, parseInt(perDay, 10) || 25);
@@ -123,6 +133,7 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
         working_days: 'monday-friday',
         zoho_modules: modules,
         zoho_tag: tag.trim() || undefined,
+        zoho_account_title: modules === 'accounts' ? (accountTitle.trim() || undefined) : undefined,
       },
       steps: buildSteps(),
     };
@@ -193,16 +204,30 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
             <div className="text-sm font-medium text-foreground">Zoho source</div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Import from</label>
-              <Select value={modules} onValueChange={(val) => setModules(val as 'contacts' | 'contacts_leads')}>
+              <Select value={modules} onValueChange={(val) => setModules(val as 'contacts' | 'contacts_leads' | 'accounts')}>
                 <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select import source" />
                 </SelectTrigger>
                 <SelectContent className="z-[100000]">
                   <SelectItem value="contacts">Contacts only</SelectItem>
                   <SelectItem value="contacts_leads">Contacts + Leads</SelectItem>
+                  <SelectItem value="accounts">Accounts (companies)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Job title to find at each account</label>
+                <Input
+                  value={accountTitle}
+                  onChange={(e) => setAccountTitle(e.target.value)}
+                  placeholder="e.g. Head of Operations, Operations Director"
+                />
+                <p className="text-xs text-muted-foreground">
+                  An account is a company, not a person. Each one is searched on LinkedIn for people with this title. Separate alternatives with commas.
+                </p>
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Only contacts with tag (optional)</label>
               <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="e.g. Auto-Conversion Lead. Leave blank for all new." />
@@ -257,7 +282,9 @@ export const RecurringZohoCampaignModal: React.FC<{ open: boolean; onClose: () =
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Each day the campaign imports new Zoho {modules === 'contacts_leads' ? 'contacts & leads' : 'contacts'}{tag.trim() ? ` tagged “${tag.trim()}”` : ''} (deduped) and runs the sequence. LinkedIn profiles are resolved from name + company when the contact has no URL. Sends pass the usual supervise + credit checks.
+            {modules === 'accounts'
+              ? <>Each day the campaign imports new Zoho accounts{tag.trim() ? ` tagged “${tag.trim()}”` : ''} and searches LinkedIn for people at each one matching the job title above (deduped), then runs the sequence. Sends pass the usual supervise + credit checks.</>
+              : <>Each day the campaign imports new Zoho {modules === 'contacts_leads' ? 'contacts & leads' : 'contacts'}{tag.trim() ? ` tagged “${tag.trim()}”` : ''} (deduped) and runs the sequence. LinkedIn profiles are resolved from name + company when the contact has no URL. Sends pass the usual supervise + credit checks.</>}
           </p>
         </div>
 
