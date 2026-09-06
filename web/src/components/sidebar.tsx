@@ -41,6 +41,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import LAD3DShowcase from "@/app/page";
+import { FEATURE } from '@/lib/page-permissions';
 
 // Internal observability console is super-admin only - gated by email, matching
 // the backend `requireSuperAdmin` gate on /api/admin/monitor.
@@ -97,7 +98,13 @@ type NavItem = {
   icon: any;
   details: string;
   requiredCapability?: string;
-  requiredFeature?: string; // For feature-flag based access
+  /**
+   * Tenant feature(s) that unlock this item. A LIST because the same feature is
+   * spelled two ways in live data — tenant_features uses underscores, the
+   * feature_flags table hyphens, and these literals were written in the wrong
+   * vocabulary. See lib/page-permissions.ts. Any match passes.
+   */
+  requiredFeature?: readonly string[];
   /**
    * Show only for a workspace on a vertical snapshot. Used instead of
    * `requiredFeature` because the snapshot's feature key is vertical-specific
@@ -212,7 +219,7 @@ export function Sidebar() {
       icon: Home,
       details: "See your overall dashboard and metrics.",
       requiredCapability: "view_overview",
-      requiredFeature: "overview",
+      requiredFeature: FEATURE.OVERVIEW,
     },
     // Curated workspaces only. Sits high because for a snapshot tenant this IS
     // the home screen - it replaces the workflow builder as the place they go
@@ -230,7 +237,7 @@ export function Sidebar() {
       icon: Search,
       details: "AI-powered ICP assistant and workflow setup",
       requiredCapability: "view_ai_assistant",
-      requiredFeature: "ai-chat",
+      requiredFeature: FEATURE.AI_CHAT,
     },
     {
       href: "/campaigns",
@@ -239,7 +246,7 @@ export function Sidebar() {
       details:
         "Multi-channel outreach campaigns with LinkedIn and Email automation.",
       requiredCapability: "view_campaigns",
-      requiredFeature: "campaigns",
+      requiredFeature: FEATURE.CAMPAIGNS,
     },
     {
       href: "/conversations",
@@ -247,7 +254,7 @@ export function Sidebar() {
       icon: MessageSquare,
       details: "View and manage your social media conversations.",
       requiredCapability: "view_conversations",
-      requiredFeature: "conversations",
+      requiredFeature: FEATURE.CONVERSATIONS,
       children: [
         {
           href: "/conversations/templates",
@@ -255,7 +262,7 @@ export function Sidebar() {
           icon: LayoutTemplate,
           details: "Create and manage message templates for conversations and broadcasts.",
           requiredCapability: "view_conversations",
-          requiredFeature: "conversations",
+          requiredFeature: FEATURE.CONVERSATIONS,
         },
       ],
     },
@@ -265,7 +272,7 @@ export function Sidebar() {
       icon: ChartNoAxesCombined,
       details: "Track and analyze community engagement and ROI metrics.",
       requiredCapability: "view_community_roi",
-      requiredFeature: "community-roi",
+      requiredFeature: FEATURE.COMMUNITY_ROI,
     },
     {
       href: "/make-call",
@@ -273,7 +280,7 @@ export function Sidebar() {
       icon: Phone,
       details: "Place outgoing calls using your assigned numbers.",
       requiredCapability: "view_make_call",
-      requiredFeature: "voice-agent",
+      requiredFeature: FEATURE.VOICE_AGENT,
       children: [
         {
           href: "/call-logs",
@@ -281,7 +288,7 @@ export function Sidebar() {
           icon: ChartNoAxesCombined,
           details: "Review past call history and recordings.",
           requiredCapability: "view_call_logs",
-          requiredFeature: "voice-agent",
+          requiredFeature: FEATURE.VOICE_AGENT,
         },
       ],
     },
@@ -293,7 +300,7 @@ export function Sidebar() {
         ? "Manage student admissions and counseling."
         : "Manage your sales pipeline and deals.",
       requiredCapability: "view_pipeline",
-      requiredFeature: "deals-pipeline",
+      requiredFeature: FEATURE.DEALS_PIPELINE,
     },
     {
       href: "/crm",
@@ -308,7 +315,7 @@ export function Sidebar() {
       icon: GitFork,
       details: "Track and manage your follow-up tasks and reminders.",
       requiredCapability: "view_followups",
-      requiredFeature: "follow-ups",
+      requiredFeature: FEATURE.FOLLOWUPS,
     },
 
   ];
@@ -328,7 +335,7 @@ export function Sidebar() {
     if (!item.requiredCapability && !item.requiredFeature) return true;
 
     // Tenant feature gate - applies to every role, no bypass.
-    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
+    if (item.requiredFeature && !item.requiredFeature.some((f) => hasFeature(f))) return false;
 
     const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
     if (isAdminOrOwner) return true;

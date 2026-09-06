@@ -60,14 +60,37 @@ import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationMo
 const WORKER_URL =
   process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
 
+/**
+ * What to show for a profile: its website address, or the folder name when the
+ * backend has never recorded one. Never the raw folder when we have better.
+ */
+function label(p: { display_domain?: string | null; domain: string }): string {
+  return p.display_domain || p.domain;
+}
+
 interface BrandProfile {
+  /** The storage folder name. An internal key: never show this to a customer. */
   domain: string;
+  /**
+   * The website address, for display. Folder names replace every punctuation
+   * mark with an underscore and cannot be turned back, so the backend keeps the
+   * real address alongside. Falls back to the folder name when we never had one.
+   */
+  display_domain?: string | null;
   is_default: boolean;
   from_crawl: boolean;
   brand_name?: string | null;
   tagline?: string | null;
   asset_count: number;
-  /** Swatches for the tile. Parsed server-side, so this costs no extra request. */
+  /** When it was extracted, from the index file. Absent until MAGe indexes it. */
+  extracted_at?: string | null;
+  /** False for a profile the extractor has not yet written a row for. */
+  indexed?: boolean;
+  /**
+   * Swatches for the tile, and ONLY populated for the default profile. Every
+   * other row would need its whole profile opened to fill this in, which is what
+   * made loading the card read every profile the tenant has.
+   */
   colors?: { primary?: string; background?: string; accent?: string } | null;
 }
 
@@ -150,6 +173,96 @@ type ModalId = 'request' | 'brand' | 'audience' | 'assets' | 'shortcuts' | 'driv
  * pixels apart, which reads as a mistake rather than as two equal actions.
  */
 const ACTION_WIDTH = 'clamp(7rem, 8.6vw, 8.75rem)';
+
+/**
+ * A placeholder shaped like the value it stands in for.
+ *
+ * The card used to sit behind a single "Loading MAGe settings" spinner until
+ * every section had arrived. The layout is known before any of the data is, so
+ * it is drawn immediately and each value fills in as its section lands.
+ */
+const Bar: React.FC<{ w: string; h?: string; className?: string }> = ({
+  w, h = '0.75rem', className = '',
+}) => (
+  <span
+    aria-hidden="true"
+    className={`block rounded bg-gray-200 dark:bg-gray-700/60 animate-pulse ${className}`}
+    style={{ width: w, height: h }}
+  />
+);
+
+/** Two stacked lines, the shape most tile bodies take. */
+const TextSkeleton: React.FC = () => (
+  <>
+    <Bar w="62%" h="0.85rem" className="mb-1.5" />
+    <Bar w="88%" />
+  </>
+);
+
+/**
+ * Turn the extractor's internal commentary into something a customer can read.
+ *
+ * The status endpoint returns MAGe's own progress notes, written for a log:
+ * "Initializing Playwright scraper", "Launching headless browser context". On
+ * failure `message` carries the raw exception, stack trace and all, and that was
+ * being printed straight onto the settings page. A missing API key read as a
+ * Python traceback.
+ *
+ * Matched on substrings rather than exact text because these strings are written
+ * for humans reading logs, not as a stable contract, and they change freely.
+ * Anything unrecognised falls back to a neutral line rather than leaking.
+ */
+// Order matters: first match wins. "Brand DNA synthesized successfully" contains
+// both a synthesis word and a success word, so the terminal patterns sit first.
+const EXTRACTION_STAGES: Array<[RegExp, string]> = [
+  // Our own line, set while the profile list is being refreshed after the
+  // extractor reports done. Sits first so it is never shadowed.
+  [/adding it to your profiles/i,         'Adding it to your profiles'],
+  [/complet|success|synthesized/i,        'Finished'],
+  [/queuing|queue/i,                      'Queued'],
+  [/playwright|browser|headless/i,        'Opening your website'],
+  [/screenshot/i,                         'Capturing screenshots'],
+  [/download/i,                           'Collecting images'],
+  [/scrap|crawl|dom|asset candidates/i,   'Reading the page'],
+  [/synthes|gemini|brand dna|visual parser/i, 'Building your brand profile'],
+  [/upload|gcs|storage/i,                 'Saving'],
+];
+
+export function extractionLabel(message?: string, status?: string): string {
+  if (status === 'completed') return 'Finished';
+  if (status === 'failed' || status === 'error') return 'Could not finish';
+  for (const [pattern, label] of EXTRACTION_STAGES) {
+    if (message && pattern.test(message)) return label;
+  }
+  return 'Working on it';
+}
+
+/**
+ * A short, actionable reason for a failed extraction.
+ *
+ * Never the raw error. Customers cannot act on a traceback, and it exposes how
+ * the service is built. Anything we do not recognise becomes a generic line;
+ * the real error is still in the worker logs where it belongs.
+ */
+export function extractionFailureReason(message?: string): string {
+  const m = message || '';
+  if (/api.?key|GEMINI_API_KEY|GOOGLE_API_KEY/i.test(m)) {
+    return 'Media generation is not configured on this environment. Contact support.';
+  }
+  if (/timeout|timed out/i.test(m)) {
+    return 'That site took too long to respond. Try again, or check the address.';
+  }
+  if (/dns|name resolution|could not resolve|connection|unreachable/i.test(m)) {
+    return 'We could not reach that address. Check the URL and try again.';
+  }
+  if (/403|401|forbidden|unauthor/i.test(m)) {
+    return 'That site blocked us from reading it.';
+  }
+  if (/404|not found/i.test(m)) {
+    return 'That page does not exist. Check the address.';
+  }
+  return 'Something went wrong reading that site. Try again, or use "No website" instead.';
+}
 
 // ── render helpers, at module scope ─────────────────────────────────────────
 //
@@ -306,7 +419,13 @@ export const MageSettings: React.FC = () => {
   // full 20-minute budget fetching for a component nobody is looking at.
   const mountedRef = useRef(true);
   const [changeTarget, setChangeTarget] = useState<string | null>(null);
+  // The address to put in the change box heading. changeTarget stays the folder
+  // name because that is what the endpoint keys on.
+  const changeTargetLabel = profiles.find((p) => p.domain === changeTarget);
   const [changeText, setChangeText] = useState('');
+  // The change box renders below the profile list, so with a dozen profiles it
+  // opens off screen and the pencil looks like it did nothing.
+  const changeBoxRef = useRef<HTMLTextAreaElement>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [viewingDna, setViewingDna] = useState<ViewedDna | null>(null);
   const [dnaLoading, setDnaLoading] = useState<string>('');
@@ -370,6 +489,19 @@ export const MageSettings: React.FC = () => {
       setLoading(false);
     })();
   }, [loadOverview]);
+
+  // ?panel=assets opens the Reference images panel on arrival.
+  //
+  // The brand DNA view tells a customer whose logo could not be extracted to
+  // add one to the Drive folder, and that view also renders inside the guided
+  // journey, where there is no panel to open. From there the link comes here,
+  // and this is what makes it land on the right panel rather than the top of
+  // the page. Read off window rather than useSearchParams so the component does
+  // not need a Suspense boundary of its own.
+  useEffect(() => {
+    const panel = new URLSearchParams(window.location.search).get('panel');
+    if (panel === 'assets') setModal('assets');
+  }, []);
 
   // Assigned in the body, not just the cleanup: StrictMode mounts, unmounts and
   // remounts, and a ref survives that, so a cleanup-only version would latch
@@ -471,7 +603,7 @@ export const MageSettings: React.FC = () => {
         body: JSON.stringify({ domain: changeTarget, request: changeText.trim() }),
       });
       if (!res.ok) throw new Error(await readError(res, 'Could not apply the changes.'));
-      setNotice(`Updated ${changeTarget}.`);
+      setNotice(`Updated ${changeTargetLabel ? label(changeTargetLabel) : changeTarget}.`);
       setChangeText('');
       setChangeTarget(null);
       await loadOverview();
@@ -495,7 +627,8 @@ export const MageSettings: React.FC = () => {
       if (!res.ok) throw new Error(await readError(res, 'Could not start the extraction.'));
       const data = await res.json();
       setExtractRun({ ...data, status: 'running' });
-      setExtractUrl('');
+      // The address deliberately stays in the field, held rather than cleared,
+      // so it is obvious which site is being analysed while it runs.
       pollExtraction(data.run_id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not start the extraction.');
@@ -532,11 +665,33 @@ export const MageSettings: React.FC = () => {
             continue;
           }
           const data = await res.json();
-          setExtractRun({ run_id: runId, ...data });
-          if (['completed', 'failed', 'error'].includes(String(data.status))) {
-            await loadOverview();
-            return;
+          const terminal = ['completed', 'failed', 'error'].includes(String(data.status));
+
+          if (!terminal) {
+            setExtractRun({ run_id: runId, ...data });
+            continue;
           }
+
+          // Refresh the list BEFORE announcing the run is finished.
+          //
+          // The status came from local state and appeared instantly, while the
+          // list waited on a request taking several seconds, so "Finished" showed
+          // up and the new profile did not arrive until noticeably later. Saying
+          // it is done while it is visibly not is worse than taking a moment
+          // longer to say it, so the run stays "working" until the list agrees.
+          setExtractRun({
+            run_id: runId,
+            ...data,
+            status: 'running',
+            message: 'Adding it to your profiles',
+          });
+          await loadOverview();
+
+          setExtractRun({ run_id: runId, ...data });
+          // Free the field for the next site. A failure keeps the address, since
+          // the usual next move is to correct it and try again.
+          if (data.status === 'completed') setExtractUrl('');
+          return;
         } catch {
           // Transient, so keep polling.
         }
@@ -574,6 +729,22 @@ export const MageSettings: React.FC = () => {
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  // Bring the change box into view and put the cursor in it when a profile's
+  // pencil is clicked. It sits below the whole profile list, so on a tenant with
+  // a dozen profiles it opens out of sight and the click reads as doing nothing.
+  //
+  // Runs after the render that mounts the box, so the ref is attached by now.
+  useEffect(() => {
+    if (!changeTarget) return;
+    const box = changeBoxRef.current;
+    if (!box) return;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Focus after the scroll starts rather than before: focusing first makes the
+    // browser jump to the element instantly, which undoes the smooth scroll.
+    const t = window.setTimeout(() => box.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(t);
+  }, [changeTarget]);
 
   /**
    * Start a run and deliberately ignore what comes back.
@@ -752,6 +923,14 @@ export const MageSettings: React.FC = () => {
   const defaultProfile = profiles.find((p) => p.is_default) || null;
   const brandColors = defaultProfile?.colors || null;
 
+  // A run is in flight from the moment it is triggered until the status turns
+  // terminal, not just while the trigger request is open. The trigger returns a
+  // run id in under a second while the work continues for minutes, so keying off
+  // `busy` alone would re-enable the field almost immediately.
+  const extractionRunning =
+    busy === 'extract' ||
+    (!!extractRun && !['completed', 'failed', 'error'].includes(String(extractRun.status)));
+
   /**
    * One readable line for the Audience tile.
    *
@@ -772,16 +951,16 @@ export const MageSettings: React.FC = () => {
     return line || raw.slice(0, 90);
   })();
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 p-6 text-sm text-gray-500 dark:text-gray-400">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Loading MAGe settings…
-      </div>
-    );
-  }
+  // No full-card spinner. The layout is known before any of the data is, so the
+  // card is drawn straight away and each tile fills in as its section lands.
 
   const queued = queue?.queued ?? 0;
+  // Each section arrives on its own, so each tile knows independently whether it
+  // is still waiting rather than the whole card sharing one flag.
+  const brandPending = loading && !defaultProfile;
+  const icpPending = loading && !icp;
+  const assetsPending = loading && !assets;
+  const keywordsPending = loading && !Object.keys(keywords).length;
 
   return (
     <div
@@ -842,19 +1021,26 @@ export const MageSettings: React.FC = () => {
               : 'Drive has not been synced yet'
           }
         >
+          {/* Stays neutral until the answer is known. Saying "not connected"
+              while still loading is a claim we cannot yet make, and it is the
+              alarming direction to get wrong. */}
           <span
             className={`w-2 h-2 rounded-full ${
-              queue?.last_synced ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+              !queue ? 'bg-gray-300 dark:bg-gray-600 animate-pulse'
+              : queue.last_synced ? 'bg-green-500'
+              : 'bg-gray-300 dark:bg-gray-600'
             }`}
           />
           <span className="text-gray-600 dark:text-gray-300">
-            {queue?.last_synced ? 'Drive connected' : 'Drive not connected'}
+            {!queue ? 'Checking Drive' : queue.last_synced ? 'Drive connected' : 'Drive not connected'}
           </span>
         </span>
 
-        <span className="text-xs text-gray-500 dark:text-gray-400" title="Requests waiting to run">
-          {queued} queued
-        </span>
+        {queue && (
+          <span className="text-xs text-gray-500 dark:text-gray-400" title="Requests waiting to run">
+            {queued} queued
+          </span>
+        )}
 
         {jobs?.active_run && (
           <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -964,12 +1150,18 @@ export const MageSettings: React.FC = () => {
                 >
                   {label}
                 </div>
-                <div
-                  className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums leading-tight"
-                  style={{ fontSize: 'clamp(1.05rem, 1.3vw, 1.35rem)' }}
-                >
-                  {n}
-                </div>
+                {/* From /auto-media/jobs, a separate request to the overview, so
+                    these fill on their own rather than waiting for the rest. */}
+                {!jobs ? (
+                  <Bar w="1.5rem" h="1.15rem" className="mt-1" />
+                ) : (
+                  <div
+                    className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums leading-tight"
+                    style={{ fontSize: 'clamp(1.05rem, 1.3vw, 1.35rem)' }}
+                  >
+                    {n}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -981,6 +1173,17 @@ export const MageSettings: React.FC = () => {
               ...(jobs?.completed || []),
               ...(jobs?.closed || []),
             ].slice(0, 4);
+            // Only claim there is nothing once we actually know. Before the jobs
+            // call returns, rows is empty because it has not loaded, not because
+            // the queue is empty, and saying "Nothing yet" then is simply wrong.
+            if (!jobs) {
+              return (
+                <div className="space-y-2 py-1">
+                  <Bar w="72%" />
+                  <Bar w="54%" />
+                </div>
+              );
+            }
             if (!rows.length) {
               return (
                 <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -1052,13 +1255,22 @@ export const MageSettings: React.FC = () => {
           title="Brand profile"
           hint="What the agent believes your brand looks and sounds like"
         >
-          {defaultProfile ? (
+          {brandPending ? (
+            <>
+              <TextSkeleton />
+              <div className="flex items-center gap-1.5 mt-2">
+                <Bar w="1rem" h="1rem" />
+                <Bar w="1rem" h="1rem" />
+                <Bar w="1rem" h="1rem" />
+              </div>
+            </>
+          ) : defaultProfile ? (
             <>
               <div className="text-sm text-gray-900 dark:text-gray-100">
-                {defaultProfile.brand_name || defaultProfile.domain}
+                {defaultProfile.brand_name || label(defaultProfile)}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {defaultProfile.tagline || defaultProfile.domain}
+                {defaultProfile.tagline || label(defaultProfile)}
               </div>
               {brandColors && (
                 <div className="flex items-center gap-1.5 mt-2">
@@ -1091,7 +1303,9 @@ export const MageSettings: React.FC = () => {
           title="Audience"
           hint="Who the agent is writing for"
         >
-          {icp?.exists ? (
+          {icpPending ? (
+            <TextSkeleton />
+          ) : icp?.exists ? (
             <>
               {/* Record names like "AI Playground Profile" are internal and mean
                   nothing to a customer, so they are suppressed in favour of the
@@ -1122,9 +1336,13 @@ export const MageSettings: React.FC = () => {
           hint="Logos and photos the agent can borrow from"
         >
           <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
-              {assets?.total ?? 0}
-            </span>
+            {assetsPending ? (
+              <Bar w="2.5rem" h="1.3rem" />
+            ) : (
+              <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums text-[clamp(1.15rem,1.45vw,1.5rem)]">
+                {assets?.total ?? 0}
+              </span>
+            )}
             <span className="text-xs text-gray-500 dark:text-gray-400">the agent can draw on</span>
           </div>
           <div className="mt-2 space-y-1">
@@ -1138,9 +1356,14 @@ export const MageSettings: React.FC = () => {
                 <span className="text-gray-400 tabular-nums">{c.count}</span>
               </div>
             ))}
-            {!assets?.categories?.length && (
+            {assetsPending ? (
+              <>
+                <Bar w="70%" className="mb-1.5" />
+                <Bar w="55%" />
+              </>
+            ) : !assets?.categories?.length ? (
               <p className="text-xs text-gray-400 dark:text-gray-500">Nothing uploaded yet.</p>
-            )}
+            ) : null}
           </div>
           <ManageButton onClick={() => setModal('assets')} hint="Upload, describe or remove reference images" />
         </Tile>
@@ -1168,7 +1391,13 @@ export const MageSettings: React.FC = () => {
           title="Keywords"
           hint="Short words that expand into a longer brief"
         >
-          {Object.keys(keywords).length ? (
+          {keywordsPending ? (
+            <div className="space-y-1.5">
+              <Bar w="58%" />
+              <Bar w="44%" />
+              <Bar w="66%" />
+            </div>
+          ) : Object.keys(keywords).length ? (
             <div className="space-y-1">
               {Object.keys(keywords).slice(0, 3).map((token) => (
                 <div key={token} className="flex items-center gap-2 text-xs" title={keywords[token]}>
@@ -1266,15 +1495,20 @@ export const MageSettings: React.FC = () => {
               value={extractUrl}
               onChange={(e) => setExtractUrl(e.target.value)}
               placeholder="https://yourcompany.com"
-              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+              // Held while a run is in flight, with the address still readable,
+              // so it is obvious which site is being analysed and a second run
+              // cannot be started on top of the first.
+              disabled={extractionRunning}
+              title={extractionRunning ? 'Analysing this site. One at a time.' : undefined}
+              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60 disabled:cursor-not-allowed"
             />
             <button
               onClick={startExtraction}
-              disabled={!extractUrl.trim() || busy === 'extract'}
+              disabled={!extractUrl.trim() || extractionRunning}
               title="Read a website and build a brand profile from it"
               className="text-sm font-medium px-3 py-2 rounded-lg bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
             >
-              {busy === 'extract' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add from URL'}
+              {extractionRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add from URL'}
             </button>
             <button
               onClick={() => { setModal(null); setShowWizard(true); }}
@@ -1285,11 +1519,48 @@ export const MageSettings: React.FC = () => {
             </button>
           </div>
 
-          {extractRun && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              {extractRun.message || extractRun.status}
-            </div>
-          )}
+          {extractRun && (() => {
+            const failed = extractRun.status === 'failed' || extractRun.status === 'error';
+            const done = extractRun.status === 'completed';
+            const pct = done ? 100 : Math.max(4, Math.min(extractRun.progress ?? 8, 99));
+            return (
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-900/60 px-3 py-2.5 mb-3">
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  {failed ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  ) : done ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0b1957] dark:text-blue-400 shrink-0" />
+                  )}
+                  <span className={
+                    failed ? 'text-red-600 dark:text-red-400'
+                    : done ? 'text-green-700 dark:text-green-400'
+                    : 'text-gray-700 dark:text-gray-200'
+                  }>
+                    {/* Never extractRun.message. That is MAGe's internal log line,
+                        and on failure it is the raw exception. */}
+                    {failed
+                      ? extractionFailureReason(extractRun.message)
+                      : extractionLabel(extractRun.message, extractRun.status)}
+                  </span>
+                  {!failed && (
+                    <span className="ml-auto text-gray-400 tabular-nums">{pct}%</span>
+                  )}
+                </div>
+                {!failed && (
+                  <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        done ? 'bg-green-600' : 'bg-[#0b1957] dark:bg-blue-500'
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {profiles.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">
@@ -1308,13 +1579,16 @@ export const MageSettings: React.FC = () => {
                   </button>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm text-gray-900 dark:text-gray-100 truncate">
-                      {p.brand_name || p.domain}
+                      {p.brand_name || label(p)}
                     </span>
                     <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {p.tagline || p.domain}
+                      {p.tagline || label(p)}
                     </span>
                   </span>
-                  {p.colors?.primary && (
+                  {/* Only the default profile carries colours, because it is the
+                      only one the card renders swatches for. Fetching them for
+                      every row meant opening every profile just to draw a list. */}
+                  {p.is_default && p.colors?.primary && (
                     <span
                       className="w-3.5 h-3.5 rounded border border-gray-200 dark:border-gray-700 shrink-0"
                       style={{ background: p.colors.primary }}
@@ -1338,9 +1612,10 @@ export const MageSettings: React.FC = () => {
           {changeTarget && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                What should change about {changeTarget}?
+                What should change about {changeTargetLabel ? label(changeTargetLabel) : changeTarget}?
               </p>
               <textarea
+                ref={changeBoxRef}
                 value={changeText}
                 onChange={(e) => setChangeText(e.target.value)}
                 rows={3}
@@ -1585,6 +1860,13 @@ export const MageSettings: React.FC = () => {
             onNext={() => setViewingDna(null)}
             hideButtons
             phase={viewingDna.from_crawl ? 'Business DNA' : 'Business DNA, described not crawled'}
+            // A missing logo tells the customer to add one to the Drive folder.
+            // We are already on the page that manages it, so open that panel
+            // here instead of sending them on a round trip through the URL.
+            onOpenReferenceImages={() => {
+              setViewingDna(null);
+              setModal('assets');
+            }}
           />
         </div>
       )}
