@@ -169,16 +169,27 @@ export interface LearnedCorrection {
 
 export async function listLearnedCorrections(): Promise<{
   corrections: LearnedCorrection[];
+  /**
+   * Backstop row count, not a curation limit — the server selects by a
+   * character budget now. Kept for compatibility; prefer `reachingPrompt`.
+   */
   maxInPrompt: number;
+  /** How many active corrections actually reach the prompt right now. */
+  reachingPrompt: number;
 }> {
   const response = await proxyClient.get<{
     success: boolean;
     data: LearnedCorrection[];
     max_in_prompt: number;
+    reaching_prompt: number;
   }>('/api/whatsapp-conversations/conversations/feedback/corrections');
+  const corrections = response.data.data ?? [];
   return {
-    corrections: response.data.data ?? [],
+    corrections,
     maxInPrompt: response.data.max_in_prompt ?? 0,
+    // Fall back to counting client-side so an older backend still renders.
+    reachingPrompt:
+      response.data.reaching_prompt ?? corrections.filter((c) => c.in_prompt).length,
   };
 }
 
