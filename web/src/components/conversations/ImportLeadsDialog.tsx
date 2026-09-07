@@ -252,7 +252,7 @@ function isValidEmail(e: string): boolean {
 export function ImportLeadsDialog({ open, onOpenChange, onImportComplete, channel, emailGroupId, variant = 'default' }: ImportLeadsDialogProps) {
   const isWhatsApp = variant === 'whatsapp';
   // Email mode: channel is 'gmail' or 'outlook'
-  const isEmailMode = channel === 'gmail' || channel === 'outlook';
+  const isEmailMode = channel === 'gmail' || channel === 'outlook' || channel === 'custom';
   const inputBorderClass = isWhatsApp
     ? "border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 focus:border-emerald-500 focus-visible:outline-none"
     : isEmailMode
