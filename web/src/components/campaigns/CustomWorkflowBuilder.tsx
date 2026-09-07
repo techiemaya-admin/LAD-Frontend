@@ -4180,6 +4180,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       })),
       macro(MULTICOND_STEP_ID, 'Multi-condition', 'Branch by a field value', <Split className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addMultiCond, 'Logic & routing'),
       macro(SPLIT_STEP_ID, 'A/B split test', 'Compare two openers', <Shuffle className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addSplitTest, 'Logic & routing'),
+      macro(ACCEPT_STEP_ID, 'Accepted?', 'Branch on the connection request', <UserCheck className="h-4 w-4 text-emerald-600" />, 'bg-emerald-50 dark:bg-emerald-950/30', addAcceptanceBranch, 'Logic & routing'),
       macro(SETFIELD_STEP_ID, 'Set field', 'Tag or write a value', <PenLine className="h-4 w-4 text-lime-600" />, 'bg-lime-50 dark:bg-lime-950/30', addSetField, 'Logic & routing'),
       macro(AI_STEP_ID, 'AI Agent', 'Clean & normalise lead data', <Sparkles className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addAiParse, 'Enrich & AI'),
       macro(ENRICH_STEP_ID, 'Enrich contact', 'Official email · phone', <Contact className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addDataEnrich, 'Enrich & AI'),
@@ -4329,6 +4330,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isResearch = editingId === RESEARCH_STEP_ID;
     const isScore = editingId === SCORE_STEP_ID;
     const isSplit = editingId === SPLIT_STEP_ID;
+    const isAccept = editingId === ACCEPT_STEP_ID;
     const isSetField = editingId === SETFIELD_STEP_ID;
     const isHttp = editingId === HTTP_STEP_ID;
     const isLanding = editingId === LANDING_STEP_ID;
@@ -5686,6 +5688,60 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
           })()}
 
+
+          {isAccept && (() => {
+            const eid = editingId!;
+            const setBranch = (k: 'accepted' | 'expired', patch: any) =>
+              setCfg(eid, { [k]: { ...(cfg[k] || {}), ...patch } });
+            const branch = (k: 'accepted' | 'expired', label: string, hint: string) => (
+              <div className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-1.5 bg-muted/20 dark:bg-[#030a21]/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-foreground">{label}</span>
+                  <span className="text-[11px] text-muted-foreground">{hint}</span>
+                </div>
+                <CustomSelect className={field} value={(cfg[k] || {}).enrich || ''} onValueChange={(val) => setBranch(k, { enrich: val })}>
+                  <option value="">No enrichment</option>
+                  <option value="phone">Reveal phone</option>
+                  <option value="official_email">Reveal official email</option>
+                </CustomSelect>
+                <CustomSelect className={field} value={(cfg[k] || {}).channel || (k === 'accepted' ? 'whatsapp' : 'email')} onValueChange={(val) => setBranch(k, { channel: val })}>
+                  <option value="whatsapp">Send WhatsApp</option>
+                  <option value="email">Send email</option>
+                </CustomSelect>
+                {((cfg[k] || {}).channel === 'email') && (
+                  <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setBranch(k, { subject: e.target.value })} placeholder="Subject" />
+                )}
+                <textarea className={`${field} min-h-[70px]`} value={(cfg[k] || {}).body || ''} onChange={(e) => setBranch(k, { body: e.target.value })}
+                  placeholder="Message (leave blank to send nothing on this branch)" />
+              </div>
+            );
+            return (
+              <div className="space-y-2.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Waits to see if the lead accepts your connection request, then branches. The
+                  clock starts when the invite was <strong>sent</strong>, not when the workflow
+                  reaches this step.
+                </p>
+                <div>
+                  <label className="text-[12px] font-semibold text-foreground">Give them how long?</label>
+                  <input
+                    className={field}
+                    type="number"
+                    min={1}
+                    value={cfg.wait_days ?? 5}
+                    onChange={(e) => setCfg(eid, { wait_days: e.target.value })}
+                    placeholder="5"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Days to wait before treating the invite as unanswered. Anything under 1 day
+                    falls back to 5 — a 0 would send the follow-up the moment the invite goes out.
+                  </p>
+                </div>
+                {branch('accepted', 'If accepted', 'phone → WhatsApp')}
+                {branch('expired', 'If still no answer', 'email → Email')}
+              </div>
+            );
+          })()}
 
           {isSplit && (() => {
             const eid = editingId!;
@@ -8428,6 +8484,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { id: RESEARCH_STEP_ID, on: addWebResearch, icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30', label: 'Web research', sub: 'AI company intel from the web' },
               { id: SCORE_STEP_ID, on: addLeadScore, icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30', label: 'Lead scoring', sub: 'Buy-intent 0-100 · hot/warm/cold' },
               { id: SPLIT_STEP_ID, on: addSplitTest, icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30', label: 'A/B split test', sub: 'Compare two openers' },
+              { id: ACCEPT_STEP_ID, on: addAcceptanceBranch, icon: <UserCheck className="h-4 w-4 text-emerald-600" />, chip: 'bg-emerald-50 dark:bg-emerald-950/30', label: 'Accepted?', sub: 'Branch on the connection request' },
               { id: SETFIELD_STEP_ID, on: addSetField, icon: <PenLine className="h-4 w-4 text-lime-600" />, chip: 'bg-lime-50 dark:bg-lime-950/30', label: 'Set field', sub: 'Tag or write a value' },
               { id: HTTP_STEP_ID, on: addHttpRequest, icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50', label: 'HTTP request', sub: 'Call any API per lead' },
               { id: CONTENT_STEP_ID, on: addLinkedInContent, icon: <PenTool className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', label: 'LinkedIn content', sub: 'Write or AI-generate the post' },
