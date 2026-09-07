@@ -25,6 +25,9 @@ import type {
   LlmRoutingMeta,
   LlmRoutingEntry,
   LlmRoutingValidation,
+  VerticalPromptEdition,
+  VerticalTemplate,
+  RenderedVerticalPrompt,
 } from './types';
 
 const BASE = '/api/admin/monitor';
@@ -215,4 +218,49 @@ export async function setLlmRoutingChain(
 /** Remove the tenant's rules for a feature - it reverts to the code default. */
 export async function clearLlmRoutingChain(tenantId: string, featureKey: string): Promise<void> {
   await apiDelete(`${BASE}/llm-routing/${tenantId}/${featureKey}`);
+}
+
+// ── Vertical prompt viewer ──────────────────────────────────────────────────
+// Read-only by design. The vertical template is version-controlled prose shared
+// by every tenant on the edition — a per-tenant copy forks it, and snapshot
+// rollback assumes it ships with the version. Changes go through a PR + deploy.
+
+/** Every vertical edition on disk, with its pipelines and archived versions. */
+export async function getVerticalPromptEditions(): Promise<VerticalPromptEdition[]> {
+  const res = await apiGet<{ success: boolean; data: VerticalPromptEdition[] }>(
+    `${BASE}/vertical-prompts`,
+  );
+  return res.data.data ?? [];
+}
+
+/** The raw template for one pipeline, optionally at an archived version. */
+export async function getVerticalTemplate(
+  vertical: string,
+  pipeline: string,
+  version?: string,
+): Promise<VerticalTemplate> {
+  const q = new URLSearchParams({ vertical, pipeline });
+  if (version) q.set('version', version);
+  const res = await apiGet<{ success: boolean; data: VerticalTemplate }>(
+    `${BASE}/vertical-prompts/template?${q.toString()}`,
+  );
+  return res.data.data;
+}
+
+/**
+ * What one tenant's agent actually receives.
+ *
+ * `data` is null — with a `note` explaining why — for every tenant outside a
+ * vertical, not yet migrated, or with the pipeline switched off. That is a
+ * normal answer, not an error.
+ */
+export async function getRenderedVerticalPrompt(
+  tenantId: string,
+  pipeline: string,
+): Promise<{ data: RenderedVerticalPrompt | null; note?: string }> {
+  const q = new URLSearchParams({ tenantId, pipeline });
+  const res = await apiGet<{
+    success: boolean; data: RenderedVerticalPrompt | null; note?: string;
+  }>(`${BASE}/vertical-prompts/rendered?${q.toString()}`);
+  return { data: res.data.data, note: res.data.note };
 }

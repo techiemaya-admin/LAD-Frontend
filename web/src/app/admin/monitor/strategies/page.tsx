@@ -14,6 +14,7 @@
 import React from 'react';
 import { RefreshCw, Check, X, ShieldCheck, Inbox, AlertTriangle } from 'lucide-react';
 import { useStrategyReview, type StrategyReviewStatus } from '@lad/frontend-features/lad-monitor';
+import { VerticalPromptViewer } from '../components/VerticalPromptViewer';
 
 const TABS: { value: StrategyReviewStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -178,6 +179,8 @@ export default function MonitorStrategiesPage() {
           );
         })}
       </div>
+
+      <VerticalPromptViewer />
     </div>
   );
 }

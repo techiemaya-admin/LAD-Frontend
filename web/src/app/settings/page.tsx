@@ -11,13 +11,14 @@ import { BillingSettings } from '../../components/settings/BillingSettings';
 import { CreditsSettings } from '../../components/settings/CreditsSettings';
 import { BusinessProfileSettings } from '../../components/settings/BusinessProfileSettings';
 import { TeamManagement } from '../../components/settings/TeamManagement';
-import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload, MessageSquare, Target, Crosshair } from 'lucide-react';
+import { MageSettings } from '../../components/settings/MageSettings';
+import { Building2, Users, UserCircle, Globe, Plug, Terminal, CreditCard, Coins, Upload, MessageSquare, Target, Crosshair, Image as ImageIcon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 
-type ActiveTab = 'businessprofile' | 'team' | 'accounts' | 'website' | 'integrations' | 'chat' | 'api' | 'billing' | 'credits';
+type ActiveTab = 'businessprofile' | 'team' | 'accounts' | 'website' | 'integrations' | 'media' | 'chat' | 'api' | 'billing' | 'credits';
 
 const SettingsPage: React.FC = () => {
   const router = useRouter();
@@ -62,7 +63,7 @@ const SettingsPage: React.FC = () => {
     if (!user) return;
     // Initialize active tab from URL query param if present
     const tabParam = (searchParams.get('tab') || '').toLowerCase();
-    const allowed: ActiveTab[] = ['businessprofile', 'team', 'accounts', 'website', 'integrations', 'chat', 'api', 'billing', 'credits'];
+    const allowed: ActiveTab[] = ['businessprofile', 'team', 'accounts', 'website', 'integrations', 'media', 'chat', 'api', 'billing', 'credits'];
     // The Company tab was merged into Business Profile - redirect old links/bookmarks.
     if (tabParam === 'company') {
       const sp = new URLSearchParams(Array.from(searchParams.entries()));
@@ -107,6 +108,7 @@ const SettingsPage: React.FC = () => {
     // { id: 'accounts' as ActiveTab, label: 'Accounts', icon: UserCircle },
     // { id: 'website' as ActiveTab, label: 'Website', icon: Globe },
     { id: 'integrations' as ActiveTab, label: 'Integrations', icon: Plug },
+    { id: 'media' as ActiveTab, label: 'Media Hub', icon: ImageIcon },
     { id: 'chat' as ActiveTab, label: 'Chat Settings', icon: MessageSquare },
     { id: 'api' as ActiveTab, label: 'Voice Settings', icon: Terminal },
     { id: 'billing' as ActiveTab, label: 'Billing', icon: CreditCard },
@@ -176,6 +178,7 @@ const SettingsPage: React.FC = () => {
       <div className="space-y-6">
         {activeTab === 'businessprofile' && <BusinessProfileSettings />}
         {activeTab === 'integrations' && <IntegrationsSettings />}
+        {activeTab === 'media' && <MageSettings />}
         {activeTab === 'chat' && <ChatSettings />}
         {activeTab === 'api' && <VoiceAgentSettings />}
         {/* Placeholder for other tabs */}

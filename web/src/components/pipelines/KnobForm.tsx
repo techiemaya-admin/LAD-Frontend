@@ -15,6 +15,7 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { KnobDefinition, KnobValues, KnobOption } from '@lad/frontend-features/snapshots';
+import { useLineListEditor } from '@/components/pipelines/useLineListEditor';
 
 function optionValue(option: KnobOption): string {
   return typeof option === 'string' ? option : option.value;
@@ -35,6 +36,9 @@ function KnobField({
   disabled: boolean;
 }) {
   const id = `knob-${knob.key}`;
+  // Hooks run for every knob type, not just 'list' — calling one inside the
+  // switch below would change hook order between renders.
+  const lineList = useLineListEditor(value, (lines) => onChange(lines));
   const base =
     'w-full rounded-md border border-gray-300 dark:border-blue-950/40 bg-white dark:bg-[#000c3b] px-2.5 py-1.5 text-sm text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-[#071131] disabled:text-gray-400 dark:disabled:text-slate-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600';
 
@@ -103,18 +107,15 @@ function KnobField({
     case 'list': {
       // One entry per line: the shape a studio owner already thinks in when
       // listing their classes, and it round-trips without a tag-input widget.
-      const text = Array.isArray(value) ? (value as string[]).join('\n') : '';
+      // The trim/filter must NOT run between keystrokes — see the hook.
       return (
         <textarea
           id={id}
           rows={4}
-          value={text}
           disabled={disabled}
           placeholder="One per line"
-          onChange={(e) =>
-            onChange(e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))
-          }
           className={base}
+          {...lineList}
         />
       );
     }
