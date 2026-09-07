@@ -157,4 +157,42 @@ export interface CreditPackage {
   savings: number;
   popular?: boolean;
   description: string;
-}
+}
+
+export interface RecurringPlan {
+  kind: 'monthly' | 'auto_recharge';
+  packageId: string;
+  priceUsd: number;
+  credits: number;
+  status: 'incomplete' | 'active' | 'past_due' | 'canceled';
+  thresholdCredits?: number | null;
+  currentPeriodEnd?: string | null;
+  lastChargedAt?: string | null;
+  lastError?: string | null;
+}
+
+export interface RecurringStatus {
+  monthly: RecurringPlan | null;
+  autoRecharge: RecurringPlan | null;
+}
+
+export interface PricingCatalogItem {
+  id?: string;
+  component_type: string;
+  provider?: string;
+  model?: string;
+  unit: string;
+  cost_per_unit: string | number;
+  is_active: boolean;
+  effective_from: string | null;
+  effective_until: string | null;
+  [key: string]: any;
+}
+
+export interface UsageAggregationGroup {
+  groupValue: string;
+  count: number;
+  totalCost: number;
+  percentage?: number;
+}
+

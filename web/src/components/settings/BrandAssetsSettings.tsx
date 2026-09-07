@@ -1,14 +1,16 @@
 'use client';
 /**
- * Brand Assets — the tenant's persistent library of reference imagery for
- * media generation. Reached from Settings → Integrations → Brand Assets.
+ * Brand Assets, the tenant's persistent library of reference imagery for
+ * media generation. Reached from Settings, Media Hub, via either the Reference
+ * images tile or the Google Drive tile; the `section` prop below decides which
+ * half each of those renders.
  *
  * Two ways in, one library:
  *   • Upload directly here. Works everywhere.
  *   • Drop files into a shared Google Drive folder we create and share with
  *     the user. Optional per environment; hidden when not configured.
  *
- * There is no "import" button — Drive is checked when this page opens and
+ * There is no "import" button. Drive is checked when this page opens and
  * again whenever a media generation session starts. The user's only job is to
  * add files.
  */
@@ -27,6 +29,7 @@ import {
   Trash2,
   HardDrive,
   RefreshCw,
+  Copy,
 } from 'lucide-react';
 import { safeStorage } from '@lad/shared/storage';
 
@@ -90,7 +93,7 @@ const formatSize = (bytes?: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-/** Sync times need the clock, not just the day — "2 Aug" is useless for "did it just run?". */
+/** Sync times need the clock, not just the day, because "2 Aug" is useless for "did it just run?". */
 const formatDateTime = (iso?: string | null) => {
   if (!iso) return null;
   try {
@@ -118,7 +121,64 @@ const formatDate = (iso?: string | null) => {
   }
 };
 
-export const BrandAssetsSettings: React.FC = () => {
+/**
+ * Which half to render.
+ *
+ * The two concerns were previously always shown together, so opening either
+ * "Reference images" or "Google Drive" produced the same long page containing
+ * both. They answer different questions: one is about the files themselves, the
+ * other about the shared folder they can arrive through.
+ *
+ * Defaults to everything, so any existing usage is unaffected.
+ */
+export type BrandAssetsSection = 'all' | 'assets' | 'drive';
+
+/**
+ * One shared folder, named by purpose rather than by its path on disk.
+ *
+ * Copy sits beside Open because the common reason to want a folder link is to
+ * send it to someone, and there is no invite email on these shares.
+ */
+const FolderRow: React.FC<{
+  label: string;
+  caption: string;
+  url?: string | null;
+  copied: boolean;
+  onCopy: () => void;
+}> = ({ label, caption, url, copied, onCopy }) => (
+  <div className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-800 px-3.5 py-2.5">
+    <span className="flex-1 min-w-0">
+      <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
+      <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">{caption}</span>
+    </span>
+    <button
+      onClick={onCopy}
+      title={copied ? 'Link copied' : 'Copy the link so you can send it to someone'}
+      className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+    >
+      {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? 'Copied' : 'Copy link'}
+    </button>
+    <a
+      href={url || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Open this folder in Google Drive"
+      className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+    >
+      <ExternalLink className="w-3.5 h-3.5" />
+      Open
+    </a>
+  </div>
+);
+
+export const BrandAssetsSettings: React.FC<{ section?: BrandAssetsSection }> = ({
+  section = 'all',
+}) => {
+  const showAssets = section === 'all' || section === 'assets';
+  const showDrive = section === 'all' || section === 'drive';
+
+  const [copiedLink, setCopiedLink] = useState<'assets' | 'work' | null>(null);
   const [status, setStatus] = useState<BrandAssetsStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -162,6 +222,19 @@ export const BrandAssetsSettings: React.FC = () => {
     }
   };
 
+  /** Copy a folder link, with a short confirmation on the button itself. */
+  const copyLink = async (which: 'assets' | 'work', url?: string | null) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(which);
+      window.setTimeout(() => setCopiedLink(null), 2000);
+    } catch {
+      // Clipboard access can be blocked by permissions; Open still works.
+      setError('Could not copy that link. Use Open and copy it from the address bar.');
+    }
+  };
+
   const loadStatus = useCallback(async (): Promise<BrandAssetsStatus | null> => {
     try {
       const res = await fetch(`${WORKER_URL}/brand-assets/status`, { headers: authHeader() });
@@ -183,13 +256,16 @@ export const BrandAssetsSettings: React.FC = () => {
   const checkDrive = useCallback(async () => {
     setChecking(true);
     try {
-      const res = await fetch(`${WORKER_URL}/brand-assets/sync`, {
+      const res = await fetch(`${WORKER_URL}/auto-media/sync`, {
         method: 'POST',
         headers: jsonHeaders(),
       });
       if (res.ok) {
+        // /auto-media/sync covers BOTH folders and nests its result per folder,
+        // unlike /brand-assets/sync which returned these counts flat.
         const result = await res.json();
-        if (result.added > 0 || result.removed > 0) await loadStatus();
+        const ba = result?.brand_assets || {};
+        if (ba.added > 0 || ba.removed > 0) await loadStatus();
       }
     } catch {
       // Best-effort: a failed check just means the list is as of the last sync.
@@ -199,7 +275,7 @@ export const BrandAssetsSettings: React.FC = () => {
   }, [jsonHeaders, loadStatus]);
 
   /**
-   * The same sync, but user-initiated — so unlike `checkDrive` it reports what
+   * The same sync, but user-initiated, so unlike `checkDrive` it reports what
    * happened, including "nothing changed", and surfaces errors. Someone who
    * just dropped a file in Drive needs to know whether we saw it.
    */
@@ -208,7 +284,7 @@ export const BrandAssetsSettings: React.FC = () => {
     setError('');
     setNotice('');
     try {
-      const res = await fetch(`${WORKER_URL}/brand-assets/sync`, {
+      const res = await fetch(`${WORKER_URL}/auto-media/sync`, {
         method: 'POST',
         headers: jsonHeaders(),
       });
@@ -216,17 +292,27 @@ export const BrandAssetsSettings: React.FC = () => {
       const result = await res.json();
       await loadStatus();
 
+      // Both folders in one pass. Reporting them separately matters because they
+      // mean different things: reference images changed the library, work orders
+      // changed the queue, and a customer who dropped a job file needs to see
+      // that second number rather than being told nothing happened.
+      const ba = result?.brand_assets || {};
+      const wo = result?.work_orders || {};
+
       const parts: string[] = [];
-      if (result.added) parts.push(`${result.added} added`);
-      if (result.removed) parts.push(`${result.removed} removed`);
-      if (result.skipped?.length) parts.push(`${result.skipped.length} skipped`);
+      if (ba.added) parts.push(`${ba.added} reference image${ba.added === 1 ? '' : 's'} added`);
+      if (ba.removed) parts.push(`${ba.removed} removed`);
+      if (wo.tracked) parts.push(`${wo.tracked} request${wo.tracked === 1 ? '' : 's'} queued`);
+
+      const rejected = (wo.rejected || []).length;
+      if (rejected) parts.push(`${rejected} file${rejected === 1 ? '' : 's'} we cannot use`);
 
       if (!parts.length) {
-        setNotice('Already up to date — nothing new in your Drive folder.');
-      } else if (result.remaining > 0) {
+        setNotice('Already up to date. Nothing new in either Drive folder.');
+      } else if (ba.remaining > 0) {
         // The worker caps each pass so it cannot outrun the request hold, so
         // say so plainly rather than leaving files silently unimported.
-        parts.push(`${result.remaining} still waiting — sync again to finish`);
+        parts.push(`${ba.remaining} still waiting, sync again to finish`);
         setNotice(parts.join(', ') + '.');
       } else {
         setNotice(parts.join(', ') + '.');
@@ -267,7 +353,7 @@ export const BrandAssetsSettings: React.FC = () => {
 
         const res = await fetch(`${WORKER_URL}/brand-assets/upload`, {
           method: 'POST',
-          headers: authHeader(), // no Content-Type — the browser sets the boundary
+          headers: authHeader(), // no Content-Type, the browser sets the boundary
           body: form,
         });
         if (!res.ok) throw new Error(await readError(res, 'Upload failed.'));
@@ -354,7 +440,7 @@ export const BrandAssetsSettings: React.FC = () => {
     setError('');
     try {
       // Add is idempotent and doubles as "change role", so there is only one
-      // endpoint to call here. No notification — nobody needs an email to be
+      // endpoint to call here. No notification, nobody needs an email to be
       // told their access level moved.
       const res = await fetch(`${WORKER_URL}/brand-assets/collaborators/add`, {
         method: 'POST',
@@ -479,6 +565,7 @@ export const BrandAssetsSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* ── Upload ── */}
+      {showAssets && (
       <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-gray-900 dark:text-gray-100 text-lg font-semibold">
           Brand Assets
@@ -547,9 +634,10 @@ export const BrandAssetsSettings: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Drive folder (only when the environment has it) ── */}
-      {status?.drive_enabled && (
+      {showDrive && status?.drive_enabled && (
         <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-start gap-3">
@@ -562,7 +650,7 @@ export const BrandAssetsSettings: React.FC = () => {
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xl">
                   We&apos;ll create a Google Drive folder and share it with you. Anything you
-                  drop in shows up here automatically — your files stay yours.
+                  drop in shows up here automatically, and your files stay yours.
                 </p>
               </div>
             </div>
@@ -608,34 +696,37 @@ export const BrandAssetsSettings: React.FC = () => {
                 <HardDrive className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
                   Must be an account with Google Drive enabled. The folder appears under
-                  &quot;Shared with me&quot; straight away — no invite to accept.
+                  &quot;Shared with me&quot; straight away, with no invite to accept.
                 </span>
               </p>
             </div>
           ) : (
             <>
-              <div className="mt-5 flex flex-wrap items-center gap-4">
-                <a
-                  href={status.folder_url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open {status.folder_name || 'folder'} in Drive
-                </a>
-
+              {/* Named by what each folder is FOR. "Media_Gen" and "Work_Orders"
+                  are storage paths, and nobody can tell from those which one
+                  takes a job request. Each gets a copy button beside it, because
+                  sharing a folder with a colleague means sending them the link,
+                  not opening it yourself. */}
+              <div className="mt-5 space-y-2.5">
+                <FolderRow
+                  label="Reference images folder"
+                  caption="Logos and photos the agent can borrow from"
+                  url={status.folder_url}
+                  copied={copiedLink === 'assets'}
+                  onCopy={() => copyLink('assets', status.folder_url)}
+                />
                 {status.work_folder_url && (
-                  <a
-                    href={status.work_folder_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Open {status.work_folder_name || 'Work_Orders'} in Drive
-                  </a>
+                  <FolderRow
+                    label="Requests folder"
+                    caption="Drop an image here and the agent makes something from it"
+                    url={status.work_folder_url}
+                    copied={copiedLink === 'work'}
+                    onCopy={() => copyLink('work', status.work_folder_url)}
+                  />
                 )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-4">
 
                 <button
                   onClick={handleManualSync}
@@ -665,10 +756,10 @@ export const BrandAssetsSettings: React.FC = () => {
                   People with access
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">
-                  Access covers <strong>both folders</strong> — they appear under
+                  Access covers <strong>both folders</strong>, and they appear under
                   &quot;Shared with me&quot; in that person&apos;s own Drive. Editors can
                   add and remove files; viewers can only look. Removing someone revokes
-                  both. Share the folder links with them — no invite email is sent.
+                  both. Share the folder links with them, no invite email is sent.
                 </p>
 
                 {(status.collaborators || []).length > 0 && (
@@ -759,6 +850,7 @@ export const BrandAssetsSettings: React.FC = () => {
       )}
 
       {/* ── Library ── */}
+      {showAssets && (
       <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
           <h3 className="text-gray-900 dark:text-gray-100 text-base font-semibold">
@@ -779,7 +871,7 @@ export const BrandAssetsSettings: React.FC = () => {
           <div className="text-center py-10 border border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
             <ImageIcon className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Nothing here yet — upload an image to get started.
+              Nothing here yet. Upload an image to get started.
             </p>
           </div>
         ) : (
@@ -932,7 +1024,7 @@ export const BrandAssetsSettings: React.FC = () => {
                   ) : (
                     <span
                       className="text-[10px] text-gray-300 dark:text-gray-600 text-right max-w-[92px] leading-tight"
-                      title="This file lives in your Drive folder — delete it there to remove it entirely."
+                      title="This file lives in your Drive folder, so delete it there to remove it entirely."
                     >
                       delete in Drive
                     </span>
@@ -943,6 +1035,7 @@ export const BrandAssetsSettings: React.FC = () => {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

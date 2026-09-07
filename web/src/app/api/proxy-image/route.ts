@@ -70,6 +70,22 @@ export async function GET(req: NextRequest) {
       cache: 'no-store',
     });
 
+    // `fetch` follows redirects, and several allowlisted hosts (anything under
+    // *.linkedin.com) expose open-redirect endpoints — so the URL we validated
+    // above is not necessarily the URL the bytes came from. Re-check the FINAL
+    // hop; without this the allowlist only constrains the first request.
+    try {
+      const finalUrl = new URL(upstream.url);
+      if (!isHostAllowed(finalUrl.hostname)) {
+        return NextResponse.json(
+          { error: 'Redirected to a host that is not allowed', host: finalUrl.hostname },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unresolvable upstream URL' }, { status: 502 });
+    }
+
     if (!upstream.ok) {
       return NextResponse.json(
         { error: 'Upstream fetch failed', status: upstream.status },

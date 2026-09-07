@@ -3,6 +3,7 @@ import { Message } from '@/types/conversation';
 import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download, MoreVertical, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MessageFeedback } from './MessageFeedback';
+import { TeachFromReply } from './TeachFromReply';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -260,10 +261,14 @@ interface MessageBubbleProps {
   onToggleStar?: (message: Message) => void;
   searchText?: string;
   isHighlighted?: boolean;
-  /** Enables the thumbs on AI replies. Omitted → feedback is not rendered. */
+  /** Enables the thumbs on AI replies, and "teach this" on a colleague's.
+   *  Omitted → neither is rendered. */
   conversationId?: string;
   /** Existing verdict, so a reload doesn't reset the thumbs. */
   feedbackRating?: 'like' | 'dislike' | null;
+  /** This human reply has already been taught, so the control shows the
+   *  confirmed state instead of inviting a duplicate. */
+  alreadyTaught?: boolean;
 }
 
 const statusIcons = {
@@ -420,6 +425,7 @@ export const MessageBubble = memo(function MessageBubble({
   isHighlighted = false,
   conversationId,
   feedbackRating = null,
+  alreadyTaught = false,
 }: MessageBubbleProps) {
   // senderName arrives already collapsed to "pushname, else raw number" by the
   // message mapper, so it is masked here at the render site rather than in the
@@ -614,14 +620,26 @@ export const MessageBubble = memo(function MessageBubble({
             />
           )}
         </div>
-        {/* Only on AI replies: a human agent's own message has nothing to
-            learn from, and the backend rejects rating anything else. */}
+        {/* Thumbs correct what the AGENT said. Only on its own replies —
+            the backend rejects rating anything else. */}
         {isAI && conversationId && (
           <MessageFeedback
             conversationId={conversationId}
             messageId={String(message.id)}
             content={typeof content === 'string' ? content : ''}
             initialRating={feedbackRating ?? null}
+          />
+        )}
+        {/* The mirror image: a colleague's takeover reply is the RIGHT answer
+            demonstrated, and used to be discarded once the thread moved on.
+            (This block previously read "a human agent's own message has nothing
+            to learn from" — it has the most.) */}
+        {role === 'human_agent' && isOutgoing && conversationId && (
+          <TeachFromReply
+            conversationId={conversationId}
+            messageId={String(message.id)}
+            content={typeof content === 'string' ? content : ''}
+            initiallyTaught={alreadyTaught ?? false}
           />
         )}
       </div>

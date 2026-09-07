@@ -19,7 +19,8 @@ import {
   bulkUpdateLeads,
   selectLeadsCacheValid
 } from '../slices/leadsSlice';
-import * as pipelineApi from '../../../../../../sdk/features/deals-pipeline/api';
+import * as pipelineApi from '@lad/frontend-features/deals-pipeline';
+
 import { AppDispatch, RootState } from '../../../../store/store';
 import { Stage } from '../slices/pipelineSlice';
 import { Lead } from '../../types';
@@ -67,7 +68,7 @@ export const createStageAction = (stageData: { name?: string; label?: string; po
     dispatch(setStagesLoading(true));
     // The addStage function already invalidated the cache, so this should fetch fresh data
     const allStages = await pipelineService.fetchStages();
-    logger.debug('[Redux] Fetched', allStages.length, 'stages after creation');
+    logger.debug(`[Redux] Fetched ${allStages.length} stages after creation`);
     dispatch(setStages(allStages));
     dispatch(setStagesLoading(false));
     logger.debug('[Redux] Stage created successfully and stages refreshed:', (newStage as Stage).key || (newStage as { id?: string }).id);
@@ -82,7 +83,7 @@ export const createStageAction = (stageData: { name?: string; label?: string; po
 // Update existing stage
 export const updateStageAction = (stageKey: string, updates: Partial<Stage>): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Updating stage:', stageKey, updates);
+    logger.debug(`[Redux] Updating stage: ${stageKey}`, updates);
     const updatedStage = await pipelineService.updateStage(stageKey, updates);
     dispatch(updateStage({ key: stageKey, updatedData: updatedStage }));
     logger.debug('[Redux] Stage updated successfully:', stageKey);
@@ -186,7 +187,7 @@ export const createLeadAction = (leadData: Partial<Lead>): AppThunk => async (di
 // Update existing lead
 export const updateLeadAction = (leadId: string | number, updates: Partial<Lead>): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Updating lead:', leadId, updates);
+    logger.debug(`[Redux] Updating lead: ${leadId}`, updates);
     const updatedLead = await pipelineService.updateLead(leadId, updates);
     dispatch(updateLead({ id: leadId, data: updatedLead }));
     logger.debug('[Redux] Lead updated successfully:', leadId);
@@ -214,7 +215,7 @@ export const deleteLeadAction = (leadId: string | number): AppThunk => async (di
 // Move lead to different stage (drag and drop)
 export const moveLeadAction = (leadId: string | number, newStageKey: string): AppThunk => async (dispatch) => {
   try {
-    logger.debug('[Redux] Moving lead:', leadId, 'to stage:', newStageKey);
+    logger.debug(`[Redux] Moving lead: ${leadId} to stage: ${newStageKey}`);
     // Optimistic update first - this makes the UI instantly responsive
     dispatch(updateLead({ id: leadId, data: { stage: newStageKey } }));
     logger.debug('[Redux] Optimistic update applied for lead:', leadId);
