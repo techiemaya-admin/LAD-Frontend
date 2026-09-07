@@ -9,6 +9,9 @@ export type StepType =
   | 'linkedin_employee_list'
   | 'linkedin_autopost'
   | 'linkedin_comment_reply'
+  // Branches on whether the invite was accepted, waiting while it is merely
+  // unanswered. See the Accepted? node in CustomWorkflowBuilder.
+  | 'linkedin_acceptance'
   | 'email_send' 
   | 'email_followup' 
   | 'whatsapp_send'

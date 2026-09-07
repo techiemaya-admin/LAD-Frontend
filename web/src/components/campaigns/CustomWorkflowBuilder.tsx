@@ -110,7 +110,7 @@ import {
   IG_AUTOPOST_STEP_ID, HUMAN_TASK_STEP_ID, REPORT_STEP_ID,
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
-  SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
+  SPLIT_STEP_ID, ACCEPT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
   templateToPreviewSteps,
 } from './workflowTemplates';
 import {
@@ -342,6 +342,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [RESEARCH_STEP_ID]: "Runs AI research on each lead's company from the open web. Nothing is required.",
   [SCORE_STEP_ID]: 'Scores each lead\'s buy-intent 0-100 and labels it hot/warm/cold. Nothing is required. Pairs naturally with a Multi-condition step placed right after it, to branch hot vs. cold leads.',
   [SPLIT_STEP_ID]: 'Sends variant A or B (roughly 50/50, sticky per lead) to compare two openers. Needs a message for BOTH variants.',
+  [ACCEPT_STEP_ID]: 'Waits to see if the lead accepts your connection request, then branches. Accepted goes one way; still unanswered after the chosen number of days goes the other. The clock starts when the invite was SENT.',
   [SETFIELD_STEP_ID]: 'Writes a tag or value onto the lead record for later branching or export.',
   [HTTP_STEP_ID]: "Calls any external API with this lead's data. Requests to internal/private/cloud-metadata addresses are blocked.",
 };
@@ -2628,6 +2629,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setEditingId(SPLIT_STEP_ID);
   };
 
+  const addAcceptanceBranch = () => {
+    if (!workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+      addWorkflowStep({
+        id: ACCEPT_STEP_ID, type: 'linkedin_acceptance', channel: 'linkedin',
+        title: 'Accepted?', description: 'Accepted · or after 5 days',
+      });
+      setCfg(ACCEPT_STEP_ID, {
+        wait_days: 5,
+        // Defaults chosen to match the shape people actually ask for: a phone
+        // number is what makes WhatsApp possible, an official email is what
+        // makes the fallback possible, and neither channel works without the
+        // enrichment in front of it.
+        accepted: { enrich: 'phone', channel: 'whatsapp', body: '' },
+        expired: { enrich: 'official_email', channel: 'email', subject: '', body: '' },
+      });
+    }
+    setEditingId(ACCEPT_STEP_ID);
+  };
+
   const addSetField = () => {
     if (!workflowPreview.some((s) => s.id === SETFIELD_STEP_ID)) {
       addWorkflowStep({ id: SETFIELD_STEP_ID, type: 'set_field', channel: 'email', title: 'Set field', description: 'Tag / write a value' });
@@ -3767,6 +3787,50 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           steps.push(buildVariant(spc.a, 'a', 'Variant A'));
           steps.push(buildVariant(spc.b, 'b', 'Variant B'));
         }
+      }
+
+      // "Accepted?" node → a linkedin_acceptance step plus, per branch, an
+      // enrichment step and a message step, both guarded by run_if_branch. The
+      // backend stamps 'accepted' or 'expired' into switch_outcomes and prunes
+      // the branch not taken — the same machinery the split test and the
+      // multi-condition node already use.
+      //
+      // The enrichment is INSIDE the branch on purpose: revealing a phone
+      // number for a lead who never accepted, or an email for one who did,
+      // spends credits on contact details that branch will never use.
+      if (workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+        const ac = configs[ACCEPT_STEP_ID] || {};
+        const acceptId = `ab-${ACCEPT_STEP_ID}`;
+        const buildBranch = (v: any, branchKey: string, label: string) => {
+          const guard = { run_if_branch: { switch_id: acceptId, branch: branchKey } };
+          const out: any[] = [];
+          if (v?.enrich) {
+            out.push({
+              type: 'data_enrich', title: `${label} · enrich`, channel: 'email', order_index: order++,
+              config: { enrich: [v.enrich], ...guard },
+            });
+          }
+          const body = (v?.body || '').trim();
+          if (!body) return out;   // a branch with no message is just the enrichment
+          if (v?.channel === 'email') {
+            out.push({ type: 'email_send', title: `${label} (email)`, channel: 'email', order_index: order++,
+              config: { subject: (v?.subject || '').trim(), body, ...guard } });
+          } else {
+            out.push({ type: 'whatsapp_send', title: `${label} (WhatsApp)`, channel: 'whatsapp', order_index: order++,
+              config: { whatsappMessage: body, ...guard } });
+          }
+          return out;
+        };
+        const days = parseInt(ac.wait_days, 10);
+        steps.push({
+          type: 'linkedin_acceptance', title: 'Accepted?', channel: 'linkedin', order_index: order++,
+          // Mirrors the backend's own guard: a 0 or unparseable value must not
+          // collapse to "expire immediately", which would email every lead the
+          // moment the invite goes out.
+          config: { branch_id: acceptId, wait_days: Number.isFinite(days) && days > 0 ? days : 5 },
+        });
+        buildBranch(ac.accepted, 'accepted', 'Accepted').forEach((s) => steps.push(s));
+        buildBranch(ac.expired, 'expired', 'No answer').forEach((s) => steps.push(s));
       }
 
       // "AI Media" node → records a media_generation step AND attaches the
