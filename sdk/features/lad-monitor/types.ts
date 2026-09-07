@@ -508,3 +508,44 @@ export interface LlmRoutingValidation {
   ok: boolean;
   error?: string;
 }
+
+// ── Vertical prompt viewer (read-only) ──────────────────────────────────────
+
+/** One vertical edition on disk, as shipped with the backend. */
+export interface VerticalPromptEdition {
+  key: string;
+  description: string | null;
+  version: string | null;
+  status: string | null;
+  pilotTenant: string | null;
+  /** Archived manifest versions available for rollback, newest first. */
+  versions: string[];
+  pipelines: {
+    key: string;
+    goal: string | null;
+    engine: string | null;
+    state: string | null;
+    /** False when this pipeline carries no prose of its own. */
+    hasTemplate: boolean;
+  }[];
+}
+
+/** The raw template, placeholders and all. Null when the pipeline has none. */
+export interface VerticalTemplate {
+  vertical: string;
+  pipeline: string;
+  version: string | null;
+  path: string | null;
+  template: string | null;
+  note?: string;
+}
+
+/** What one tenant's agent actually receives, knobs substituted in. */
+export interface RenderedVerticalPrompt {
+  prompt: string;
+  vertical: string;
+  version: string;
+  pipeline: string;
+  escalationPhone?: string | null;
+  policy?: unknown;
+}
