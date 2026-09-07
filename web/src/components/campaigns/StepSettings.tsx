@@ -57,6 +57,9 @@ const getRequiredFields = (stepType: StepType): string[] => {
     linkedin_company_search: ['linkedinCompanyName'],
     linkedin_employee_list: ['linkedinCompanyUrl'],
     linkedin_autopost: ['linkedinPostContent'],
+    // Edited through the Accepted? node in the workflow builder, which owns both
+    // branches; this panel has nothing of its own to offer.
+    linkedin_acceptance: [],
     linkedin_comment_reply: ['linkedinCommentText'],
     instagram_follow: ['instagramUsername'],
     instagram_like: ['instagramPostUrl'],

@@ -50,6 +50,7 @@ export const SCRAPE_STEP_ID = 'web-scrape-node';
 export const RESEARCH_STEP_ID = 'web-research-node';
 export const SCORE_STEP_ID = 'lead-score-node';
 export const SPLIT_STEP_ID = 'split-test-node';
+export const ACCEPT_STEP_ID = 'acceptance-branch-node';
 export const SETFIELD_STEP_ID = 'set-field-node';
 export const HTTP_STEP_ID = 'http-request-node';
 

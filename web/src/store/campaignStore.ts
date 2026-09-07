@@ -29,6 +29,7 @@ const defaultStepData: Record<StepType, Partial<StepData>> = {
   linkedin_company_search: { title: 'LinkedIn Company Search', linkedinCompanyName: '{{company_name}}' },
   linkedin_employee_list: { title: 'Get Employee List', linkedinCompanyUrl: '' },
   linkedin_autopost: { title: 'LinkedIn Auto Post', linkedinPostContent: '', linkedinPostImageUrl: '' },
+  linkedin_acceptance: { title: 'Accepted?' },
   linkedin_comment_reply: { title: 'Reply to LinkedIn Comment', linkedinCommentText: 'Thanks for your comment!' },
   email_send: { title: 'Send Email', subject: 'Re: {{company_name}}', body: 'Hi {{first_name}},...' },
   email_followup: { title: 'Email Follow-up', subject: 'Re: {{company_name}}', body: 'Hi {{first_name}},...' },
