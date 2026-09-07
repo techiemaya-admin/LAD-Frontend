@@ -107,6 +107,25 @@ const mockImages = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
 ];
 
+/**
+ * Read a notes-API body whether or not it carries the success envelope.
+ *
+ * The notes endpoints used to answer WITHOUT the `{success, data}` wrapper the
+ * rest of the WABA API uses, so a successful write looked like a no-op: the row
+ * WAS saved, this panel gated on `data.success`, and the list stayed on "No
+ * notes yet" with the text still sitting in the composer. Accepting both shapes
+ * keeps the panel correct either side of that deploy, and stops it silently
+ * regressing if the shape ever moves again.
+ *
+ * Returns null only when the server explicitly said it failed.
+ */
+function notesPayload<T>(body: unknown): T | null {
+  if (!body || typeof body !== 'object') return null;
+  const b = body as { success?: boolean; data?: unknown };
+  if (b.success === false) return null;
+  return (b.data ?? b) as T;
+}
+
 export const ConversationContextPanel = memo(function ConversationContextPanel({
   conversation,
   onClose,
@@ -312,7 +331,8 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
     fetchWithTenant(`${CONV_API}/${conversation.id}/notes?channel=${backendChannel}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) setNotes(data.data || []);
+        const rows = notesPayload<ConversationNote[]>(data);
+        setNotes(Array.isArray(rows) ? rows : []);
       })
       .catch(() => {});
   }, [conversation.id, backendChannel]);
@@ -406,9 +426,11 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           share_with_agent: shareNewNote,
         }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setNotes((prev) => [data.data, ...prev]);
+      // A real note always has an id — a sturdier success signal than an
+      // envelope flag this endpoint has not always sent.
+      const note = notesPayload<ConversationNote>(await res.json());
+      if (note?.id) {
+        setNotes((prev) => [note, ...prev]);
         setNewNote('');
         setShareNewNote(false);
       }
@@ -423,9 +445,9 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           method: 'PATCH',
           body: JSON.stringify({ content: editingNoteContent.trim() }),
         });
-        const data = await res.json();
-        if (data.success) {
-          setNotes((prev) => prev.map((n) => (n.id === noteId ? data.data : n)));
+        const note = notesPayload<ConversationNote>(await res.json());
+        if (note?.id) {
+          setNotes((prev) => prev.map((n) => (n.id === noteId ? note : n)));
           setEditingNoteId(null);
           setEditingNoteContent('');
         }
@@ -441,12 +463,12 @@ export const ConversationContextPanel = memo(function ConversationContextPanel({
           `/api/whatsapp-conversations/notes/${noteId}?channel=${backendChannel}`,
           { method: 'PATCH', body: JSON.stringify({ share_with_agent: next }) }
         );
-        const data = await res.json();
         // No optimistic flip. Showing "the agent can read this" when the save
         // failed is the one wrong answer here — it invites someone to write
         // the next note believing a control works that does not.
-        if (data.success) {
-          setNotes((prev) => prev.map((n) => (n.id === noteId ? data.data : n)));
+        const note = notesPayload<ConversationNote>(await res.json());
+        if (note?.id) {
+          setNotes((prev) => prev.map((n) => (n.id === noteId ? note : n)));
         }
       } catch {}
     },
