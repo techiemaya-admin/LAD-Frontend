@@ -82,6 +82,24 @@ jobs:
         # to exercise.
         run: npm ci
 
+      # The step this job was missing. `next build` collects page data for
+      # /api/blog/[id], which imports @prisma/client — and a fresh `npm ci` has
+      # no generated client, so the build died with
+      #     @prisma/client did not initialize yet. Please run "prisma generate"
+      # on every run, while the deploy stayed green: web/Dockerfile generates
+      # before it builds and CI did not. The gate was failing for a reason the
+      # deploy does not have, which is the mirror image of the divergence the
+      # "Build" step below warns about — and just as good at teaching people to
+      # ignore a red build.
+      #
+      # Kept character-for-character identical to web/Dockerfile, v6 pin
+      # included: npx would otherwise pull prisma 7, which rejects this schema.
+      # Nothing here needs DATABASE_URL — generate reads the schema and never
+      # connects, which the Docker build (no DATABASE_URL either) already proves.
+      - name: Generate Prisma client
+        working-directory: web
+        run: if [ -d "prisma" ]; then npx --yes prisma@6 generate; fi
+
       - name: Build
         working-directory: web
         env:
