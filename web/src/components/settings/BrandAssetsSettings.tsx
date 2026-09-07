@@ -448,7 +448,7 @@ export const BrandAssetsSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6">
         <div className="animate-pulse space-y-3">
           <div className="h-5 w-48 bg-gray-200 dark:bg-gray-800 rounded" />
           <div className="h-4 w-full max-w-md bg-gray-100 dark:bg-gray-900 rounded" />
@@ -459,7 +459,7 @@ export const BrandAssetsSettings: React.FC = () => {
 
   if (status && !status.enabled) {
     return (
-      <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6">
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <div>
@@ -479,7 +479,7 @@ export const BrandAssetsSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* ── Upload ── */}
-      <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6">
         <h2 className="text-gray-900 dark:text-gray-100 text-lg font-semibold">
           Brand Assets
         </h2>
@@ -515,7 +515,7 @@ export const BrandAssetsSettings: React.FC = () => {
           className={`mt-5 rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
             dragging
               ? 'border-blue-400 bg-blue-50/60 dark:bg-blue-950/20'
-              : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+              : 'border-gray-200 dark:border-blue-950/40 hover:border-gray-300 dark:hover:border-gray-700'
           }`}
         >
           <input
@@ -550,7 +550,7 @@ export const BrandAssetsSettings: React.FC = () => {
 
       {/* ── Drive folder (only when the environment has it) ── */}
       {status?.drive_enabled && (
-        <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
@@ -660,7 +660,7 @@ export const BrandAssetsSettings: React.FC = () => {
               </div>
 
               {/* ── Who can reach the folder ── */}
-              <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-800">
+              <div className="mt-6 pt-5 border-t border-gray-200 dark:border-blue-950/40">
                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   People with access
                 </h4>
@@ -676,7 +676,7 @@ export const BrandAssetsSettings: React.FC = () => {
                     {(status.collaborators || []).map((person) => (
                       <li
                         key={person.permission_id || person.email}
-                        className="flex flex-wrap items-center gap-2 justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#0a1027] border border-gray-200 dark:border-gray-800"
+                        className="flex flex-wrap items-center gap-2 justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40"
                       >
                         <span className="text-sm text-gray-700 dark:text-gray-200 truncate min-w-0">
                           {person.email}
@@ -759,7 +759,7 @@ export const BrandAssetsSettings: React.FC = () => {
       )}
 
       {/* ── Library ── */}
-      <div className="bg-white dark:bg-[#060b21] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 p-6">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
           <h3 className="text-gray-900 dark:text-gray-100 text-base font-semibold">
             Your files
@@ -776,7 +776,7 @@ export const BrandAssetsSettings: React.FC = () => {
         </p>
 
         {!status || status.assets.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
+          <div className="text-center py-10 border border-dashed border-gray-200 dark:border-blue-950/40 rounded-lg">
             <ImageIcon className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Nothing here yet — upload an image to get started.
@@ -789,11 +789,11 @@ export const BrandAssetsSettings: React.FC = () => {
                 key={asset.id}
                 className={`flex items-start gap-4 p-4 rounded-lg border transition-opacity ${
                   asset.enabled
-                    ? 'border-gray-100 dark:border-gray-800'
-                    : 'border-gray-100 dark:border-gray-800 opacity-55'
+                    ? 'border-gray-100 dark:border-blue-950/40'
+                    : 'border-gray-100 dark:border-blue-950/40 opacity-55'
                 }`}
               >
-                <div className="w-14 h-14 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-blue-950/40 overflow-hidden shrink-0 flex items-center justify-center">
                   {asset.preview_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

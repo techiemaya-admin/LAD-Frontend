@@ -427,7 +427,7 @@ export const MageSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-sm text-gray-500 dark:text-gray-400">
+      <div className="mx-4 mb-4 flex items-center gap-2 p-6 text-sm text-gray-500 sm:mx-6 sm:mb-6 dark:text-gray-400">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading MAGe settings…
       </div>
@@ -435,7 +435,7 @@ export const MageSettings: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-4 mb-4 space-y-4 sm:mx-6 sm:mb-6">
       {/* ── heading ── */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -463,7 +463,7 @@ export const MageSettings: React.FC = () => {
       {/* ── gallery: a button, not a section ── */}
       <button
         onClick={() => openGallery(false)}
-        className="w-full flex items-center gap-3 px-5 py-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#060b21] hover:bg-gray-50 dark:hover:bg-gray-900/60 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] hover:bg-gray-50 dark:hover:bg-gray-900/60 transition-colors text-left"
       >
         <span className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
           <Images className="w-4 h-4" />
@@ -479,7 +479,7 @@ export const MageSettings: React.FC = () => {
         <ChevronRight className="w-4 h-4 text-gray-400" />
       </button>
 
-      <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#060b21] divide-y divide-gray-200 dark:divide-gray-800 overflow-hidden">
+      <div className="rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] divide-y divide-gray-200 dark:divide-blue-950/40 overflow-hidden">
         {/* ── Business DNA ── */}
         <div>
           <SectionHeader
@@ -509,7 +509,7 @@ export const MageSettings: React.FC = () => {
                 {profiles.map((p) => (
                   <li
                     key={p.domain}
-                    className="p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#0a1027]"
+                    className="p-3 rounded-lg border border-gray-200 dark:border-blue-950/40 bg-gray-50 dark:bg-[#071131]"
                   >
                     <div className="flex items-start gap-3 flex-wrap">
                       <div className="flex-1 min-w-0">
@@ -589,7 +589,7 @@ export const MageSettings: React.FC = () => {
                     </div>
 
                     {changeTarget === p.domain && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-blue-950/40">
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                           What should change?
                         </label>
@@ -628,7 +628,7 @@ export const MageSettings: React.FC = () => {
               </ul>
 
               {/* extract new */}
-              <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div className="pt-3 border-t border-gray-200 dark:border-blue-950/40">
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                   Analyse a website
                 </label>
@@ -657,7 +657,7 @@ export const MageSettings: React.FC = () => {
                 </div>
 
                 {extractRun && (
-                  <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-[#0a1027] border border-gray-200 dark:border-gray-800">
+                  <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40">
                     <div className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
                       {['completed', 'failed', 'error'].includes(String(extractRun.status)) ? (
                         <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -706,7 +706,7 @@ export const MageSettings: React.FC = () => {
           {open === 'icp' && (
             <div className="px-5 pb-5 space-y-3">
               {icp?.exists ? (
-                <pre className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-[#0a1027] rounded-lg p-3 border border-gray-200 dark:border-gray-800 max-h-56 overflow-y-auto">
+                <pre className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-[#071131] rounded-lg p-3 border border-gray-200 dark:border-blue-950/40 max-h-56 overflow-y-auto">
                   {icp.summary || 'No detail recorded.'}
                 </pre>
               ) : (
@@ -767,7 +767,7 @@ export const MageSettings: React.FC = () => {
                   {Object.entries(keywords).map(([key, value]) => (
                     <li
                       key={key}
-                      className="p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#0a1027]"
+                      className="p-3 rounded-lg border border-gray-200 dark:border-blue-950/40 bg-gray-50 dark:bg-[#071131]"
                     >
                       <div className="flex items-start gap-3">
                         <code className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-mono shrink-0">
@@ -814,7 +814,7 @@ export const MageSettings: React.FC = () => {
                 </button>
               </div>
 
-              <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div className="pt-3 border-t border-gray-200 dark:border-blue-950/40">
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1.5">
                   Try a filename
                 </label>
@@ -834,7 +834,7 @@ export const MageSettings: React.FC = () => {
                   </button>
                 </div>
                 {previewResult && (
-                  <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-[#0a1027] border border-gray-200 dark:border-gray-800">
+                  <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40">
                     <div className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
                       {previewResult.matched?.length
                         ? `Expanded ${previewResult.matched.join(', ')}`
@@ -972,7 +972,7 @@ const MageWizard: React.FC<{
   };
 
   return (
-    <div className="mt-3 p-4 rounded-lg border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+    <div className="mt-3 p-4 rounded-lg border border-indigo-200 dark:border-blue-950/40 bg-indigo-50/50 dark:bg-[#071131] space-y-3">
       <div className="flex items-center gap-2">
         <Wand2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">

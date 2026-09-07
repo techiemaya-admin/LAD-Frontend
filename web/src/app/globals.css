@@ -805,7 +805,7 @@ body {
    Ensures all input, textarea, select, combobox, and modal fields use
    slate-900/50 (rgba(15, 23, 42, 0.5)) background and subtle #1c2c4e border.
 ----------------------------------------------------------------- */
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="image"]):not(.media-builder-prompt),
 .dark textarea,
 .dark select,
 .dark [data-slot="input"],
@@ -813,11 +813,11 @@ body {
 .dark [data-slot="select-trigger"],
 .dark [role="combobox"],
 .dark button[role="combobox"],
-.dark [role="dialog"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.dark [role="dialog"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not(.media-builder-prompt),
 .dark [role="dialog"] textarea,
 .dark [role="dialog"] select,
 .dark [role="dialog"] [role="combobox"],
-.dark [data-slot="dialog-content"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.dark [data-slot="dialog-content"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not(.media-builder-prompt),
 .dark [data-slot="dialog-content"] textarea,
 .dark [data-slot="dialog-content"] select,
 .dark [data-slot="dialog-content"] [role="combobox"] {

@@ -93,7 +93,7 @@ export function AgentBuilderBrandDNA({
         linkElement.rel = "stylesheet";
         document.head.appendChild(linkElement);
       }
-      
+
       const href = uniqueFonts
         .map((font) => `family=${font.replace(/\s+/g, "+")}`)
         .join("&");
@@ -112,12 +112,12 @@ export function AgentBuilderBrandDNA({
     return (
       <div className={cn(
         "relative flex flex-col items-center justify-center p-8",
-        fullBleed 
-          ? "w-full h-full bg-transparent" 
-          : "w-[448px] max-w-full h-[88%] max-h-[660px] min-h-[460px] bg-white rounded-3xl border border-slate-200 shadow-xl"
+        fullBleed
+          ? "w-full h-full bg-transparent dark:bg-transparent"
+          : "w-[448px] max-w-full h-[88%] max-h-[660px] min-h-[460px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl"
       )}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0b1957]" />
-        <p className="mt-4 text-sm font-semibold text-slate-500">Loading Brand DNA Profile...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0b1957] dark:border-blue-500" />
+        <p className="mt-4 text-sm font-semibold text-slate-500 dark:text-slate-400">Loading Brand DNA Profile...</p>
       </div>
     );
   }
@@ -141,24 +141,24 @@ export function AgentBuilderBrandDNA({
   return (
     <div className={cn(
       "relative flex flex-col items-center overflow-hidden transition-all duration-300",
-      fullBleed 
-        ? "w-full h-full bg-transparent" 
-        : "w-[448px] max-w-full h-[88%] max-h-[660px] min-h-[460px] bg-white rounded-3xl border border-slate-200 shadow-xl animate-in fade-in zoom-in-95"
+      fullBleed
+        ? "w-full h-full bg-transparent dark:bg-transparent"
+        : "w-[448px] max-w-full h-[88%] max-h-[660px] min-h-[460px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl animate-in fade-in zoom-in-95"
     )}>
-      
+
       {/* Header */}
       {!fullBleed && (
-        <div className="w-full flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+        <div className="w-full flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
           <div className="flex items-center gap-2 pl-4">
             <Sparkles className="size-4 text-emerald-500" />
-            <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider">
               {"Extracted Brand DNA"}
             </span>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+              className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
             >
               <X className="size-4" />
             </button>
@@ -168,11 +168,11 @@ export function AgentBuilderBrandDNA({
 
       {/* Main Content Area */}
       <div className="flex-1 w-full overflow-y-auto scrollbar-none pt-6 px-6 pb-20 space-y-6">
-        
+
         {/* Title & Domain */}
         <div className="text-center space-y-1">
           <h2
-            className="text-2xl font-extrabold text-[#0b1957] tracking-tight"
+            className="text-2xl font-extrabold text-[#0b1957] dark:text-slate-100 tracking-tight"
             style={{ fontFamily: brandDna.fonts?.title || "inherit" }}
           >
             {brandDna.brand_name || "Extracted Brand DNA"}
@@ -187,7 +187,7 @@ export function AgentBuilderBrandDNA({
           </a>
           {brandDna.tagline && (
             <div
-              className="text-sm font-semibold text-slate-500 mt-2 italic markdown-content"
+              className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-2 italic markdown-content"
               style={{ fontFamily: brandDna.fonts?.body || "inherit" }}
             >
               <ReactMarkdown
@@ -203,17 +203,17 @@ export function AgentBuilderBrandDNA({
 
         {/* Company Overview Card */}
         {brandDna.overview && (
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2">
-            <h3 className="text-xs font-bold text-[#0b1957] uppercase tracking-wider flex items-center gap-1.5">
+          <div className="bg-slate-50 dark:bg-[#071131] border border-slate-100 dark:border-blue-950/40 rounded-2xl p-4 space-y-2">
+            <h3 className="text-xs font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
               <BookOpen className="size-3.5 text-blue-500" /> Company Overview
             </h3>
             <div
-              className="text-xs text-slate-600 leading-relaxed font-medium markdown-content"
+              className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium markdown-content"
               style={{ fontFamily: brandDna.fonts?.body || "inherit" }}
             >
               <ReactMarkdown
                 components={{
-                  strong: ({ ...props }) => <strong className="font-bold text-[#0b1957]" {...props} />,
+                  strong: ({ ...props }) => <strong className="font-bold text-[#0b1957] dark:text-slate-100" {...props} />,
                   p: ({ ...props }) => <p className="leading-relaxed" {...props} />,
                 }}
               >
@@ -227,13 +227,13 @@ export function AgentBuilderBrandDNA({
         {(brandDna.values || brandDna.tone) && (
           <div className="grid grid-cols-2 gap-4">
             {brandDna.values && brandDna.values.length > 0 && (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                <h4 className="text-[10px] font-bold text-[#0b1957] uppercase tracking-wider mb-2">
+              <div className="bg-slate-50 dark:bg-[#071131] border border-slate-100 dark:border-blue-950/40 rounded-2xl p-4">
+                <h4 className="text-[10px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider mb-2">
                   Brand Values
                 </h4>
                 <ul className="space-y-1.5">
                   {brandDna.values.slice(0, 4).map((val, idx) => (
-                    <li key={idx} className="text-[11px] text-slate-600 font-semibold flex items-start gap-1">
+                    <li key={idx} className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold flex items-start gap-1">
                       <span className="text-emerald-500 select-none">•</span>
                       <div
                         className="inline markdown-content"
@@ -253,17 +253,17 @@ export function AgentBuilderBrandDNA({
               </div>
             )}
             {brandDna.tone && (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                <h4 className="text-[10px] font-bold text-[#0b1957] uppercase tracking-wider mb-2">
+              <div className="bg-slate-50 dark:bg-[#071131] border border-slate-100 dark:border-blue-950/40 rounded-2xl p-4">
+                <h4 className="text-[10px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider mb-2">
                   Tone of Voice
                 </h4>
                 <div
-                  className="text-[11px] text-slate-600 font-semibold leading-relaxed markdown-content"
+                  className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold leading-relaxed markdown-content"
                   style={{ fontFamily: brandDna.fonts?.body || "inherit" }}
                 >
                   <ReactMarkdown
                     components={{
-                      strong: ({ ...props }) => <strong className="font-bold text-[#0b1957]" {...props} />,
+                      strong: ({ ...props }) => <strong className="font-bold text-[#0b1957] dark:text-slate-100" {...props} />,
                       p: ({ ...props }) => <p className="leading-relaxed" {...props} />,
                     }}
                   >
@@ -277,8 +277,8 @@ export function AgentBuilderBrandDNA({
 
         {/* Visual Token Swatches */}
         {brandDna.colors && (
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-bold text-[#0b1957] uppercase tracking-wider flex items-center gap-1.5">
+          <div className="bg-slate-50 dark:bg-[#071131] border border-slate-100 dark:border-blue-950/40 rounded-2xl p-4 space-y-3">
+            <h3 className="text-xs font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
               <Palette className="size-3.5 text-pink-500" /> Brand Identity Colors
             </h3>
             <div className="flex flex-wrap gap-3">
@@ -289,17 +289,17 @@ export function AgentBuilderBrandDNA({
                   <button
                     key={key}
                     onClick={() => handleCopyColor(hex)}
-                    className="flex-1 min-w-[125px] max-w-[145px] flex items-center gap-2.5 p-2 bg-white border border-slate-200 rounded-xl hover:shadow-md active:scale-95 transition-all text-left group"
+                    className="flex-1 min-w-[125px] max-w-[145px] flex items-center gap-2.5 p-2 bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 rounded-xl hover:shadow-md active:scale-95 transition-all text-left group"
                   >
                     <div
-                      className="size-7 rounded-lg border border-slate-100 shadow-inner flex-shrink-0"
+                      className="size-7 rounded-lg border border-slate-100 dark:border-blue-950/40 shadow-inner flex-shrink-0"
                       style={{ backgroundColor: hex }}
                     />
                     <div className="min-w-0">
                       <div className="text-[10px] font-bold text-slate-400 capitalize truncate leading-none">
                         {key}
                       </div>
-                      <div className="text-xs font-bold text-[#0b1957] flex items-center gap-1 mt-0.5">
+                      <div className="text-xs font-bold text-[#0b1957] dark:text-slate-100 flex items-center gap-1 mt-0.5">
                         {hex}
                         {isCopied ? (
                           <Check className="size-3 text-emerald-500" />
@@ -317,7 +317,7 @@ export function AgentBuilderBrandDNA({
 
         {/* Typography settings */}
         {brandDna.fonts && (
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-[#071131] border border-slate-100 dark:border-blue-950/40 rounded-2xl p-4">
             {brandDna.fonts.title && (
               <div className="space-y-1.5">
                 <span className="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1">
@@ -329,7 +329,7 @@ export function AgentBuilderBrandDNA({
                     return (
                       <span
                         key={idx}
-                        className="inline-block px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-bold text-[#0b1957]"
+                        className="inline-block px-1.5 py-0.5 bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 rounded text-[10px] font-bold text-[#0b1957] dark:text-slate-100"
                         style={{ fontFamily: `${font}, sans-serif` }}
                       >
                         {cleanFont}
@@ -350,7 +350,7 @@ export function AgentBuilderBrandDNA({
                     return (
                       <span
                         key={idx}
-                        className="inline-block px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-bold text-[#0b1957]"
+                        className="inline-block px-1.5 py-0.5 bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 rounded text-[10px] font-bold text-[#0b1957] dark:text-slate-100"
                         style={{ fontFamily: `${font}, sans-serif` }}
                       >
                         {cleanFont}
@@ -366,25 +366,25 @@ export function AgentBuilderBrandDNA({
         {/* Asset Manifest Library */}
         {brandDna.assets && brandDna.assets.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-[#0b1957] uppercase tracking-wider flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="size-3.5 text-purple-500" /> Contextual Asset Library
             </h3>
-            
+
             {Object.entries(categories).map(([categoryName, assetList]) => (
-              <div key={categoryName} className="space-y-2 border-t border-slate-100 pt-3">
-                <h4 className="text-[10px] font-bold text-[#0b1957]/70 uppercase tracking-wider">
+              <div key={categoryName} className="space-y-2 border-t border-slate-100 dark:border-blue-950/40 pt-3">
+                <h4 className="text-[10px] font-bold text-[#0b1957]/70 dark:text-slate-300 uppercase tracking-wider">
                   {categoryName}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   {assetList.map((asset) => (
                     <div
                       key={asset.key}
-                      className="group relative bg-slate-50 border border-slate-150 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col h-28 cursor-pointer"
+                      className="group relative bg-slate-50 dark:bg-[#071131] border border-slate-150 dark:border-blue-950/40 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col h-28 cursor-pointer"
                       onClick={() => setZoomedAsset(asset)}
                     >
                       {/* Asset Preview Thumbnail */}
                       <div
-                        className="flex-1 relative overflow-hidden flex items-center justify-center border-b border-slate-100"
+                        className="flex-1 relative overflow-hidden flex items-center justify-center border-b border-slate-100 dark:border-blue-950/40"
                         style={checkersStyle}
                       >
                         {/* Shimmer Loading Wireframe skeleton */}
@@ -395,14 +395,14 @@ export function AgentBuilderBrandDNA({
                           </div>
                         )}
                         {failedAssets[asset.key] ? (
-                          <div className="flex flex-col items-center justify-center text-slate-300 gap-1.5 p-4 w-full h-full bg-slate-50">
+                          <div className="flex flex-col items-center justify-center text-slate-300 gap-1.5 p-4 w-full h-full bg-slate-50 dark:bg-[#071131]">
                             <svg className="size-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             <span className="text-[8px] font-semibold text-slate-400">Failed to load</span>
                           </div>
                         ) : asset.url.endsWith(".svg") ? (
-                          <div className="p-3 w-full h-full flex items-center justify-center bg-white/40">
+                          <div className="p-3 w-full h-full flex items-center justify-center bg-white/40 dark:bg-[#071131]">
                             <img
                               src={asset.url}
                               alt={asset.key}
@@ -434,10 +434,10 @@ export function AgentBuilderBrandDNA({
                           <ZoomIn className="size-5 text-white drop-shadow" />
                         </div>
                       </div>
-                      
+
                       {/* Asset Title Footer */}
-                      <div className="p-2 bg-white border-t border-slate-100 flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold text-[#0b1957] truncate capitalize">
+                      <div className="p-2 bg-white dark:bg-[#071131] border-t border-slate-100 dark:border-blue-950/40 flex flex-col min-w-0">
+                        <span className="text-[10px] font-bold text-[#0b1957] dark:text-slate-100 truncate capitalize">
                           {asset.key.replace(/_/g, " ")}
                         </span>
                         {asset.context && (
@@ -458,18 +458,18 @@ export function AgentBuilderBrandDNA({
 
       {/* Bottom Sticky Action Panel */}
       {!hideButtons && (
-        <div className="absolute bottom-0 left-0 right-0 w-full flex-shrink-0 flex justify-between pb-5 px-6 pt-3 bg-gradient-to-t from-white via-white/95 to-transparent z-20 gap-3">
+        <div className="absolute bottom-0 left-0 right-0 w-full flex-shrink-0 flex justify-between pb-5 px-6 pt-3 bg-gradient-to-t from-white dark:from-[#000724] via-white/95 to-transparent z-20 gap-3">
           <button
             type="button"
             onClick={() => onNext("Request Changes")}
-            className="flex-1 py-3 rounded-full font-bold border border-slate-300 bg-white hover:bg-slate-50 text-[#0b1957] shadow-sm active:scale-95 transition-all text-center cursor-pointer"
+            className="flex-1 py-3 rounded-full font-bold border border-slate-300 dark:border-blue-900/60 bg-white dark:bg-[#000724] hover:bg-slate-50 dark:hover:bg-blue-950/40 text-[#0b1957] dark:text-slate-100 shadow-sm active:scale-95 transition-all text-center cursor-pointer"
           >
             Request Changes
           </button>
           <button
             type="button"
             onClick={() => onNext("Select this & start")}
-            className="flex-1 py-3 rounded-full font-bold shadow-lg bg-gradient-to-br from-[#0b1957] to-[#1e293b] text-white hover:shadow-xl hover:shadow-[#0b1957]/10 active:scale-95 transition-all text-center cursor-pointer"
+            className="flex-1 py-3 rounded-full font-bold shadow-lg bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 text-white hover:shadow-xl hover:shadow-[#0b1957]/10 active:scale-95 transition-all text-center cursor-pointer"
           >
             Select this & start
           </button>

@@ -36,13 +36,13 @@ export function BuilderBottomInput({
 
   return (
     <div className="w-full flex justify-center mt-2 px-2 pb-2">
-      <div className="w-full relative flex items-center bg-slate-50/80 backdrop-blur-md rounded-2xl border border-slate-200/50 shadow-sm p-1.5 transition-all focus-within:shadow-md focus-within:border-[#0b1957]/30">
+      <div className="w-full relative flex items-center bg-slate-50/80 dark:bg-[#071131] backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-blue-950/40 shadow-sm p-1.5 transition-all focus-within:shadow-md focus-within:border-[#0b1957]/30 dark:focus-within:border-blue-500/50">
         {enableUpload ? (
           <>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 shrink-0 text-[#0b1957]/50 hover:text-[#0b1957] transition-colors rounded-full hover:bg-slate-100 cursor-pointer"
+              className="p-2 shrink-0 text-[#0b1957]/50 dark:text-slate-400 hover:text-[#0b1957] dark:hover:text-white transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-blue-950/60 cursor-pointer"
               aria-label="Add attachment"
             >
               <div className="border border-current rounded-full p-0.5">
@@ -73,13 +73,13 @@ export function BuilderBottomInput({
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
-          className="media-builder-prompt flex-1 bg-transparent border-none outline-none text-sm text-[#0b1957] placeholder:text-slate-400 px-2"
+          className="media-builder-prompt flex-1 bg-transparent border-none outline-none text-sm text-[#0b1957] dark:text-slate-100 placeholder:text-slate-400 px-2"
         />
 
         <div className="flex items-center gap-1.5 shrink-0 pr-1">
           <button
             type="button"
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[#0b1957]/70 hover:text-[#0b1957] transition-all cursor-pointer"
+            className="p-2.5 bg-transparent hover:bg-slate-200 dark:hover:bg-blue-900/60 rounded-full text-[#0b1957]/70 dark:text-slate-300 hover:text-[#0b1957] dark:hover:text-white transition-all cursor-pointer"
             aria-label="Voice input"
           >
             <Mic className="size-4" />
@@ -87,7 +87,7 @@ export function BuilderBottomInput({
           <button
             type="button"
             onClick={handleSubmit}
-            className="p-2.5 bg-gradient-to-br from-[#0b1957] to-[#1e293b] hover:to-[#0b1957] active:scale-95 rounded-full text-white transition-all shadow-md cursor-pointer"
+            className="p-2.5 bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 hover:to-[#0b1957] dark:hover:to-blue-800 active:scale-95 rounded-full text-white transition-all shadow-md cursor-pointer"
             aria-label="Send"
           >
             <Send className="size-4 -ml-0.5" />
