@@ -301,7 +301,7 @@ const CONDITIONS = [
 const STEP_INSTRUCTIONS: Record<string, string> = {
   // Sources
   own_contacts: 'Works through the contacts already in your account - people who messaged you or were imported from your booking system. Email only: they have no open WhatsApp window, so a WhatsApp step would need an approved template. Anyone without a usable email address is skipped.',
-  zoho_recurring: 'Imports newly-created Zoho CRM contacts every day for the life of the campaign. Nothing is required - the tag filter is optional.',
+  zoho_recurring: 'Imports newly-created Zoho CRM records every day for the life of the campaign. Contacts and Leads need nothing beyond the optional tag filter; Accounts are companies, so they also need a job title to find at each one.',
   zoho_once: 'Imports contacts already synced from Zoho CRM, once. Nothing is required.',
   ghl_once: 'Imports contacts already synced from GoHighLevel, once. Nothing is required.',
   ghl_recurring: 'Imports newly-created GoHighLevel contacts every day for the life of the campaign. Nothing is required - the tag filter is optional. GoHighLevel must be connected and synced first.',
@@ -3049,7 +3049,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   }, [editingId, liOrganizations.length]);
 
   // Lazy-load Zoho field metadata when the write-back node is open, per module.
-  const zohoModule = configs[ZOHO_UPDATE_STEP_ID]?.module === 'Leads' ? 'Leads' : 'Contacts';
+  // Contacts and Leads are people; Accounts are companies, and their field
+  // list has nothing in common with either (no first name, no email).
+  const ZOHO_WRITEBACK_MODULES = ['Contacts', 'Leads', 'Accounts'] as const;
+  const zohoModule = ZOHO_WRITEBACK_MODULES.includes(configs[ZOHO_UPDATE_STEP_ID]?.module)
+    ? configs[ZOHO_UPDATE_STEP_ID]?.module as string
+    : 'Contacts';
   useEffect(() => {
     if (editingId !== ZOHO_UPDATE_STEP_ID) return;
     let cancelled = false;
@@ -3126,6 +3131,18 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (workflowPreview.some((s) => s.id === APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       issues.push({ id: APPROVAL_STEP_ID, message: 'The Approval node needs a LinkedIn post node - it gates what that node publishes.' });
     }
+    // Zoho Accounts: an account is a company, so without a target job title the
+    // import has nobody to search for and the campaign would launch, run daily
+    // and enrol zero leads without ever erroring. Same reasoning as the
+    // broadcast template below — catch it before Launch, not after.
+    if (source === 'zoho_recurring'
+        && (configs[SOURCE_STEP_ID] || {}).zoho_modules === 'accounts'
+        && !String((configs[SOURCE_STEP_ID] || {}).zoho_account_title || '').trim()) {
+      issues.push({
+        id: SOURCE_STEP_ID,
+        message: 'Importing Zoho Accounts needs a job title to look for. An account is a company, not a person — without a title there is nobody to enrol.',
+      });
+    }
     // Broadcasts: catch the missing-required-field case here rather than letting
     // the backend validator answer with a 400 after the user hits Launch.
     if (workflowPreview.some((x) => x.id === WA_BROADCAST_STEP_ID)
@@ -3144,7 +3161,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       });
     }
     return issues;
-  }, [workflowPreview, configs]);
+  }, [workflowPreview, configs, source]);
 
   // Router-style branch visualisation for the Multi-condition node: one output
   // node per condition (+ else), fanned out on the canvas.
@@ -3339,6 +3356,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             source: 'zoho_contacts',
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
             leadGenerationLimit: perDayN,
           },
         });
@@ -3686,7 +3708,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         if (mappings.length) {
           steps.push({
             type: 'zoho_update', title: 'Update Zoho record', channel: 'linkedin', order_index: order++,
-            config: { module: zc.module === 'Leads' ? 'Leads' : 'Contacts', mappings },
+            config: { module: ['Contacts', 'Leads', 'Accounts'].includes(zc.module) ? zc.module : 'Contacts', mappings },
           });
         }
       }
@@ -3813,6 +3835,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           ...(source === 'zoho_recurring' ? {
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
             // Compliant, read-only Instagram enrichment: resolve each contact's
             // handle + optional public business_discovery profile. No follow/DM
             // (Meta's API exposes none) - maps contacts to IG for inbound.
@@ -4303,10 +4330,31 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Import from</label>
               <CustomSelect className={field} value={cfg.zoho_modules || 'contacts'} onValueChange={(val) => setCfg(editingId, { zoho_modules: val })}>
                 <option value="contacts">Contacts only</option><option value="contacts_leads">Contacts + Leads</option>
+                <option value="accounts">Accounts (companies)</option>
               </CustomSelect></div>
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Job title to find at each account</label>
+                <Input
+                  value={cfg.zoho_account_title || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_title: e.target.value })}
+                  placeholder="e.g. Head of Operations, Operations Director"
+                />
+                <p className="text-xs text-muted-foreground">
+                  An account is a company, not a person. Each one is searched on LinkedIn for people with this title. Separate alternatives with commas — they widen one search rather than adding more.
+                </p>
+                {!(cfg.zoho_account_title || '').trim() && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">Required — without a title there is nobody to import.</p>
+                )}
+              </div>
+            )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only tag (optional)</label>
               <Input value={cfg.zoho_tag || ''} onChange={(e) => setCfg(editingId, { zoho_tag: e.target.value })} placeholder="e.g. Auto-Conversion Lead" /></div>
-            <p className="text-xs text-muted-foreground">Imports up to {perDay}/day of newly-created records, every day until the campaign ends.</p>
+            <p className="text-xs text-muted-foreground">
+              {cfg.zoho_modules === 'accounts'
+                ? `Imports up to ${perDay}/day of newly-created accounts and finds people at each, every day until the campaign ends.`
+                : `Imports up to ${perDay}/day of newly-created records, every day until the campaign ends.`}
+            </p>
             <div className="rounded-lg border border-border p-2.5 space-y-2 bg-muted/20">
               <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
                 <input type="checkbox" checked={!!cfg.resolve_instagram} onChange={(e) => setCfg(editingId, { resolve_instagram: e.target.checked })} />
@@ -4911,8 +4959,17 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const mappedCount = Object.values(zmap).filter(Boolean).length;
             return (<>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Update which record</label>
-                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => { setCfg(eid, { module: val }); updateWorkflowStep(eid, { description: `Write back to ${val}` }); }}>
-                  <option value="Contacts">Contacts</option><option value="Leads">Leads</option>
+                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => {
+                  // Drop the existing mapping. It is keyed by Zoho api_name, and
+                  // the save path writes EVERY key in it — not just the rows still
+                  // on screen — so a mapping left over from Contacts would be
+                  // posted invisibly to Accounts, where those fields do not exist.
+                  setCfg(eid, { module: val, map: {} });
+                  updateWorkflowStep(eid, { description: `Write back to ${val}` });
+                }}>
+                  <option value="Contacts">Contacts</option>
+                  <option value="Leads">Leads</option>
+                  <option value="Accounts">Accounts (companies)</option>
                 </CustomSelect></div>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Field mapping{mappedCount ? ` (${mappedCount})` : ''}</label>
@@ -4935,7 +4992,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   ))}
                 </div>
               )}
-              <p className="text-[11px] leading-snug text-muted-foreground">Runs when a lead finishes the sequence - writes the mapped workflow &amp; enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {(cfg.module || 'Contacts') === 'Accounts'
+                  ? 'Runs when a lead finishes the sequence - writes the mapped data onto the COMPANY the lead was found at, not the person. Only leads that came from the Zoho Accounts source carry an account to update; for anyone else this step is skipped. Only non-empty values are written; blank fields are left untouched.'
+                  : 'Runs when a lead finishes the sequence - writes the mapped workflow & enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.'}
+              </p>
             </>);
           })()}
 

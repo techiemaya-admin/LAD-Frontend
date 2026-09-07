@@ -613,8 +613,14 @@ export function useMediaBuilder() {
     setLoadingGallery(true);
     setError("");
     try {
+      // "Everything" is a very large window, NOT an empty value. The worker
+      // declares `max_age_days: int | None = 90` and FastAPI cannot parse "" as
+      // an int, so `?max_age_days=` was a 422 (`int_parsing`) rather than "no
+      // limit". Omitting the parameter is no good either — that re-applies the
+      // 90-day default, the opposite of full history. The worker's filter is
+      // `if max_age_days is not None`, so 36500 days reaches back to ~1926.
       const url = loadAll
-        ? `${workerUrl}/playground-media/gallery?max_age_days=`
+        ? `${workerUrl}/playground-media/gallery?max_age_days=36500`
         : `${workerUrl}/playground-media/gallery?max_age_days=90`;
       const res = await fetch(url, {
         method: "GET",
