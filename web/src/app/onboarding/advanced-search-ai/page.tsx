@@ -1585,6 +1585,24 @@ export default function AdvancedSearchAIPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaFileInputRef = useRef<HTMLInputElement>(null);
 
+    // Which model answers this chat. null = Auto, i.e. leave the workspace's own
+    // routing rule in charge — deliberately NOT the same as picking a model.
+    // Kept per browser: it is a personal preference, not workspace configuration.
+    const [chatModel, setChatModel] = useState<ModelChoice>(null);
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('adv-chat-model');
+            if (raw) setChatModel(JSON.parse(raw));
+        } catch { /* corrupt or unavailable storage → Auto */ }
+    }, []);
+    const pickChatModel = useCallback((c: ModelChoice) => {
+        setChatModel(c);
+        try {
+            if (c) localStorage.setItem('adv-chat-model', JSON.stringify(c));
+            else localStorage.removeItem('adv-chat-model');
+        } catch { /* storage full or blocked — the choice still applies this session */ }
+    }, []);
+
     // Contact picker modal state
     const [showContactPicker, setShowContactPicker] = useState(false);
     const [cpPickerStep, setCpPickerStep] = useState<'source' | 'contacts'>('source');
@@ -1967,7 +1985,7 @@ export default function AdvancedSearchAIPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: msg }),
+                body: JSON.stringify({ message: msg, ...(chatModel || {}) }),
             });
             const data = await res.json();
             if (data.success) {
@@ -2065,7 +2083,7 @@ export default function AdvancedSearchAIPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: '__init__' }),
+                body: JSON.stringify({ message: '__init__', ...(chatModel || {}) }),
             });
             const data = await res.json();
             if (data.success && data.reply) {
@@ -7984,6 +8002,9 @@ export default function AdvancedSearchAIPage() {
                                     {!mediaMode && (
                                         <RolesLauncher onPick={startRole} />
                                     )}
+                                    {!mediaMode && (
+                                        <ModelPicker value={chatModel} onChange={pickChatModel} />
+                                    )}
                                   </div>
                                     {/* Premium Search or Mic Button based on mediaMode */}
                                     {mediaMode ? (
@@ -9727,6 +9748,120 @@ function RoleChain({ tpl, compact = false }: { tpl: WorkflowTemplate; compact?: 
  *  NOTE: the component and its CSS keep the older `roles` naming - renaming those
  *  is churn with no user-visible effect, and `.adv-roles-btn` is referenced in
  *  four style blocks. */
+/** A model the user may pick, as returned by GET /api/ai-playground/models. */
+type PickableModel = { model: string; input: number | null; output: number | null };
+type ModelChoice = { provider: string; model: string } | null;
+
+/** Display names. Anything not listed falls back to the raw provider key. */
+const PROVIDER_LABEL: Record<string, string> = {
+    anthropic: 'Claude',
+    openai: 'GPT',
+    gemini: 'Gemini',
+    deepseek: 'DeepSeek',
+};
+
+/** "claude-sonnet-4-6" → "Sonnet 4 6" — the family, without the vendor prefix. */
+function modelLabel(model: string): string {
+    return model
+        .replace(/^(claude|gpt|gemini|deepseek)-?/i, '')
+        .replace(/-/g, ' ')
+        .trim() || model;
+}
+
+/**
+ * Model picker for the chat composer.
+ *
+ * The options come from the server, never a hardcoded list here: the backend
+ * serves only models it can actually price, and an unpriced id would bill the
+ * tenant at a $5/$15 "unknown model" rate. A list duplicated in the client would
+ * drift out of that guarantee the first time anyone added a model.
+ *
+ * "Auto" (no pick) is the default and is not the same as choosing a model — it
+ * leaves the tenant's own routing rule in charge.
+ */
+function ModelPicker({ value, onChange }: { value: ModelChoice; onChange: (c: ModelChoice) => void }) {
+    const [open, setOpen] = React.useState(false);
+    const [providers, setProviders] = React.useState<Record<string, PickableModel[]>>({});
+
+    React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/ai-playground/models', { credentials: 'include' });
+                const data = await res.json();
+                if (!cancelled && data?.success) setProviders(data.providers || {});
+            } catch {
+                // Non-fatal: with no list the chip stays on Auto and the chat
+                // works exactly as it did before the picker existed.
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const h = () => setOpen(false);
+        document.addEventListener('click', h);
+        return () => document.removeEventListener('click', h);
+    }, [open]);
+
+    const label = value ? `${PROVIDER_LABEL[value.provider] || value.provider}` : 'Auto';
+    const hasOptions = Object.keys(providers).length > 0;
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <button type="button" className="adv-roles-btn"
+                title={value ? `Answers come from ${value.provider}/${value.model}` : 'Model chosen automatically for this workspace'}
+                onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 0 1 5 5v1a4 4 0 0 1 0 8v1a5 5 0 0 1-10 0v-1a4 4 0 0 1 0-8V7a5 5 0 0 1 5-5Z" /></svg>
+                {label}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ opacity: .55, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            {open && (
+                <div className="adv-roles-menu" onClick={(e) => e.stopPropagation()}>
+                    <div className="px-2.5 pt-1.5 pb-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Answer with</span>
+                    </div>
+                    <button type="button"
+                        className="w-full text-left rounded-xl p-2.5 flex gap-2.5 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        onClick={() => { setOpen(false); onChange(null); }}>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Auto</span>
+                            <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Use this workspace&apos;s configured model</span>
+                        </span>
+                        {!value && <svg className="mt-1 flex-shrink-0 text-emerald-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                    </button>
+                    {!hasOptions && (
+                        <div className="px-2.5 py-2 text-[11px] text-slate-400 dark:text-slate-500">No other models available</div>
+                    )}
+                    {Object.entries(providers).map(([provider, models]) => (
+                        <React.Fragment key={provider}>
+                            <div className="flex items-center gap-2 px-2.5 pt-2 pb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{PROVIDER_LABEL[provider] || provider}</span>
+                                <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                            </div>
+                            {models.map((m) => {
+                                const selected = value?.provider === provider && value?.model === m.model;
+                                return (
+                                    <button key={m.model} type="button"
+                                        className="w-full text-left rounded-xl p-2.5 flex gap-2.5 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                                        onClick={() => { setOpen(false); onChange({ provider, model: m.model }); }}>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">{modelLabel(m.model)}</span>
+                                            <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{m.model}</span>
+                                        </span>
+                                        {selected && <svg className="mt-1 flex-shrink-0 text-emerald-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                                    </button>
+                                );
+                            })}
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function RolesLauncher({ onPick }: { onPick: (t: WorkflowTemplate) => void }) {
     const [open, setOpen] = React.useState(false);
     React.useEffect(() => {
