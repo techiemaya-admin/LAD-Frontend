@@ -5727,14 +5727,15 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <input
                     className={field}
                     type="number"
-                    min={1}
+                    min={0}
                     value={cfg.wait_days ?? 5}
                     onChange={(e) => setCfg(eid, { wait_days: e.target.value })}
                     placeholder="5"
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Days to wait before treating the invite as unanswered. Anything under 1 day
-                    falls back to 5 — a 0 would send the follow-up the moment the invite goes out.
+                    Days to wait before treating the invite as unanswered. Leave it blank for the
+                    default of 5. <strong>0</strong> decides on the next pass — useful for testing
+                    the sequence, but it sends the no-answer follow-up within minutes of the invite.
                   </p>
                 </div>
                 {branch('accepted', 'If accepted', 'phone → WhatsApp')}
