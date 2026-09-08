@@ -52,6 +52,7 @@ export const AUTH_ROUTES = [
   '/onboarding',
   '/community-roi',
   '/follow-ups',
+  '/sales-playbook', // Discovery call script, scoring and customisation costing
   '/instagram', // Instagram management (accounts, AI replies, comments, goals)
   '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) - super-admin gated
   '/api/protected', // Mark all protected API routes with /api/protected prefix

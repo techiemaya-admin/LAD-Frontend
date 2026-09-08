@@ -86,6 +86,10 @@
       "types": "./features/overview/index.ts",
       "default": "./features/overview/index.ts"
     },
+    "./sales-playbook": {
+      "types": "./features/sales-playbook/index.ts",
+      "default": "./features/sales-playbook/index.ts"
+    },
     "./prospects": {
       "types": "./features/prospects/index.ts",
       "default": "./features/prospects/index.ts"

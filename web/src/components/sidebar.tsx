@@ -317,6 +317,14 @@ export function Sidebar() {
       requiredCapability: "view_followups",
       requiredFeature: FEATURE.FOLLOWUPS,
     },
+    {
+      href: "/sales-playbook",
+      label: "Sales Playbook",
+      icon: ClipboardList,
+      details: "Run the discovery call script, score the lead and cost the customisation.",
+      requiredCapability: "view_sales_playbook",
+      requiredFeature: FEATURE.SALES_PLAYBOOK,
+    },
 
   ];
 
