@@ -46,6 +46,11 @@ export const FEATURE = {
   DEALS_PIPELINE: ['deals_pipeline', 'deals-pipeline'],
   // 'followups' is in ESSENTIAL_TENANT_FEATURES, so every tenant holds it.
   FOLLOWUPS: ['followups', 'follow-ups'],
+  // New in this change, so no live tenant holds either spelling yet. Both are
+  // listed for the same reason every row above does: tenant_features is seeded
+  // with underscores and feature_flags with hyphens, and which one a tenant is
+  // provisioned under is decided outside this file.
+  SALES_PLAYBOOK: ['sales_playbook', 'sales-playbook'],
 } as const;
 
 export type PagePermission = {
@@ -89,6 +94,7 @@ export const PAGE_PERMISSIONS: readonly PagePermission[] = [
   // deals_pipeline would remove an admin's ability to grant /crm, which works
   // today, while members already holding it keep it unrevocably.
   { key: 'view_pipeline',      label: 'Pipeline',      features: [...FEATURE.DEALS_PIPELINE, null] },
+  { key: 'view_sales_playbook', label: 'Sales Playbook', features: FEATURE.SALES_PLAYBOOK },
 
   // UNGATED — kept, not dropped. These unlock pages with no feature gate and no
   // nav item, so no entitlement can be shown to justify hiding them. Removing a
