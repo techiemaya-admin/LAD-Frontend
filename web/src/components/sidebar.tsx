@@ -6,6 +6,7 @@ import {
   Video,
   Search,
   CircleDollarSign,
+  ClipboardList,
   GitFork,
   Cable,
   DollarSign,
