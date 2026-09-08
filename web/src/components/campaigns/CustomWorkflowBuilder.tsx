@@ -3821,13 +3821,24 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           }
           return out;
         };
-        const days = parseInt(ac.wait_days, 10);
+        // Mirrors the backend's own guard (WorkflowProcessor, acceptance
+        // branch): an ABSENT or unusable value must not collapse to "expire
+        // immediately", which would email every lead the moment the invite goes
+        // out. An explicit 0 is a real choice — "don't wait, decide on the next
+        // pass" — and is passed through.
+        //
+        // The supplied-ness check has to come before the conversion: Number(null)
+        // is 0, so an absent value would otherwise read as a deliberate zero.
+        // Number rather than parseInt for the same reason the engine uses it —
+        // parseInt('5 days') is 5, and quietly accepting that here would put a
+        // number in the config the box never showed.
+        const rawWaitDays = ac.wait_days;
+        const waitDaysSupplied = rawWaitDays !== undefined && rawWaitDays !== null
+          && String(rawWaitDays).trim() !== '';
+        const days = waitDaysSupplied ? Number(rawWaitDays) : NaN;
         steps.push({
           type: 'linkedin_acceptance', title: 'Accepted?', channel: 'linkedin', order_index: order++,
-          // Mirrors the backend's own guard: a 0 or unparseable value must not
-          // collapse to "expire immediately", which would email every lead the
-          // moment the invite goes out.
-          config: { branch_id: acceptId, wait_days: Number.isFinite(days) && days > 0 ? days : 5 },
+          config: { branch_id: acceptId, wait_days: Number.isFinite(days) && days >= 0 ? days : 5 },
         });
         buildBranch(ac.accepted, 'accepted', 'Accepted').forEach((s) => steps.push(s));
         buildBranch(ac.expired, 'expired', 'No answer').forEach((s) => steps.push(s));
