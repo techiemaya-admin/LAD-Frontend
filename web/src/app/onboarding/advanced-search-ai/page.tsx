@@ -5,6 +5,9 @@ import {
 } from "@/components/ui/select";
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import rehypeHighlight from 'rehype-highlight';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -9862,6 +9865,145 @@ function ModelPicker({ value, onChange }: { value: ModelChoice; onChange: (c: Mo
     );
 }
 
+/** Recursively pull the plain text out of a rendered node tree. */
+function nodeText(node: React.ReactNode): string {
+    if (node == null || typeof node === 'boolean') return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(nodeText).join('');
+    if (React.isValidElement(node)) {
+        return nodeText((node.props as { children?: React.ReactNode }).children);
+    }
+    return '';
+}
+
+/**
+ * A fenced code block, with the header + copy affordance people expect.
+ *
+ * The copy target is derived by walking the rendered tree, because
+ * rehype-highlight has already replaced the raw string with <span> tokens by
+ * the time this renders — reading `children` as text would copy nothing.
+ */
+function ChatCodeBlock({ children }: { children?: React.ReactNode }) {
+    const [copied, setCopied] = React.useState(false);
+
+    // react-markdown hands <pre> a single <code> child carrying the language
+    // class that rehype-highlight resolved (e.g. "hljs language-sql").
+    const codeEl = React.Children.toArray(children).find(
+        (c) => React.isValidElement(c) && c.type === 'code'
+    ) as React.ReactElement<{ className?: string; children?: React.ReactNode }> | undefined;
+
+    const className = codeEl?.props?.className || '';
+    const lang = (className.match(/language-([\w-]+)/) || [])[1] || '';
+    const raw = nodeText(codeEl?.props?.children ?? children);
+
+    const copy = React.useCallback(() => {
+        navigator.clipboard?.writeText(raw).then(
+            () => { setCopied(true); setTimeout(() => setCopied(false), 1600); },
+            () => { /* clipboard blocked — the code is still selectable */ }
+        );
+    }, [raw]);
+
+    return (
+        <div className="adv-code-block">
+            <div className="adv-code-head">
+                <span className="adv-code-lang">{lang || 'code'}</span>
+                <button type="button" className="adv-code-copy" onClick={copy} title="Copy code">
+                    {copied ? (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>Copied</>
+                    ) : (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>Copy</>
+                    )}
+                </button>
+            </div>
+            <pre className="adv-code-pre">{children}</pre>
+        </div>
+    );
+}
+
+/**
+ * The assistant message body.
+ *
+ * REPLACES a hand-rolled line-by-line parser that split on '\n' and regexed for
+ * **bold** / ### / bullets. That could never render a fenced code block, a
+ * table, a link or a nested list — a ``` block came out as literal backticks,
+ * one <p> per line, and `[text](url)` shipped as raw markdown.
+ *
+ * Plugin choices, each for a specific reason:
+ *   remarkGfm    — tables, strikethrough, task lists, autolinks. This product
+ *                  answers with lead tables constantly.
+ *   remarkBreaks — a single newline stays a line break. Standard markdown
+ *                  collapses it into the paragraph, which would have visibly
+ *                  reflowed every existing answer.
+ *   rehypeHighlight — the colour highlighting, with ignoreMissing so an
+ *                  unknown language label renders plain instead of throwing.
+ *
+ * The component map deliberately reuses the existing adv-ai-* classes for
+ * headings, bullets and numbered items, so the elements that already looked
+ * right are untouched and only the missing ones are new.
+ */
+function MarkdownMessage({ text }: { text: string }) {
+    // The agent emits "• " bullets in places. Markdown does not know that
+    // character, so they would render as literal text in a paragraph.
+    const src = React.useMemo(() => text.replace(/^([ \t]*)•[ \t]+/gm, '$1- '), [text]);
+
+    return (
+        <div className="adv-md">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+                components={{
+                    /* eslint-disable @typescript-eslint/no-unused-vars --
+                       `node` and `ref` are destructured purely to keep them OFF the
+                       DOM element; naming them is the only way to exclude them from
+                       the rest spread. */
+                    // Two props from react-markdown must not reach the DOM element:
+                    //   node — its hast element, not a DOM attribute
+                    //   ref  — typed LegacyRef, which permits a string ref; React 19's
+                    //          intrinsic elements accept only Ref, so spreading it is
+                    //          a type error on EVERY entry. This is the real cause;
+                    //          dropping `node` alone changes nothing.
+                    // Real heading tags rather than divs: the types then line up,
+                    // and a screen reader gets the document structure for free.
+                    h1: ({ node, ref, ...props }) => <h1 className="adv-ai-h3 adv-md-h1" {...props} />,
+                    h2: ({ node, ref, ...props }) => <h2 className="adv-ai-h3" style={{ fontSize: '14.5px' }} {...props} />,
+                    h3: ({ node, ref, ...props }) => <h3 className="adv-ai-h3" {...props} />,
+                    h4: ({ node, ref, ...props }) => <h4 className="adv-ai-h3" style={{ fontSize: '12.5px' }} {...props} />,
+                    p:  ({ node, ref, ...props }) => <p className="adv-md-p" {...props} />,
+                    hr: ({ node, ref, ...props }) => <hr className="adv-ai-hr" {...props} />,
+                    ul: ({ node, ref, ...props }) => <ul className="adv-md-ul" {...props} />,
+                    ol: ({ node, ref, ...props }) => <ol className="adv-md-ol" {...props} />,
+                    li: ({ node, ref, ...props }) => <li className="adv-md-li" {...props} />,
+                    a:  ({ node, ref, ...props }) => (
+                        // Untrusted: this text comes from a model and from scraped
+                        // pages. noopener/noreferrer so a link can never reach back
+                        // into this tab via window.opener.
+                        <a className="adv-md-a" target="_blank" rel="noopener noreferrer nofollow" {...props} />
+                    ),
+                    blockquote: ({ node, ref, ...props }) => <blockquote className="adv-md-quote" {...props} />,
+                    table: ({ node, ref, ...props }) => (
+                        // Wrapped so a wide table scrolls itself instead of pushing
+                        // the whole conversation column sideways.
+                        <div className="adv-md-table-wrap"><table className="adv-md-table" {...props} /></div>
+                    ),
+                    th: ({ node, ref, ...props }) => <th className="adv-md-th" {...props} />,
+                    td: ({ node, ref, ...props }) => <td className="adv-md-td" {...props} />,
+                    pre: ({ children }) => <ChatCodeBlock>{children}</ChatCodeBlock>,
+                    code: ({ node, ref, className, ...props }) =>
+                        // A block's <code> carries the language class from
+                        // rehype-highlight; inline code has none. That is the
+                        // discriminator, since react-markdown v9 dropped `inline`.
+                        className
+                            ? <code className={className} {...props} />
+                            : <code className="adv-md-code-inline" {...props} />,
+                    /* eslint-enable @typescript-eslint/no-unused-vars */
+                }}
+            >
+                {src}
+            </ReactMarkdown>
+        </div>
+    );
+}
+
 function RolesLauncher({ onPick }: { onPick: (t: WorkflowTemplate) => void }) {
     const [open, setOpen] = React.useState(false);
     React.useEffect(() => {
@@ -10240,50 +10382,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, a
 
                 {/* ── Rich markdown-aware renderer ── */}
                 <div className="adv-ai-text" style={{ marginBottom: msg.targeting ? "16px" : "0", display: msg.roleCard && !msg.text ? 'none' : undefined }}>
-                    {msg.text.split('\n').map((line, i) => {
-                        // ── Inline rich text parser: **bold**, *italic*, `code` ──────
-                        const renderInline = (raw: string) => {
-                            const tokens = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
-                            return tokens.map((t, j) => {
-                                if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2, -2)}</strong>;
-                                if (t.startsWith('*') && t.endsWith('*')) return <em key={j} className="adv-ai-em">{t.slice(1, -1)}</em>;
-                                if (t.startsWith('`') && t.endsWith('`')) return <code key={j} style={{ background: '#f3f4f6', padding: '1px 5px', borderRadius: '4px', fontSize: '13px', fontFamily: 'monospace', color: '#0b1957' }}>{t.slice(1, -1)}</code>;
-                                return t;
-                            });
-                        };
-
-                        const trimmed = line.trim();
-                        if (!trimmed) return <div key={i} style={{ height: '6px' }} />;
-
-                        // ### Heading
-                        if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
-                        if (trimmed.startsWith('## ')) return <div key={i} className="adv-ai-h3" style={{ fontSize: '14.5px' }}>{renderInline(trimmed.slice(3))}</div>;
-
-                        // --- Divider
-                        if (/^-{3,}$/.test(trimmed)) return <hr key={i} className="adv-ai-hr" />;
-
-                        // Numbered list  1. Item
-                        const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
-                        if (numMatch) return (
-                            <div key={i} className="adv-ai-num-item">
-                                <span className="adv-ai-num-badge">{numMatch[1]}</span>
-                                <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(numMatch[2])}</span>
-                            </div>
-                        );
-
-                        // Bullet list  • or - or *
-                        if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || /^\* [^*]/.test(trimmed)) {
-                            const content = trimmed.replace(/^[•\-\*]\s+/, '');
-                            return (
-                                <div key={i} className="adv-ai-bullet">
-                                    <span className="adv-ai-bullet-dot" />
-                                    <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(content)}</span>
-                                </div>
-                            );
-                        }
-
-                        return <p key={i} style={{ margin: '3px 0' }}>{renderInline(trimmed)}</p>;
-                    })}
+                    <MarkdownMessage text={msg.text} />
                 </div>
 
                 {/* ── Web search source links ── */}
@@ -15538,6 +15637,55 @@ const css = `
             .adv-ai-bullet-dot {width:5px; height:5px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:8px; opacity:.6; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
             .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+            /* ── RICH MARKDOWN MESSAGE ──────────────────────────────────────
+               Everything below renders elements the previous hand-rolled parser
+               could not produce at all: fenced code, tables, links, quotes,
+               nested lists. Headings/bullets/numbers keep their original
+               adv-ai-* classes, so nothing that already looked right moved. */
+            .adv-md {font-size:13.5px; line-height:1.65; color:#374151; }
+            .adv-md-p {margin:6px 0; }
+            .adv-md-p:first-child {margin-top:0; }
+            .adv-md-p:last-child {margin-bottom:0; }
+            .adv-md-h1 {font-size:16px; }
+            .adv-md-ul, .adv-md-ol {margin:6px 0 8px; padding-left:20px; display:flex; flex-direction:column; gap:3px; }
+            .adv-md-ul {list-style:disc; }
+            .adv-md-ol {list-style:decimal; }
+            .adv-md-li {line-height:1.65; padding-left:2px; }
+            .adv-md-li::marker {color:#0b1957; opacity:.65; font-weight:600; }
+            /* Nested lists tighten up rather than inheriting the top gap. */
+            .adv-md-li > .adv-md-ul, .adv-md-li > .adv-md-ol {margin:3px 0 2px; }
+            .adv-md-a {color:#1a3a8f; font-weight:500; text-decoration:none; border-bottom:1px solid rgba(26,58,143,.28); transition:border-color .15s, color .15s; }
+            .adv-md-a:hover {color:#2563eb; border-bottom-color:#2563eb; }
+            .adv-md-quote {margin:8px 0; padding:6px 0 6px 12px; border-left:3px solid #dce3f5; color:#4b5563; font-style:italic; }
+            .adv-md-code-inline {background:#f3f4f6; padding:1.5px 5px; border-radius:4px; font-size:12.5px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#0b1957; border:1px solid #ececf1; }
+            /* Tables: the wrapper scrolls, so a wide result set never widens the
+               conversation column. */
+            .adv-md-table-wrap {margin:10px 0; overflow-x:auto; border:1px solid #e9ecf5; border-radius:10px; }
+            .adv-md-table {border-collapse:collapse; width:100%; font-size:12.5px; }
+            .adv-md-th {background:#f7f9fd; color:#0b1957; font-weight:700; text-align:left; padding:8px 12px; border-bottom:1px solid #e9ecf5; white-space:nowrap; }
+            .adv-md-td {padding:8px 12px; border-bottom:1px solid #f1f3f9; color:#374151; vertical-align:top; }
+            .adv-md-table tr:last-child .adv-md-td {border-bottom:none; }
+            .adv-md-table tbody tr:nth-child(even) {background:#fcfdff; }
+            /* ── CODE BLOCK ── */
+            .adv-code-block {margin:10px 0; border:1px solid #e9ecf5; border-radius:10px; overflow:hidden; background:#fbfcfe; }
+            .adv-code-head {display:flex; align-items:center; justify-content:space-between; padding:6px 10px 6px 12px; background:#f7f9fd; border-bottom:1px solid #e9ecf5; }
+            .adv-code-lang {font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6b7280; }
+            .adv-code-copy {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#4b5563; background:transparent; border:1px solid transparent; border-radius:6px; padding:3px 8px; cursor:pointer; transition:background .15s,color .15s,border-color .15s; }
+            .adv-code-copy:hover {background:#fff; border-color:#e0e7ff; color:#0b1957; }
+            .adv-code-pre {margin:0; padding:12px 14px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.6; }
+            .adv-code-pre code {background:none; border:none; padding:0; font-size:inherit; color:#1f2937; }
+            /* Syntax colours. Scoped to this block rather than importing a full
+               highlight.js theme, which would be a global stylesheet fighting
+               the app's own palette. */
+            .adv-code-pre .hljs-comment, .adv-code-pre .hljs-quote {color:#8b93a7; font-style:italic; }
+            .adv-code-pre .hljs-keyword, .adv-code-pre .hljs-selector-tag, .adv-code-pre .hljs-literal, .adv-code-pre .hljs-doctag {color:#7c3aed; font-weight:600; }
+            .adv-code-pre .hljs-string, .adv-code-pre .hljs-attr, .adv-code-pre .hljs-addition {color:#0f7b52; }
+            .adv-code-pre .hljs-number, .adv-code-pre .hljs-symbol, .adv-code-pre .hljs-bullet {color:#c2410c; }
+            .adv-code-pre .hljs-title, .adv-code-pre .hljs-name, .adv-code-pre .hljs-section, .adv-code-pre .hljs-title\.function_ {color:#1a3a8f; font-weight:600; }
+            .adv-code-pre .hljs-built_in, .adv-code-pre .hljs-type, .adv-code-pre .hljs-class {color:#0369a1; }
+            .adv-code-pre .hljs-variable, .adv-code-pre .hljs-template-variable, .adv-code-pre .hljs-attribute {color:#0e7490; }
+            .adv-code-pre .hljs-deletion {color:#b91c1c; }
+            .adv-code-pre .hljs-meta {color:#6b7280; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
             /* ── THINKING STATE ── */
             .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden;padding-top:2px}
@@ -16109,6 +16257,32 @@ const css = `
             .dark .adv-ai-name { color: #60a5fa; }
             .dark .adv-ai-text { color: #e5e7eb; }
             .dark .adv-ai-h3 { color: #f3f4f6; }
+            /* Dark variants for the rich-markdown elements. Without these the
+               code block and table keep their light backgrounds and go
+               unreadable the moment the app is in dark mode. */
+            .dark .adv-md {color:#cbd5e1; }
+            .dark .adv-md-li::marker {color:#93a4d4; }
+            .dark .adv-md-a {color:#93b4ff; border-bottom-color:rgba(147,180,255,.3); }
+            .dark .adv-md-a:hover {color:#bfd3ff; border-bottom-color:#bfd3ff; }
+            .dark .adv-md-quote {border-left-color:#27324f; color:#9fb0c9; }
+            .dark .adv-md-code-inline {background:#111a35; border-color:#1e2a4d; color:#c7d6ff; }
+            .dark .adv-md-table-wrap {border-color:#1e2a4d; }
+            .dark .adv-md-th {background:#0d1630; color:#c7d6ff; border-bottom-color:#1e2a4d; }
+            .dark .adv-md-td {color:#cbd5e1; border-bottom-color:#16203d; }
+            .dark .adv-md-table tbody tr:nth-child(even) {background:#0b142e; }
+            .dark .adv-code-block {background:#0a1229; border-color:#1e2a4d; }
+            .dark .adv-code-head {background:#0d1630; border-bottom-color:#1e2a4d; }
+            .dark .adv-code-lang {color:#8fa0c0; }
+            .dark .adv-code-copy {color:#a9b8d4; }
+            .dark .adv-code-copy:hover {background:#111a35; border-color:#27324f; color:#dbe6ff; }
+            .dark .adv-code-pre code {color:#dbe4f7; }
+            .dark .adv-code-pre .hljs-comment, .dark .adv-code-pre .hljs-quote {color:#6b7a99; }
+            .dark .adv-code-pre .hljs-keyword, .dark .adv-code-pre .hljs-selector-tag, .dark .adv-code-pre .hljs-literal, .dark .adv-code-pre .hljs-doctag {color:#c4a4ff; }
+            .dark .adv-code-pre .hljs-string, .dark .adv-code-pre .hljs-attr, .dark .adv-code-pre .hljs-addition {color:#6ee7a8; }
+            .dark .adv-code-pre .hljs-number, .dark .adv-code-pre .hljs-symbol, .dark .adv-code-pre .hljs-bullet {color:#ffb27a; }
+            .dark .adv-code-pre .hljs-title, .dark .adv-code-pre .hljs-name, .dark .adv-code-pre .hljs-section {color:#93b4ff; }
+            .dark .adv-code-pre .hljs-built_in, .dark .adv-code-pre .hljs-type, .dark .adv-code-pre .hljs-class {color:#7dd3fc; }
+            .dark .adv-code-pre .hljs-variable, .dark .adv-code-pre .hljs-template-variable, .dark .adv-code-pre .hljs-attribute {color:#5eead4; }
             .dark .adv-ai-bullet {
                 color: #e5e7eb; 
             }
