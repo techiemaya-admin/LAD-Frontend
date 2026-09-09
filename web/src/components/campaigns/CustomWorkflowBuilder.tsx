@@ -3409,6 +3409,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             zoho_account_title: srcCfg.zoho_modules === 'accounts'
               ? ((srcCfg.zoho_account_title || '').trim() || undefined)
               : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
             leadGenerationLimit: perDayN,
           },
         });
@@ -3978,6 +3984,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             zoho_account_title: srcCfg.zoho_modules === 'accounts'
               ? ((srcCfg.zoho_account_title || '').trim() || undefined)
               : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
             // Compliant, read-only Instagram enrichment: resolve each contact's
             // handle + optional public business_discovery profile. No follow/DM
             // (Meta's API exposes none) - maps contacts to IG for inbound.
@@ -4511,6 +4523,26 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 {!(cfg.zoho_account_title || '').trim() && (
                   <p className="text-xs text-amber-600 dark:text-amber-500">Required — without a title there is nobody to import.</p>
                 )}
+              </div>
+            )}
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Location (optional)</label>
+                <Input
+                  value={cfg.zoho_account_location || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_location: e.target.value })}
+                  placeholder="e.g. Dubai"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Added to each company&apos;s people search, so it favours profiles based there.
+                  It <strong>steers</strong> the search rather than filtering it — a few people
+                  elsewhere will still come through. Leave blank to search worldwide.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This does not read the account&apos;s address in Zoho: on most accounts the
+                  billing city is empty, so filtering on it would skip nearly every company —
+                  and permanently, because the daily import moves past whatever it reads.
+                </p>
               </div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only tag (optional)</label>
