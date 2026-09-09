@@ -318,8 +318,21 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {/*
+                Stated as a requirement, not a preference. SMTP authenticates in a
+                single exchange — there is no interactive step, so a mailbox with
+                2FA on cannot ever accept a login password here and the UI has
+                nowhere to collect a code. Reported as "it is asking for two
+                factor authentication and I don't see any place to provide otp",
+                which is exactly right: there is no such place, and the old
+                wording ("prefer one") read as advice rather than the only thing
+                that works.
+              */}
               <p className="text-[11px] text-muted-foreground mt-1">
-                If your provider supports app passwords, prefer one over your account password.
+                <strong className="font-medium text-foreground">Two-factor authentication on?</strong>{' '}
+                Use an app password, not your login password — SMTP has no OTP step, so
+                a normal password is always rejected. Zoho, Gmail and Outlook each generate
+                one under their own security settings.
               </p>
             </div>
 
