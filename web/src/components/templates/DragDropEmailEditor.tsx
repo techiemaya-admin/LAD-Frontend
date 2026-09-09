@@ -1452,7 +1452,7 @@ function SortableBlock({
         {/* Content preview */}
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="text-[10px] font-medium text-gray-400 dark:text-slate-300 uppercase tracking-wide flex-shrink-0">{typeLabel}</span>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 truncate">
             <Preview />
           </div>
         </div>
