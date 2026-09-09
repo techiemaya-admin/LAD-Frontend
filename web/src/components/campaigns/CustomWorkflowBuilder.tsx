@@ -1514,6 +1514,24 @@ function BuilderCanvas({ steps, branches = [], switchId }: { steps: WorkflowPrev
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+/** A Meta template's BODY text. Approved templates carry their copy in
+ *  `components`, not a flat field, and the list endpoint may omit it entirely —
+ *  so an empty string is normal and must not be treated as an error. */
+function waTemplateBody(t: any): string {
+  const body = (t?.components || []).find((c: any) => c?.type === 'BODY');
+  return body?.text || '';
+}
+
+/** What to call a Meta template in a dropdown. The NAME is what Meta knows it
+ *  by and what the operator approved; the language disambiguates the same name
+ *  registered twice, and the number says which WABA it lives on. */
+function waTemplateLabel(t: any): string {
+  const parts = [t?.name || 'Template'];
+  if (t?.language) parts.push(`· ${t.language}`);
+  if (t?.account_phone) parts.push(`· ${t.account_phone}`);
+  return parts.join(' ');
+}
+
 /** Loads the connected accounts/templates a step config can reference:
  *  voice agents + numbers, email senders + templates, WhatsApp accounts +
  *  templates, LinkedIn templates. Reuses the same hooks/endpoints the
@@ -1530,8 +1548,18 @@ function useBuilderResources() {
   useEffect(() => {
     fetch('/api/social-integration/whatsapp/accounts', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (Array.isArray(d?.accounts)) setWaAccounts(d.accounts); }).catch(() => {});
-    fetch('/api/campaigns/whatsapp-templates', { credentials: 'include' })
-      .then((r) => r.json()).then((d) => { if (d?.success) setWaTemplates(d.data || []); }).catch(() => {});
+    // The Meta-APPROVED templates, the same list the Templates page shows —
+    // not communication_templates, which holds the "Welcome Message" /
+    // "Follow-Up Message" pair seeded into every tenant at onboarding and has
+    // nothing to do with Meta approval. A WABA send to a lead outside the 24h
+    // window is only accepted as an approved template, so those seeded rows
+    // could never have been sent to a cold lead.
+    fetch('/api/whatsapp-conversations/conversations/templates?channel=waba', { credentials: 'include' })
+      .then((r) => r.json()).then((d) => {
+        const list = Array.isArray(d) ? d : Array.isArray(d?.templates) ? d.templates : Array.isArray(d?.data) ? d.data : [];
+        // Only APPROVED can be sent; PENDING and REJECTED would fail at Meta.
+        setWaTemplates(list.filter((t: any) => String(t?.status || '').toUpperCase() === 'APPROVED'));
+      }).catch(() => {});
     fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (d?.success) setLiTemplates(d.data || []); }).catch(() => {});
   }, []);
@@ -3627,7 +3655,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         else if (s.type === 'linkedin_inmail') steps.push({ type: s.type, title: 'Send LinkedIn InMail', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), subject: (c.subject || '').trim() || undefined, template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_visit') steps.push({ type: s.type, title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: order++, config: { ...delay } });
         else if (s.type === 'email_send') steps.push({ type: s.type, title: 'Send Email', channel: 'email', order_index: order++, config: { subject: (c.subject || '').trim(), body: (c.body || '').trim(), from_email: c.from_email || undefined, email_provider: c.email_provider || undefined, template_id: c.template_id || undefined, ...delay } });
-        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, ...delay } });
+        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, whatsapp_template_name: c.whatsapp_template_name || undefined, whatsapp_template_language: c.whatsapp_template_language || undefined, ...delay } });
         // added_context is the key the voice executors read (they also accept
         // voiceContext); without it the panel's extra-context box would collect
         // text that never left the browser.
@@ -3644,7 +3672,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       // else the chosen template id). Delays are relative to the prior step.
       const fc = configs[FOLLOWUP_STEP_ID] || {};
       const fuChannel = fc.channel === 'email' ? 'email' : fc.channel === 'whatsapp' ? 'whatsapp' : 'linkedin';
-      const fuTouchList: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] =
+      const fuTouchList: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] =
         Array.isArray(fc.touches) && fc.touches.length ? fc.touches.slice(0, 7) : [{ hours: 24 }, { hours: 72 }, { hours: 168 }];
       if (followupNode) {
         fuTouchList.forEach((t, idx) => {
@@ -3661,7 +3689,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           // modes so other touch_type values (e.g. lead_report) fall through.
           const liTouchType = (t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') ? t.touch_type : undefined;
           if (fuChannel === 'email') steps.push({ type: 'email_send', title: `Follow-up ${n} (email)`, channel: 'email', order_index: order++, config: { subject: '', body, template_id: tid, ...d } });
-          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...d } });
+          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...(t.template_name ? { whatsapp_template_name: t.template_name, whatsapp_template_language: t.template_language || 'en' } : {}), ...d } });
           else steps.push({ type: 'linkedin_message', title: `Follow-up ${n} (LinkedIn)`, channel: 'linkedin', order_index: order++, config: { message: body, template_id: tid, ...(liTouchType ? { touch_type: liTouchType } : {}), ...d } });
         });
       }
@@ -3839,6 +3867,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               config: {
                 whatsappMessage: body,
                 ...(tmplId ? { whatsapp_template_id: tmplId } : {}),
+                // What the engine sends when the lead's 24h window is shut —
+                // without these the send is free text only, which Meta rejects
+                // for anyone who has not messaged the tenant first.
+                ...(v?.whatsapp_template_name ? {
+                  whatsapp_template_name: v.whatsapp_template_name,
+                  whatsapp_template_language: v.whatsapp_template_language || 'en',
+                } : {}),
                 // NOT optional, unlike email: whatsAppDispatcher.resolveAccount
                 // has no tenant default and errors with "No WhatsApp account
                 // configured for this step" when this is missing. The branch
@@ -4743,7 +4778,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const reportBeforeFollowup = reportIdx !== -1 && followupIdx !== -1 && reportIdx < followupIdx;
             const eid = editingId!;
             const channel: string = cfg.channel || 'linkedin';
-            const touches: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
+            const touches: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
             const tmpls: any[] = channel === 'email' ? res.emailTemplates : channel === 'whatsapp' ? res.waTemplates : res.liTemplates;
             const tmplName = (t: any) => t.name || t.title || 'Template';
             const syncDesc = (n: number, ch: string) => updateWorkflowStep(eid, { description: `${n} touches · ${FU_CHANNELS.find((c2) => c2.value === ch)?.label}` });
@@ -4788,7 +4823,19 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           if (v === '__lead_report__') setTouch(i, { touch_type: 'lead_report', template_id: undefined });
                           else if (v === '__industry_trend__') setTouch(i, { touch_type: 'industry_trend', template_id: undefined });
                           else if (v === '__company_post__') setTouch(i, { touch_type: 'company_page_post', template_id: undefined });
-                          else setTouch(i, { touch_type: undefined, template_id: v || undefined });
+                          else {
+                            const tm = tmpls.find((x: any) => String(x.id) === v);
+                            setTouch(i, {
+                              touch_type: undefined,
+                              template_id: v || undefined,
+                              // WhatsApp templates are addressed by name +
+                              // language, not by id — see waTemplateLabel.
+                              ...(channel === 'whatsapp' ? {
+                                template_name: tm?.name || undefined,
+                                template_language: tm?.language || undefined,
+                              } : {}),
+                            });
+                          }
                         }}>
                         <option value="">AI-generated (default)</option>
                         {reportBeforeFollowup && (
@@ -4800,7 +4847,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             <option value="__company_post__">Share a post from our company page</option>
                           </>
                         )}
-                        {tmpls.map((tm: any) => <option key={tm.id} value={tm.id}>{tmplName(tm)}</option>)}
+                        {tmpls.map((tm: any) => (
+                          <option key={tm.id} value={tm.id}>
+                            {channel === 'whatsapp' ? waTemplateLabel(tm) : tmplName(tm)}
+                          </option>
+                        ))}
                       </CustomSelect>
                       {(t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') && (
                         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -5763,14 +5814,27 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 {branchTemplates(k).length > 0 && (
                   <CustomSelect className={field} value={(cfg[k] || {}).template_id || ''} onValueChange={(val) => {
                     const t = branchTemplates(k).find((x: any) => String(x.id) === val);
+                    const isWa = branchChannel(k) === 'whatsapp';
                     setBranch(k, {
                       template_id: val || undefined,
-                      ...(t ? { body: t.content ?? t.body ?? t.message ?? (cfg[k] || {}).body } : {}),
+                      // WhatsApp is addressed by name + language: that is what
+                      // Meta accepts outside the 24h window, and the id alone
+                      // cannot express it (the same name can exist on two of a
+                      // tenant's numbers).
+                      ...(isWa ? {
+                        whatsapp_template_name: t?.name || undefined,
+                        whatsapp_template_language: t?.language || undefined,
+                      } : {}),
+                      ...(t ? { body: (isWa ? waTemplateBody(t) : (t.content ?? t.body ?? t.message)) || (cfg[k] || {}).body } : {}),
                       ...(t && branchChannel(k) === 'email' && t.subject ? { subject: t.subject } : {}),
                     });
                   }}>
                     <option value="">— No template (write below / AI-drafted) —</option>
-                    {branchTemplates(k).map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
+                    {branchTemplates(k).map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {branchChannel(k) === 'whatsapp' ? waTemplateLabel(t) : (t.name || t.title || 'Template')}
+                      </option>
+                    ))}
                   </CustomSelect>
                 )}
                 {/* Sending account. WhatsApp needs one — the dispatcher has no
@@ -6774,10 +6838,18 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Template (optional)</label>
                 <CustomSelect className={field} value={cfg.whatsapp_template_id || ''} onValueChange={(val) => {
                   const t = res.waTemplates.find((x: any) => String(x.id) === val);
-                  setCfg(editingId!, { whatsapp_template_id: val || undefined, message: t?.content ?? t?.body ?? cfg.message });
+                  setCfg(editingId!, {
+                    whatsapp_template_id: val || undefined,
+                    // Meta addresses a template by NAME + LANGUAGE, not by id —
+                    // the same name can exist on two of a tenant's numbers. The
+                    // engine sends these two; the id is kept for media lookup.
+                    whatsapp_template_name: t?.name || undefined,
+                    whatsapp_template_language: t?.language || undefined,
+                    message: waTemplateBody(t) || cfg.message,
+                  });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
-                  {res.waTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
+                  {res.waTemplates.map((t: any) => <option key={t.id} value={t.id}>{waTemplateLabel(t)}</option>)}
                 </CustomSelect></div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message</label>
