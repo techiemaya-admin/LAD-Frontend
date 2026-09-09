@@ -3823,13 +3823,29 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           // whatsapp_template_id, linkedin_message → linkedin_template_id.
           if (v?.channel === 'email') {
             out.push({ type: 'email_send', title: `${label} (email)`, channel: 'email', order_index: order++,
-              config: { subject: (v?.subject || '').trim(), body, ...(tmplId ? { template_id: tmplId } : {}), ...guard } });
+              config: {
+                subject: (v?.subject || '').trim(), body,
+                ...(tmplId ? { template_id: tmplId } : {}),
+                // Sender is optional here: the email executor falls back to the
+                // tenant's own active account when from_email is unset.
+                ...(v?.from_email ? { from_email: v.from_email, email_provider: v.email_provider || undefined } : {}),
+                ...guard,
+              } });
           } else if (v?.channel === 'linkedin') {
             out.push({ type: 'linkedin_message', title: `${label} (LinkedIn)`, channel: 'linkedin', order_index: order++,
               config: { message: body, ...(tmplId ? { linkedin_template_id: tmplId } : {}), ...guard } });
           } else {
             out.push({ type: 'whatsapp_send', title: `${label} (WhatsApp)`, channel: 'whatsapp', order_index: order++,
-              config: { whatsappMessage: body, ...(tmplId ? { whatsapp_template_id: tmplId } : {}), ...guard } });
+              config: {
+                whatsappMessage: body,
+                ...(tmplId ? { whatsapp_template_id: tmplId } : {}),
+                // NOT optional, unlike email: whatsAppDispatcher.resolveAccount
+                // has no tenant default and errors with "No WhatsApp account
+                // configured for this step" when this is missing. The branch
+                // never sent one, so its WhatsApp step could not have worked.
+                ...(v?.whatsapp_account_id ? { whatsapp_account_id: v.whatsapp_account_id } : {}),
+                ...guard,
+              } });
           }
           return out;
         };
@@ -5757,9 +5773,31 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     {branchTemplates(k).map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
                   </CustomSelect>
                 )}
-                {(branchChannel(k) === 'email') && (
+                {/* Sending account. WhatsApp needs one — the dispatcher has no
+                    tenant default and fails the step without it. Email does
+                    default to the tenant's own active account, so its picker is
+                    a choice rather than a requirement. */}
+                {(branchChannel(k) === 'whatsapp') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).whatsapp_account_id || ''} onValueChange={(val) => setBranch(k, { whatsapp_account_id: val || undefined })}>
+                    <option value="">— Pick the WhatsApp number to send from —</option>
+                    {res.waAccounts.map((a: any) => <option key={a.id} value={a.id}>{a.slug || a.display_name || a.phone_number || a.id}</option>)}
+                  </CustomSelect>
+                  {res.waAccounts.length === 0
+                    ? <p className="text-[11px] text-muted-foreground">No WhatsApp account connected — connect one in Settings.</p>
+                    : !(cfg[k] || {}).whatsapp_account_id
+                      ? <p className="text-[11px] text-amber-700 dark:text-amber-400">Pick a number — WhatsApp has no default sender, so this branch would fail without one.</p>
+                      : null}
+                </>)}
+                {(branchChannel(k) === 'email') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).from_email || ''} onValueChange={(val) => {
+                    const s = res.emailSenders.find((x: any) => x.email === val);
+                    setBranch(k, { from_email: val || undefined, email_provider: s?.provider || undefined });
+                  }}>
+                    <option value="">— Default connected account —</option>
+                    {res.emailSenders.map((s: any) => <option key={s.email} value={s.email}>{s.email}{s.provider ? ` (${s.provider})` : ''}</option>)}
+                  </CustomSelect>
                   <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setBranch(k, { subject: e.target.value })} placeholder="Subject" />
-                )}
+                </>)}
                 <textarea className={`${field} min-h-[70px]`} value={(cfg[k] || {}).body || ''} onChange={(e) => setBranch(k, { body: e.target.value })}
                   placeholder="Message (leave blank to send nothing on this branch)" />
               </div>
