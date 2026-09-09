@@ -4109,9 +4109,34 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         // Steps are not in update()'s allowedFields - they have their own
         // endpoint, so without this an edited outreach sequence saved nothing.
         if (res.ok && Array.isArray(editSteps)) {
-          await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
-          }).catch(() => { /* surfaced by the reload below */ });
+          // This used to swallow every failure and fall through to the redirect
+          // below, so a save that never wrote a step reported as done. It hid a
+          // 500 on this endpoint for as long as that endpoint has been broken —
+          // and worse, on the old non-transactional handler the delete had
+          // already committed, so "saved" meant the workflow was gone.
+          try {
+            const stepsRes = await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
+            });
+            if (!stepsRes.ok) {
+              const body = await stepsRes.text();
+              let parsed: any = null;
+              try { parsed = body ? JSON.parse(body) : null; } catch { /* not JSON */ }
+              // The backend says whether the campaign kept its previous steps.
+              // Worth repeating verbatim: it is the difference between "your
+              // edit did not save" and "your workflow is now empty".
+              const kept = parsed?.stepsPreserved
+                ? ' Your previous steps were kept.'
+                : '';
+              setError(`${parsed?.message || parsed?.error || `Could not save the workflow steps (${stepsRes.status})`}.${kept}`);
+              setLaunching(false);
+              return;
+            }
+          } catch (stepsErr: any) {
+            setError(stepsErr?.message || 'Could not save the workflow steps');
+            setLaunching(false);
+            return;
+          }
         }
       } else {
         res = await fetchWithTenant('/api/campaigns', {
