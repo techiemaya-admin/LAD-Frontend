@@ -426,7 +426,7 @@ export const InstagramTenantOnboarding: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDisconnect(a)}
-                        className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-950/20 px-3 py-1.5 text-xs text-rose-200 hover:bg-rose-900/40 dark:border-rose-500/30"
+                        className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-950/20 dark:text-rose-200 dark:hover:bg-rose-900/40"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Disconnect
@@ -1106,11 +1106,11 @@ function StatusBadge({ status }: { status: string }): JSX.Element {
     <span
       className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
         active
-          ? 'bg-emerald-950/30 text-emerald-200 border border-emerald-500/20'
-          : 'bg-[#071131]/70 text-slate-300 border border-blue-950/40'
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-200 dark:border-emerald-500/20'
+          : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-[#071131]/70 dark:text-slate-300 dark:border-blue-950/40'
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-slate-600'}`} />
       {status || 'unknown'}
     </span>
   );
