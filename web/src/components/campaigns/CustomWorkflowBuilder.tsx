@@ -3811,13 +3811,41 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             });
           }
           const body = (v?.body || '').trim();
-          if (!body) return out;   // a branch with no message is just the enrichment
+          const tmplId = v?.template_id || undefined;
+          // A branch with neither a message nor a template is just the
+          // enrichment. A template alone IS a send: an approved WhatsApp
+          // template carries its own body, so requiring text here would drop
+          // the step for exactly the branches that need it most.
+          if (!body && !tmplId) return out;
+          // Same three channels the multi-condition branch already compiles
+          // (buildBranchStep above), and the same template_id keys the engine
+          // reads: email_send → template_id, whatsapp_send →
+          // whatsapp_template_id, linkedin_message → linkedin_template_id.
           if (v?.channel === 'email') {
             out.push({ type: 'email_send', title: `${label} (email)`, channel: 'email', order_index: order++,
-              config: { subject: (v?.subject || '').trim(), body, ...guard } });
+              config: {
+                subject: (v?.subject || '').trim(), body,
+                ...(tmplId ? { template_id: tmplId } : {}),
+                // Sender is optional here: the email executor falls back to the
+                // tenant's own active account when from_email is unset.
+                ...(v?.from_email ? { from_email: v.from_email, email_provider: v.email_provider || undefined } : {}),
+                ...guard,
+              } });
+          } else if (v?.channel === 'linkedin') {
+            out.push({ type: 'linkedin_message', title: `${label} (LinkedIn)`, channel: 'linkedin', order_index: order++,
+              config: { message: body, ...(tmplId ? { linkedin_template_id: tmplId } : {}), ...guard } });
           } else {
             out.push({ type: 'whatsapp_send', title: `${label} (WhatsApp)`, channel: 'whatsapp', order_index: order++,
-              config: { whatsappMessage: body, ...guard } });
+              config: {
+                whatsappMessage: body,
+                ...(tmplId ? { whatsapp_template_id: tmplId } : {}),
+                // NOT optional, unlike email: whatsAppDispatcher.resolveAccount
+                // has no tenant default and errors with "No WhatsApp account
+                // configured for this step" when this is missing. The branch
+                // never sent one, so its WhatsApp step could not have worked.
+                ...(v?.whatsapp_account_id ? { whatsapp_account_id: v.whatsapp_account_id } : {}),
+                ...guard,
+              } });
           }
           return out;
         };
@@ -4180,6 +4208,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       })),
       macro(MULTICOND_STEP_ID, 'Multi-condition', 'Branch by a field value', <Split className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addMultiCond, 'Logic & routing'),
       macro(SPLIT_STEP_ID, 'A/B split test', 'Compare two openers', <Shuffle className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addSplitTest, 'Logic & routing'),
+      macro(ACCEPT_STEP_ID, 'Accepted?', 'Branch on the connection request', <UserCheck className="h-4 w-4 text-emerald-600" />, 'bg-emerald-50 dark:bg-emerald-950/30', addAcceptanceBranch, 'Logic & routing'),
       macro(SETFIELD_STEP_ID, 'Set field', 'Tag or write a value', <PenLine className="h-4 w-4 text-lime-600" />, 'bg-lime-50 dark:bg-lime-950/30', addSetField, 'Logic & routing'),
       macro(AI_STEP_ID, 'AI Agent', 'Clean & normalise lead data', <Sparkles className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addAiParse, 'Enrich & AI'),
       macro(ENRICH_STEP_ID, 'Enrich contact', 'Official email · phone', <Contact className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addDataEnrich, 'Enrich & AI'),
@@ -4329,6 +4358,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isResearch = editingId === RESEARCH_STEP_ID;
     const isScore = editingId === SCORE_STEP_ID;
     const isSplit = editingId === SPLIT_STEP_ID;
+    const isAccept = editingId === ACCEPT_STEP_ID;
     const isSetField = editingId === SETFIELD_STEP_ID;
     const isHttp = editingId === HTTP_STEP_ID;
     const isLanding = editingId === LANDING_STEP_ID;
@@ -5686,6 +5716,120 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
           })()}
 
+
+          {isAccept && (() => {
+            const eid = editingId!;
+            const setBranch = (k: 'accepted' | 'expired', patch: any) =>
+              setCfg(eid, { [k]: { ...(cfg[k] || {}), ...patch } });
+            // Defaults match what buildBranch compiles when nothing is set.
+            const branchChannel = (k: 'accepted' | 'expired') =>
+              (cfg[k] || {}).channel || (k === 'accepted' ? 'whatsapp' : 'email');
+            const branchTemplates = (k: 'accepted' | 'expired'): any[] => {
+              const ch = branchChannel(k);
+              return ch === 'email' ? res.emailTemplates : ch === 'linkedin' ? res.liTemplates : res.waTemplates;
+            };
+            // Derived, never passed in: a hardcoded "phone → WhatsApp" goes
+            // stale the moment someone changes the channel, and a label that
+            // disagrees with the config is how a step nobody expected gets sent.
+            const branchHint = (k: 'accepted' | 'expired') => {
+              const ch = branchChannel(k);
+              const enrich = (cfg[k] || {}).enrich;
+              const chLabel = ch === 'email' ? 'Email' : ch === 'linkedin' ? 'LinkedIn' : 'WhatsApp';
+              const enrichLabel = enrich === 'phone' ? 'phone' : enrich === 'official_email' ? 'email' : null;
+              return enrichLabel ? `${enrichLabel} → ${chLabel}` : chLabel;
+            };
+            const branch = (k: 'accepted' | 'expired', label: string) => (
+              <div className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-1.5 bg-muted/20 dark:bg-[#030a21]/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-foreground">{label}</span>
+                  <span className="text-[11px] text-muted-foreground">{branchHint(k)}</span>
+                </div>
+                <CustomSelect className={field} value={(cfg[k] || {}).enrich || ''} onValueChange={(val) => setBranch(k, { enrich: val })}>
+                  <option value="">No enrichment</option>
+                  <option value="phone">Reveal phone</option>
+                  <option value="official_email">Reveal official email</option>
+                </CustomSelect>
+                <CustomSelect className={field} value={branchChannel(k)} onValueChange={(val) => setBranch(k, { channel: val, template_id: undefined })}>
+                  <option value="whatsapp">Send WhatsApp</option>
+                  <option value="linkedin">Send LinkedIn message</option>
+                  <option value="email">Send email</option>
+                </CustomSelect>
+                {/* Same templates the standalone message nodes offer, picked per
+                    branch because each branch chooses its own channel. Selecting
+                    one copies its text into the box below so it stays editable
+                    and visible; the id travels too, since the engine's email and
+                    WhatsApp executors resolve HTML, media and approved WhatsApp
+                    templates from it rather than from the text. */}
+                {branchTemplates(k).length > 0 && (
+                  <CustomSelect className={field} value={(cfg[k] || {}).template_id || ''} onValueChange={(val) => {
+                    const t = branchTemplates(k).find((x: any) => String(x.id) === val);
+                    setBranch(k, {
+                      template_id: val || undefined,
+                      ...(t ? { body: t.content ?? t.body ?? t.message ?? (cfg[k] || {}).body } : {}),
+                      ...(t && branchChannel(k) === 'email' && t.subject ? { subject: t.subject } : {}),
+                    });
+                  }}>
+                    <option value="">— No template (write below / AI-drafted) —</option>
+                    {branchTemplates(k).map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
+                  </CustomSelect>
+                )}
+                {/* Sending account. WhatsApp needs one — the dispatcher has no
+                    tenant default and fails the step without it. Email does
+                    default to the tenant's own active account, so its picker is
+                    a choice rather than a requirement. */}
+                {(branchChannel(k) === 'whatsapp') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).whatsapp_account_id || ''} onValueChange={(val) => setBranch(k, { whatsapp_account_id: val || undefined })}>
+                    <option value="">— Pick the WhatsApp number to send from —</option>
+                    {res.waAccounts.map((a: any) => <option key={a.id} value={a.id}>{a.slug || a.display_name || a.phone_number || a.id}</option>)}
+                  </CustomSelect>
+                  {res.waAccounts.length === 0
+                    ? <p className="text-[11px] text-muted-foreground">No WhatsApp account connected — connect one in Settings.</p>
+                    : !(cfg[k] || {}).whatsapp_account_id
+                      ? <p className="text-[11px] text-amber-700 dark:text-amber-400">Pick a number — WhatsApp has no default sender, so this branch would fail without one.</p>
+                      : null}
+                </>)}
+                {(branchChannel(k) === 'email') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).from_email || ''} onValueChange={(val) => {
+                    const s = res.emailSenders.find((x: any) => x.email === val);
+                    setBranch(k, { from_email: val || undefined, email_provider: s?.provider || undefined });
+                  }}>
+                    <option value="">— Default connected account —</option>
+                    {res.emailSenders.map((s: any) => <option key={s.email} value={s.email}>{s.email}{s.provider ? ` (${s.provider})` : ''}</option>)}
+                  </CustomSelect>
+                  <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setBranch(k, { subject: e.target.value })} placeholder="Subject" />
+                </>)}
+                <textarea className={`${field} min-h-[70px]`} value={(cfg[k] || {}).body || ''} onChange={(e) => setBranch(k, { body: e.target.value })}
+                  placeholder="Message (leave blank to send nothing on this branch)" />
+              </div>
+            );
+            return (
+              <div className="space-y-2.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Waits to see if the lead accepts your connection request, then branches. The
+                  clock starts when the invite was <strong>sent</strong>, not when the workflow
+                  reaches this step.
+                </p>
+                <div>
+                  <label className="text-[12px] font-semibold text-foreground">Give them how long?</label>
+                  <input
+                    className={field}
+                    type="number"
+                    min={0}
+                    value={cfg.wait_days ?? 5}
+                    onChange={(e) => setCfg(eid, { wait_days: e.target.value })}
+                    placeholder="5"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Days to wait before treating the invite as unanswered. Leave it blank for the
+                    default of 5. <strong>0</strong> decides on the next pass — useful for testing
+                    the sequence, but it sends the no-answer follow-up within minutes of the invite.
+                  </p>
+                </div>
+                {branch('accepted', 'If accepted')}
+                {branch('expired', 'If still no answer')}
+              </div>
+            );
+          })()}
 
           {isSplit && (() => {
             const eid = editingId!;
@@ -8428,6 +8572,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { id: RESEARCH_STEP_ID, on: addWebResearch, icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30', label: 'Web research', sub: 'AI company intel from the web' },
               { id: SCORE_STEP_ID, on: addLeadScore, icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30', label: 'Lead scoring', sub: 'Buy-intent 0-100 · hot/warm/cold' },
               { id: SPLIT_STEP_ID, on: addSplitTest, icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30', label: 'A/B split test', sub: 'Compare two openers' },
+              { id: ACCEPT_STEP_ID, on: addAcceptanceBranch, icon: <UserCheck className="h-4 w-4 text-emerald-600" />, chip: 'bg-emerald-50 dark:bg-emerald-950/30', label: 'Accepted?', sub: 'Branch on the connection request' },
               { id: SETFIELD_STEP_ID, on: addSetField, icon: <PenLine className="h-4 w-4 text-lime-600" />, chip: 'bg-lime-50 dark:bg-lime-950/30', label: 'Set field', sub: 'Tag or write a value' },
               { id: HTTP_STEP_ID, on: addHttpRequest, icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50', label: 'HTTP request', sub: 'Call any API per lead' },
               { id: CONTENT_STEP_ID, on: addLinkedInContent, icon: <PenTool className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', label: 'LinkedIn content', sub: 'Write or AI-generate the post' },
