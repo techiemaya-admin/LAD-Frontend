@@ -14,7 +14,7 @@ interface DonutChartProps {
 export function DonutChart({ title, data }: DonutChartProps) {
   const hasData = Array.isArray(data) && data.some((d) => d.value > 0);
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
       <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
       {hasData ? (
         <ResponsiveContainer width="100%" height={220}>

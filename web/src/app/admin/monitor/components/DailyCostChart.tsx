@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
   if (!active || !payload || !payload.length) return null;
   const r = payload[0].payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg dark:border-gray-700 dark:bg-gray-900">
+    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg dark:border-blue-950/40 dark:bg-[#071131]">
       <div className="mb-1 font-semibold text-gray-900 dark:text-gray-100">
         {r.day} {r.isSpike ? <span className="ml-1 text-red-500">· spike</span> : null}
       </div>
@@ -43,7 +43,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
       </div>
       <div className="text-gray-500">Calls: {r.calls.toLocaleString()}</div>
       {r.driverFeature ? (
-        <div className="mt-1 border-t border-gray-100 pt-1 text-gray-500 dark:border-gray-800">
+        <div className="mt-1 border-t border-gray-100 pt-1 text-gray-500 dark:border-blue-950/40">
           Top driver: <span className="font-medium text-gray-700 dark:text-gray-300">{r.driverFeature}</span>
           {r.driverTenant ? <> · {r.driverTenant}</> : null}
         </div>
@@ -65,7 +65,7 @@ export function DailyCostChart({ series }: { series: LlmCostDay[] }) {
   }));
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Daily LLM spend</h3>
         <div className="flex items-center gap-3 text-xs text-gray-500">

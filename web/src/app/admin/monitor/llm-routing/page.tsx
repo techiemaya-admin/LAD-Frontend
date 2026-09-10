@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { Route, RefreshCw, Plus, Trash2, AlertTriangle, Lock, Save, X } from 'lucide-react';
 import { useLlmRouting, useMonitorTenants } from '@lad/frontend-features/lad-monitor';
 import type { LlmRoutingEntry, LlmProvider } from '@lad/frontend-features/lad-monitor';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /**
  * Per-tenant, per-feature LLM routing.
@@ -74,23 +75,28 @@ export default function MonitorLlmRoutingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={tenantId ?? ''}
-            onChange={(e) => {
-              setTenantId(e.target.value || null);
+          <Select
+            value={tenantId ?? '__none__'}
+            onValueChange={(value) => {
+              setTenantId(value === '__none__' ? null : value);
               setEditing(null);
             }}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+            disabled={tenantsLoading}
           >
-            <option value="">{tenantsLoading ? 'Loading tenants…' : 'Select a tenant…'}</option>
-            {tenantList.map((t: { id: string; name: string }) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 min-w-[180px] border-gray-200 bg-white text-xs dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-200">
+              <SelectValue placeholder={tenantsLoading ? 'Loading tenants…' : 'Select a tenant…'} />
+            </SelectTrigger>
+            <SelectContent className="border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+              <SelectItem value="__none__">Select a tenant…</SelectItem>
+              {tenantList.map((t: { id: string; name: string }) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <button
             onClick={() => refetch()}
             disabled={!tenantId}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -108,7 +114,7 @@ export default function MonitorLlmRoutingPage() {
       </div>
 
       {!tenantId && (
-        <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-gray-700">
+        <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-blue-950/40">
           Select a tenant to view or change its model routing.
         </div>
       )}
@@ -130,9 +136,9 @@ export default function MonitorLlmRoutingPage() {
             return (
               <div
                 key={f.key}
-                className={`rounded-lg border p-3 dark:border-gray-700 ${
+                className={`rounded-lg border p-3 dark:border-blue-950/40 dark:bg-[#071131] ${
                   locked || notWired
-                    ? 'border-gray-100 opacity-60 dark:border-gray-800'
+                    ? 'border-gray-100 opacity-60 dark:border-blue-950/40'
                     : 'border-gray-200'
                 }`}
               >
@@ -157,7 +163,7 @@ export default function MonitorLlmRoutingPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => startEdit(f.key)}
-                        className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
                       >
                         {rule ? 'Edit' : 'Set model'}
                       </button>
@@ -166,7 +172,7 @@ export default function MonitorLlmRoutingPage() {
                           onClick={() => clearChain(f.key)}
                           disabled={saving}
                           title="Revert to the platform default"
-                          className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:border-blue-950/40 dark:hover:bg-[#253456]"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -186,7 +192,7 @@ export default function MonitorLlmRoutingPage() {
                               className={`rounded-md px-2 py-0.5 font-mono ${
                                 i === 0
                                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-[#253456] dark:text-gray-400'
                               }`}
                             >
                               {PROVIDER_LABEL[c.provider]} · {c.model}
@@ -204,16 +210,16 @@ export default function MonitorLlmRoutingPage() {
                 )}
 
                 {isEditing && (
-                  <div className="mt-3 space-y-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+                  <div className="mt-3 space-y-2 border-t border-gray-100 pt-3 dark:border-blue-950/40">
                     {draft.map((entry, i) => (
                       <div key={i} className="flex flex-wrap items-center gap-2">
                         <span className="w-16 shrink-0 text-xs text-gray-500">
                           {i === 0 ? 'Primary' : `Fallback ${i}`}
                         </span>
-                        <select
+                        <Select
                           value={entry.provider}
-                          onChange={(e) => {
-                            const provider = e.target.value as LlmProvider;
+                          onValueChange={(value) => {
+                            const provider = value as LlmProvider;
                             const next = [...draft];
                             // Drop the model if the new provider does not serve it  - 
                             // leaving it would show an empty select and fail on save.
@@ -223,35 +229,42 @@ export default function MonitorLlmRoutingPage() {
                             next[i] = { provider, model: stillValid ? next[i].model : '' };
                             setDraft(next);
                           }}
-                          className="rounded-lg border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                         >
-                          {(meta?.providers ?? []).map((p) => (
-                            <option key={p} value={p}>{PROVIDER_LABEL[p] ?? p}</option>
-                          ))}
-                        </select>
-                        <select
-                          value={entry.model}
-                          onChange={(e) => {
+                          <SelectTrigger className="h-8 w-[120px] border-gray-200 bg-white px-2 text-xs dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+                            {(meta?.providers ?? []).map((p) => (
+                              <SelectItem key={p} value={p}>{PROVIDER_LABEL[p] ?? p}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={entry.model || undefined}
+                          onValueChange={(value) => {
                             const next = [...draft];
-                            next[i] = { ...next[i], model: e.target.value };
+                            next[i] = { ...next[i], model: value };
                             setDraft(next);
                           }}
-                          className="min-w-[260px] flex-1 rounded-lg border border-gray-200 px-2 py-1 font-mono text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
                         >
-                          <option value="">Select a model…</option>
-                          {(meta?.models?.[entry.provider] ?? []).map((m) => (
-                            <option key={m.model} value={m.model}>
-                              {m.model}
-                              {m.input != null && m.output != null
-                                ? `  ($${m.input}/$${m.output} per 1M)`
-                                : ''}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-8 min-w-[260px] flex-1 border-gray-200 bg-white px-2 font-mono text-xs dark:border-blue-950/40 dark:bg-[#071131] dark:text-gray-200">
+                            <SelectValue placeholder="Select a model…" />
+                          </SelectTrigger>
+                          <SelectContent className="border-gray-200 bg-white dark:border-blue-950/40 dark:bg-[#071131]">
+                            {(meta?.models?.[entry.provider] ?? []).map((m) => (
+                              <SelectItem key={m.model} value={m.model} className="font-mono text-xs">
+                                {m.model}
+                                {m.input != null && m.output != null
+                                  ? `  ($${m.input}/$${m.output} per 1M)`
+                                  : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <button
                           onClick={() => setDraft(draft.filter((_, j) => j !== i))}
                           disabled={draft.length === 1}
-                          className="rounded-lg border border-gray-200 px-2 py-1 text-gray-400 hover:bg-gray-50 disabled:opacity-30 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="rounded-lg border border-gray-200 px-2 py-1 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-30 dark:border-blue-950/40 dark:hover:border-red-900/60 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -269,7 +282,7 @@ export default function MonitorLlmRoutingPage() {
                         onClick={() => setDraft([...draft, { provider: 'gemini', model: '' }])}
                         disabled={draft.length >= 4}
                         title={draft.length >= 4 ? 'Maximum 4 entries' : 'Add a fallback'}
-                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-blue-950/40 dark:text-gray-300 dark:hover:bg-[#253456]"
                       >
                         <Plus className="h-3 w-3" /> Fallback
                       </button>

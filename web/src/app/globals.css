@@ -961,3 +961,24 @@ textarea.adv-chat-ta:focus-within,
 .dark .react-flow__controls-button svg {
   fill: currentColor !important;
 }
+
+/* Platform Monitor chart overlays follow the shared navy card theme. */
+.platform-monitor tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.dark .platform-monitor tbody tr:hover {
+  background-color: #1a2a43;
+}
+
+.dark .platform-monitor .recharts-default-tooltip {
+  background-color: #071131 !important;
+  border-color: rgba(30, 58, 138, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.dark .platform-monitor .recharts-tooltip-label,
+.dark .platform-monitor .recharts-tooltip-item,
+.dark .platform-monitor .recharts-legend-item-text {
+  color: #e2e8f0 !important;
+}
