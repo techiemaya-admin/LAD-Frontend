@@ -87,11 +87,11 @@ export function WhatsAppEmbeddedSignup() {
   };
 
   return (
-    <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 mx-3 shadow-sm">
+    <div className="min-w-0 overflow-hidden bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 mx-3 shadow-sm">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -104,7 +104,7 @@ export function WhatsAppEmbeddedSignup() {
               to copy.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <button
               onClick={() => refetch()}
               className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 dark:hover:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -115,7 +115,7 @@ export function WhatsAppEmbeddedSignup() {
             <button
               onClick={launch}
               disabled={!isConfigured || !isSdkReady || isConnecting}
-              className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+              className="h-11 min-w-0 flex-1 justify-center px-4 sm:h-12 sm:flex-none sm:px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl sm:rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
             >
               {isConnecting ? (
                 <>
@@ -135,9 +135,9 @@ export function WhatsAppEmbeddedSignup() {
 
       {/* Environment not configured - explain rather than silently disable */}
       {!configLoading && !isConfigured && (
-        <div className="mx-6 mt-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex gap-3">
+        <div className="mx-4 mt-4 sm:mx-6 sm:mt-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex gap-3 overflow-hidden">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800 dark:text-amber-200">
+          <div className="min-w-0 break-words text-sm text-amber-800 dark:text-amber-200">
             <p className="font-medium">WhatsApp sign-in isn&apos;t available on this environment yet.</p>
             <p className="mt-1 text-amber-700 dark:text-amber-300">
               One of <code>FACEBOOK_APP_ID</code>, <code>FACEBOOK_APP_SECRET</code>,{' '}
@@ -150,9 +150,9 @@ export function WhatsAppEmbeddedSignup() {
 
       {/* Error */}
       {error && (
-        <div className="mx-6 mt-6 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 flex gap-3">
+        <div className="mx-4 mt-4 sm:mx-6 sm:mt-6 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 flex flex-wrap gap-3 sm:flex-nowrap">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm text-red-800 dark:text-red-200">
+          <div className="min-w-0 flex-1 break-words text-sm text-red-800 dark:text-red-200">
             <p className="font-medium">Couldn&apos;t connect WhatsApp</p>
             <p className="mt-1 text-red-700 dark:text-red-300">{error}</p>
           </div>
@@ -167,7 +167,7 @@ export function WhatsAppEmbeddedSignup() {
 
       {/* Success + any non-fatal warnings from the handshake */}
       {justConnected && !error && (
-        <div className="mx-6 mt-6 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 flex gap-3">
+        <div className="mx-4 mt-4 sm:mx-6 sm:mt-6 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 flex gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div className="text-sm text-emerald-800 dark:text-emerald-200">
             <p className="font-medium">{justConnected} is connected.</p>
@@ -181,7 +181,7 @@ export function WhatsAppEmbeddedSignup() {
       )}
 
       {disconnectWarnings.length > 0 && (
-        <div className="mx-6 mt-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-800 dark:text-amber-200">
+        <div className="mx-4 mt-4 sm:mx-6 sm:mt-6 p-4 break-words rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-800 dark:text-amber-200">
           <ul className="space-y-1 list-disc list-inside">
             {disconnectWarnings.map((w) => <li key={w}>{w}</li>)}
           </ul>
@@ -189,7 +189,7 @@ export function WhatsAppEmbeddedSignup() {
       )}
 
       {/* Connected accounts */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {accountsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400 dark:text-slate-300" />
@@ -203,9 +203,9 @@ export function WhatsAppEmbeddedSignup() {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60"
+                className="flex min-w-0 flex-col items-stretch gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -230,7 +230,7 @@ export function WhatsAppEmbeddedSignup() {
                   <button
                     onClick={() => handleDisconnect(account)}
                     disabled={isDisconnecting}
-                    className="shrink-0 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md disabled:opacity-50 flex items-center gap-1.5"
+                    className="w-full shrink-0 justify-center px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md disabled:opacity-50 flex items-center gap-1.5 sm:w-auto"
                   >
                     <Unplug className="h-4 w-4" />
                     Disconnect
