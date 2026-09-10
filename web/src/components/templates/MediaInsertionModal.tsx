@@ -128,15 +128,15 @@ export default function MediaInsertionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dark:bg-[#000c3b] dark:border-gray-800">
-        <DialogHeader>
+      <DialogContent className="sm:!w-[min(90vw,64rem)] sm:!max-w-5xl max-h-[88vh] dark:bg-[#000724] dark:border-blue-950/40">
+        <DialogHeader className="flex-col items-start gap-1 px-6 py-5 sm:px-8 sm:py-6 pr-14 sm:pr-16">
           <DialogTitle className="dark:text-white">Insert Media into Email</DialogTitle>
           <DialogDescription className="dark:text-gray-400">
             Select a previously uploaded image or upload a new one
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 h-[55vh] sm:h-auto sm:min-h-[28rem] space-y-6 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-3">
@@ -158,7 +158,7 @@ export default function MediaInsertionModal({
               {mediaFiles.length > 0 ? (
                 <div className="space-y-3">
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white">Select Media:</label>
-                  <div className="grid grid-cols-2 gap-4 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto border border-gray-200 dark:border-blue-950/40 rounded-xl p-4">
                     {mediaFiles.map((media) => (
                       <div
                         key={media.id}
@@ -166,7 +166,7 @@ export default function MediaInsertionModal({
                         className={`p-3 rounded-lg border-2 cursor-pointer transition ${
                           selectedMedia?.id === media.id
                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-500'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-[#000724]'
+                            : 'border-gray-200 dark:border-blue-950/40 hover:border-gray-300 dark:hover:border-blue-950/40 bg-white dark:bg-[#000724]'
                         }`}
                       >
                         <img
@@ -186,7 +186,7 @@ export default function MediaInsertionModal({
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-6 text-center">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-6 text-center">
                   <p className="text-gray-600 dark:text-gray-400 mb-3">No media uploaded yet</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">
                     Upload an image in the media section first, then use this tool to insert it
@@ -205,7 +205,7 @@ export default function MediaInsertionModal({
                     value={altText}
                     onChange={(e) => setAltText(e.target.value)}
                     placeholder="Describe the image content..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-blue-950/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-[#000724] text-gray-900 dark:text-white placeholder-gray-400"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                     This text is shown if the image fails to load and helps with accessibility
@@ -215,7 +215,7 @@ export default function MediaInsertionModal({
 
               {/* Preview */}
               {selectedMedia && (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-4">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Preview:</p>
                   <img
                     src={selectedMedia.url}
@@ -227,7 +227,7 @@ export default function MediaInsertionModal({
 
               {/* HTML Preview */}
               {selectedMedia && (
-                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                <div className="bg-gray-50 dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 rounded-lg p-3">
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-400 mb-1">Generated HTML:</p>
                   <code className="text-xs text-gray-600 dark:text-gray-300 break-all">
                     &lt;img src=&quot;{selectedMedia.url}&quot; alt=&quot;{altText || selectedMedia.name}&quot; /&gt;
@@ -239,11 +239,11 @@ export default function MediaInsertionModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex justify-end px-6 py-4 sm:px-8 sm:py-5 border-t border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331]">
           <Button
             onClick={handleInsert}
             disabled={!selectedMedia || loading}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 dark:hover:bg-primary/80"
           >
             Insert Image
           </Button>

@@ -67,19 +67,19 @@ export default function HtmlEmailEditor({
       <div className="flex flex-col sm:flex-row gap-0 h-full w-full overflow-hidden bg-transparent">
 
         {/* Mobile only header to toggle Media Library (collapsible on mobile screens) */}
-        <div className="sm:hidden flex-shrink-0 bg-gray-50 dark:bg-[#000c3b] border-b border-gray-200 dark:border-gray-800 px-4 py-2 flex items-center justify-between">
+        <div className="sm:hidden flex-shrink-0 bg-gray-50 dark:bg-[#000c3b] border-b border-gray-200 dark:border-blue-950/40 px-4 py-2 flex items-center justify-between">
           <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📸 Media library items</span>
           <button
               type="button"
               onClick={() => setShowMediaMobile(!showMediaMobile)}
-              className="text-[11px] px-2.5 py-1 rounded-md bg-white dark:bg-[#000724] border border-gray-200 dark:border-gray-800 font-bold text-gray-700 dark:text-gray-300 cursor-pointer shadow-xs hover:bg-gray-50 dark:hover:bg-[#0b1957]/30"
+              className="text-[11px] px-2.5 py-1 rounded-md bg-white dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 font-bold text-gray-700 dark:text-gray-300 cursor-pointer shadow-xs hover:bg-gray-50 dark:hover:bg-[#0b1957]/30"
           >
             {showMediaMobile ? 'Hide Library ✖' : 'Show Library +'}
           </button>
         </div>
 
       {/* ── Left: Media Library ── */}
-      <div className={`w-full sm:w-52 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#000724] overflow-y-auto p-4 ${showMediaMobile ? 'block h-48 sm:h-full' : 'hidden sm:block h-full'}`}>
+      <div className={`w-full sm:w-52 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-blue-950/40 bg-gray-50 dark:bg-[#000724] overflow-y-auto p-4 ${showMediaMobile ? 'block h-48 sm:h-full' : 'hidden sm:block h-full'}`}>
         <EmailMediaLibrary onInsert={insertAtCursor} />
       </div>
 
@@ -87,7 +87,7 @@ export default function HtmlEmailEditor({
       <div className="flex-1 min-w-0 flex flex-col p-3 sm:p-5 gap-2 sm:gap-3 overflow-hidden h-full">
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 bg-white dark:bg-[#000c3b] rounded-xl border border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 bg-white dark:bg-[#000c3b] rounded-xl border border-gray-200 dark:border-blue-950/40 flex-shrink-0">
           <span className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mr-1">Insert:</span>
           {[
             { label: 'First Name', val: '{{first_name}}' },
@@ -128,7 +128,7 @@ export default function HtmlEmailEditor({
             className={`flex-1 w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 font-mono text-sm resize-none transition-colors ${
               isDragOver
                 ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-300 dark:ring-blue-900 bg-blue-50 dark:bg-blue-950/20 text-gray-900 dark:text-white'
-                : 'border-gray-200 dark:border-gray-800 focus:ring-blue-500 focus:border-blue-400 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white'
+                : 'border-gray-200 dark:border-blue-950/40 focus:ring-blue-500 focus:border-blue-400 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white'
             }`}
             style={{ minHeight: '340px' }}
           />

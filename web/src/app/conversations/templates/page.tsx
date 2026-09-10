@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   LayoutTemplate, Mail, Pencil, FileText, MessageSquare, RefreshCw,
   CheckCircle2, Clock, XCircle, AlertCircle, Image, FileIcon, Video,
-  Linkedin, Instagram, Trash2, Star, Plus,
+  Linkedin, Instagram, Trash2, Star, Plus, X,
 } from 'lucide-react';
 import { useEmailTemplates } from '@lad/frontend-features/email-templates';
 import {
@@ -155,7 +155,7 @@ function EmptyState({ icon, title, subtitle, ctaLabel, onCta }: {
       <p className="text-sm text-[#64748B] dark:text-[#7a8ba3] mb-6">{subtitle}</p>
       <button
         onClick={onCta}
-        className="px-5 py-2.5 bg-[#0b1957] dark:bg-[#071131] dark:border dark:border-blue-950/40 text-white rounded-xl hover:bg-[#0a1540] dark:hover:bg-[#0f1b3e] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all inline-flex items-center gap-2"
+        className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 dark:hover:bg-primary/80 font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] transition-all inline-flex items-center gap-2"
       >
         <Plus className="w-4 h-4" /> {ctaLabel}
       </button>
@@ -496,7 +496,7 @@ export default function TemplatesPage() {
           </div>
           <button
             onClick={createButton.onClick}
-            className="px-4 py-2 bg-[#0b1957] dark:bg-[#071131] dark:border dark:border-blue-950/40 text-white rounded-xl hover:bg-[#0a1540] dark:hover:bg-[#0f1b3e] font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] w-full sm:w-auto flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 dark:hover:bg-primary/80 font-semibold shadow-[0_4px_20px_rgba(11,25,87,0.3)] hover:shadow-[0_8px_30px_rgba(11,25,87,0.5)] w-full sm:w-auto flex items-center justify-center gap-2"
           >
             {createButton.icon}
             {createButton.label}
@@ -798,52 +798,50 @@ export default function TemplatesPage() {
         The remaining components are sent back untouched so they survive.
       */}
       {wabaEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-[#0b1957] shadow-xl border border-[#E2E8F0] dark:border-blue-950/40">
-            <div className="px-5 py-4 border-b border-[#E2E8F0] dark:border-blue-950/40">
-              <h3 className="font-bold text-[#1E293B] dark:text-white">Edit template</h3>
-              <p className="text-xs text-[#64748B] dark:text-[#7a8ba3] mt-0.5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-[#000724]/80 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="waba-edit-title">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-[#000724] text-gray-900 dark:text-white shadow-2xl border border-gray-200 dark:border-blue-950/40">
+            <div className="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
+              <div className="min-w-0">
+              <h3 id="waba-edit-title" className="font-bold text-[#1E293B] dark:text-white">Edit template</h3>
+              <p className="text-xs text-[#64748B] dark:text-slate-400 mt-0.5 truncate">
                 {wabaEditing.name} · {wabaEditing.language}
                 {wabaEditing.account_phone ? ` · ${wabaEditing.account_phone}` : ''}
               </p>
+              </div>
+              <button type="button" onClick={() => setWabaEditing(null)} disabled={wabaEditSaving} className="shrink-0 p-2 rounded-lg border border-gray-200 dark:border-blue-950/40 bg-gray-50 dark:bg-[#071131] text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-50 cursor-pointer" aria-label="Close edit template">
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 sm:px-6 py-5 space-y-4 bg-gray-50/50 dark:bg-[#000724]">
               {/*
                 Stated before they commit, not after. An approved template that
                 is edited leaves APPROVED and cannot be sent until Meta approves
                 it again, so editing one mid-campaign stops that campaign's sends.
               */}
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded-xl px-3 py-2.5">
                 Editing sends this template back to Meta for review. It cannot be
                 sent until the change is approved.
               </p>
 
-              <label className="block text-sm font-medium text-[#1E293B] dark:text-white">Body text</label>
+              <label className="block text-sm font-semibold text-[#1E293B] dark:text-slate-200">Body text</label>
               <textarea
                 value={wabaEditBody}
                 onChange={e => setWabaEditBody(e.target.value)}
                 rows={6}
-                className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-blue-950/60 rounded-lg text-sm bg-white dark:bg-[#000724] text-[#1E293B] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957]/20"
+                className="w-full px-3.5 py-3 border border-gray-200 dark:border-blue-950/40 rounded-xl text-sm bg-white dark:bg-[#071131] text-[#1E293B] dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
               />
-              <p className="text-[11px] text-[#94A3B8] dark:text-gray-500">
+              <p className="text-[11px] text-[#94A3B8] dark:text-slate-400">
                 Keep every {'{{n}}'} placeholder the original had — Meta rejects a
                 body whose variables do not match its examples.
               </p>
             </div>
 
-            <div className="px-5 py-3 border-t border-[#E2E8F0] dark:border-blue-950/40 flex justify-end gap-2">
-              <button
-                onClick={() => setWabaEditing(null)}
-                disabled={wabaEditSaving}
-                className="px-3 py-1.5 text-sm font-semibold text-[#64748B] dark:text-[#7a8ba3] hover:text-[#1E293B] dark:hover:text-white transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
+            <div className="px-5 sm:px-6 py-4 border-t border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] flex justify-end gap-2">
               <button
                 onClick={submitWabaEdit}
                 disabled={wabaEditSaving}
-                className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-[#0b1957] text-white hover:bg-[#0a1540] transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
               >
                 {wabaEditSaving ? 'Submitting…' : 'Submit for review'}
               </button>
