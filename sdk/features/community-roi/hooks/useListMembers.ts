@@ -5,11 +5,11 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { getListMembersOptions } from '../api';
-import type { Member, ListMembersParams, PaginatedResponse } from '../types';
+import type { Member, ListMembersParams } from '../types';
 
 export interface UseListMembersReturn {
-  data: PaginatedResponse<Member> | undefined;
-  members: PaginatedResponse<Member> | undefined;
+  data: Member[] | undefined;
+  members: Member[] | undefined;
   isLoading: boolean;
   loading: boolean;
   error: Error | null;
