@@ -28,9 +28,9 @@ export const CreditsSettings: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-2 py-6 sm:px-4 lg:px-6">
       {/* Wallet Balance Card */}
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-[#ffffff] p-6 rounded-xl shadow-lg dark:from-[#051139] dark:to-[#02081e] dark:border dark:border-blue-950/50">
+      <div className="bg-gradient-to-br from-primary to-primary/80 text-[#ffffff] p-6 rounded-xl shadow-lg dark:from-blue-950 dark:via-[#071131] dark:to-[#071131] dark:border dark:border-blue-950/50">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Wallet className="h-5 w-5 mr-2 text-[#ffffff] dark:text-blue-400" />
@@ -66,7 +66,7 @@ export const CreditsSettings: React.FC = () => {
       <AddCreditsModal open={showAddCreditsModal} onClose={() => setShowAddCreditsModal(false)} />
 
       {/* Credits Information */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 dark:bg-[#030a21]/60 dark:border-blue-950/40">
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 dark:bg-[#071131] dark:border-blue-950/40">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">How Credits Work</h3>
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
@@ -106,9 +106,9 @@ export const CreditsSettings: React.FC = () => {
       </div>
 
       {/* Credit Pricing Guide */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 dark:bg-[#030a21]/60 dark:border-blue-950/40">
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 dark:bg-[#071131] dark:border-blue-950/40">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Credit Pricing</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 dark:[&>div]:bg-[#030a21]/60">
           <div className="p-4 border border-gray-200 dark:border-blue-950/40 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-900 dark:text-white">Voice Calls (Cartesia)</span>
