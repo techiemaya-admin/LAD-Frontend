@@ -71,3 +71,6 @@ export type { NetworkStats, UseNetworkStatsReturn } from './useNetworkStats';
 export type { UseRelationshipHeatmapReturn, UseUpdateRelationshipScoresReturn } from './useRelationshipHeatmap';
 export type { NewMembersResponse, UseNewMembersReturn } from './useNewMembers';
 
+
+export { useCoordinationSelections, useSelectCoordination, useSendCoordination } from './useCoordination';
+export type { DaySlot, CoordinationSelection, CoordinationSelectionsResponse, SeedSummary, SendSummary, SelectArgs } from './useCoordination';
