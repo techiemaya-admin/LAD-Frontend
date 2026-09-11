@@ -1591,6 +1591,11 @@ function useBuilderResources() {
   const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
   const [waAccounts, setWaAccounts] = useState<any[]>([]);
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  // Why the WhatsApp template list is empty, when it is empty for a REASON.
+  // The service answers 200 with total 0 and a `degraded` array naming the
+  // number and Meta's error; ignoring that rendered nothing at all, and the
+  // operator read "no templates" when the truth was "your token is revoked".
+  const [waTemplatesDegraded, setWaTemplatesDegraded] = useState<string | null>(null);
   const [liTemplates, setLiTemplates] = useState<any[]>([]);
 
   useEffect(() => { voice.fetchAll?.().catch(() => {}); /* eslint-disable-next-line */ }, []);
@@ -1608,6 +1613,10 @@ function useBuilderResources() {
         const list = Array.isArray(d) ? d : Array.isArray(d?.templates) ? d.templates : Array.isArray(d?.data) ? d.data : [];
         // Only APPROVED can be sent; PENDING and REJECTED would fail at Meta.
         setWaTemplates(list.filter((t: any) => String(t?.status || '').toUpperCase() === 'APPROVED'));
+        const deg: any[] = Array.isArray(d?.degraded) ? d.degraded : [];
+        setWaTemplatesDegraded(deg.length
+          ? deg.map((g: any) => `${g?.account_phone || g?.account_name || 'WhatsApp number'}: ${g?.error || 'could not load templates'}`).join(' · ')
+          : null);
       }).catch(() => {});
     fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (d?.success) setLiTemplates(d.data || []); }).catch(() => {});
@@ -1624,7 +1633,7 @@ function useBuilderResources() {
     voiceAgents, voiceNumbers,
     emailSenders: (emailSenders as any[]) || [],
     emailTemplates: (emailTemplates as any[]) || [],
-    waAccounts, waTemplates, liTemplates,
+    waAccounts, waTemplates, liTemplates, waTemplatesDegraded,
   };
 }
 
@@ -5999,6 +6008,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     })}
                   </CustomSelect>
                 )}
+                {branchChannel(k) === 'whatsapp' && branchTemplates(k).length === 0 && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    {res.waTemplatesDegraded
+                      ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                      : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+                  </p>
+                )}
                 {/* Sending account. WhatsApp needs one — the dispatcher has no
                     tenant default and fails the step without it. Email does
                     default to the tenant's own active account, so its picker is
@@ -7013,6 +7029,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <option value=""> -  None (write below / AI-drafted)  - </option>
                   {res.waTemplates.map((t: any) => <option key={waTemplateKey(t)} value={waTemplateKey(t)}>{waTemplateLabel(t)}</option>)}
                 </CustomSelect></div>
+            )}
+            {res.waTemplates.length === 0 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                {res.waTemplatesDegraded
+                  ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                  : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+              </p>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message</label>
               <textarea className={`${field} min-h-[90px]`} value={cfg.message || ''} onChange={(e) => { setCfg(editingId!, { message: e.target.value }); updateWorkflowStep(editingId!, { description: e.target.value.slice(0, 40) }); }}
