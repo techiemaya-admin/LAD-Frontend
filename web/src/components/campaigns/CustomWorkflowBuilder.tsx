@@ -1435,12 +1435,43 @@ const WORKFLOW_DATA_POINTS: DataPoint[] = [
   { key: 'location',           label: 'Location',             match: /location|\bcity\b|\bstate\b|country|address/i },
   { key: 'industry',           label: 'Industry',             match: /industry|sector/i },
   { key: 'headline',           label: 'Headline / summary',   match: /headline|about|summary|description/i },
-  { key: 'campaign_status',    label: 'Campaign status',      match: /lead.?status|\bstatus\b|\bstage\b/i },
+  // Listed BEFORE campaign_status so a status-shaped field suggests this one.
+  // campaign_status resolves to the engine's internal lead status ("active",
+  // "contacted"), which a Zoho picklist refuses; this one resolves to a
+  // sequence outcome the operator maps onto the field's own options below.
+  { key: 'campaign_outcome',   label: 'Campaign outcome',     match: /lead.?status|\bstatus\b|\bstage\b|outcome|result/i },
+  { key: 'campaign_status',    label: 'Campaign status (raw)', match: /^$/ },
   { key: 'campaign_name',      label: 'Campaign name',        match: /campaign/i },
   { key: 'last_channel',       label: 'Last channel used',    match: /channel|\bsource\b/i },
   { key: 'last_activity_date', label: "Today's date",         match: /date|last.?activity|modified/i },
   { key: 'notes',              label: 'Last message / notes', match: /\bnote|comment|remark/i },
 ];
+
+/** The outcomes a sequence can leave a lead in. MIRRORS the backend's
+ *  CAMPAIGN_OUTCOMES in ZohoWritebackService — same keys, same order — and
+ *  the backend pins them with a test. A key here that the backend does not
+ *  know resolves to nothing at run time; a backend key missing here can never
+ *  be mapped. Change both together. */
+const CAMPAIGN_OUTCOMES: { key: string; label: string; hint: RegExp }[] = [
+  { key: 'linkedin_not_found',     label: 'LinkedIn account not found', hint: /not.?found|no.?linkedin|acc(ount)?.?not|invalid|missing/i },
+  { key: 'connection_sent',        label: 'Connection request sent',    hint: /(connection|invite|invitation|request).*(sent|pending)|requested/i },
+  { key: 'connection_accepted',    label: 'Connection accepted',        hint: /accept|connected\b/i },
+  { key: 'linkedin_followup_sent', label: 'LinkedIn follow-up sent',    hint: /follow.?up|linkedin.*(message|dm|sent)|messaged/i },
+  { key: 'replied',                label: 'Replied',                    hint: /repl|respond|answer/i },
+  { key: 'email_sent',             label: 'Email sent',                 hint: /e-?mail.*sent|sent.*e-?mail|emailed/i },
+  { key: 'email_opened',           label: 'Email opened',               hint: /e-?mail.*(open|read|viewed)|(open|read).*e-?mail/i },
+  { key: 'whatsapp_sent',          label: 'WhatsApp sent',              hint: /whats?app|\bwa\b/i },
+];
+
+/** Pick the picklist option that most plausibly means this outcome, or ''. A
+ *  suggestion, not a decision — the operator sees every row and can override. */
+function suggestPicklistOption(outcomeKey: string, options: string[]): string {
+  const o = CAMPAIGN_OUTCOMES.find((x) => x.key === outcomeKey);
+  if (!o) return '';
+  // "-None-" is Zoho's empty option; never suggest it as a meaning.
+  const real = options.filter((v) => v && !/^-?none-?$/i.test(v.trim()));
+  return real.find((v) => o.hint.test(v)) || '';
+}
 
 /** Suggest a data-point for a Zoho field, sequence-aware (only maps a channel
  *  source when that channel is actually in the Accelerator). Returns key or ''. */
@@ -3756,9 +3787,17 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       if (zohoUpdateNode) {
         const zc = configs[ZOHO_UPDATE_STEP_ID] || {};
         const map: Record<string, string> = zc.map || {};
+        const pick: Record<string, Record<string, string>> = zc.picklist || {};
         const mappings = Object.entries(map)
           .filter(([, sourceKey]) => sourceKey)
-          .map(([zoho_field, source]) => ({ zoho_field, source }));
+          .map(([zoho_field, source]) => {
+            // Only the rows the operator actually chose; an empty row must
+            // read as "don't write", not as a blank value posted to Zoho.
+            const chosen = Object.fromEntries(Object.entries(pick[zoho_field] || {}).filter(([, v]) => v && String(v).trim()));
+            return source === 'campaign_outcome' && Object.keys(chosen).length
+              ? { zoho_field, source, picklist_map: chosen }
+              : { zoho_field, source };
+          });
         if (mappings.length) {
           steps.push({
             type: 'zoho_update', title: 'Update Zoho record', channel: 'linkedin', order_index: order++,
@@ -5163,11 +5202,29 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const channels = new Set<Channel>();
             workflowPreview.forEach((s) => { const o = OUTREACH.find((x) => x.type === s.type); if (o) channels.add(o.channel); });
             if ((source === 'zoho_recurring' || source === 'ghl_recurring') && configs[SOURCE_STEP_ID]?.resolve_instagram) channels.add('instagram');
+            // Per picklist field: which of ITS options each outcome becomes.
+            // { [api_name]: { [outcome_key]: option } }. Kept apart from `map`
+            // so the module-switch reset above clears both together.
+            const zpick: Record<string, Record<string, string>> = cfg.picklist || {};
             const setMap = (api: string, val: string) => setCfg(eid, { map: { ...zmap, [api]: val } });
+            const setPick = (api: string, outcome: string, option: string) =>
+              setCfg(eid, { picklist: { ...zpick, [api]: { ...(zpick[api] || {}), [outcome]: option } } });
+            const optionsOf = (f: any): string[] => Array.isArray(f?.pick_list_values) ? f.pick_list_values.map(String) : [];
             const applySuggestions = () => {
               const next: Record<string, string> = { ...zmap };
-              zohoFields.forEach((f) => { if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; } });
-              setCfg(eid, { map: next });
+              const nextPick: Record<string, Record<string, string>> = { ...zpick };
+              zohoFields.forEach((f) => {
+                if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; }
+                // A picklist mapped to the outcome gets its rows suggested too,
+                // but only the rows the operator has not already set.
+                if (next[f.api_name] === 'campaign_outcome' && optionsOf(f).length) {
+                  const cur = nextPick[f.api_name] || {};
+                  const filled: Record<string, string> = { ...cur };
+                  CAMPAIGN_OUTCOMES.forEach((o) => { if (!filled[o.key]) { const s = suggestPicklistOption(o.key, optionsOf(f)); if (s) filled[o.key] = s; } });
+                  nextPick[f.api_name] = filled;
+                }
+              });
+              setCfg(eid, { map: next, picklist: nextPick });
             };
             const mappedCount = Object.values(zmap).filter(Boolean).length;
             return (<>
@@ -5195,13 +5252,42 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {!!zohoFields.length && (
                 <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
                   {zohoFields.map((f) => (
-                    <div key={f.api_name} className="grid grid-cols-2 gap-2 items-center">
-                      <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
-                      <CustomSelect className="w-full text-xs" value={zmap[f.api_name] || ''} onValueChange={(val) => setMap(f.api_name, val)}>
-                        <option value="">— Skip —</option>
-                        {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
-                      </CustomSelect>
-                    </div>
+                    <Fragment key={f.api_name}>
+                      <div className="grid grid-cols-2 gap-2 items-center">
+                        <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
+                        <CustomSelect className="w-full text-xs" value={zmap[f.api_name] || ''} onValueChange={(val) => setMap(f.api_name, val)}>
+                          <option value="">— Skip —</option>
+                          {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
+                        </CustomSelect>
+                      </div>
+                      {/* A picklist mapped to the outcome needs one more answer per
+                          outcome: which of the field's OWN options it becomes.
+                          Zoho refuses any value that is not an option, and the
+                          write-back fails softly, so without this the field
+                          silently never changed. An outcome left at "— Don't
+                          write —" leaves the field alone on those leads. */}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length > 0 && (
+                        <div className="ml-3 pl-2 border-l-2 border-border dark:border-blue-950/40 space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            <strong>{f.field_label}</strong> is a picklist. Choose which of its options each outcome becomes:
+                          </p>
+                          {CAMPAIGN_OUTCOMES.map((o) => (
+                            <div key={o.key} className="grid grid-cols-2 gap-2 items-center">
+                              <span className="text-[11px] text-foreground truncate" title={o.label}>{o.label}</span>
+                              <CustomSelect className="w-full text-[11px]" value={(zpick[f.api_name] || {})[o.key] || ''} onValueChange={(val) => setPick(f.api_name, o.key, val)}>
+                                <option value="">— Don&apos;t write —</option>
+                                {optionsOf(f).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                              </CustomSelect>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length === 0 && (
+                        <p className="ml-3 text-[11px] text-amber-700 dark:text-amber-400">
+                          This field is not a picklist, so the outcome key (e.g. <code>connection_accepted</code>) is written as plain text.
+                        </p>
+                      )}
+                    </Fragment>
                   ))}
                 </div>
               )}
