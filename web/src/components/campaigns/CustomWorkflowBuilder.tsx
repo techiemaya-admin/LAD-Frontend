@@ -1549,8 +1549,26 @@ function BuilderCanvas({ steps, branches = [], switchId }: { steps: WorkflowPrev
  *  `components`, not a flat field, and the list endpoint may omit it entirely —
  *  so an empty string is normal and must not be treated as an error. */
 function waTemplateBody(t: any): string {
+  // The WABA service's list already flattens the BODY component to `body`;
+  // the raw Meta shape keeps it in `components`. Read both.
+  if (t?.body && typeof t.body === 'string') return t.body;
   const body = (t?.components || []).find((c: any) => c?.type === 'BODY');
   return body?.text || '';
+}
+
+/** What a Meta template is keyed on. NOT an id — the WABA service's list has
+ *  none, so `<option value={t.id}>` rendered value=undefined and the browser
+ *  fell back to the option's TEXT: the label "developer_outreach · en · +971…"
+ *  went into the config as the template id, and the lookup by id found
+ *  nothing, so name and language were never stored and the engine had no
+ *  template to send (stage, campaign f8cfedcd, 2026-09-11). Meta addresses a
+ *  template by name + language, and the same name can exist in two languages,
+ *  so that pair is the identity. */
+function waTemplateKey(t: any): string {
+  return `${t?.name || ''}|${t?.language || t?.language_code || 'en'}`;
+}
+function findWaTemplate(list: any[], key: string): any | undefined {
+  return (list || []).find((x: any) => waTemplateKey(x) === key);
 }
 
 /** What to call a Meta template in a dropdown. The NAME is what Meta knows it
@@ -4920,7 +4938,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           else if (v === '__industry_trend__') setTouch(i, { touch_type: 'industry_trend', template_id: undefined });
                           else if (v === '__company_post__') setTouch(i, { touch_type: 'company_page_post', template_id: undefined });
                           else {
-                            const tm = tmpls.find((x: any) => String(x.id) === v);
+                            const tm = channel === 'whatsapp' ? findWaTemplate(tmpls, v) : tmpls.find((x: any) => String(x.id) === v);
                             setTouch(i, {
                               touch_type: undefined,
                               template_id: v || undefined,
@@ -4943,11 +4961,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             <option value="__company_post__">Share a post from our company page</option>
                           </>
                         )}
-                        {tmpls.map((tm: any) => (
-                          <option key={tm.id} value={tm.id}>
-                            {channel === 'whatsapp' ? waTemplateLabel(tm) : tmplName(tm)}
-                          </option>
-                        ))}
+                        {tmpls.map((tm: any) => {
+                          const v = channel === 'whatsapp' ? waTemplateKey(tm) : String(tm.id);
+                          return <option key={v} value={v}>{channel === 'whatsapp' ? waTemplateLabel(tm) : tmplName(tm)}</option>;
+                        })}
                       </CustomSelect>
                       {(t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') && (
                         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -5956,8 +5973,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     templates from it rather than from the text. */}
                 {branchTemplates(k).length > 0 && (
                   <CustomSelect className={field} value={(cfg[k] || {}).template_id || ''} onValueChange={(val) => {
-                    const t = branchTemplates(k).find((x: any) => String(x.id) === val);
                     const isWa = branchChannel(k) === 'whatsapp';
+                    const t = isWa
+                      ? findWaTemplate(branchTemplates(k), val)
+                      : branchTemplates(k).find((x: any) => String(x.id) === val);
                     setBranch(k, {
                       template_id: val || undefined,
                       // WhatsApp is addressed by name + language: that is what
@@ -5973,11 +5992,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     });
                   }}>
                     <option value="">— No template (write below / AI-drafted) —</option>
-                    {branchTemplates(k).map((t: any) => (
-                      <option key={t.id} value={t.id}>
-                        {branchChannel(k) === 'whatsapp' ? waTemplateLabel(t) : (t.name || t.title || 'Template')}
-                      </option>
-                    ))}
+                    {branchTemplates(k).map((t: any) => {
+                      const isWa = branchChannel(k) === 'whatsapp';
+                      const v = isWa ? waTemplateKey(t) : String(t.id);
+                      return <option key={v} value={v}>{isWa ? waTemplateLabel(t) : (t.name || t.title || 'Template')}</option>;
+                    })}
                   </CustomSelect>
                 )}
                 {/* Sending account. WhatsApp needs one — the dispatcher has no
@@ -6980,7 +6999,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             {res.waTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Template (optional)</label>
                 <CustomSelect className={field} value={cfg.whatsapp_template_id || ''} onValueChange={(val) => {
-                  const t = res.waTemplates.find((x: any) => String(x.id) === val);
+                  const t = findWaTemplate(res.waTemplates, val);
                   setCfg(editingId!, {
                     whatsapp_template_id: val || undefined,
                     // Meta addresses a template by NAME + LANGUAGE, not by id —
@@ -6992,7 +7011,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
-                  {res.waTemplates.map((t: any) => <option key={t.id} value={t.id}>{waTemplateLabel(t)}</option>)}
+                  {res.waTemplates.map((t: any) => <option key={waTemplateKey(t)} value={waTemplateKey(t)}>{waTemplateLabel(t)}</option>)}
                 </CustomSelect></div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message</label>
