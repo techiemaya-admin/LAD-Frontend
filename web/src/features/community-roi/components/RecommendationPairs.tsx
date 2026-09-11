@@ -9,7 +9,7 @@ import {
 import type { DaySlot } from '@lad/frontend-features/community-roi';
 import MessageTemplateSender from './MessageTemplateSender';
 import {
-  MemberCoordinationCard, SendCoordinationPanel, DAY_SLOTS, selectionFor,
+  MemberCoordinationCard, SendCoordinationPanel, DAY_SLOTS, DAY_LABEL, selectionFor, partnerOf,
   type Pair, type MemberLite,
 } from './CoordinationRows';
 
@@ -79,6 +79,9 @@ export const RecommendationPairs: React.FC = () => {
   const [showCoordinate, setShowCoordinate] = useState(false);
   const [broadcastToast, setBroadcastToast] = useState<string | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // The one row whose own Coordinate button is mid-send, if any.
+  const [coordinating, setCoordinating] = useState<{ memberId: string; day: DaySlot } | null>(null);
 
   // Persisted picks for the active week, and who is taken on each day.
   const { data: selData, refetch: refetchSelections } = useCoordinationSelections(activeWeek);
@@ -188,6 +191,61 @@ export const RecommendationPairs: React.FC = () => {
     } catch (e) {
       setPickError((e as Error).message);
     } finally {
+      refetchSelections();
+    }
+  };
+
+  // Coordinate ONE member now: their pick for that day, nobody else. The pair
+  // shown in the dropdown is what goes out — a persisted override if there is
+  // one, otherwise the generated pair (seeded here, scoped to this member).
+  const handleCoordinate = async (member: MemberLite, day: DaySlot) => {
+    const existing = selectionFor(selections, member.id, day);
+    if (existing && existing.status !== 'pending') return;   // already coordinated
+    const gen = memberRows.find((r) => r.member.id === member.id)?.generatedByDay[day];
+    const partner = existing
+      ? partnerOf(existing, member.id)
+      : (() => {
+          const id = gen?.member_a_id === member.id ? gen?.member_b_id : gen?.member_a_id;
+          return id ? { id, name: memberLites.find((m) => m.id === id)?.name ?? 'their partner' } : null;
+        })();
+    if (!partner) { setPickError(`${member.name} has no partner on ${DAY_LABEL[day]} — pick one first.`); return; }
+    if (!window.confirm(
+      `Send ${member.name} a ${DAY_LABEL[day]} slot offer for a 1-2-1 with ${partner.name}?\n\nOnly this pair is messaged; nobody else in the chapter hears anything.`,
+    )) return;
+
+    setPickError(null);
+    setNotice(null);
+    setCoordinating({ memberId: member.id, day });
+    try {
+      if (!existing) {
+        const seeded = await seed(activeWeek, day, { memberId: member.id });
+        if (seeded.created === 0 && seeded.alreadySelected === 0) {
+          const who = seeded.skipped
+            .flatMap((sk) => sk.members)
+            .map((id) => memberLites.find((m) => m.id === id)?.name ?? id)
+            .filter((n) => n !== member.name);
+          setPickError(
+            who.length
+              ? `${who.join(', ')} already has a 1-2-1 on ${DAY_LABEL[day]}. Pick someone else, or change theirs first.`
+              : `No generated pair for ${member.name} on ${DAY_LABEL[day]} — pick a partner first.`,
+          );
+          return;
+        }
+      }
+      const out = await send(activeWeek, day, { memberId: member.id });
+      if (out.notified >= 1) {
+        setNotice(`Slot offer sent to ${member.name} for ${DAY_LABEL[day]} — a 1-2-1 with ${partner.name}.`);
+      } else if (out.proposed >= 1) {
+        setNotice(`Negotiation opened for ${member.name}; the WhatsApp offer was not delivered yet and will be retried.`);
+      } else if (out.skipped >= 1 || out.failed >= 1) {
+        setPickError(`${member.name}'s ${DAY_LABEL[day]} pair was not sent — see the row's status for why.`);
+      } else {
+        setPickError(`Nothing to send for ${member.name} on ${DAY_LABEL[day]}.`);
+      }
+    } catch (e) {
+      setPickError((e as Error).message);
+    } finally {
+      setCoordinating(null);
       refetchSelections();
     }
   };
@@ -386,6 +444,9 @@ export const RecommendationPairs: React.FC = () => {
                 {pickError && (
                   <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pickError}</p>
                 )}
+                {notice && (
+                  <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{notice}</p>
+                )}
                 {memberRows
                   .filter(({ member }) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map(({ member, generatedByDay }, index) => (
@@ -398,7 +459,9 @@ export const RecommendationPairs: React.FC = () => {
                       takenByDay={takenByDay}
                       allMembers={memberLites}
                       saving={isSaving}
+                      coordinatingDay={coordinating?.memberId === member.id ? coordinating.day : null}
                       onPick={(day, partnerId) => handlePick(member, day, partnerId)}
+                      onCoordinate={(day) => handleCoordinate(member, day)}
                     />
                   ))}
               </div>
