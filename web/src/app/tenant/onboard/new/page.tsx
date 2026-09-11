@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, Copy, Check, AlertCircle, Info, ShieldOff,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
+import { readProvisionHandoff, clearProvisionHandoff, type SignupApplication } from '@/lib/signup-applications';
 
 const SUPER_ADMIN_EMAIL = 'admin@techiemaya.com';
 
@@ -1009,6 +1010,11 @@ export default function TenantOnboardPage() {
           capabilities:           Array.isArray(d.capabilities)           ? d.capabilities           : DEFAULT_CAPABILITIES,
           essential_features:     Array.isArray(d.essential_features)     ? d.essential_features     : FALLBACK_ESSENTIAL_FEATURES,
           essential_capabilities: Array.isArray(d.essential_capabilities) ? d.essential_capabilities : FALLBACK_ESSENTIAL_CAPABILITIES,
+          // Was never read from the response, so the edition picker (which
+          // renders only when verticals.length > 0) had been invisible since
+          // it shipped — the portal could not actually create a wellness
+          // tenant. The signup queue depends on it, hence fixed here.
+          verticals:              Array.isArray(d.verticals)              ? d.verticals              : [],
         };
         setMeta(next);
         // Merge essentials into the form's selected sets so they ship with
@@ -1022,6 +1028,39 @@ export default function TenantOnboardPage() {
       .catch(() => { /* silent - UI falls back to hardcoded DEFAULT_* lists */ });
     return () => { cancelled = true; };
   }, [authState]);
+
+  // ── Prefill from an approved signup application ───────────────────────────
+  // /tenant/signups hands the row over in sessionStorage and puts its id in
+  // the URL; the two must agree. Runs once meta has loaded so the vertical's
+  // live pipelines can be pre-selected the same way pickVertical() does.
+  const [application, setApplication] = useState<SignupApplication | null>(null);
+  const [applicationStamp, setApplicationStamp] = useState<'idle' | 'done' | 'failed'>('idle');
+  useEffect(() => {
+    if (authState !== 'allowed' || meta === null || application) return;
+    const id = new URLSearchParams(window.location.search).get('application');
+    if (!id) return;
+    const app = readProvisionHandoff(id);
+    if (!app) return;
+    setApplication(app);
+    const [first, ...rest] = (app.contact_name || app.identity_name || '').trim().split(/\s+/);
+    const email = app.contact_email || app.identity_email || '';
+    const vertical = (meta.verticals ?? []).some(v => v.key === app.vertical) ? app.vertical : '';
+    const live = (meta.verticals ?? []).find(v => v.key === vertical)?.pipelines.filter(p => p.state === 'live').map(p => p.key) ?? [];
+    setForm(prev => ({
+      ...prev,
+      companyName: app.business_name,
+      slug: toSlug(app.business_name),
+      email,
+      industry: prev.industry || (app.vertical === 'wellness' ? 'Fitness & Wellness' : ''),
+      vertical,
+      snapshotPipelines: live,
+      adminFirstName: first || '',
+      adminLastName: rest.join(' '),
+      adminEmail: email,
+      // web.mrlads.com is develop; a customer signup belongs on stage.
+      environment: 'stage',
+    }));
+  }, [authState, meta, application]);
 
   const set = useCallback((k: keyof FormData, v: any) => {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -1152,6 +1191,23 @@ export default function TenantOnboardPage() {
 
       setProvisionLogs(logs);
       setProvisionResult(data);
+
+      // Close the loop with the signup queue: the application is now
+      // provisioned and points at its tenant. Best-effort — the tenant exists
+      // either way, and the queue page shows the row still 'approved' if this
+      // fails, which is the honest state.
+      if (application && data.success && data.tenantId) {
+        try {
+          const r = await fetch(`/api/signup/applications/${application.id}`, {
+            method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'provisioned', tenant_id: data.tenantId }),
+          });
+          setApplicationStamp(r.ok ? 'done' : 'failed');
+          if (r.ok) clearProvisionHandoff();
+        } catch {
+          setApplicationStamp('failed');
+        }
+      }
     } catch (e: any) {
       setProvisionLogs([{ step: `Network error: ${e.message}`, status: 'error' }]);
       setProvisionResult({ success: false, error: e.message });
@@ -1220,6 +1276,13 @@ export default function TenantOnboardPage() {
             <h1 className="text-sm font-semibold text-white">Tenant Onboarding</h1>
             <p className="text-xs text-gray-500">web.mrlads.com/tenant/onboard/new</p>
           </div>
+          {application && (
+            <span className="ml-3 text-xs px-2 py-0.5 rounded-full border border-green-700 text-green-400 bg-green-900/20">
+              from signup: {application.business_name}
+              {applicationStamp === 'done' && ' · marked provisioned'}
+              {applicationStamp === 'failed' && ' · could not mark provisioned — do it in /tenant/signups'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
