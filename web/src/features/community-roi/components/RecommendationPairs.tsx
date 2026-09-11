@@ -89,9 +89,13 @@ export const RecommendationPairs: React.FC = () => {
   // Load saved recommendations on mount
   useEffect(() => { refetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // After a fresh generate completes, switch to showing the new data
-  // generateResult takes precedence over savedData once available
-  const data = (generateResult ?? savedData) as GenerateResult | null;
+  // The SAVED payload is canonical. The generate-bulk response is the
+  // generator's in-memory shape — it carries day_slot but NO member ids, so a
+  // screen that rendered it straight after Regenerate filtered every row to
+  // nothing ("Wednesday · 0 pairs" over 626 real ones). handleGenerate refetches
+  // the saved payload the moment generation finishes; generateResult is only a
+  // fallback for the instant before that lands.
+  const data = (savedData ?? generateResult) as GenerateResult | null;
   const isLoading = isSavedLoading && !generateResult;
 
   const weekData = data?.weeks?.find(w => w.week_number === activeWeek);
@@ -190,7 +194,12 @@ export const RecommendationPairs: React.FC = () => {
 
   const handleGenerate = async () => {
     await generate(selectedWeeks);
+    // Re-read the canonical shape (ids + day_slot + recommendation_id) rather
+    // than rendering the generator's response, and drop any picks that were
+    // made against the previous generation.
+    await refetch();
     setActiveWeek(1);
+    refetchSelections();
   };
 
   return (
