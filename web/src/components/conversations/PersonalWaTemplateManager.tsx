@@ -238,30 +238,25 @@ function TemplateFormDialog({
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
               <label className="text-slate-700 dark:text-slate-200">Message Body *</label>
             </div>
-            <div className="md:border-none border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-[#00051d] md:bg-transparent">
             <Textarea
               placeholder={"Hi {{name}}, thanks for reaching out!\n\nUse {{variable}} for dynamic placeholders."}
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
               rows={5}
-              className="w-full resize-none font-mono text-sm bg-transparent md:bg-white dark:md:bg-[#00051d] border-none md:border md:border-slate-200 md:dark:border-slate-800/80 rounded-none md:rounded-xl text-slate-800 dark:text-white p-3 focus:ring-0 focus-visible:ring-0 outline-none"
+              className="w-full resize-none font-mono text-sm bg-white dark:bg-[#00051d] border border-slate-200 dark:border-slate-800/80 rounded-xl text-slate-800 dark:text-white p-3 focus-visible:border-[#0B1957] focus-visible:ring-2 focus-visible:ring-[#0B1957]/20 dark:focus-visible:border-blue-500 dark:focus-visible:ring-blue-500/20"
             />
-            <div className="text-[11px] text-slate-400 dark:text-slate-400/70 leading-normal">
-              <div className="hidden md:block">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal mt-1">
               Use <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">{'{{name}}'}</code> for contact name,{' '}
-              <code className="px-1 py-0.5 rounded bg-muted">{'{{1}}'}</code> for custom variables.
-              Variables are auto-corrected to double-brace format on save.
+              <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">{'{{1}}'}</code> for custom variables. Variables are auto-corrected to double-brace format on save.
+              {placeholders.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Detected: {placeholders.map((p) => (
+                    <code key={p} className="mx-0.5 px-1 py-0.5 rounded bg-muted text-xs">{`{{${p}}}`}</code>
+                  ))}
+                </p>
+              )}
             </div>
-            {placeholders.length > 0 && (
-              <p className="text-xs text-muted-foreground hidden md:block">
-                Detected: {placeholders.map((p) => (
-                  <code key={p} className="mx-0.5 px-1 py-0.5 rounded bg-muted text-xs">{`{{${p}}}`}</code>
-                ))}
-              </p>
-            )}
           </div>
-        </div>
-     </div>
 
           {/* Footer */}
           <div className="space-y-1.5">
@@ -293,8 +288,8 @@ function TemplateFormDialog({
                   className={cn(
                     'flex-1 md:flex-initial flex items-center justify-center gap-1 px-1 md:px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold border-none outline-none transition-all cursor-pointer capitalize shrink-0',
                     form.media_type === type
-                      ? 'bg-[#0B1957] md:bg-[#2563eb] text-white shadow-sm'
-                      : 'bg-white dark:bg-[#000724] md:bg-white md:dark:bg-[#000724] text-slate-600 dark:text-slate-400 md:border md:border-slate-200 md:dark:border-slate-800 hover:bg-slate-100'
+                      ? 'bg-[#0B1957] dark:bg-blue-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-[#000724] md:bg-white md:dark:bg-[#000724] text-slate-600 dark:text-slate-400 md:border md:border-slate-200 md:dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   )}
                 >
                   {type !== 'none' && <span className="scale-90 md:scale-100">{mediaTypeIcons[type]}</span>}
@@ -408,7 +403,7 @@ function TemplateFormDialog({
                 Attached Contact (optional)
               </label>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Sent as a follow-up contact card right after the template — recipient can tap Message / Save.
+                Sent as a follow-up contact card right after the template. Recipient can tap Message / Save.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -484,7 +479,7 @@ function TemplateFormDialog({
           <Button
             onClick={() => onSave(form)}
             disabled={saving || uploading || !form.name.trim() || !form.content.trim()}
-            className="w-full sm:w-auto h-11 bg-[#2563eb] hover:bg-[#2563eb]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 text-white font-bold rounded-xl px-6 active:scale-[0.98] transition-all cursor-pointer shadow-md border-none"
+            className="w-full sm:w-auto h-11 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 text-white font-bold rounded-xl px-6 active:scale-[0.98] transition-all cursor-pointer shadow-md border-none"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Save Template
@@ -633,7 +628,7 @@ export function PersonalWaTemplateManager() {
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-white">Personal WA Templates</h2>
             <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5">
-              Saved messages — no Meta approval required
+              Saved messages. No Meta approval required.
             </p>
           </div>
         </div>

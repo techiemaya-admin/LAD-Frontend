@@ -739,18 +739,18 @@ export const LinkedInIntegration: React.FC = () => {
   }
   return (
     <>
-      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 space-y-4 font-sans text-slate-900 dark:text-white">
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-4 space-y-4 font-sans text-slate-900 dark:text-white">
         {/* 1. SEPARATED TOP HEADER CARD */}
-        <div className="rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-5 shadow-sm dark:shadow-none">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-blue-950/40 bg-white dark:bg-[#071131] p-4 sm:p-5 shadow-sm dark:shadow-none">
+          <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
               {/* LinkedIn Icon Box */}
-              <div className="w-10 h-10 rounded-lg bg-[#1d4ed8] flex items-center justify-center shrink-0">
-                <Linkedin className="h-6 w-6 text-white fill-current" />
+              <div className="w-10 h-10 rounded-xl bg-[#0a66c2] flex items-center justify-center shrink-0">
+                <Linkedin className="h-5 w-5 text-white fill-current" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-white leading-tight">LinkedIn</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-normal">
                   Connect your LinkedIn account for automated lead enrichment and outreach
                 </p>
               </div>
@@ -794,7 +794,7 @@ export const LinkedInIntegration: React.FC = () => {
 
         {/* 2. SECTION TITLE */}
         {linkedInConnections.length > 0 && (
-          <h4 className="font-medium text-slate-700 dark:text-gray-100 text-sm pt-1">
+          <h4 className="font-semibold text-slate-800 dark:text-gray-100 text-sm pt-1">
             Connected Accounts ({linkedInConnections.length})
           </h4>
         )}
@@ -806,20 +806,37 @@ export const LinkedInIntegration: React.FC = () => {
               return (
                 <div 
                   key={account.id || account.email || `account-${index}`} 
-                  className="p-5 rounded-2xl border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#08172e] shadow-sm dark:shadow-none"
+                  className="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-blue-950/40 bg-white dark:bg-[#071131] shadow-sm dark:shadow-none"
                 >
-                  {/* Header Row: Account Name & Actions Vertically Centered */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-900 dark:text-gray-100 truncate text-sm">
+                  {/* Top Section: Account Info on Left, Badges & Actions on Right */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-900 dark:text-gray-100 truncate text-sm">
                         {account.accountName || account.profileName || account.email || 'LinkedIn Account'}
                       </p>
+
+                      {account.connectedAt && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Connected on {new Date(account.connectedAt).toLocaleDateString('en-GB')}
+                        </p>
+                      )}
+
+                      {account.profileUrl && (
+                        <a
+                          href={account.profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 break-all mt-1"
+                        >
+                          View Profile
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      )}
                     </div>
 
                     {/* Status Badge + Disconnect Button */}
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-[#0e4835] bg-emerald-50 dark:bg-[#061e19] text-emerald-700 dark:text-[#00d68f] text-xs font-medium">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-[#00d68f]"></span>
                         <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-[#00d68f]" />
                         <span>Connected</span>
                       </div>
@@ -827,32 +844,11 @@ export const LinkedInIntegration: React.FC = () => {
                       <button
                         onClick={() => disconnectLinkedIn(account.id, account.email)}
                         disabled={disconnecting[account.id || 'default']}
-                        className="px-4 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-950 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer font-medium"
+                        className="px-3.5 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:bg-red-300 dark:disabled:bg-red-950 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer font-semibold"
                       >
                         {disconnecting[account.id || 'default'] ? 'Disconnecting...' : 'Disconnect'}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Profile Info Sub-details */}
-                  <div className="mt-1">
-                    {account.profileUrl && (
-                      <a
-                        href={account.profileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 break-all"
-                      >
-                        View Profile
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                      </a>
-                    )}
-
-                    {account.connectedAt && (
-                      <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
-                        Connected on {new Date(account.connectedAt).toLocaleDateString()}
-                      </p>
-                    )}
                   </div>
 
                   {/* Status warnings */}
@@ -885,7 +881,7 @@ export const LinkedInIntegration: React.FC = () => {
         {/* 4. ADD BUTTON */}
         <button
           onClick={() => setShowConnectionModal(true)}
-          className="w-full h-12 px-5 rounded-2xl text-sm font-semibold text-white bg-[#2463ef] hover:bg-[#1d4ed8] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1d4ed8]/20 active:scale-[0.99] cursor-pointer border-none"
+          className="w-full h-11 sm:h-12 px-5 rounded-xl sm:rounded-2xl text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer border-none"
         >
           <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24">
             <path d={LINKEDIN_LOGO_PATH}/>
@@ -896,18 +892,18 @@ export const LinkedInIntegration: React.FC = () => {
         </button>
 
         {/* 5. SEPARATED IMPORTANT NOTE CARD */}
-        <div className="bg-amber-50 dark:bg-[#071925] border border-amber-200 dark:border-yellow-500/30 rounded-2xl p-4">
-          <div className="flex items-start gap-2 sm:gap-3">
+        <div className="bg-[#fffdf5] dark:bg-[#071925] border border-amber-200/90 dark:border-yellow-500/30 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 dark:text-yellow-400 mt-0.5 shrink-0" />
-            <div className="text-sm text-amber-900 dark:text-yellow-200 min-w-0 leading-relaxed">
-              <p className="font-semibold mb-1 text-amber-950 dark:text-yellow-300">Important Note</p>
-              <span>
+            <div className="text-xs sm:text-sm text-amber-950/90 dark:text-yellow-100/90 min-w-0 leading-relaxed">
+              <p className="font-bold text-amber-950 dark:text-yellow-300 text-sm mb-1">Important Note</p>
+              <p>
                 LinkedIn has strict rate limits and usage policies. Automated actions should be used
-                responsibly to avoid account restrictions.{" "}
-              </span>
-              <span className="text-amber-700 dark:text-yellow-400 font-semibold">
-                We recommend limiting connection requests to 50-100 per day.
-              </span>
+                responsibly to avoid account restrictions.
+              </p>
+              <p className="font-bold text-amber-800 dark:text-yellow-400 mt-2">
+                We recommend limiting connection requests to 50–100 per day.
+              </p>
             </div>
           </div>
         </div>

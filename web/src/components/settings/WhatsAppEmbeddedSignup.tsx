@@ -89,8 +89,55 @@ export function WhatsAppEmbeddedSignup() {
   return (
     <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 mx-3 shadow-sm">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-start justify-between gap-4">
+      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+        {/* Mobile Header Layout */}
+        <div className="sm:hidden space-y-3">
+          {/* Line 1: Heading and Refresh button */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Connect WhatsApp
+              </h2>
+            </div>
+            <button
+              onClick={() => refetch()}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 dark:hover:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Refresh accounts"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Line 2: Full width button */}
+          <button
+            onClick={launch}
+            disabled={!isConfigured || !isSdkReady || isConnecting}
+            className="w-full h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl shadow-lg transition-all font-bold flex items-center justify-center gap-2"
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Connecting…
+              </>
+            ) : (
+              <>
+                <Plug className="h-5 w-5" />
+                Connect WhatsApp
+              </>
+            )}
+          </button>
+
+          {/* Line 3: Sub heading as a Para */}
+          <p className="text-sm text-gray-500 dark:text-slate-300 leading-relaxed">
+            Sign in with Meta to connect your WhatsApp Business number. We handle
+            the webhook setup and message registration for you - no access tokens
+            to copy.
+          </p>
+        </div>
+
+        {/* Desktop Header Layout */}
+        <div className="hidden sm:flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -203,12 +250,14 @@ export function WhatsAppEmbeddedSignup() {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60"
+                className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60"
               >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
+                {/* Account row: info on left, disconnect on right */}
+                <div className="flex items-center gap-3">
+                  {/* Info block */}
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {account.display_name}
                       </span>
                       <MethodBadge method={account.connection_method} />
@@ -218,7 +267,7 @@ export function WhatsAppEmbeddedSignup() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-300 truncate">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-300">
                       {account.display_phone_number || 'Number pending verification'}
                       {account.business_account_id && (
                         <span className="text-gray-400 dark:text-slate-400">
@@ -227,13 +276,14 @@ export function WhatsAppEmbeddedSignup() {
                       )}
                     </p>
                   </div>
+                  {/* Disconnect – always visible (no hover-only) so it works on mobile too */}
                   <button
                     onClick={() => handleDisconnect(account)}
                     disabled={isDisconnecting}
-                    className="shrink-0 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md disabled:opacity-50 flex items-center gap-1.5"
+                    className="shrink-0 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md disabled:opacity-50 flex items-center gap-1.5 transition-colors"
                   >
                     <Unplug className="h-4 w-4" />
-                    Disconnect
+                    <span>Disconnect</span>
                   </button>
                 </div>
 
