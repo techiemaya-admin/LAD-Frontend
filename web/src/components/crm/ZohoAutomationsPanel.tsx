@@ -213,7 +213,7 @@ export const ZohoAutomationsPanel: React.FC = () => {
           onClick={handleScan}
           disabled={scanning || !connected}
           title={connected ? undefined : blockedReason}
-          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-primary/95 hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-auto cursor-pointer"
         >
           {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {scanning ? 'Scanning…' : 'Scan open tasks'}

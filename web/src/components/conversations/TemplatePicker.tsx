@@ -787,7 +787,7 @@ export function TemplatePicker({
           )}
         </div>
 
-        <DialogActions className={cn(isWA ? "border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/80 px-6 py-4" : "")}>
+        <DialogActions className={cn(isWA ? "border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 px-6 py-4" : "")}>
           <div className="flex items-center justify-between w-full">
             <div className={cn("text-sm font-medium", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
               {selectedTemplate ? (

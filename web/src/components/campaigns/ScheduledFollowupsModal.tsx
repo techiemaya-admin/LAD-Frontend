@@ -406,7 +406,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search accepted leads…"
-              className="pl-9 h-9 rounded-xl"
+              className="pl-9 h-9 rounded-xl bg-white"
             />
           </div>
           <span className="text-xs font-semibold text-slate-500 dark:text-[#7a8ba3] whitespace-nowrap">
@@ -420,6 +420,8 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
             selectedTemplateId={selectedTemplateId || undefined}
             onTemplateSelect={handleTemplateSelect}
             onManageClick={() => window.open('/conversations/templates', '_blank')}
+            triggerClassName="bg-white dark:bg-slate-800/50"
+            manageButtonClassName="bg-white dark:bg-transparent"
           />
           {selectedMedia && (
             <div className="flex items-center gap-2 p-2 rounded-md border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#1a2a43]">
@@ -448,7 +450,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
             Governs what the NEXT accepted lead gets. Collapsed by default: the
             summary line answers "what will fire, and whose setting is it?" at a
             glance, which is exactly what was invisible before. */}
-        <div className="px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-blue-950/40 shrink-0">
+        <div className="px-4 sm:px-8 py-3 border-b border-gray-100 bg-white dark:bg-[#000724] dark:border-blue-950/40 shrink-0">
           <button
             onClick={() => setCadenceOpen((v) => !v)}
             className="w-full flex items-center gap-3 text-left group"
@@ -660,7 +662,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
                                 value={customHours}
                                 onChange={(e) => setCustomHours(e.target.value)}
                                 placeholder="e.g. 12"
-                                className="h-9 rounded-xl"
+                                className="h-9 rounded-xl bg-white"
                               />
                               <Button
                                 size="sm"
@@ -684,7 +686,7 @@ export default function ScheduledFollowupsModal({ campaignId, open, onClose }: P
                                 type="datetime-local"
                                 value={customWhen}
                                 onChange={(e) => setCustomWhen(e.target.value)}
-                                className="h-9 rounded-xl"
+                                className="h-9 rounded-xl bg-white"
                               />
                               <Button
                                 size="sm"

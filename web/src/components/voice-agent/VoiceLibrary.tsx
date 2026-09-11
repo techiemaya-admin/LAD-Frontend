@@ -750,14 +750,14 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                   <Plus className="h-3.5 w-3.5 mr-1" /> Clone Voice
                 </Button>
               </DialogTrigger>
-              <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[560px] p-6 rounded-3xl bg-background text-foreground dark:bg-[#071131] dark:text-white dark:border-blue-900/40">
-                <DialogHeader className="flex-col items-start gap-1.5 pb-4 border-none">
-                  <DialogTitle>Clone a New Voice</DialogTitle>
+              <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[560px] p-0 rounded-3xl bg-background text-foreground dark:bg-[#000724] dark:text-white dark:border-blue-900/40">
+                <DialogHeader className="w-full flex-col items-start gap-1.5 text-left">
+                  <DialogTitle className="w-full text-left">Clone a New Voice</DialogTitle>
                   <DialogDescription className="text-muted-foreground dark:text-slate-400">
                     Upload or record a clean audio clip. Use the handles to trim it to the required length.
                   </DialogDescription>
                 </DialogHeader>
-                <div ref={dialogScrollContainerRef} className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-2 custom-scrollbar">
+                <div ref={dialogScrollContainerRef} className="grid gap-4 px-8 py-4 max-h-[60vh] overflow-y-auto bg-background dark:bg-[#000724] custom-scrollbar">
                   {/* Cloning backend. Cartesia is the default; Fish returns a model id
                       that doubles as the reference_id, so a Fish clone becomes an ordinary
                       voice row usable by any agent. */}
@@ -797,7 +797,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                       value={cloneName} 
                       onChange={(e) => setCloneName(e.target.value)} 
                       placeholder="e.g. Sales Alex" 
-                      className="bg-background border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
+                      className="bg-white border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -808,12 +808,12 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                         value={cloneDesc} 
                         onChange={(e) => setCloneDesc(e.target.value)} 
                         placeholder="e.g. Energetic" 
-                        className="bg-background border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
+                        className="bg-white border-input dark:bg-slate-900/50 dark:border-blue-900/50 dark:text-white"
                       />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="gender">Gender</Label>
-                      <div className="flex bg-muted/50 rounded-lg p-1 border border-border dark:bg-slate-900/80 dark:border-blue-900/40">
+                      <div className="flex bg-muted/50 rounded-lg p-1 border border-border dark:bg-[#071131] dark:border-blue-900/40">
                         {(["male", "female", "neutral"] as const).map((g) => (
                           <button
                             key={g}
@@ -821,8 +821,8 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                             onClick={() => setCloneGender(g)}
                             className={cn(
                               "flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-all",
-                              cloneGender === g 
-                                ? "bg-background shadow-sm text-foreground dark:bg-blue-600 dark:text-white dark:shadow-sm" 
+                              cloneGender === g
+                                ? "bg-primary text-primary-foreground shadow-sm dark:bg-blue-600 dark:text-white dark:shadow-sm"
                                 : "text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-white"
                             )}
                           >
@@ -836,7 +836,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                   <div className="grid gap-2">
                     <Label htmlFor="cloneLanguage">Accent / Dialect</Label>
                     <Select value={cloneLanguage} onValueChange={setCloneLanguage}>
-                      <SelectTrigger id="cloneLanguage" className="h-10 rounded-lg border-input focus:ring-2 focus:ring-primary w-full bg-background text-sm dark:border-blue-900/50 dark:focus:ring-blue-500 dark:bg-slate-900/50 dark:text-white">
+                      <SelectTrigger id="cloneLanguage" className="h-10 rounded-lg border-input focus:ring-2 focus:ring-primary w-full bg-white text-sm dark:border-blue-900/50 dark:focus:ring-blue-500 dark:bg-slate-900/50 dark:text-white">
                         <SelectValue placeholder="Select accent / dialect" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover text-popover-foreground dark:bg-[#071131] dark:border-blue-900/50 dark:text-white">
@@ -849,7 +849,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                     </Select>
                   </div>
 
-                  <div className="flex flex-col gap-4 bg-muted/30 p-4 rounded-lg border border-border dark:bg-slate-900/40 dark:border-blue-900/40">
+                  <div className="flex flex-col gap-4 bg-white p-4 rounded-lg border border-border dark:bg-[#071131] dark:border-blue-900/40">
                     {/* Clone Mode */}
                     <div className="space-y-3">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">Clone Mode</Label>
@@ -907,7 +907,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                     </Label>
 
                     {recordingStep === "script_select" ? (
-                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-slate-900/40">
+                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-white shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-[#071131]">
                         <div className="space-y-2">
                           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
                             1. Select a script to speak aloud
@@ -922,7 +922,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                                   "flex flex-col items-start text-left p-3 rounded-lg border transition-all duration-200",
                                   selectedScriptIndex === idx
                                     ? "border-primary bg-primary/5 shadow-sm dark:border-blue-500 dark:bg-blue-500/10"
-                                    : "border-border hover:bg-muted/50 dark:border-blue-900/40 dark:hover:bg-slate-800/40"
+                                    : "border-border hover:bg-muted/50 dark:border-blue-900/40 dark:hover:bg-[#0e1a3a]"
                                 )}
                               >
                                 <div className="flex items-center justify-between w-full">
@@ -948,7 +948,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
                             Script Preview
                           </span>
-                          <div className="p-3.5 rounded-lg bg-muted/40 border text-sm text-foreground leading-relaxed font-medium min-h-[5rem] flex items-center dark:bg-slate-900/60 dark:border-blue-900/40 dark:text-white">
+                          <div className="p-3.5 rounded-lg bg-white border text-sm text-foreground leading-relaxed font-medium min-h-[5rem] flex items-center dark:bg-[#071131] dark:border-blue-900/40 dark:text-white">
                             &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
                           </div>
                         </div>
@@ -972,7 +972,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                         </div>
                       </div>
                     ) : recordingStep === "recording" ? (
-                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-card/50 shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-slate-900/40">
+                      <div className="flex flex-col gap-4 p-4 rounded-xl border bg-white shadow-sm animate-fade-in dark:border-blue-900/40 dark:bg-[#071131]">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-slate-400">
                             Reading Script ({READING_SCRIPTS[selectedScriptIndex].type})
@@ -982,7 +982,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                           </span>
                         </div>
 
-                        <div className="p-4 rounded-lg bg-muted/40 border text-sm sm:text-base text-foreground leading-relaxed font-medium min-h-[5.5rem] flex items-center shadow-inner dark:bg-slate-900/60 dark:border-blue-900/40 dark:text-white">
+                        <div className="p-4 rounded-lg bg-white border text-sm sm:text-base text-foreground leading-relaxed font-medium min-h-[5.5rem] flex items-center shadow-inner dark:bg-[#071131] dark:border-blue-900/40 dark:text-white">
                           &quot;{READING_SCRIPTS[selectedScriptIndex].text}&quot;
                         </div>
 
@@ -999,7 +999,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                           
                           {/* Real-time Voice Responsive Wave Progress Visualizer */}
                           <div className="relative">
-                            <div className="flex items-center justify-between gap-1 h-14 w-full px-3 bg-muted/20 rounded-xl border border-muted/50 overflow-hidden dark:bg-slate-900/40 dark:border-blue-900/40">
+                            <div className="flex items-center justify-between gap-1 h-14 w-full px-3 bg-white rounded-xl border border-muted/50 overflow-hidden dark:bg-[#071131] dark:border-blue-900/40">
                               {Array.from({ length: 32 }).map((_, idx) => {
                                 const barProgress = (idx / 31) * 100;
                                 const progress = Math.min(100, (recordingSeconds / 25) * 100);
@@ -1045,7 +1045,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                       </div>
                     ) : !cloneFile ? (
                       <div className="grid grid-cols-2 gap-3">
-                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 border-border hover:bg-muted/50 transition-colors dark:border-blue-900/50 dark:bg-slate-900/30 dark:hover:bg-slate-900/60">
+                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-white border-border hover:bg-muted/50 transition-colors dark:border-blue-900/50 dark:bg-[#071131] dark:hover:bg-[#0e1a3a]">
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Upload className="w-6 h-6 mb-2 text-muted-foreground dark:text-slate-400" />
                             <p className="text-xs font-semibold text-foreground dark:text-slate-300">Upload Audio</p>
@@ -1066,7 +1066,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                         <button 
                           type="button"
                           onClick={checkMicPermission}
-                          className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/50 border-border transition-colors dark:border-blue-900/50 dark:bg-slate-900/30 dark:hover:bg-slate-900/60"
+                          className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-white hover:bg-muted/50 border-border transition-colors dark:border-blue-900/50 dark:bg-[#071131] dark:hover:bg-[#0e1a3a]"
                         >
                           <Mic className="w-6 h-6 mb-2 text-muted-foreground dark:text-slate-400" />
                           <p className="text-xs font-semibold text-foreground dark:text-slate-300">Record Mic</p>
@@ -1074,7 +1074,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20 transition-all duration-300 hover:shadow-sm font-[Segoe UI] dark:bg-blue-950/40 dark:border-blue-800/40">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20 transition-all duration-300 hover:shadow-sm font-[Segoe UI] dark:bg-[#071131] dark:border-blue-800/40">
                           <button
                             type="button"
                             onClick={() => {
@@ -1093,7 +1093,7 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                                 Clear
                               </Button>
                             </div>
-                            <div ref={waveformRef} className="w-full bg-background rounded border border-border overflow-hidden h-[60px] dark:bg-slate-950 dark:border-blue-900/40" />
+                            <div ref={waveformRef} className="w-full bg-white rounded border border-border overflow-hidden h-[60px] dark:bg-[#071131] dark:border-blue-900/40" />
                           </div>
                         </div>
                       </div>
@@ -1102,9 +1102,6 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
                 </div>
                 {!isRecording && recordingStep === "idle" && (
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)} disabled={isCloning} className="border-input dark:border-blue-900/50 dark:text-slate-300">
-                      Cancel
-                    </Button>
                     <Button onClick={handleCloneSubmit} disabled={isCloning || !cloneName || !cloneFile} className="gradient-primary dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white">
                       {isCloning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cloning...</> : 'Clone Selected Region'}
                     </Button>

@@ -89,7 +89,7 @@ function DialogActions({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex justify-end gap-3 px-8 py-6 border-t border-gray-100 dark:border-blue-950/40 bg-gray-50/50 dark:bg-[#081331] shrink-0",
+        "flex justify-end gap-3 px-8 py-6 border-t border-gray-100 dark:border-blue-950/40 bg-white dark:bg-[#081331] shrink-0",
         className
       )}
       {...props}
