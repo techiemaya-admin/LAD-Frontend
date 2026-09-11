@@ -81,6 +81,8 @@ export interface TemplatePickerProps {
   isBulkSend?: boolean;
   /** Visual theme variant: 'default' or 'whatsapp' (neutral zinc + emerald green) */
   variant?: 'default' | 'whatsapp';
+  defaultPhoneNumber?: string;
+  defaultUrl?: string;
 }
 
 const TEMPLATES_API = '/api/whatsapp-conversations/conversations/templates';
@@ -120,6 +122,8 @@ export function TemplatePicker({
   channel = 'waba',
   isBulkSend = false,
   variant = 'default',
+  defaultPhoneNumber,
+  defaultUrl,
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -360,6 +364,8 @@ export function TemplatePicker({
             setShowCreateModal(false);
             setRefreshKey(k => k + 1);
           }}
+          defaultPhoneNumber={defaultPhoneNumber}
+          defaultUrl={defaultUrl}
         />
 
         <div className={cn("flex-1 flex flex-col min-h-0 overflow-hidden", isWA ? "bg-white dark:bg-zinc-900" : "")}>
@@ -787,9 +793,9 @@ export function TemplatePicker({
           )}
         </div>
 
-        <DialogActions className={cn(isWA ? "border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/80 px-6 py-4" : "")}>
-          <div className="flex items-center justify-between w-full">
-            <div className={cn("text-sm font-medium", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
+        <DialogActions className={cn("px-6 py-3.5 sm:py-4 flex-shrink-0", isWA ? "border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/80" : "")}>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+            <div className={cn("text-xs sm:text-sm font-medium text-center sm:text-left w-full sm:w-auto", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>
               {selectedTemplate ? (
                 <span>
                   Ready to send {selectedCount} {selectedCount === 1 ? 'conversation' : 'conversations'}.
@@ -798,12 +804,12 @@ export function TemplatePicker({
                 <span>Select a template to continue</span>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center justify-end gap-2.5 sm:gap-3 w-full sm:w-auto">
               <Button
                 onClick={handleSend}
                 disabled={!canSend || sending}
                 className={cn(
-                  "rounded-xl font-bold shadow-lg transition-all disabled:opacity-50",
+                  "rounded-xl font-bold shadow-lg transition-all disabled:opacity-50 w-full sm:w-auto",
                   isWA
                     ? "px-7 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                     : "px-8 py-2.5 bg-[#0B1957] hover:bg-[#0B1957]/90 text-white"

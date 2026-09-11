@@ -11,7 +11,6 @@ import {
   ChevronUp,
   ChevronLeft,
   FlaskConical,
-  Bot,
   User,
   Loader2,
   Settings,
@@ -76,7 +75,7 @@ interface AIPlaygroundProps {
 const CHANNELS = [
   { value: "all",       label: "All",       Icon: Hash,          color: "text-gray-500 dark:text-neutral-400",  bg: "bg-gray-100 dark:bg-neutral-800" },
   { value: "whatsapp",  label: "WhatsApp",  Icon: MessageCircle, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/60" },
-  { value: "linkedin",  label: "LinkedIn",  Icon: Linkedin,      color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-950/60" },
+  { value: "linkedin",  label: "LinkedIn",  Icon: Linkedin,      color: "text-[#0B1957] dark:text-blue-400",       bg: "bg-[#0B1957]/10 dark:bg-blue-950/60" },
   { value: "instagram", label: "Instagram", Icon: Instagram,     color: "text-pink-600 dark:text-pink-400",     bg: "bg-pink-50 dark:bg-pink-950/60" },
   { value: "email",     label: "Email",     Icon: Mail,          color: "text-violet-600 dark:text-violet-400",   bg: "bg-violet-50 dark:bg-violet-950/60" },
   { value: "generic",   label: "Generic",   Icon: Cpu,           color: "text-orange-500 dark:text-orange-400",   bg: "bg-orange-50 dark:bg-orange-950/60" },
@@ -102,24 +101,24 @@ function getChannelStyle(channel: string, isSelected: boolean, isWhatsAppVariant
         : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
     case "linkedin":
       return isSelected
-        ? "bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border-blue-500 dark:border-blue-400 shadow-xs"
-        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
+        ? "bg-[#0B1957]/10 dark:bg-blue-950/80 text-[#0B1957] dark:text-blue-300 border-[#0B1957] dark:border-blue-400 shadow-xs"
+        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-[#0B1957] dark:hover:border-blue-500";
     case "instagram":
       return isSelected
         ? "bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border-pink-500 dark:border-pink-500 shadow-xs"
-        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
+        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-pink-400 dark:hover:border-blue-500";
     case "email":
       return isSelected
         ? "bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border-violet-500 dark:border-violet-500 shadow-xs"
-        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
+        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-violet-400 dark:hover:border-blue-500";
     case "generic":
       return isSelected
         ? "bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border-orange-500 dark:border-orange-500 shadow-xs"
-        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
+        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-orange-400 dark:hover:border-blue-500";
     default: // all
       return isSelected
-        ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600 dark:border-blue-500 shadow-xs"
-        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500";
+        ? "bg-[#0B1957] dark:bg-blue-600 text-white border-[#0B1957] dark:border-blue-500 shadow-xs"
+        : "bg-white dark:bg-[#091126] text-slate-600 dark:text-blue-200/80 border-slate-200 dark:border-blue-900/60 hover:border-[#0B1957] dark:hover:border-blue-500";
   }
 }
 
@@ -140,9 +139,9 @@ function getUserBubbleStyle(channel: string, isWhatsAppVariant: boolean) {
       };
     case "linkedin":
       return {
-        avatar: "bg-blue-600 text-white",
-        bubble: "bg-blue-600 dark:bg-blue-600 text-white",
-        button: "bg-blue-600 hover:bg-blue-700 text-white shadow-xs",
+        avatar: "bg-[#0B1957] dark:bg-blue-600 text-white",
+        bubble: "bg-[#0B1957] dark:bg-blue-600 text-white",
+        button: "bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-blue-600 dark:hover:bg-blue-700 text-white shadow-xs",
       };
     case "instagram":
       return {
@@ -164,9 +163,9 @@ function getUserBubbleStyle(channel: string, isWhatsAppVariant: boolean) {
       };
     default:
       return {
-        avatar: "bg-blue-600 text-white",
-        bubble: "bg-blue-600 dark:bg-blue-600 text-white",
-        button: "bg-blue-600 hover:bg-blue-700 text-white shadow-xs",
+        avatar: "bg-[#0B1957] dark:bg-blue-600 text-white",
+        bubble: "bg-[#0B1957] dark:bg-blue-600 text-white",
+        button: "bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-blue-600 dark:hover:bg-blue-700 text-white shadow-xs",
       };
   }
 }
@@ -283,7 +282,7 @@ function AssistantBubble({ content, isWhatsApp }: { content: string; isWhatsApp?
               "flex items-center gap-1 text-[10px] transition-colors px-1 py-0.5",
               isWhatsApp
                 ? "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100"
-                : "text-slate-500 dark:text-blue-300/80 hover:text-slate-900 dark:hover:text-blue-100"
+                : "text-slate-500 dark:text-blue-300/80 hover:text-[#0B1957] dark:hover:text-blue-100"
             )}
           >
             {showMeta ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -323,6 +322,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
   const [knowledgeBase, setKnowledgeBase]     = useState<string>("");
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
+  const [showStageDropdown, setShowStageDropdown]   = useState(false);
   // Conversation-stage selector (WABA) - previews stage-scoped prompts.
   const [selectedStage, setSelectedStage] = useState<string>("greeting");
   // Echo of what the backend actually scoped to (stage + assembled prompt size).
@@ -341,9 +341,10 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef       = useRef<HTMLTextAreaElement>(null);
-  const dropdownRef    = useRef<HTMLDivElement>(null);
+  const messagesEndRef  = useRef<HTMLDivElement>(null);
+  const inputRef        = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef     = useRef<HTMLDivElement>(null);
+  const stageDropdownRef = useRef<HTMLDivElement>(null);
 
   // ── Derived: prompts filtered by selected channel ─────────────────────────────
 
@@ -399,6 +400,9 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowPromptDropdown(false);
       }
+      if (stageDropdownRef.current && !stageDropdownRef.current.contains(e.target as Node)) {
+        setShowStageDropdown(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -409,6 +413,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
   const handleSelectChannel = useCallback((ch: ChannelValue) => {
     setSelectedChannel(ch);
     setShowPromptDropdown(false);
+    setShowStageDropdown(false);
     // If the currently selected prompt's channel doesn't match the new filter,
     // clear the selection so the user picks a matching one
     if (ch !== "all") {
@@ -574,7 +579,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
         "fixed right-0 top-0 h-full w-full sm:w-[480px] z-[110] flex flex-col border-l shadow-2xl transition-colors",
         isWhatsApp
           ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100"
-          : "bg-white dark:bg-[#0b132b] border-blue-100 dark:border-blue-900/60 text-slate-900 dark:text-slate-100"
+          : "bg-white dark:bg-[#0b132b] border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100"
       )}
     >
       {/* ── Header ────────────────────────────────────────────────────── */}
@@ -583,7 +588,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
           "flex items-center gap-2 border-b shrink-0 transition-colors",
           isWhatsApp
             ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800"
-            : "bg-white dark:bg-[#0d1735] border-blue-100 dark:border-blue-900/60",
+            : "bg-white dark:bg-[#0d1735] border-slate-200 dark:border-blue-900/60",
           isConversations ? "px-4 py-3 sm:py-0 sm:h-10 sm:px-3" : "px-4 py-3"
         )}
       >
@@ -594,7 +599,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
             "h-9 w-9 sm:hidden -ml-2 transition-colors",
             isWhatsApp
               ? "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
-              : "text-slate-500 dark:text-blue-300 hover:text-slate-900 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-blue-950/60"
+              : "text-slate-500 dark:text-blue-300 hover:text-[#0B1957] dark:hover:text-white hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60"
           )}
           onClick={onClose}
         >
@@ -615,7 +620,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
               "text-[10px] px-2 py-0.5 rounded-full hidden xs:inline-block transition-colors border",
               isWhatsApp
                 ? "bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400 border-transparent"
-                : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60"
+                : "bg-[#0B1957]/10 dark:bg-blue-950/60 text-[#0B1957] dark:text-blue-300 border-[#0B1957]/20 dark:border-blue-800/60"
             )}
           >
             {settings?.ai_model || "claude-sonnet"}
@@ -630,7 +635,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
               isConversations ? "h-8 w-8 sm:h-7 sm:w-7" : "h-8 w-8",
               isWhatsApp
                 ? "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
-                : "text-slate-500 dark:text-blue-300 hover:text-slate-900 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-blue-950/60"
+                : "text-slate-500 dark:text-blue-300 hover:text-[#0B1957] dark:hover:text-white hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60"
             )}
             onClick={loadConfig}
             title="Reload config"
@@ -645,7 +650,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
               isConversations ? "h-8 w-8 sm:h-7 sm:w-7" : "h-8 w-8",
               isWhatsApp
                 ? "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
-                : "text-slate-500 dark:text-blue-300 hover:text-slate-900 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-blue-950/60"
+                : "text-slate-500 dark:text-blue-300 hover:text-[#0B1957] dark:hover:text-white hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60"
             )}
             onClick={onClose}
           >
@@ -656,7 +661,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
 
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className={cn("h-6 w-6 animate-spin", isWhatsApp ? "text-gray-400 dark:text-neutral-500" : "text-blue-500 dark:text-blue-400")} />
+          <Loader2 className={cn("h-6 w-6 animate-spin", isWhatsApp ? "text-gray-400 dark:text-neutral-500" : "text-[#0B1957] dark:text-blue-400")} />
         </div>
       ) : (
         <>
@@ -666,7 +671,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
               "shrink-0 border-b px-4 py-3 space-y-3 transition-colors",
               isWhatsApp
                 ? "bg-gray-50/50 dark:bg-neutral-900 border-gray-200 dark:border-neutral-800"
-                : "bg-blue-50/20 dark:bg-[#0d1735]/80 border-blue-100 dark:border-blue-900/60"
+                : "bg-[#0B1957]/[0.02] dark:bg-[#0d1735]/80 border-slate-200 dark:border-blue-900/60"
             )}
           >
             <div>
@@ -679,7 +684,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                 >
                   System Prompt
                 </label>
-                <Info className={cn("h-3.5 w-3.5", isWhatsApp ? "text-gray-400 dark:text-neutral-400" : "text-blue-500/70 dark:text-blue-400")} />
+                <Info className={cn("h-3.5 w-3.5", isWhatsApp ? "text-gray-400 dark:text-neutral-400" : "text-[#0B1957]/70 dark:text-blue-400")} />
               </div>
 
               {/* ── Channel selector pills ──────────────────────────── */}
@@ -736,23 +741,67 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                   >
                     Stage
                   </label>
-                  <select
-                    value={selectedStage}
-                    onChange={(e) => setSelectedStage(e.target.value)}
-                    title="Preview how a sectioned (## STAGE:) prompt scopes + how the bot replies in this stage. Stateless - does not run real transitions or bookings."
-                    className={cn(
-                      "flex-1 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none transition-colors cursor-pointer",
-                      isWhatsApp
-                        ? "bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 focus:ring-1 focus:ring-[#00a884]"
-                        : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
-                    )}
-                  >
-                    {STAGES.map((s) => (
-                      <option key={s.value} value={s.value} className={isWhatsApp ? "bg-white dark:bg-neutral-900 text-gray-900 dark:text-neutral-100" : "bg-white dark:bg-[#080e22] text-slate-900 dark:text-slate-100"}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative flex-1" ref={stageDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowStageDropdown((v) => !v)}
+                      title="Preview how a sectioned (## STAGE:) prompt scopes + how the bot replies in this stage. Stateless - does not run real transitions or bookings."
+                      className={cn(
+                        "w-full flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 focus:outline-none transition-colors cursor-pointer text-left",
+                        isWhatsApp
+                          ? "bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 focus:ring-1 focus:ring-[#00a884]"
+                          : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-400"
+                      )}
+                    >
+                      <span className="truncate">
+                        {STAGES.find((s) => s.value === selectedStage)?.label || "Select stage..."}
+                      </span>
+                      <ChevronDown className={cn("h-3 w-3 ml-1.5 shrink-0 opacity-60", isWhatsApp ? "text-gray-400 dark:text-neutral-400" : "text-slate-400 dark:text-blue-300/60")} />
+                    </button>
+
+                    <AnimatePresence>
+                      {showStageDropdown && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.1 }}
+                          className={cn(
+                            "absolute z-20 top-full left-0 right-0 mt-1 rounded-xl border shadow-xl overflow-hidden py-1",
+                            isWhatsApp
+                              ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800"
+                              : "bg-white dark:bg-[#0d1735] border-slate-200 dark:border-blue-900/80"
+                          )}
+                        >
+                          {STAGES.map((s) => {
+                            const isSelected = s.value === selectedStage;
+                            return (
+                              <button
+                                key={s.value}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStage(s.value);
+                                  setShowStageDropdown(false);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between",
+                                  isSelected
+                                    ? isWhatsApp
+                                      ? "bg-[#00a884] text-white font-medium"
+                                      : "bg-[#0B1957] dark:bg-blue-600 text-white font-medium"
+                                    : isWhatsApp
+                                    ? "hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-900 dark:text-neutral-100"
+                                    : "hover:bg-[#0B1957]/5 dark:hover:bg-blue-900/40 text-slate-900 dark:text-slate-100"
+                                )}
+                              >
+                                <span>{s.label}</span>
+                              </button>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                   {stageInfo && (
                     <span className={cn("text-[10px] shrink-0 whitespace-nowrap", isWhatsApp ? "text-gray-500 dark:text-neutral-400" : "text-slate-500 dark:text-blue-300/60")}>
                       scoped: {stageInfo.stage} · {stageInfo.chars} chars
@@ -769,7 +818,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                     "w-full flex items-center justify-between text-xs rounded-xl px-3 py-2 transition-colors",
                     isWhatsApp
                       ? "bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700 text-gray-900 dark:text-neutral-100"
-                      : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 hover:border-blue-400 dark:hover:border-blue-500 text-slate-900 dark:text-slate-100"
+                      : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 hover:border-[#0B1957] dark:hover:border-blue-500 text-slate-900 dark:text-slate-100"
                   )}
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -805,7 +854,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                         "absolute z-10 top-full left-0 right-0 mt-1 rounded-xl border shadow-xl overflow-hidden max-h-52 overflow-y-auto",
                         isWhatsApp
                           ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800"
-                          : "bg-white dark:bg-[#0d1735] border-blue-100 dark:border-blue-900/80"
+                          : "bg-white dark:bg-[#0d1735] border-slate-200 dark:border-blue-900/80"
                       )}
                     >
                       {filteredPrompts.length === 0 ? (
@@ -824,8 +873,8 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                                   ? "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100 font-medium"
                                   : "hover:bg-gray-50 dark:hover:bg-neutral-800/80 text-gray-900 dark:text-neutral-100"
                                 : p.name === selectedPromptName
-                                ? "bg-blue-50 dark:bg-blue-950/80 text-blue-900 dark:text-blue-100 font-medium border-l-2 border-blue-600 dark:border-blue-400"
-                                : "hover:bg-blue-50/60 dark:hover:bg-blue-900/40 text-slate-900 dark:text-slate-100"
+                                ? "bg-[#0B1957]/10 dark:bg-blue-950/80 text-[#0B1957] dark:text-blue-100 font-medium border-l-2 border-[#0B1957] dark:border-blue-400"
+                                : "hover:bg-[#0B1957]/5 dark:hover:bg-blue-900/40 text-slate-900 dark:text-slate-100"
                             )}
                           >
                             {(() => {
@@ -852,7 +901,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                           "w-full text-left px-3 py-2 text-xs border-t transition-colors",
                           isWhatsApp
                             ? "text-gray-500 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-neutral-800 border-gray-200 dark:border-neutral-800"
-                            : "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 border-slate-200 dark:border-blue-900/60"
+                            : "text-[#0B1957] dark:text-blue-400 hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60 border-slate-200 dark:border-blue-900/60"
                         )}
                       >
                         Clear selection
@@ -877,7 +926,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                     "w-full text-xs rounded-xl px-3 py-2.5 resize-none focus:outline-none font-mono transition-colors",
                     isWhatsApp
                       ? "bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 focus:ring-1 focus:ring-[#00a884]"
-                      : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-400"
                   )}
                 />
                 <span className={cn("absolute bottom-2.5 right-3 text-[10px] pointer-events-none select-none", isWhatsApp ? "text-gray-400 dark:text-neutral-500" : "text-slate-400 dark:text-blue-300/50")}>
@@ -895,7 +944,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                       "h-7 text-xs gap-1.5 transition-colors",
                       isWhatsApp
                         ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-700 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-800"
-                        : "bg-white dark:bg-[#080e22] border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60"
+                        : "bg-white dark:bg-[#080e22] border-[#0B1957]/30 dark:border-blue-800/80 text-[#0B1957] dark:text-blue-300 hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60"
                     )}
                     onClick={handleSavePrompt}
                     disabled={isSaving || !systemPrompt.trim()}
@@ -918,7 +967,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                     "flex items-center gap-1.5 text-xs transition-colors ml-auto font-medium",
                     isWhatsApp || selectedChannel === "whatsapp"
                       ? "text-[#00a884] hover:text-[#008069] dark:text-[#00a884] dark:hover:text-[#00c89c]"
-                      : "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                      : "text-[#0B1957] hover:text-[#0B1957]/80 dark:text-blue-400 dark:hover:text-blue-300"
                   )}
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -935,7 +984,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                   "flex items-center gap-1.5 text-xs transition-colors font-medium",
                   isWhatsApp
                     ? "text-gray-700 dark:text-neutral-200 hover:text-gray-900 dark:hover:text-white"
-                    : "text-slate-700 dark:text-blue-200 hover:text-blue-600 dark:hover:text-blue-300"
+                    : "text-slate-700 dark:text-blue-200 hover:text-[#0B1957] dark:hover:text-blue-300"
                 )}
               >
                 {showKnowledgeBase ? (
@@ -944,7 +993,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                   <ChevronDown className="h-3.5 w-3.5" />
                 )}
                 Knowledge Base
-                {knowledgeBase && <span className={cn("h-1.5 w-1.5 rounded-full ml-1", isWhatsApp ? "bg-emerald-500 dark:bg-emerald-400" : "bg-blue-600 dark:bg-blue-400")} />}
+                {knowledgeBase && <span className={cn("h-1.5 w-1.5 rounded-full ml-1", isWhatsApp ? "bg-emerald-500 dark:bg-emerald-400" : "bg-[#0B1957] dark:bg-blue-400")} />}
               </button>
               <AnimatePresence>
                 {showKnowledgeBase && (
@@ -964,7 +1013,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                         "mt-2 w-full text-xs rounded-xl px-3 py-2 resize-none focus:outline-none transition-colors",
                         isWhatsApp
                           ? "bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 focus:ring-1 focus:ring-[#00a884]"
-                          : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                          : "bg-white dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-400"
                       )}
                     />
                     <p className={cn("text-[10px] mt-1", isWhatsApp ? "text-gray-500 dark:text-neutral-400" : "text-slate-500 dark:text-blue-300/60")}>
@@ -991,7 +1040,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                   (() => {
                     const { Icon: ChIcon, color } = activeChannelCfg;
                     return selectedChannel === "all" ? (
-                      <FlaskConical className="h-12 w-12 text-blue-300 dark:text-blue-900/60 mb-3 stroke-[1.25]" />
+                      <FlaskConical className="h-12 w-12 text-[#0B1957]/30 dark:text-blue-900/60 mb-3 stroke-[1.25]" />
                     ) : (
                       <ChIcon className={`h-12 w-12 mb-3 ${color} opacity-70`} />
                     );
@@ -1026,10 +1075,17 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                         ? channelUserStyle.avatar
                         : isWhatsApp
                         ? "bg-gray-200 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400"
-                        : "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60"
+                        : "bg-[#0B1957]/10 dark:bg-blue-950/80 text-[#0B1957] dark:text-blue-300 border border-[#0B1957]/20 dark:border-blue-800/60"
                     )}
                   >
-                    {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                    {msg.role === "user" ? (
+                      <User className="h-3.5 w-3.5" />
+                    ) : (
+                      <>
+                        <img src="/logo.svg" alt="Mr LAD" className="h-3.5 w-3.5 object-contain dark:hidden" />
+                        <img src="/logo-white.svg" alt="Mr LAD" className="h-3.5 w-3.5 object-contain hidden dark:block" />
+                      </>
+                    )}
                   </div>
                   {msg.role === "user" ? (
                     <div
@@ -1074,13 +1130,14 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
             {/* Typing indicator */}
             {isSending && (
               <div className="flex items-start gap-2">
-                <div className={cn("shrink-0 h-7 w-7 rounded-full flex items-center justify-center", isWhatsApp ? "bg-gray-200 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400" : "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300")}>
-                  <Bot className="h-3.5 w-3.5" />
+                <div className={cn("shrink-0 h-7 w-7 rounded-full flex items-center justify-center", isWhatsApp ? "bg-gray-200 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400" : "bg-[#0B1957]/10 dark:bg-blue-950/80 text-[#0B1957] dark:text-blue-300")}>
+                  <img src="/logo.svg" alt="Mr LAD" className="h-3.5 w-3.5 object-contain dark:hidden" />
+                  <img src="/logo-white.svg" alt="Mr LAD" className="h-3.5 w-3.5 object-contain hidden dark:block" />
                 </div>
                 <div className={cn("rounded-2xl rounded-tl-sm px-3 py-2.5 flex items-center gap-1", isWhatsApp ? "bg-gray-100 dark:bg-neutral-800" : "bg-slate-100 dark:bg-[#132044]")}>
-                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:0ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-blue-400 dark:bg-blue-300")} />
-                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:150ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-blue-400 dark:bg-blue-300")} />
-                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:300ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-blue-400 dark:bg-blue-300")} />
+                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:0ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-[#0B1957]/60 dark:bg-blue-300")} />
+                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:150ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-[#0B1957]/60 dark:bg-blue-300")} />
+                  <span className={cn("h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:300ms]", isWhatsApp ? "bg-gray-400 dark:bg-neutral-400" : "bg-[#0B1957]/60 dark:bg-blue-300")} />
                 </div>
               </div>
             )}
@@ -1101,7 +1158,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
               "shrink-0 border-t px-3 py-2.5 transition-colors",
               isWhatsApp
                 ? "bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800"
-                : "bg-white dark:bg-[#0d1735] border-blue-100 dark:border-blue-900/60"
+                : "bg-white dark:bg-[#0d1735] border-slate-200 dark:border-blue-900/60"
             )}
           >
             {/* Active channel indicator */}
@@ -1123,7 +1180,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                     "h-8 w-8 shrink-0 transition-colors",
                     isWhatsApp
                       ? "text-gray-400 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
-                      : "text-slate-400 dark:text-blue-300/60 hover:text-red-600 dark:hover:text-red-400 hover:bg-blue-50 dark:hover:bg-blue-950/60"
+                      : "text-slate-400 dark:text-blue-300/60 hover:text-red-600 dark:hover:text-red-400 hover:bg-[#0B1957]/10 dark:hover:bg-blue-950/60"
                   )}
                   onClick={handleClearChat}
                   title="Clear chat"
@@ -1143,7 +1200,7 @@ export function AIPlayground({ onClose, variant = "default" }: AIPlaygroundProps
                   "flex-1 text-sm rounded-xl px-3.5 py-2 resize-none focus:outline-none disabled:opacity-50 min-h-[38px] max-h-[120px] transition-colors",
                   isWhatsApp
                     ? "bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 focus:ring-1 focus:ring-[#00a884]"
-                    : "bg-slate-50 dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    : "bg-slate-50 dark:bg-[#080e22] border border-slate-200 dark:border-blue-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-blue-300/40 focus:ring-1 focus:ring-[#0B1957] dark:focus:ring-blue-400"
                 )}
                 style={{ height: "auto" }}
                 onInput={(e) => {
