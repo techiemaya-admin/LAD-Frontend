@@ -101,11 +101,11 @@ export const RecommendationPairs: React.FC = () => {
   const weekData = data?.weeks?.find(w => w.week_number === activeWeek);
 
   const selections = useMemo(() => selData?.selections ?? [], [selData]);
-  // useListMembers returns a PaginatedResponse, not an array — the rows are
-  // under .data. The informational sender below used to be handed the whole
-  // object as `allMembers`; fixed here since it sits next to this change.
+  // useListMembers returns the member ARRAY (its type said PaginatedResponse
+  // for a long time and was wrong; reading `.data` off it gave undefined, an
+  // empty dropdown, and "no meeting this day" for every member).
   const memberLites: MemberLite[] = useMemo(
-    () => (members?.data ?? []).map((m) => ({ id: m.id, name: m.name, industry: m.industry ?? null })),
+    () => (members ?? []).map((m) => ({ id: m.id, name: m.name, industry: m.industry ?? null })),
     [members],
   );
 
@@ -437,7 +437,7 @@ export const RecommendationPairs: React.FC = () => {
           memberName={data?.weeks?.[0]?.pairs?.[0]?.member_a || 'Member'}
           noInteractionCount={0}
           recommendations={data?.weeks?.flatMap(w => w.pairs) || []}
-          allMembers={members?.data ?? []}
+          allMembers={members ?? []}
           onClose={() => setShowMessageSender(false)}
           onSuccess={(result) => {
             setShowMessageSender(false);
