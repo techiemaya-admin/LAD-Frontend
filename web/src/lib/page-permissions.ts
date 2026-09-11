@@ -44,7 +44,8 @@ export const FEATURE = {
   COMMUNITY_ROI: ['community_roi', 'community-roi'],
   VOICE_AGENT: ['voice_agent', 'voice-agent'],
   DEALS_PIPELINE: ['deals_pipeline', 'deals-pipeline'],
-  // 'followups' is in ESSENTIAL_TENANT_FEATURES, so every tenant holds it.
+  // Not seeded at provisioning since 2026-09-11 and switched off for every
+  // stage tenant — granted per tenant via the admin feature toggle.
   FOLLOWUPS: ['followups', 'follow-ups'],
   // New in this change, so no live tenant holds either spelling yet. Both are
   // listed for the same reason every row above does: tenant_features is seeded
