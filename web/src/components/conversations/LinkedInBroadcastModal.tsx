@@ -20,6 +20,7 @@ import {
   CheckCircle, Clock, AlertCircle, Ban, Briefcase, Eye, MessageSquare,
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { cn } from '@/lib/utils';
 
 const BASE = '/api/campaigns/linkedin-broadcast';
 
@@ -64,13 +65,41 @@ async function getJson(url: string, init?: RequestInit) {
 }
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: JSX.Element }> = {
-  queued: { label: 'Queued', cls: 'text-amber-600 bg-amber-50', icon: <Clock className="h-3 w-3" /> },
-  running: { label: 'Sending', cls: 'text-blue-600 bg-blue-50', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  paused_rate_limited: { label: 'Paused (daily cap)', cls: 'text-amber-600 bg-amber-50', icon: <Clock className="h-3 w-3" /> },
-  paused_credits: { label: 'Paused (credits)', cls: 'text-red-600 bg-red-50', icon: <AlertCircle className="h-3 w-3" /> },
-  completed: { label: 'Completed', cls: 'text-green-600 bg-green-50', icon: <CheckCircle className="h-3 w-3" /> },
-  failed: { label: 'Failed', cls: 'text-red-600 bg-red-50', icon: <AlertCircle className="h-3 w-3" /> },
-  cancelled: { label: 'Cancelled', cls: 'text-slate-500 bg-slate-100', icon: <Ban className="h-3 w-3" /> },
+  queued: {
+    label: 'Queued',
+    cls: 'text-amber-700 bg-amber-50 border border-amber-200/80 dark:text-amber-400 dark:bg-amber-950/40 dark:border-amber-800/50',
+    icon: <Clock className="h-3 w-3" />,
+  },
+  running: {
+    label: 'Sending',
+    cls: 'text-blue-700 bg-blue-50 border border-blue-200/80 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-800/50',
+    icon: <Loader2 className="h-3 w-3 animate-spin" />,
+  },
+  paused_rate_limited: {
+    label: 'Paused (daily cap)',
+    cls: 'text-amber-700 bg-amber-50 border border-amber-200/80 dark:text-amber-400 dark:bg-amber-950/40 dark:border-amber-800/50',
+    icon: <Clock className="h-3 w-3" />,
+  },
+  paused_credits: {
+    label: 'Paused (credits)',
+    cls: 'text-red-700 bg-red-50 border border-red-200/80 dark:text-red-400 dark:bg-red-950/40 dark:border-red-800/50',
+    icon: <AlertCircle className="h-3 w-3" />,
+  },
+  completed: {
+    label: 'Completed',
+    cls: 'text-emerald-700 bg-emerald-50 border border-emerald-200/80 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-800/50',
+    icon: <CheckCircle className="h-3 w-3" />,
+  },
+  failed: {
+    label: 'Failed',
+    cls: 'text-red-700 bg-red-50 border border-red-200/80 dark:text-red-400 dark:bg-red-950/40 dark:border-red-800/50',
+    icon: <AlertCircle className="h-3 w-3" />,
+  },
+  cancelled: {
+    label: 'Cancelled',
+    cls: 'text-slate-600 bg-slate-100 border border-slate-200/80 dark:text-slate-400 dark:bg-slate-800/60 dark:border-slate-700/50',
+    icon: <Ban className="h-3 w-3" />,
+  },
 };
 
 export default function LinkedInBroadcastModal({ onClose }: Props) {
@@ -198,99 +227,194 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
   const canSend = !!selectedGroup && !!selectedTemplate && (chosenGroup?.member_count || 0) > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl bg-card shadow-xl border border-border max-h-[88vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/75 backdrop-blur-xs p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0B132B] text-slate-900 dark:text-slate-100 shadow-2xl border border-slate-200 dark:border-slate-800/80 max-h-[88vh] overflow-hidden flex flex-col transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-blue-600" />
-            <h2 className="font-semibold text-foreground">LinkedIn Broadcast</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#091024]/60">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#0A66C2] dark:text-blue-400 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center">
+              <Megaphone className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-base text-slate-900 dark:text-slate-100 leading-tight">LinkedIn Broadcast</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Drip campaigns safely within LinkedIn limits</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border text-sm">
+        <div className="flex border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/30 dark:bg-[#091024]/30 px-5 text-sm gap-6">
           {(['compose', 'runs'] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-2.5 font-medium capitalize ${tab === t ? 'text-blue-600 border-b-2 border-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "py-3 font-medium text-xs sm:text-sm capitalize transition-colors relative",
+                tab === t
+                  ? "text-[#0A66C2] dark:text-blue-400 font-semibold"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              )}
+            >
               {t === 'compose' ? 'New broadcast' : 'Sending history'}
+              {tab === t && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0A66C2] dark:bg-blue-500 rounded-full" />
+              )}
             </button>
           ))}
         </div>
 
         {notice && (
-          <div className={`mx-5 mt-3 rounded-md px-3 py-2 text-xs ${notice.kind === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-            {notice.text}
+          <div
+            className={cn(
+              "mx-5 mt-4 rounded-xl px-3.5 py-2.5 text-xs font-medium border flex items-center gap-2",
+              notice.kind === 'ok'
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50"
+                : "bg-red-50 text-red-800 border-red-200/80 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/50"
+            )}
+          >
+            {notice.kind === 'ok' ? <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <AlertCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />}
+            <span>{notice.text}</span>
           </div>
         )}
 
-        <div className="p-5 overflow-y-auto">
+        <div className="p-5 overflow-y-auto space-y-5 custom-scrollbar">
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <Loader2 className="h-6 w-6 animate-spin text-[#0A66C2] dark:text-blue-400 mb-2" />
+              <span className="text-xs">Loading broadcast data…</span>
+            </div>
           ) : tab === 'compose' ? (
             <div className="space-y-5">
               {/* Drip reality note */}
-              <div className="rounded-md bg-blue-50 text-blue-800 text-xs px-3 py-2 leading-relaxed">
-                LinkedIn caps how many messages an account can send per day, so a broadcast <strong>drips</strong> out
-                over hours/days within a safe limit - not all at once. You&apos;ll get an ETA when you queue it.
+              <div className="rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-blue-950 dark:text-blue-200 text-xs p-3 leading-relaxed flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-[#0A66C2] dark:text-blue-400 mt-0.5 shrink-0" />
+                <div>
+                  LinkedIn caps how many messages an account can send per day, so a broadcast <strong className="font-semibold text-[#0A66C2] dark:text-blue-300">drips</strong> out safely over hours/days within daily limits. You&apos;ll get an ETA upon queuing.
+                </div>
               </div>
 
               {/* Audience */}
               <section>
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground mb-2"><Users className="h-4 w-4" /> Audience</div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
+                  <Users className="h-3.5 w-3.5 text-[#0A66C2] dark:text-blue-400" />
+                  <span>Audience</span>
+                </div>
                 {groups.length > 0 ? (
-                  <div className="space-y-1.5 mb-3">
-                    {groups.map((g) => (
-                      <label key={g.id} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-muted">
-                        <input type="radio" name="grp" checked={selectedGroup === g.id} onChange={() => setSelectedGroup(g.id)} />
-                        <span className="text-sm flex-1">{g.name}</span>
-                        <span className="text-xs text-muted-foreground">{g.member_count} connection{g.member_count === 1 ? '' : 's'}</span>
-                        <button type="button" onClick={(e) => { e.preventDefault(); rebuildGroup(g.id); }}
-                          disabled={busy === `rebuild-${g.id}`} title="Refresh from accepted connections"
-                          className="text-muted-foreground hover:text-blue-600">
-                          {busy === `rebuild-${g.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                        </button>
-                      </label>
-                    ))}
+                  <div className="space-y-2 mb-3">
+                    {groups.map((g) => {
+                      const isSelected = selectedGroup === g.id;
+                      return (
+                        <label
+                          key={g.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all",
+                            isSelected
+                              ? "border-[#0A66C2] dark:border-blue-500/60 bg-blue-50/40 dark:bg-blue-950/20 ring-1 ring-[#0A66C2]/20 dark:ring-blue-500/20"
+                              : "border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="grp"
+                            className="accent-[#0A66C2] dark:accent-blue-500 h-4 w-4"
+                            checked={isSelected}
+                            onChange={() => setSelectedGroup(g.id)}
+                          />
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1 truncate">{g.name}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                            {g.member_count} connection{g.member_count === 1 ? '' : 's'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); rebuildGroup(g.id); }}
+                            disabled={busy === `rebuild-${g.id}`}
+                            title="Refresh from accepted connections"
+                            className="p-1 rounded-lg text-slate-400 hover:text-[#0A66C2] dark:hover:text-blue-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60 transition-colors"
+                          >
+                            {busy === `rebuild-${g.id}` ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </label>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground mb-3">No broadcast groups yet. Create one from your accepted connections below.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">No broadcast groups yet. Create one from your accepted connections below.</p>
                 )}
+
                 {/* Build a new group from a campaign's accepted connections */}
-                <div className="rounded-md border border-border p-3 space-y-2.5">
-                  <div className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" /> New group from a campaign</div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-900/30 p-3.5 space-y-3">
+                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Briefcase className="h-3.5 w-3.5 text-[#0A66C2] dark:text-blue-400" />
+                    <span>New group from a campaign</span>
+                  </div>
                   {campaigns.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No campaigns with accepted LinkedIn connections yet.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">No campaigns with accepted LinkedIn connections yet.</p>
                   ) : (
                     <>
-                      <select value={selectedCampaign} onChange={(e) => { setSelectedCampaign(e.target.value); setNewGroupName(''); }}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                      <select
+                        value={selectedCampaign}
+                        onChange={(e) => { setSelectedCampaign(e.target.value); setNewGroupName(''); }}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0D1527] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0A66C2] dark:focus:border-blue-500"
+                      >
                         <option value="">Select a campaign…</option>
                         {campaigns.map((c) => (
-                          <option key={c.campaign_id} value={c.campaign_id}>{c.name} ({c.accepted_count} accepted)</option>
+                          <option key={c.campaign_id} value={c.campaign_id}>
+                            {c.name} ({c.accepted_count} accepted)
+                          </option>
                         ))}
                       </select>
 
                       {chosenCampaign && (
-                        <div className="space-y-1.5 pl-0.5">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="radio" name="acceptance_filter" checked={!excludeResponded} onChange={() => setExcludeResponded(false)} />
-                            <span>All accepted <span className="text-muted-foreground">({chosenCampaign.accepted_count})</span></span>
+                        <div className="space-y-1.5 pl-0.5 text-xs text-slate-700 dark:text-slate-300">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="acceptance_filter"
+                              className="accent-[#0A66C2] dark:accent-blue-500"
+                              checked={!excludeResponded}
+                              onChange={() => setExcludeResponded(false)}
+                            />
+                            <span>All accepted <span className="text-slate-400 dark:text-slate-500">({chosenCampaign.accepted_count})</span></span>
                           </label>
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="radio" name="acceptance_filter" checked={excludeResponded} onChange={() => setExcludeResponded(true)} />
-                            <span>Accepted, excluding responded <span className="text-muted-foreground">({chosenCampaign.not_responded_count})</span></span>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="acceptance_filter"
+                              className="accent-[#0A66C2] dark:accent-blue-500"
+                              checked={excludeResponded}
+                              onChange={() => setExcludeResponded(true)}
+                            />
+                            <span>Accepted, excluding responded <span className="text-slate-400 dark:text-slate-500">({chosenCampaign.not_responded_count})</span></span>
                           </label>
                         </div>
                       )}
 
-                      <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)}
+                      <input
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
                         placeholder={chosenCampaign ? `${chosenCampaign.name}${excludeResponded ? ' - not responded' : ' - accepted'}` : 'Group name (optional)'}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0D1527] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0A66C2] dark:focus:border-blue-500"
+                      />
 
-                      <button onClick={createGroupFromAccepted} disabled={!selectedCampaign || busy === 'create'}
-                        className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">
+                      <button
+                        onClick={createGroupFromAccepted}
+                        disabled={!selectedCampaign || busy === 'create'}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0A66C2] hover:bg-[#095196] dark:bg-blue-600 dark:hover:bg-blue-500 px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 shadow-xs"
+                      >
                         {busy === 'create' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                         Build group{chosenCampaign ? ` (${audienceCount})` : ''}
                       </button>
@@ -301,45 +425,63 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
 
               {/* Message */}
               <section>
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground mb-2"><Send className="h-4 w-4" /> Message</div>
-                <select value={selectedTemplate} onChange={(e) => setSelectedTemplate(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
+                  <Send className="h-3.5 w-3.5 text-[#0A66C2] dark:text-blue-400" />
+                  <span>Message</span>
+                </div>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0D1527] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0A66C2] dark:focus:border-blue-500"
+                >
                   <option value="">Select a saved LinkedIn template…</option>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
                 </select>
                 {templates.length === 0 && (
-                  <p className="text-xs text-muted-foreground mt-1.5">No LinkedIn templates found. Create one under Campaigns → LinkedIn templates.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">No LinkedIn templates found. Create one under Campaigns → LinkedIn templates.</p>
                 )}
                 {chosenTemplate?.content && (
-                  <div className="mt-2 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-28 overflow-y-auto">
+                  <div className="mt-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 px-3.5 py-2.5 text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap max-h-28 overflow-y-auto leading-relaxed">
                     {chosenTemplate.content}
                   </div>
                 )}
               </section>
 
               {/* Queue */}
-              <div className="pt-1">
+              <div className="pt-2">
                 {chosenGroup && (
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Will drip to <strong>{chosenGroup.member_count}</strong> connection{chosenGroup.member_count === 1 ? '' : 's'} from “{chosenGroup.name}”.
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2.5 text-center">
+                    Will drip to <strong className="text-slate-800 dark:text-slate-200 font-semibold">{chosenGroup.member_count}</strong> connection{chosenGroup.member_count === 1 ? '' : 's'} from “{chosenGroup.name}”.
                   </p>
                 )}
-                <button onClick={queueBroadcast} disabled={!canSend || busy === 'send'}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50">
+                <button
+                  onClick={queueBroadcast}
+                  disabled={!canSend || busy === 'send'}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A66C2] hover:bg-[#095196] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-md shadow-[#0A66C2]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                >
                   {busy === 'send' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />} Queue broadcast
                 </button>
               </div>
             </div>
           ) : (
             /* Runs */
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex justify-end">
-                <button onClick={loadRuns} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <button
+                  onClick={loadRuns}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                >
                   <RefreshCw className="h-3.5 w-3.5" /> Refresh
                 </button>
               </div>
               {runs.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No broadcasts yet.</p>
+                <div className="text-center py-12">
+                  <Megaphone className="h-8 w-8 text-slate-300 dark:text-slate-600 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No broadcasts yet</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Queued broadcasts will display their delivery and engagement status here.</p>
+                </div>
               ) : runs.map((r) => {
                 const meta = STATUS_META[r.status] || STATUS_META.queued;
                 const total = r.recipient_count || 0;
@@ -354,43 +496,55 @@ export default function LinkedInBroadcastModal({ onClose }: Props) {
                 // would understate a broadcast still mid-drip.
                 const rate = (n: number) => (sent ? Math.round((n / sent) * 100) : 0);
                 return (
-                  <div key={r.id} className="rounded-md border border-border px-3 py-2.5">
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                  <div
+                    key={r.id}
+                    className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 p-3.5 space-y-2 hover:border-slate-300 dark:hover:border-slate-700/80 transition-colors shadow-2xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate" title={runLabel(r)}>{runLabel(r)}</p>
-                        {sentAt && <p className="text-[11px] text-muted-foreground mt-0.5">{sentAt}</p>}
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate" title={runLabel(r)}>{runLabel(r)}</p>
+                        {sentAt && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{sentAt}</p>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.cls}`}>{meta.icon}{meta.label}</span>
                         {active && (
-                          <button onClick={() => cancelRun(r.id)} disabled={busy === `cancel-${r.id}`}
-                            className="text-[11px] text-muted-foreground hover:text-red-600">Cancel</button>
+                          <button
+                            onClick={() => cancelRun(r.id)}
+                            disabled={busy === `cancel-${r.id}`}
+                            className="text-[11px] text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                          >
+                            Cancel
+                          </button>
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-1.5">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       {sent}/{total} sent
                       {r.failed_count ? ` · ${r.failed_count} failed` : ''}
                       {r.skipped_count ? ` · ${r.skipped_count} skipped` : ''}
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full bg-[#0A66C2] dark:bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
                     </div>
                     {sent > 0 && (
-                      <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
+                      <div className="mt-2 flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
                         <span className="inline-flex items-center gap-1" title="Recipients who opened the message. LinkedIn only reports a read receipt when the recipient has them switched on, so this is a minimum.">
-                          <Eye className="h-3.5 w-3.5" />
-                          <strong className="text-foreground font-medium">{seen}</strong> seen
-                          <span className="text-muted-foreground/70">({rate(seen)}%)</span>
+                          <Eye className="h-3.5 w-3.5 text-slate-400" />
+                          <strong className="text-slate-800 dark:text-slate-200 font-medium">{seen}</strong> seen
+                          <span className="text-slate-400">({rate(seen)}%)</span>
                         </span>
                         <span className="inline-flex items-center gap-1" title="Recipients who replied in the thread after this broadcast.">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <strong className="text-foreground font-medium">{replied}</strong> replied
-                          <span className="text-muted-foreground/70">({rate(replied)}%)</span>
+                          <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+                          <strong className="text-slate-800 dark:text-slate-200 font-medium">{replied}</strong> replied
+                          <span className="text-slate-400">({rate(replied)}%)</span>
                         </span>
                       </div>
                     )}
-                    {r.error_message && <p className="mt-1 text-[11px] text-red-500">{r.error_message}</p>}
+                    {r.error_message && (
+                      <p className="mt-1 text-[11px] text-red-500 dark:text-red-400 bg-red-50/50 dark:bg-red-950/30 p-1.5 rounded-md border border-red-100 dark:border-red-900/30">
+                        {r.error_message}
+                      </p>
+                    )}
                   </div>
                 );
               })}
