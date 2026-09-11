@@ -1,11 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, X, ChevronDown, Send } from 'lucide-react';
-import { useGenerateBulkRecommendations, useSavedRecommendations, useListMembers } from '@lad/frontend-features/community-roi';
+import {
+  useGenerateBulkRecommendations, useSavedRecommendations, useListMembers,
+  useCoordinationSelections, useSelectCoordination, useSendCoordination,
+} from '@lad/frontend-features/community-roi';
+import type { DaySlot } from '@lad/frontend-features/community-roi';
 import MessageTemplateSender from './MessageTemplateSender';
+import {
+  MemberCoordinationCard, SendCoordinationPanel, DAY_SLOTS, selectionFor,
+  type Pair, type MemberLite,
+} from './CoordinationRows';
 
 interface RecommendationPair {
+  recommendation_id?: string | null;
+  member_a_id?: string | null;
+  member_b_id?: string | null;
+  day_slot?: number | null;
   member_a: string;
   member_b: string;
   member_a_company?: string;
@@ -29,98 +41,6 @@ interface GenerateResult {
   weeks: WeekData[];
   error?: string;
 }
-
-function initials(name: string): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-}
-
-const AVATAR_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
-function avatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-const Avatar: React.FC<{ name: string; size?: 'sm' | 'md' }> = ({ name, size = 'md' }) => (
-  <div
-    className={`rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white ${size === 'sm' ? 'w-8 h-8 text-[10px]' : 'w-10 h-10 text-[11px]'}`}
-    style={{ backgroundColor: avatarColor(name) }}
-    title={name}
-  >
-    {initials(name)}
-  </div>
-);
-
-const IndustryTag: React.FC<{ industry?: string }> = ({ industry }) => {
-  if (!industry) return null;
-  return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium truncate max-w-[120px]">
-      {industry}
-    </span>
-  );
-};
-
-const MemberOptionCard: React.FC<{ memberA: string; industryA?: string; options: RecommendationPair[]; index: number }> = ({ memberA, industryA, options, index }) => {
-  const [selectedOption, setSelectedOption] = React.useState(0);
-  const selected = options[selectedOption];
-  const isReferral = selected?.combination_type === 2;
-
-  return (
-    <div className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all">
-      {/* Index */}
-      <span className="text-xs font-bold text-slate-300 w-5 flex-shrink-0 text-center">{index + 1}</span>
-
-      {/* Member A (Left side - fixed) */}
-      <div className="flex items-center gap-2 flex-shrink-0 min-w-[180px]">
-        <Avatar name={memberA} />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-800 truncate">{memberA}</p>
-          <IndustryTag industry={industryA} />
-        </div>
-      </div>
-
-      {/* Dropdown with 3 options (Right side) */}
-      <div className="flex-1 ml-auto">
-        <select
-          value={selectedOption}
-          onChange={(e) => setSelectedOption(Number(e.target.value))}
-          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-800 hover:border-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 cursor-pointer appearance-none bg-no-repeat bg-right pr-8"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23334155' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-            backgroundPosition: 'right 0.5rem center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        >
-          {options.map((option, idx) => (
-            <option key={idx} value={idx}>
-              {option.member_b} ({option.score}) {option.combination_type === 2 ? '⭐' : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Selected Member B info */}
-      {selected && (
-        <div className="flex items-center gap-3 flex-shrink-0 min-w-[200px] justify-end">
-          <div className="text-right">
-            <div className="flex items-center gap-2 justify-end">
-              <span className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full bg-indigo-500">{selected.score}</span>
-              {isReferral && (
-                <span className="text-[9px] font-semibold text-yellow-600 bg-yellow-50 border border-yellow-200 px-1.5 py-0.5 rounded">
-                  Has Referral
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-semibold text-slate-800 truncate mt-1">{selected.member_b}</p>
-            <IndustryTag industry={selected.industry_b} />
-          </div>
-          <Avatar name={selected.member_b} />
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ── Week selector options ────────────────────────────────────────────────────
 const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
@@ -156,7 +76,15 @@ export const RecommendationPairs: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMessageSender, setShowMessageSender] = useState(false);
+  const [showCoordinate, setShowCoordinate] = useState(false);
   const [broadcastToast, setBroadcastToast] = useState<string | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
+
+  // Persisted picks for the active week, and who is taken on each day.
+  const { data: selData, refetch: refetchSelections } = useCoordinationSelections(activeWeek);
+  const { select, deselect, isSaving } = useSelectCoordination();
+  const { seed, send, isSeeding, isSending } = useSendCoordination();
+  useEffect(() => { refetchSelections(); }, [activeWeek, refetchSelections]);
 
   // Load saved recommendations on mount
   useEffect(() => { refetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -167,6 +95,98 @@ export const RecommendationPairs: React.FC = () => {
   const isLoading = isSavedLoading && !generateResult;
 
   const weekData = data?.weeks?.find(w => w.week_number === activeWeek);
+
+  const selections = useMemo(() => selData?.selections ?? [], [selData]);
+  // useListMembers returns a PaginatedResponse, not an array — the rows are
+  // under .data. The informational sender below used to be handed the whole
+  // object as `allMembers`; fixed here since it sits next to this change.
+  const memberLites: MemberLite[] = useMemo(
+    () => (members?.data ?? []).map((m) => ({ id: m.id, name: m.name, industry: m.industry ?? null })),
+    [members],
+  );
+
+  // memberId -> name of who they are paired with, per day. Drives the greyed-
+  // out options so a taken partner explains itself instead of being a 409.
+  const takenByDay = useMemo(() => {
+    const out: Record<DaySlot, Map<string, string>> = { 1: new Map(), 2: new Map() };
+    for (const sel of selections) {
+      if (sel.status === 'skipped') continue;
+      const day = sel.day_slot as DaySlot;
+      if (!out[day]) continue;
+      out[day].set(sel.member_a_id, sel.member_b_name);
+      out[day].set(sel.member_b_id, sel.member_a_name);
+    }
+    return out;
+  }, [selections]);
+
+  // One row per member, with the recommender's pair for each day. Pairs are
+  // stored in both directions, so every member appears as member_a somewhere.
+  const memberRows = useMemo(() => {
+    const byMember = new Map<string, { member: MemberLite; generatedByDay: Partial<Record<DaySlot, Pair>> }>();
+    for (const pair of (weekData?.pairs ?? []) as Pair[]) {
+      if (!pair.member_a_id) continue;   // pre-#832 payload: no ids, nothing to pick against
+      if (!byMember.has(pair.member_a_id)) {
+        byMember.set(pair.member_a_id, {
+          member: { id: pair.member_a_id, name: pair.member_a, industry: pair.industry_a ?? null },
+          generatedByDay: {},
+        });
+      }
+      const day = pair.day_slot as DaySlot | null | undefined;
+      if (day && DAY_SLOTS.includes(day)) byMember.get(pair.member_a_id)!.generatedByDay[day] = pair;
+    }
+    return [...byMember.values()].sort((a, b) => a.member.name.localeCompare(b.member.name));
+  }, [weekData]);
+
+  const generatedCount = useMemo(() => {
+    const c: Record<DaySlot, number> = { 1: 0, 2: 0 };
+    const seen = new Set<string>();
+    for (const pair of (weekData?.pairs ?? []) as Pair[]) {
+      const day = pair.day_slot as DaySlot | null | undefined;
+      if (!day || !pair.member_a_id || !pair.member_b_id) continue;
+      const key = [pair.member_a_id, pair.member_b_id].sort().join('|') + `|${day}`;
+      if (seen.has(key)) continue;   // both directions are stored; count the pair once
+      seen.add(key);
+      c[day] = (c[day] ?? 0) + 1;
+    }
+    return c;
+  }, [weekData]);
+
+  // Changing a pick: drop the old selection for this member+day, record the new
+  // one, and say exactly who is in the way if the service refuses.
+  const handlePick = async (member: MemberLite, day: DaySlot, partnerId: string | null) => {
+    setPickError(null);
+    const existing = selectionFor(selections, member.id, day);
+    if (existing && existing.status !== 'pending') return;   // already coordinated
+    try {
+      if (existing) {
+        const removed = await deselect(existing.id);
+        if (!removed) { setPickError('That pair has already been coordinated and cannot be changed.'); return; }
+      }
+      if (partnerId) {
+        const gen = memberRows.find((r) => r.member.id === member.id)?.generatedByDay[day];
+        const isGenerated = !!gen && (gen.member_b_id === partnerId || gen.member_a_id === partnerId);
+        const out = await select({
+          weekNumber: activeWeek, daySlot: day, memberAId: member.id, memberBId: partnerId,
+          recommendationId: isGenerated ? gen?.recommendation_id ?? null : null,
+          reason: isGenerated ? gen?.reason ?? null : null,
+        });
+        if (!out.ok) {
+          const who = out.members
+            .map((id) => memberLites.find((m) => m.id === id)?.name ?? id)
+            .filter((n) => n !== member.name);
+          setPickError(
+            who.length
+              ? `${who.join(', ')} already has a 1-2-1 on ${day === 1 ? 'Wednesday' : 'Friday'}. Pick someone else, or change theirs first.`
+              : `That pick was refused: ${out.reason}.`,
+          );
+        }
+      }
+    } catch (e) {
+      setPickError((e as Error).message);
+    } finally {
+      refetchSelections();
+    }
+  };
 
   const handleGenerate = async () => {
     await generate(selectedWeeks);
@@ -193,7 +213,7 @@ export const RecommendationPairs: React.FC = () => {
           <div>
             <h2 className="text-lg font-bold text-slate-900">1-to-1 Meeting Recommendations</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Each member gets top 3 personalized options per week based on industry synergy and interaction history.
+              Each member gets two suggestions a week — one for each coordination day — chosen so nobody is booked twice on a day. Pick a partner per day, then send that day&apos;s slot offers.
             </p>
           </div>
         </div>
@@ -217,14 +237,25 @@ export const RecommendationPairs: React.FC = () => {
 
           {/* Send Messages button (only show if data loaded with results) */}
           {!isLoading && data?.success && !!(data as GenerateResult)?.weeks?.length && (
+            <>
             <button
-              onClick={() => setShowMessageSender(true)}
+              onClick={() => setShowCoordinate(true)}
               disabled={isGenerating}
+              title="Send each member a slot offer for their pick that day and open the negotiation"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-4 h-4" />
-              Send Messages
+              Coordinate 1-2-1s
             </button>
+            <button
+              onClick={() => setShowMessageSender(true)}
+              disabled={isGenerating}
+              title="Send an informational template (no slots, no negotiation)"
+              className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 transition-colors"
+            >
+              Info message
+            </button>
+            </>
           )}
 
           {/* Generate button */}
@@ -269,7 +300,7 @@ export const RecommendationPairs: React.FC = () => {
                 <p className="text-sm font-semibold text-slate-700">No recommendations yet</p>
                 <p className="text-xs text-slate-400 mt-1 max-w-xs">
                   Select how many weeks ahead to plan, then click <strong>Generate Recommendations</strong>.
-                  Each member gets 3 personalized 1-to-1 options per week based on industry synergy.
+                  Each member gets two 1-to-1 suggestions per week, one for each coordination day.
                 </p>
               </div>
             </div>
@@ -343,31 +374,24 @@ export const RecommendationPairs: React.FC = () => {
       {/* Pairs for selected week */}
             {weekData?.pairs?.length ? (
               <div className="flex flex-col gap-2">
-                {Array.from(
-                  weekData.pairs.reduce((map, pair) => {
-                    const key = pair.member_a;
-                    if (!map.has(key)) {
-                      map.set(key, []);
-                    }
-                    map.get(key)!.push(pair);
-                    return map;
-                  }, new Map<string, RecommendationPair[]>())
-                )
-                  .filter(([memberA]) => 
-                    memberA.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map(([memberA, options], index) => {
-                    const first = options[0];
-                    return (
-                      <MemberOptionCard
-                        key={memberA}
-                        memberA={memberA}
-                        industryA={first?.industry_a}
-                        options={options.slice(0, 3)}
-                        index={index}
-                      />
-                    );
-                  })}
+                {pickError && (
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pickError}</p>
+                )}
+                {memberRows
+                  .filter(({ member }) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map(({ member, generatedByDay }, index) => (
+                    <MemberCoordinationCard
+                      key={member.id}
+                      index={index}
+                      member={member}
+                      generatedByDay={generatedByDay}
+                      selections={selections}
+                      takenByDay={takenByDay}
+                      allMembers={memberLites}
+                      saving={isSaving}
+                      onPick={(day, partnerId) => handlePick(member, day, partnerId)}
+                    />
+                  ))}
               </div>
             ) : (
               <p className="text-sm text-slate-400 text-center py-8">
@@ -387,12 +411,24 @@ export const RecommendationPairs: React.FC = () => {
       )}
 
       {/* Message Sender Modal */}
+      {showCoordinate && (
+        <SendCoordinationPanel
+          weekNumber={activeWeek}
+          generatedCount={generatedCount}
+          selections={selections}
+          isSeeding={isSeeding}
+          isSending={isSending}
+          onSeed={(day) => seed(activeWeek, day).finally(() => refetchSelections())}
+          onSend={(day) => send(activeWeek, day).finally(() => refetchSelections())}
+          onClose={() => setShowCoordinate(false)}
+        />
+      )}
       {showMessageSender && data?.success && (
         <MessageTemplateSender
           memberName={data?.weeks?.[0]?.pairs?.[0]?.member_a || 'Member'}
           noInteractionCount={0}
           recommendations={data?.weeks?.flatMap(w => w.pairs) || []}
-          allMembers={members || []}
+          allMembers={members?.data ?? []}
           onClose={() => setShowMessageSender(false)}
           onSuccess={(result) => {
             setShowMessageSender(false);

@@ -6,6 +6,12 @@
  */
 import { safeStorage } from '../../shared/storage';
 
+/** A non-2xx response, carrying what the server actually said. */
+export interface ApiClientError extends Error {
+  status?: number;
+  data?: unknown;
+}
+
 type ApiResponse<T = any> = {
   data: T;
   status: number;
@@ -112,7 +118,14 @@ class CommunityROIApiClient {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const err = new Error(`API Error: ${response.status} ${response.statusText}`);
+      // The status and the parsed body ride on the error. Without them a
+      // caller cannot tell a 409 ("that partner is already taken — by X")
+      // from a 500, and the backend's explanation is thrown away one line
+      // after it was logged. Additive: callers that only read .message are
+      // unaffected.
+      const err = new Error(`API Error: ${response.status} ${response.statusText}`) as ApiClientError;
+      err.status = response.status;
+      err.data = data;
       // Log all failed requests to help debug
       console.error(`[CommunityROI API] ${response.status} on ${method} ${url.toString()}`, {
         baseURL: this.baseURL,
