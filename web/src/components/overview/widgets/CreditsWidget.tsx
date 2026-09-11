@@ -28,6 +28,26 @@ interface CreditsWidgetProps {
   onRefresh?: () => void;
   isLoading?: boolean;
 }
+
+interface UsageTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{ value?: number }>;
+}
+
+const UsageTooltip: React.FC<UsageTooltipProps> = ({ active, label, payload }) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-[10px] border border-blue-200 bg-white px-3 py-2 shadow-lg dark:border-blue-500/30 dark:bg-slate-950">
+      <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-[13px] font-medium text-blue-600 dark:text-blue-400">
+        Usage : {payload[0].value ?? 0} min
+      </p>
+    </div>
+  );
+};
+
 export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
   id,
   balance,
@@ -123,16 +143,7 @@ export const CreditsWidget: React.FC<CreditsWidgetProps> = ({
                 <YAxis hide />
                 <Tooltip
                   cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "4 4" }}
-                  contentStyle={{
-                    background: "rgba(2, 6, 23, 0.95)",
-                    border: "1px solid rgba(59, 130, 246, 0.3)",
-                    borderRadius: 10,
-                    padding: "8px 12px",
-                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                  }}
-                  labelStyle={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}
-                  itemStyle={{ color: "#60a5fa", fontSize: 13, fontWeight: 500 }}
-                  formatter={(value: number) => [`${value} min`, "Usage"]}
+                  content={<UsageTooltip />}
                 />
                 <Area
                   type="monotone"
