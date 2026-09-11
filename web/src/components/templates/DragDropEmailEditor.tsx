@@ -462,7 +462,7 @@ function VariablePicker({ onInsert, dropAlign = 'left' }: { onInsert: (v: string
         className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
           open
             ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-            : 'bg-white dark:bg-[#000c3b] text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-900 hover:bg-violet-50 dark:hover:bg-violet-950/30'
+            : 'bg-white dark:bg-[#071131] text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-900 hover:bg-violet-50 dark:hover:bg-violet-950/30'
         }`}
       >
         <Tags className="w-3.5 h-3.5" />
@@ -470,7 +470,7 @@ function VariablePicker({ onInsert, dropAlign = 'left' }: { onInsert: (v: string
       </button>
 
       {open && (
-        <div className={`absolute ${dropAlign === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 bg-white dark:bg-[#000c3b] rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 py-1.5 min-w-[180px]`}>
+        <div className={`absolute ${dropAlign === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 bg-white dark:bg-[#071131] rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 py-1.5 min-w-[180px]`}>
           <p className="text-[10px] font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wide px-3 pb-1.5">Insert variable</p>
           {VARIABLES.map(({ label, val }) => (
             <button
@@ -819,7 +819,7 @@ function ImageBlockEditor({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-2 border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-[#000c3b] hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-blue-400 dark:hover:border-blue-500 transition-all disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-2 border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-[#071131] hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-blue-400 dark:hover:border-blue-500 transition-all disabled:opacity-60"
         >
           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
           {uploading ? 'Uploading…' : 'Upload from device'}
@@ -861,7 +861,7 @@ function ImageBlockEditor({
           <button
             type="button"
             onClick={() => set('src', '')}
-            className="absolute top-2 right-2 w-6 h-6 bg-white dark:bg-[#000c3b] rounded-full shadow flex items-center justify-center text-gray-400 dark:text-slate-300 hover:text-red-500 transition-colors"
+            className="absolute top-2 right-2 w-6 h-6 bg-white dark:bg-[#071131] rounded-full shadow flex items-center justify-center text-gray-400 dark:text-slate-300 hover:text-red-500 transition-colors"
             title="Remove image"
           >
             <X className="w-3.5 h-3.5" />
@@ -1063,11 +1063,11 @@ function RichTextEditor({
           onMouseDown={(e) => e.stopPropagation()}
           onFocus={saveSelection}
           onChange={(e) => { setFontSize(e.target.value); (e.target as HTMLSelectElement).value = ''; }}
-          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer"
+          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#071131] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer"
           defaultValue=""
         >
-          <option value="" disabled className="dark:bg-[#000c3b]">Size</option>
-          {FONT_SIZES.map((s) => <option key={s} value={s} className="dark:bg-[#000c3b]">{s}px</option>)}
+          <option value="" disabled className="dark:bg-[#071131]">Size</option>
+          {FONT_SIZES.map((s) => <option key={s} value={s} className="dark:bg-[#071131]">{s}px</option>)}
         </select>
 
         {/* Font family */}
@@ -1079,11 +1079,11 @@ function RichTextEditor({
             if (e.target.value) { restoreSelection(); exec('fontName', e.target.value); }
             (e.target as HTMLSelectElement).value = '';
           }}
-          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer max-w-[90px]"
+          className="text-xs border border-gray-200 dark:border-gray-800 rounded px-1 py-1 bg-white dark:bg-[#071131] text-gray-600 dark:text-slate-300 focus:outline-none cursor-pointer max-w-[90px]"
           defaultValue=""
         >
-          <option value="" disabled className="dark:bg-[#000c3b]">Font</option>
-          {FONT_FAMILIES.map(({ label, value }) => <option key={label} value={value} className="dark:bg-[#000c3b]">{label}</option>)}
+          <option value="" disabled className="dark:bg-[#071131]">Font</option>
+          {FONT_FAMILIES.map(({ label, value }) => <option key={label} value={value} className="dark:bg-[#071131]">{label}</option>)}
         </select>
         <Sep />
 
@@ -1139,7 +1139,7 @@ function RichTextEditor({
           document.execCommand('insertText', false, text);
           setTimeout(sync, 0);
         }}
-        className="min-h-[140px] max-h-[300px] overflow-y-auto p-3 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-[#000c3b] focus:outline-none
+        className="min-h-[140px] max-h-[300px] overflow-y-auto p-3 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-[#071131] focus:outline-none
           [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1
           [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1
           [&_li]:my-0.5"
@@ -1181,7 +1181,7 @@ function BlockEditor({
   };
 
   const labelCls = 'block text-[11px] font-semibold text-gray-500 dark:text-slate-300 uppercase tracking-wide mb-1';
-  const inputCls = 'w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white placeholder-gray-400';
+  const inputCls = 'w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#071131] text-gray-900 dark:text-white placeholder-gray-400';
 
   return (
     <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/60 rounded-xl p-4 mt-2 space-y-3">
@@ -1305,7 +1305,7 @@ function BlockEditor({
               <button
                 key={a}
                 onClick={() => set('align', a)}
-                className={`flex-1 py-1.5 text-xs rounded-lg border font-medium capitalize transition ${local.align === a ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-[#000c3b] text-gray-600 dark:text-slate-300 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                className={`flex-1 py-1.5 text-xs rounded-lg border font-medium capitalize transition ${local.align === a ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-[#071131] text-gray-600 dark:text-slate-300 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 {a}
               </button>
@@ -1433,7 +1433,7 @@ function SortableBlock({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div className={`group relative flex items-center gap-3 p-3 bg-white dark:bg-[#000c3b] rounded-xl border-2 transition-all ${isEditing ? 'border-blue-400 shadow-md' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm'}`}>
+      <div className={`group relative flex items-center gap-3 p-3 bg-white dark:bg-[#071131] rounded-xl border-2 transition-all ${isEditing ? 'border-blue-400 shadow-md' : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm'}`}>
         {/* Drag handle */}
         <div
           {...attributes}
@@ -1490,9 +1490,10 @@ interface DragDropEmailEditorProps {
   htmlContent: string;
   subject?: string;
   onContentChange: (html: string) => void;
+  theme?: 'black' | 'blue';
 }
 
-export default function DragDropEmailEditor({ htmlContent, subject, onContentChange }: DragDropEmailEditorProps) {
+export default function DragDropEmailEditor({ htmlContent, subject, onContentChange, theme = 'blue' }: DragDropEmailEditorProps) {
   const [blocks, setBlocks] = useState<EmailBlock[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPalette, setShowPalette] = useState(false);
@@ -1566,14 +1567,14 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
         </button>
 
         {showPalette && (
-          <div className="absolute top-full left-0 mt-2 z-30 bg-white dark:bg-[#000c3b] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-4 w-full">
+          <div className="absolute top-full left-0 mt-2 z-30 bg-white dark:bg-[#071131] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-4 w-full">
             <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wide mb-3">Choose a block type</p>
             <div className="grid grid-cols-4 gap-2">
               {PALETTE.map(({ type, label, icon, desc }) => (
                 <button
                   key={type}
                   onClick={() => addBlock(type)}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all group"
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-zinc-900/10 transition-all group"
                 >
                   <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-[#000724] group-hover:bg-blue-100 dark:group-hover:bg-blue-950/60 flex items-center justify-center text-gray-500 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {icon}
@@ -1590,13 +1591,23 @@ export default function DragDropEmailEditor({ htmlContent, subject, onContentCha
 
       {/* Empty state */}
       {blocks.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
-          <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 flex items-center justify-center mb-4">
-            <AlignLeft className="w-7 h-7 text-gray-300 dark:text-zinc-400" />
+        theme === 'black' ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900">
+            <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 flex items-center justify-center mb-4">
+              <AlignLeft className="w-7 h-7 text-gray-300 dark:text-zinc-400" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700 dark:text-zinc-200 mb-1">Your email is empty</p>
+            <p className="text-xs text-gray-400 dark:text-zinc-400 mb-4">Click &quot;Add Block&quot; above to build your email</p>
           </div>
-          <p className="text-sm font-semibold text-gray-700 dark:text-zinc-200 mb-1">Your email is empty</p>
-          <p className="text-xs text-gray-400 dark:text-zinc-400 mb-4">Click &quot;Add Block&quot; above to build your email</p>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-blue-900/50 rounded-2xl bg-white dark:bg-blue-900/20">
+            <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-[#000724] shadow-sm border border-gray-100 dark:border-blue-900/40 flex items-center justify-center mb-4">
+              <AlignLeft className="w-7 h-7 text-gray-300 dark:text-blue-400/70" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700 dark:text-slate-200 mb-1">Your email is empty</p>
+            <p className="text-xs text-gray-400 dark:text-slate-400 mb-4">Click &quot;Add Block&quot; above to build your email</p>
+          </div>
+        )
       )}
 
       {/* Sortable blocks */}

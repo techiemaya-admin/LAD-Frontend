@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import DOMPurify from 'dompurify';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -361,6 +362,7 @@ function ComposeWindow({
   onClose, onSent, minimized = false, onMinimize, onMaximize, maximized = false,
 }: ComposeWindowProps) {
   const { toast } = useToast();
+  const { isDark } = useTheme();
   const [to, setTo] = useState(initialTo);
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -599,7 +601,7 @@ function ComposeWindow({
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               aria-label="Recipients"
               placeholder=""
-              className="flex-1 focus:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent"
+              className="flex-1 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent"
             />
             <div className="flex items-center gap-3 text-sm text-[#5f6368] dark:text-[#9aa0a6] flex-shrink-0">
               <button
@@ -657,7 +659,7 @@ function ComposeWindow({
                 onChange={e => setCc(e.target.value)}
                 placeholder="Add Cc recipients, comma-separated"
                 aria-label="Cc recipients"
-                className="flex-1 focus:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent placeholder:text-[#5f6368]"
+                className="flex-1 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent placeholder:text-[#5f6368]"
               />
               <button type="button" aria-label="Remove Cc" onClick={() => { setShowCc(false); setCc(''); }}
                 className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043]">
@@ -679,7 +681,7 @@ function ComposeWindow({
                 onChange={e => setBcc(e.target.value)}
                 placeholder="Add Bcc recipients, comma-separated"
                 aria-label="Bcc recipients"
-                className="flex-1 focus:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent placeholder:text-[#5f6368]"
+                className="flex-1 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-sm text-[#202124] dark:text-[#e8eaed] bg-transparent placeholder:text-[#5f6368]"
               />
               <button type="button" aria-label="Remove Bcc" onClick={() => { setShowBcc(false); setBcc(''); }}
                 className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043]">
@@ -700,7 +702,7 @@ function ComposeWindow({
               onChange={e => setSubject(e.target.value)}
               placeholder="Subject"
               aria-label="Email subject"
-              className="flex-1 focus:outline-none text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] bg-transparent"
+              className="flex-1 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] bg-transparent"
             />
           </div>
         </div>
@@ -715,7 +717,7 @@ function ComposeWindow({
             onChange={e => setBody(e.target.value)}
             placeholder="Body Text"
             aria-label="Email body"
-            className="w-full flex-1 bg-transparent resize-none focus:outline-none text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6]/60"
+            className="w-full flex-1 bg-transparent resize-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6]/60"
             style={{ minHeight: maximized ? '400px' : '200px' }}
           />
           {showTemplate && (
@@ -805,7 +807,7 @@ function ComposeWindow({
               >
                 {agentType === 'human'
                   ? <User className="h-5 w-5" />
-                  : <Image src="/logo.svg" alt="Mr LAD" width={28} height={28} className="object-contain" />
+                  : <Image src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" width={28} height={28} className="object-contain" />
                 }
               </button>
             </DropdownMenuTrigger>
@@ -821,7 +823,7 @@ function ComposeWindow({
                 onClick={() => setAgentType('ai')}
                 className={cn('cursor-pointer', agentType === 'ai' && 'bg-muted')}
               >
-                <Image src="/logo.svg" alt="Mr LAD" width={16} height={16} className="mr-2" /> Mr LAD
+                <Image src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" width={16} height={16} className="mr-2" /> Mr LAD
                 {agentType === 'ai' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -2543,7 +2545,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
               value={contactSearch}
               onChange={e => setContactSearch(e.target.value)}
               aria-label="Search in mail"
-              className="w-full h-full bg-transparent pl-9 pr-9 md:pl-12 md:pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none"
+              className="w-full h-full bg-transparent pl-9 pr-9 md:pl-12 md:pr-12 text-sm text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] focus:outline-none focus:ring-0"
             />
             <button
               title="Search options"
@@ -2575,7 +2577,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                     value={value}
                     onChange={e => set(e.target.value)}
                     placeholder={placeholder}
-                    className="flex-1 h-8 border-b border-[#dadce0] dark:border-[#3c4043] bg-transparent text-[#202124] dark:text-[#e8eaed] focus:outline-none focus:border-[#1a73e8] dark:focus:border-[#8ab4f8] text-sm px-1"
+                    className="flex-1 h-8 border-b border-[#dadce0] dark:border-[#3c4043] bg-transparent text-[#202124] dark:text-[#e8eaed] outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus:border-[#1a73e8] dark:focus:border-[#8ab4f8] text-sm px-1"
                   />
                 </div>
               ))}
