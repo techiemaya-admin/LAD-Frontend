@@ -43,6 +43,8 @@ export interface CoordinationSelectionsResponse {
 export interface SeedSummary {
   weekNumber: number;
   daySlot: number;
+  /** set when the call was scoped to one member's pair */
+  memberId?: string | null;
   generated: number;
   created: number;
   alreadySelected: number;
@@ -53,6 +55,8 @@ export interface SeedSummary {
 export interface SendSummary {
   weekNumber: number;
   daySlot: number;
+  /** set when the call was scoped to one member's pair */
+  memberId?: string | null;
   selected: number;
   pending: number;
   proposed: number;
@@ -146,6 +150,13 @@ export function useSelectCoordination() {
   return { select, deselect, isSaving };
 }
 
+/** Narrow a seed or send to one member's pair; omit for the whole day. */
+export interface SeedScope { memberId?: string }
+export interface SendScope extends SeedScope {
+  /** stop after this many pairs; the rest stay pending for a later press */
+  cap?: number;
+}
+
 /**
  * Seed a day's picks from the generated pairs, then send them.
  * POST .../coordination/selections/seed  then  POST .../coordination/send
@@ -153,16 +164,23 @@ export function useSelectCoordination() {
  * Two calls rather than one endpoint on purpose: the seed summary is shown
  * BEFORE anything is sent, so an admin sees "42 pairs, 2 skipped because you
  * already overrode them" and can stop.
+ *
+ * Both take a scope. With `memberId` they touch only that member's pair for
+ * the day — coordinating one person (a test with yourself, a late joiner)
+ * without the rest of the chapter hearing anything.
  */
 export function useSendCoordination() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const seed = useCallback(async (weekNumber: number, daySlot: DaySlot): Promise<SeedSummary> => {
+  const seed = useCallback(async (
+    weekNumber: number, daySlot: DaySlot, scope: SeedScope = {},
+  ): Promise<SeedSummary> => {
     setIsSeeding(true);
     try {
       const res = await communityROIApiClient.post<Envelope<SeedSummary>>(
-        '/api/community-roi/coordination/selections/seed', { weekNumber, daySlot },
+        '/api/community-roi/coordination/selections/seed',
+        { weekNumber, daySlot, ...(scope.memberId ? { memberId: scope.memberId } : {}) },
       );
       return res.data.data;
     } finally {
@@ -170,11 +188,18 @@ export function useSendCoordination() {
     }
   }, []);
 
-  const send = useCallback(async (weekNumber: number, daySlot: DaySlot, cap?: number): Promise<SendSummary> => {
+  const send = useCallback(async (
+    weekNumber: number, daySlot: DaySlot, scope: SendScope = {},
+  ): Promise<SendSummary> => {
     setIsSending(true);
     try {
       const res = await communityROIApiClient.post<Envelope<SendSummary>>(
-        '/api/community-roi/coordination/send', { weekNumber, daySlot, ...(cap ? { cap } : {}) },
+        '/api/community-roi/coordination/send',
+        {
+          weekNumber, daySlot,
+          ...(scope.cap ? { cap: scope.cap } : {}),
+          ...(scope.memberId ? { memberId: scope.memberId } : {}),
+        },
       );
       return res.data.data;
     } finally {

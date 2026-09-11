@@ -12,6 +12,10 @@
  * A pick is persisted the moment it changes (it used to live in the page and
  * vanish on reload). Sending a day seeds the remaining generated pairs into
  * selections in one call, shows what that did, and only then sends.
+ *
+ * Each row also has its own Coordinate button: the same seed-then-send,
+ * scoped to that one member's pair. For trying the flow with one person
+ * before the chapter sees it, or a member who joined after the day went out.
  */
 import React, { useMemo, useState } from 'react';
 import { Send, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react';
@@ -109,10 +113,14 @@ interface DayRowProps {
   takenBy: Map<string, string>;           // memberId -> name of who they are paired with, this day
   allMembers: MemberLite[];
   saving: boolean;
+  coordinating: boolean;                  // this row's own send is in flight
   onPick: (partnerId: string | null) => void;
+  onCoordinate: () => void;               // send just this pair, now
 }
 
-const DayRow: React.FC<DayRowProps> = ({ member, day, generated, selection, takenBy, allMembers, saving, onPick }) => {
+const DayRow: React.FC<DayRowProps> = ({
+  member, day, generated, selection, takenBy, allMembers, saving, coordinating, onPick, onCoordinate,
+}) => {
   const generatedPartnerId = generated
     ? (generated.member_a_id === member.id ? generated.member_b_id : generated.member_a_id) ?? null
     : null;
@@ -154,6 +162,17 @@ const DayRow: React.FC<DayRowProps> = ({ member, day, generated, selection, take
           );
         })}
       </select>
+      {current && !locked ? (
+        <button
+          type="button"
+          onClick={onCoordinate}
+          disabled={saving || coordinating}
+          title={`Send ${member.name} the ${DAY_LABEL[day]} slot offer now — only this pair is messaged`}
+          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Send className="w-3 h-3" /> {coordinating ? 'Sending…' : 'Coordinate'}
+        </button>
+      ) : null}
       <div className="w-36 flex-shrink-0 text-right"><StatusChip sel={selection} /></div>
     </div>
   );
@@ -167,11 +186,13 @@ export interface MemberCoordinationCardProps {
   takenByDay: Record<DaySlot, Map<string, string>>;
   allMembers: MemberLite[];
   saving: boolean;
+  coordinatingDay?: DaySlot | null;       // which of this member's rows is sending
   onPick: (day: DaySlot, partnerId: string | null) => void;
+  onCoordinate: (day: DaySlot) => void;
 }
 
 export const MemberCoordinationCard: React.FC<MemberCoordinationCardProps> = ({
-  index, member, generatedByDay, selections, takenByDay, allMembers, saving, onPick,
+  index, member, generatedByDay, selections, takenByDay, allMembers, saving, coordinatingDay, onPick, onCoordinate,
 }) => (
   <div className="flex items-start gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all">
     <span className="text-xs font-bold text-slate-300 w-5 flex-shrink-0 text-center pt-2">{index + 1}</span>
@@ -193,7 +214,9 @@ export const MemberCoordinationCard: React.FC<MemberCoordinationCardProps> = ({
           takenBy={takenByDay[day]}
           allMembers={allMembers}
           saving={saving}
+          coordinating={coordinatingDay === day}
           onPick={(partnerId) => onPick(day, partnerId)}
+          onCoordinate={() => onCoordinate(day)}
         />
       ))}
     </div>
