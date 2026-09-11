@@ -86,7 +86,7 @@ interface StepLog {
 const DEFAULT_FEATURES = [
   'overview', 'dashboard', 'campaigns', 'conversations', 'settings',
   'ai_assistant', 'ai_business_profile', 'ai_playground_history',
-  'apollo_leads', 'followups', 'social_integration', 'deals_pipeline',
+  'apollo_leads', 'social_integration', 'deals_pipeline',
   'whatsapp-conversations', 'personal-whatsapp',
   'abm', 'instagram-conversations',
   'ai-chat', 'lead_enrichment', 'voice_agent',
@@ -115,7 +115,7 @@ const DEFAULT_CAPABILITIES = [
 // Keep these in sync with ESSENTIAL_OWNER_CAPABILITIES / ESSENTIAL_TENANT_FEATURES
 // in LAD_backend/features/admin/routes/provision.js (also surfaced via /meta).
 const FALLBACK_ESSENTIAL_FEATURES = [
-  'conversations', 'campaigns', 'followups',
+  'conversations', 'campaigns',
   // 'ai_assistant' = AI-template generation; 'ai-chat' = sidebar AI Assistant
   // nav. Distinct feature keys - both required, otherwise new tenants hit
   // "Feature Not Available - unlock ai-chat".
