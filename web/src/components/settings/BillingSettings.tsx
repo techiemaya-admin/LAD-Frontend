@@ -55,13 +55,13 @@ export const BillingSettings: React.FC = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="transactions" className="space-y-4 text-slate-100">
-            <div className="text-lg font-semibold mb-4">Transaction History & Details</div>
+          <TabsContent value="transactions" className="space-y-4 text-slate-900 dark:text-slate-100">
+            <div className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Transaction History & Details</div>
             <TransactionHistory />
           </TabsContent>
 
-          <TabsContent value="usage" className="space-y-4 text-slate-100">
-            <div className="text-lg font-semibold mb-4">Credit Usage Analytics</div>
+          <TabsContent value="usage" className="space-y-4 text-slate-900 dark:text-slate-100">
+            <div className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">Credit Usage Analytics</div>
             <CreditUsageAnalytics />
           </TabsContent>
         </Tabs>

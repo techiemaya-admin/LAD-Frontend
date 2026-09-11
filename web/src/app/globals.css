@@ -939,8 +939,6 @@ textarea.adv-chat-ta:focus-within,
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
-  ring: 0 !important;
-  -webkit-ring-color: transparent !important;
   --tw-ring-color: transparent !important;
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
@@ -961,3 +959,15 @@ textarea.adv-chat-ta:focus-within,
 .dark .react-flow__controls-button svg {
   fill: currentColor !important;
 }
+
+/* ── Custom LAD Toggle Switches ── */
+.lad-toggle-on {
+  background-color: #00C950 !important;
+}
+.lad-toggle-off {
+  background-color: #CBD5E1 !important;
+}
+.dark .lad-toggle-off {
+  background-color: #364153 !important;
+}
+
