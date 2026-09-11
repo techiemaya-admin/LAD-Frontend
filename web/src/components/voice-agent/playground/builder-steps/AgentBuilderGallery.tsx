@@ -65,7 +65,7 @@ export function AgentBuilderGallery({
   const videoGroups = React.useMemo(() => {
     const groupsMap: { [key: string]: VideoAsset[] } = {};
     const ungroupedList: VideoAsset[] = [];
-    
+
     videos.forEach((vid) => {
       const firstPrompt = vid.prompt_history?.[0];
       if (firstPrompt && firstPrompt.trim()) {
@@ -77,9 +77,9 @@ export function AgentBuilderGallery({
         ungroupedList.push(vid);
       }
     });
-    
+
     const resultGroups: { group_key: string; videos: VideoAsset[]; created_at: number }[] = [];
-    
+
     // Convert groupsMap to array
     Object.entries(groupsMap).forEach(([key, items]) => {
       // Sort items: first gen (shortest duration) first
@@ -89,16 +89,16 @@ export function AgentBuilderGallery({
         if (durA !== durB) return durA - durB;
         return a.created_at - b.created_at;
       });
-      
+
       const maxCreatedAt = Math.max(...items.map((v) => v.created_at));
-      
+
       resultGroups.push({
         group_key: key,
         videos: items,
         created_at: maxCreatedAt
       });
     });
-    
+
     // For ungrouped videos, each one forms its own group of size 1
     ungroupedList.forEach((vid, index) => {
       resultGroups.push({
@@ -107,10 +107,10 @@ export function AgentBuilderGallery({
         created_at: vid.created_at
       });
     });
-    
+
     // Sort final groups by created_at descending (most recent first)
     resultGroups.sort((a, b) => b.created_at - a.created_at);
-    
+
     return resultGroups;
   }, [videos]);
 
@@ -122,7 +122,7 @@ export function AgentBuilderGallery({
 
   const unifiedAssets = React.useMemo(() => {
     const assets: UnifiedGalleryAsset[] = [];
-    
+
     // Add image groups
     images.forEach((imgGroup) => {
       assets.push({
@@ -132,7 +132,7 @@ export function AgentBuilderGallery({
         created_at: imgGroup.created_at
       });
     });
-    
+
     // Add video groups
     videoGroups.forEach((vidGroup) => {
       assets.push({
@@ -142,7 +142,7 @@ export function AgentBuilderGallery({
         created_at: vidGroup.created_at
       });
     });
-    
+
     // Sort all unified assets by created_at descending (most recent first)
     assets.sort((a, b) => b.created_at - a.created_at);
     return assets;
@@ -154,14 +154,14 @@ export function AgentBuilderGallery({
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return "Today";
     }
     if (date.toDateString() === yesterday.toDateString()) {
       return "Yesterday";
     }
-    
+
     return date.toLocaleDateString(undefined, {
       month: "long",
       day: "numeric",
@@ -173,7 +173,7 @@ export function AgentBuilderGallery({
     const sliced = unifiedAssets.slice(0, visibleCount);
     const groups: { dateHeader: string; items: UnifiedGalleryAsset[] }[] = [];
     const dateHeadersMap: { [header: string]: UnifiedGalleryAsset[] } = {};
-    
+
     sliced.forEach((asset) => {
       const header = getDateHeader(asset.created_at);
       if (!dateHeadersMap[header]) {
@@ -181,7 +181,7 @@ export function AgentBuilderGallery({
       }
       dateHeadersMap[header].push(asset);
     });
-    
+
     const seenHeaders = new Set<string>();
     sliced.forEach((asset) => {
       const header = getDateHeader(asset.created_at);
@@ -193,7 +193,7 @@ export function AgentBuilderGallery({
         });
       }
     });
-    
+
     return groups;
   }, [unifiedAssets, visibleCount]);
 
@@ -296,14 +296,14 @@ export function AgentBuilderGallery({
   };
 
   return (
-    <div className="relative flex flex-col items-center w-[480px] max-w-full h-[620px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
+    <div className="relative flex flex-col items-center w-[480px] max-w-full h-[620px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
       {/* ── HEADER (CONTEXTUAL OR STANDARD) ── */}
       {hasSelected ? (
-        <div className="w-full flex shrink-0 items-center justify-between p-4 bg-slate-900 text-white z-20 animate-in slide-in-from-top duration-200">
+        <div className="w-full flex shrink-0 items-center justify-between p-4 bg-slate-900 dark:bg-[#081331] text-white z-20 animate-in slide-in-from-top duration-200">
           <div className="flex items-center gap-3">
             <button
               onClick={handleDeselect}
-              className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-full text-slate-300 hover:text-white transition-colors active:scale-95"
             >
               <X className="size-4" />
             </button>
@@ -317,11 +317,11 @@ export function AgentBuilderGallery({
               <div className="relative group">
                 <button
                   onClick={handleAnimate}
-                  className="p-2 hover:bg-slate-800 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors active:scale-95 cursor-pointer"
+                  className="p-2 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors active:scale-95 cursor-pointer"
                 >
                   <Video className="size-4.5" />
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 dark:bg-[#071131] text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700 dark:border-blue-950/40">
                   Animate Image
                 </div>
               </div>
@@ -331,11 +331,11 @@ export function AgentBuilderGallery({
               <div className="relative group">
                 <button
                   onClick={handleExtend}
-                  className="p-2 hover:bg-slate-800 rounded-xl text-blue-400 hover:text-blue-300 transition-colors active:scale-95 cursor-pointer"
+                  className="p-2 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-xl text-blue-400 hover:text-blue-300 transition-colors active:scale-95 cursor-pointer"
                 >
                   <Video className="size-4.5" />
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 dark:bg-[#071131] text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700 dark:border-blue-950/40">
                   Extend Video
                 </div>
               </div>
@@ -345,11 +345,11 @@ export function AgentBuilderGallery({
               <div className="relative group">
                 <button
                   onClick={handleAddDialogues}
-                  className="p-2 hover:bg-slate-800 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors active:scale-95 cursor-pointer"
+                  className="p-2 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-xl text-emerald-400 hover:text-emerald-300 transition-colors active:scale-95 cursor-pointer"
                 >
                   <Volume2 className="size-4.5" />
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 dark:bg-[#071131] text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700 dark:border-blue-950/40">
                   Add Dialogues
                 </div>
               </div>
@@ -359,11 +359,11 @@ export function AgentBuilderGallery({
               <div className="relative group">
                 <button
                   onClick={handleAttach}
-                  className="p-2 hover:bg-slate-800 rounded-xl text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 cursor-pointer"
+                  className="p-2 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-xl text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 cursor-pointer"
                 >
                   <Paperclip className="size-4.5" />
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 dark:bg-[#071131] text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700 dark:border-blue-950/40">
                   Attach as Reference
                 </div>
               </div>
@@ -373,11 +373,11 @@ export function AgentBuilderGallery({
               <div className="relative group">
                 <button
                   onClick={handleDelete}
-                  className="p-2 hover:bg-slate-800 rounded-xl text-rose-500 hover:text-rose-400 transition-colors active:scale-95 cursor-pointer"
+                  className="p-2 hover:bg-slate-800 dark:hover:bg-blue-950/60 rounded-xl text-rose-500 hover:text-rose-400 transition-colors active:scale-95 cursor-pointer"
                 >
                   <Trash2 className="size-4.5" />
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block bg-slate-800 dark:bg-[#071131] text-white text-[9px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-[99] pointer-events-none shadow-lg border border-slate-700 dark:border-blue-950/40">
                   Delete Selected
                 </div>
               </div>
@@ -385,24 +385,24 @@ export function AgentBuilderGallery({
           </div>
         </div>
       ) : (
-        <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+        <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
           <div className="flex items-center gap-2 pl-2">
             <button
               onClick={onBack}
-              className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95"
+              className="p-1.5 hover:bg-slate-50 dark:hover:bg-blue-950/40 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95"
               title="Back to Welcome"
             >
               <ArrowLeft className="size-4" />
             </button>
-            <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider flex items-center gap-2">
+            <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
               Asset Vault & Gallery
-              {loading && <span className="inline-block size-3 rounded-full border-2 border-slate-200 border-t-[#0b1957] animate-spin" />}
+              {loading && <span className="inline-block size-3 rounded-full border-2 border-slate-200 dark:border-blue-950/40 border-t-[#0b1957] dark:border-t-blue-400 animate-spin" />}
             </span>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+              className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
             >
               <X className="size-4" />
             </button>
@@ -411,12 +411,12 @@ export function AgentBuilderGallery({
       )}
 
       {/* Main Content (Scrollable Container) */}
-      <div className="flex-1 w-full min-h-0 overflow-y-auto px-6 py-4 space-y-6 scrollbar-none bg-slate-50/50">
+      <div className="flex-1 w-full min-h-0 overflow-y-auto px-6 py-4 space-y-6 scrollbar-none bg-slate-50/50 dark:bg-[#000724]">
         {loading && images.length === 0 && videos.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-4">
-            <div className="size-16 rounded-full flex items-center justify-center border-4 border-slate-100 border-t-[#0b1957] animate-spin" />
+            <div className="size-16 rounded-full flex items-center justify-center border-4 border-slate-100 dark:border-blue-950/40 border-t-[#0b1957] dark:border-t-blue-400 animate-spin" />
             <div className="space-y-1">
-              <h3 className="font-bold text-slate-700 text-sm animate-pulse">Accessing Vault...</h3>
+              <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm animate-pulse">Accessing Vault...</h3>
               <p className="text-xs text-slate-400 max-w-[240px] leading-relaxed">
                 Retrieving your media assets and generation history.
               </p>
@@ -424,11 +424,11 @@ export function AgentBuilderGallery({
           </div>
         ) : images.length === 0 && videos.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-4">
-            <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+            <div className="size-16 bg-slate-100 dark:bg-[#071131] rounded-full flex items-center justify-center text-slate-400">
               <Sparkles className="size-8" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-slate-700 text-sm">No assets found</h3>
+              <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">No assets found</h3>
               <p className="text-xs text-slate-400 max-w-[240px] leading-relaxed">
                 Start generating image concepts or videos to see them listed in your asset vault.
               </p>
@@ -440,10 +440,10 @@ export function AgentBuilderGallery({
               return (
                 <div key={group.dateHeader} className="space-y-2.5">
                   {/* Date Header */}
-                  <h3 className="text-xs font-extrabold text-[#0b1957]/80 uppercase tracking-wider pl-1.5 pt-2 select-none">
+                  <h3 className="text-xs font-extrabold text-[#0b1957]/80 dark:text-slate-200 uppercase tracking-wider pl-1.5 pt-2 select-none">
                     {group.dateHeader}
                   </h3>
-                  
+
                   {/* 3-Column Grid */}
                   <div className="grid grid-cols-3 gap-3">
                     {group.items.map((asset) => {
@@ -451,7 +451,7 @@ export function AgentBuilderGallery({
                         const isGroup = (asset.urls?.length || 0) > 1;
                         const hasSelectedInGroup = asset.urls?.some((url) => isAssetSelected(url)) || false;
                         const topUrl = asset.urls?.[0] || "";
-                        
+
                         if (!isGroup) {
                           const isSel = isAssetSelected(topUrl);
                           return (
@@ -461,8 +461,8 @@ export function AgentBuilderGallery({
                               className="relative w-full aspect-square pr-1.5 pb-1.5 select-none cursor-pointer"
                             >
                               <div className={cn(
-                                "absolute inset-x-0 inset-y-0 mr-1 mb-1 rounded-2xl bg-slate-900 border overflow-hidden group shadow-sm hover:shadow transition-all",
-                                isSel ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200 hover:border-[#0b1957]/30"
+                                "absolute inset-x-0 inset-y-0 mr-1 mb-1 rounded-2xl bg-slate-900 dark:bg-[#071131] border overflow-hidden group shadow-sm hover:shadow transition-all",
+                                isSel ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20 dark:ring-blue-500/30" : "border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957]/30 dark:hover:border-blue-500/50"
                               )}>
                                 <img
                                   src={topUrl}
@@ -473,7 +473,7 @@ export function AgentBuilderGallery({
                                 {/* Selection check overlay */}
                                 <div className={cn(
                                   "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
-                                  isSel ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+                                  isSel ? "bg-[#0b1957] dark:bg-blue-600 border-[#0b1957] dark:border-blue-500 text-white" : "bg-white/70 dark:bg-[#071131] border-slate-300 dark:border-blue-900/60 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {isSel && <Check className="size-2.5 stroke-[3]" />}
                                 </div>
@@ -489,13 +489,13 @@ export function AgentBuilderGallery({
                               className="relative w-full aspect-square pr-1.5 pb-1.5 select-none cursor-pointer"
                             >
                               {/* Layer 3 */}
-                              <div className="absolute inset-0 rounded-2xl bg-slate-300/80 border border-slate-300/50 -rotate-3 -translate-x-1 -translate-y-1 shadow-sm" />
+                              <div className="absolute inset-0 rounded-2xl bg-slate-300/80 dark:bg-blue-950/80 border border-slate-300/50 dark:border-blue-900/50 -rotate-3 -translate-x-1 -translate-y-1 shadow-sm" />
                               {/* Layer 2 */}
-                              <div className="absolute inset-0 rounded-2xl bg-slate-200/90 border border-slate-200/70 rotate-3 translate-x-1 translate-y-1 shadow-sm" />
+                              <div className="absolute inset-0 rounded-2xl bg-slate-200/90 dark:bg-[#071131] border border-slate-200/70 dark:border-blue-900/40 rotate-3 translate-x-1 translate-y-1 shadow-sm" />
                               {/* Layer 1 */}
                               <div className={cn(
-                                "absolute inset-0 rounded-2xl bg-slate-900 border overflow-hidden group shadow-md hover:shadow-lg transition-all",
-                                hasSelectedInGroup ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200 hover:border-[#0b1957]/40"
+                                "absolute inset-0 rounded-2xl bg-slate-900 dark:bg-[#071131] border overflow-hidden group shadow-md hover:shadow-lg transition-all",
+                                hasSelectedInGroup ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20 dark:ring-blue-500/30" : "border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957]/40"
                               )}>
                                 <img
                                   src={topUrl}
@@ -505,7 +505,7 @@ export function AgentBuilderGallery({
                                 />
                                 <div className={cn(
                                   "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
-                                  hasSelectedInGroup ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+                                  hasSelectedInGroup ? "bg-[#0b1957] dark:bg-blue-600 border-[#0b1957] dark:border-blue-500 text-white" : "bg-white/70 dark:bg-[#071131] border-slate-300 dark:border-blue-900/60 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {hasSelectedInGroup && <Check className="size-2.5 stroke-[3]" />}
                                 </div>
@@ -518,9 +518,9 @@ export function AgentBuilderGallery({
                         const isGroup = (asset.videos?.length || 0) > 1;
                         const hasSelectedInGroup = asset.videos?.some((vid) => isAssetSelected(vid.url)) || false;
                         const topVid = asset.videos?.[0];
-                        
+
                         if (!topVid) return null;
-                        
+
                         if (!isGroup) {
                           const isSel = isAssetSelected(topVid.url);
                           return (
@@ -530,8 +530,8 @@ export function AgentBuilderGallery({
                               className="relative w-full aspect-square pr-1.5 pb-1.5 select-none cursor-pointer"
                             >
                               <div className={cn(
-                                "absolute inset-x-0 inset-y-0 mr-1 mb-1 rounded-2xl bg-slate-900 border overflow-hidden group shadow-sm hover:shadow transition-all",
-                                isSel ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200 hover:border-[#0b1957]/30"
+                                "absolute inset-x-0 inset-y-0 mr-1 mb-1 rounded-2xl bg-slate-900 dark:bg-[#071131] border overflow-hidden group shadow-sm hover:shadow transition-all",
+                                isSel ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20 dark:ring-blue-500/30" : "border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957]/30 dark:hover:border-blue-500/50"
                               )}>
                                 <video
                                   src={topVid.url}
@@ -557,7 +557,7 @@ export function AgentBuilderGallery({
                                 </div>
                                 <div className={cn(
                                   "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
-                                  isSel ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+                                  isSel ? "bg-[#0b1957] dark:bg-blue-600 border-[#0b1957] dark:border-blue-500 text-white" : "bg-white/70 dark:bg-[#071131] border-slate-300 dark:border-blue-900/60 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {isSel && <Check className="size-2.5 stroke-[3]" />}
                                 </div>
@@ -578,13 +578,13 @@ export function AgentBuilderGallery({
                               className="relative w-full aspect-square pr-1.5 pb-1.5 select-none cursor-pointer"
                             >
                               {/* Layer 3 */}
-                              <div className="absolute inset-0 rounded-2xl bg-slate-300/80 border border-slate-300/50 -rotate-3 -translate-x-1 -translate-y-1 shadow-sm" />
+                              <div className="absolute inset-0 rounded-2xl bg-slate-300/80 dark:bg-blue-950/80 border border-slate-300/50 dark:border-blue-900/50 -rotate-3 -translate-x-1 -translate-y-1 shadow-sm" />
                               {/* Layer 2 */}
-                              <div className="absolute inset-0 rounded-2xl bg-slate-200/90 border border-slate-200/70 rotate-3 translate-x-1 translate-y-1 shadow-sm" />
+                              <div className="absolute inset-0 rounded-2xl bg-slate-200/90 dark:bg-[#071131] border border-slate-200/70 dark:border-blue-900/40 rotate-3 translate-x-1 translate-y-1 shadow-sm" />
                               {/* Layer 1 */}
                               <div className={cn(
-                                "absolute inset-0 rounded-2xl bg-slate-900 border overflow-hidden group shadow-md hover:shadow-lg transition-all",
-                                hasSelectedInGroup ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200 hover:border-[#0b1957]/40"
+                                "absolute inset-0 rounded-2xl bg-slate-900 dark:bg-[#071131] border overflow-hidden group shadow-md hover:shadow-lg transition-all",
+                                hasSelectedInGroup ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20 dark:ring-blue-500/30" : "border-slate-200 dark:border-blue-950/40 hover:border-[#0b1957]/40"
                               )}>
                                 <video
                                   src={topVid.url}
@@ -609,7 +609,7 @@ export function AgentBuilderGallery({
                                 </div>
                                 <div className={cn(
                                   "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
-                                  hasSelectedInGroup ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+                                  hasSelectedInGroup ? "bg-[#0b1957] dark:bg-blue-600 border-[#0b1957] dark:border-blue-500 text-white" : "bg-white/70 dark:bg-[#071131] border-slate-300 dark:border-blue-900/60 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {hasSelectedInGroup && <Check className="size-2.5 stroke-[3]" />}
                                 </div>
@@ -623,15 +623,15 @@ export function AgentBuilderGallery({
                 </div>
               );
             })}
-            
+
             {/* Cute load more button */}
             {unifiedAssets.length > visibleCount ? (
               <div className="flex justify-center pt-3 pb-6 animate-in fade-in duration-300">
                 <button
                   onClick={() => setVisibleCount((prev) => prev + 12)}
-                  className="px-5 py-2 text-[11px] font-bold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-all active:scale-95 shadow-sm flex items-center gap-1.5 hover:border-slate-300"
+                  className="px-5 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 rounded-full hover:bg-slate-50 dark:hover:bg-blue-950/40 transition-all active:scale-95 shadow-sm flex items-center gap-1.5 hover:border-slate-300 dark:hover:border-blue-900/60"
                 >
-                  <Sparkles className="size-3 text-[#0b1957] fill-current" />
+                  <Sparkles className="size-3 text-[#0b1957] dark:text-slate-100 fill-current" />
                   Load More
                 </button>
               </div>
@@ -640,9 +640,9 @@ export function AgentBuilderGallery({
                 <div className="flex justify-center pt-3 pb-6 animate-in fade-in duration-300">
                   <button
                     onClick={onLoadFullHistory}
-                    className="px-5 py-2 text-[11px] font-bold text-[#0b1957] bg-blue-50/50 border border-blue-100 rounded-full hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95 shadow-sm flex items-center gap-1.5"
+                    className="px-5 py-2 text-[11px] font-bold text-[#0b1957] dark:text-slate-100 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/40 hover:border-blue-200 dark:hover:border-blue-500/40 transition-all active:scale-95 shadow-sm flex items-center gap-1.5"
                   >
-                    <Sparkles className="size-3 text-[#0b1957] fill-current animate-pulse" />
+                    <Sparkles className="size-3 text-[#0b1957] dark:text-slate-100 fill-current animate-pulse" />
                     Load Older Generations (Pre-90 Days)
                   </button>
                 </div>
@@ -657,16 +657,16 @@ export function AgentBuilderGallery({
       {/* Image Group Detailed Modal Overlay */}
       {selectedGroup && (
         <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
-          <div className="bg-white w-full rounded-2xl p-4 max-h-[90%] flex flex-col space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-[#000724] w-full rounded-2xl p-4 max-h-[90%] flex flex-col space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedGroup(null)}
-              className="absolute top-3 right-3 p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute top-3 right-3 p-1.5 hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
               <X className="size-4" />
             </button>
-            
-            <div className="pr-8">
-              <h4 className="font-bold text-sm text-[#0b1957]">
+
+            <div className="pr-8 dark:-mx-4 dark:-mt-4 dark:px-4 dark:pr-12 dark:py-4 dark:rounded-t-2xl dark:bg-[#081331]">
+              <h4 className="font-bold text-sm text-[#0b1957] dark:text-slate-100">
                 Image Group Previews
               </h4>
               <p className="text-[10px] text-slate-400">
@@ -683,8 +683,8 @@ export function AgentBuilderGallery({
                     key={idx}
                     onClick={() => setActiveImage({ url, urls: selectedGroup.urls })}
                     className={cn(
-                      "rounded-xl overflow-hidden bg-slate-50 border relative group aspect-square flex flex-col cursor-pointer transition-all",
-                      isSel ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200"
+                      "rounded-xl overflow-hidden bg-slate-50 dark:bg-[#071131] border relative group aspect-square flex flex-col cursor-pointer transition-all",
+                      isSel ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20 dark:ring-blue-500/30" : "border-slate-200 dark:border-blue-950/40"
                     )}
                   >
                     <img
@@ -723,7 +723,7 @@ export function AgentBuilderGallery({
                       }}
                       className={cn(
                         "absolute top-2 right-2 size-5 rounded-full border flex items-center justify-center transition-all z-20 cursor-pointer active:scale-95",
-                        isSel ? "bg-[#0b1957] border-[#0b1957] text-white animate-in zoom-in-50" : "bg-white/80 border-slate-300 backdrop-blur-sm opacity-100"
+                        isSel ? "bg-[#0b1957] dark:bg-blue-600 border-[#0b1957] dark:border-blue-500 text-white animate-in zoom-in-50" : "bg-white/80 dark:bg-[#000724]/80 border-slate-300 dark:border-blue-900/60 backdrop-blur-sm opacity-100"
                       )}
                     >
                       {isSel && <Check className="size-3 stroke-[3]" />}
@@ -739,14 +739,14 @@ export function AgentBuilderGallery({
       {/* Video Modal Player Overlay */}
       {activeVideo && (
         <div className="absolute inset-0 bg-slate-950/90 z-60 flex items-center justify-center p-6 animate-in fade-in duration-200">
-          <div className="w-full max-w-[380px] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-800 flex flex-col">
+          <div className="w-full max-w-[380px] bg-slate-900 dark:bg-[#000724] rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-800 dark:border-blue-950/40 flex flex-col">
             <button
               onClick={() => setActiveVideo(null)}
               className="absolute top-3 right-3 z-10 p-1.5 bg-black/40 hover:bg-black/60 rounded-full text-white/80 hover:text-white transition-colors"
             >
               <X className="size-4" />
             </button>
-            
+
             <div className="aspect-video bg-black flex items-center justify-center relative">
               <video
                 src={activeVideo}
@@ -755,8 +755,8 @@ export function AgentBuilderGallery({
                 className="w-full h-full object-contain"
               />
             </div>
-            
-            <div className="p-4 flex items-center justify-between bg-slate-950">
+
+            <div className="p-4 flex items-center justify-between bg-slate-950 dark:bg-[#000724]">
               <span className="text-[10px] text-slate-400 font-semibold">Video Playback</span>
               <div className="flex gap-2">
                 {onExtendVideo && (
@@ -785,7 +785,7 @@ export function AgentBuilderGallery({
                 )}
                 <button
                   onClick={() => handleDownload(activeVideo, "playground-video.mp4")}
-                  className="py-1.5 px-3 bg-[#0b1957] hover:bg-blue-900 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-1.5 px-3 bg-[#0b1957] dark:bg-blue-600 hover:bg-blue-900 dark:hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Download className="size-3.5" />
                   Download Video
@@ -801,7 +801,7 @@ export function AgentBuilderGallery({
         const currentIdx = activeImage.urls.indexOf(activeImage.url);
         const isSel = isAssetSelected(activeImage.url);
         return (
-          <div 
+          <div
             className="absolute inset-0 bg-slate-950/95 z-55 flex flex-col items-center justify-between p-6 animate-in fade-in duration-200"
             onClick={() => setActiveImage(null)}
           >
@@ -858,8 +858,8 @@ export function AgentBuilderGallery({
             </div>
 
             {/* Bottom Footer Actions */}
-            <div 
-              className="w-full flex items-center justify-center gap-3 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-white/10 z-20 max-w-full overflow-x-auto select-none" 
+            <div
+              className="w-full flex items-center justify-center gap-3 bg-slate-900/80 dark:bg-[#071131] backdrop-blur-md p-3 rounded-2xl border border-white/10 z-20 max-w-full overflow-x-auto select-none"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Select Toggle Button */}
@@ -867,8 +867,8 @@ export function AgentBuilderGallery({
                 onClick={() => toggleAssetSelection(activeImage.url, "image")}
                 className={cn(
                   "h-9 px-4 flex items-center justify-center gap-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95",
-                  isSel 
-                    ? "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700" 
+                  isSel
+                    ? "bg-slate-800 dark:bg-[#071131] hover:bg-slate-700 text-slate-200 border border-slate-700 dark:border-blue-950/40"
                     : "bg-white/10 hover:bg-white/20 text-white border border-white/10"
                 )}
               >
@@ -909,7 +909,7 @@ export function AgentBuilderGallery({
               {/* Download Button */}
               <button
                 onClick={() => handleDownload(activeImage.url, `concept-max-${currentIdx + 1}.png`)}
-                className="h-9 px-4 bg-[#0b1957] hover:bg-blue-800 text-white border border-blue-900/50 flex items-center justify-center gap-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                className="h-9 px-4 bg-[#0b1957] dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700 text-white border border-blue-900/50 flex items-center justify-center gap-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95"
               >
                 <Download className="size-3.5" />
                 Download
@@ -922,20 +922,20 @@ export function AgentBuilderGallery({
       {/* Video Group Stack detailed Modal Overlay */}
       {selectedVideoGroup && (
         <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200" onClick={() => setSelectedVideoGroup(null)}>
-          <div 
-            className="bg-white w-full max-w-[380px] rounded-3xl p-5 max-h-[85%] flex flex-col space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-100"
+          <div
+            className="bg-white dark:bg-[#000724] w-full max-w-[380px] rounded-3xl p-5 max-h-[85%] flex flex-col space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-blue-950/40"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setSelectedVideoGroup(null)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors cursor-pointer active:scale-95"
+              className="absolute top-4 right-4 p-1.5 hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer active:scale-95"
             >
               <X className="size-4" />
             </button>
-            
-            <div className="pr-8 space-y-1">
-              <h4 className="font-bold text-sm text-[#0b1957] flex items-center gap-1.5">
-                <Video className="size-4 text-[#0b1957]" />
+
+            <div className="pr-8 space-y-1 dark:-mx-5 dark:-mt-5 dark:px-5 dark:pr-12 dark:py-4 dark:rounded-t-3xl dark:bg-[#081331]">
+              <h4 className="font-bold text-sm text-[#0b1957] dark:text-slate-100 flex items-center gap-1.5">
+                <Video className="size-4 text-[#0b1957] dark:text-slate-100" />
                 Video Sequence Generations
               </h4>
               <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
@@ -951,12 +951,12 @@ export function AgentBuilderGallery({
                   <div
                     key={idx}
                     className={cn(
-                      "p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-sm bg-slate-50/20",
-                      isSel ? "border-[#0b1957] bg-blue-50/10" : "border-slate-100 hover:border-slate-200"
+                      "p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-sm bg-slate-50/20 dark:bg-[#071131]",
+                      isSel ? "border-[#0b1957] dark:border-blue-500 bg-blue-50/10 dark:bg-blue-950/40" : "border-slate-100 dark:border-blue-950/40 hover:border-slate-200 dark:hover:border-blue-900/60"
                     )}
                   >
-                    <div 
-                      className="w-[100px] aspect-video rounded-xl bg-slate-900 border border-slate-200 overflow-hidden relative cursor-pointer group flex-shrink-0"
+                    <div
+                      className="w-[100px] aspect-video rounded-xl bg-slate-900 dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 overflow-hidden relative cursor-pointer group flex-shrink-0"
                       onClick={() => setActiveVideo(vid.url)}
                     >
                       <video
@@ -976,23 +976,23 @@ export function AgentBuilderGallery({
 
                     <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 h-full">
                       <div className="min-w-0">
-                        <div className="text-[10px] font-bold text-slate-700 truncate">
+                        <div className="text-[10px] font-bold text-slate-700 dark:text-slate-200 truncate">
                           {idx === 0 ? "Longest / Final Video" : `Extension Part ${selectedVideoGroup.videos.length - idx}`}
                         </div>
                         <div className="text-[9px] text-slate-400 font-medium mt-0.5">
                           Duration: {vid.duration || 8}s • {formatTimestamp(vid.created_at)}
                         </div>
                       </div>
-                      
+
                       {/* Action buttons inside the modal item */}
                       <div className="flex items-center gap-1.5 mt-2">
                         <button
                           onClick={() => toggleAssetSelection(vid.url, "video")}
                           className={cn(
                             "h-6.5 px-2.5 flex items-center justify-center gap-1 text-[9px] font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap active:scale-95 border",
-                            isSel 
-                              ? "bg-[#0b1957] hover:bg-blue-900 text-white border-[#0b1957]" 
-                              : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                            isSel
+                              ? "bg-[#0b1957] dark:bg-blue-600 hover:bg-blue-900 dark:hover:bg-blue-700 text-white border-[#0b1957] dark:border-blue-500"
+                              : "bg-white dark:bg-[#000724] hover:bg-slate-50 dark:hover:bg-blue-950/40 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-blue-950/40"
                           )}
                         >
                           <Check className={cn("size-2.5", isSel ? "text-white stroke-[3]" : "text-slate-400")} />
@@ -1000,7 +1000,7 @@ export function AgentBuilderGallery({
                         </button>
                         <button
                           onClick={() => handleDownload(vid.url, `video-segment-${vid.duration || 8}s.mp4`)}
-                          className="h-6.5 w-6.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 border border-slate-200/40"
+                          className="h-6.5 w-6.5 bg-slate-100 dark:bg-[#071131] hover:bg-slate-200 dark:hover:bg-blue-900/60 text-slate-600 dark:text-slate-300 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 border border-slate-200/40 dark:border-blue-950/40"
                           title="Download Segment"
                         >
                           <Download className="size-3" />

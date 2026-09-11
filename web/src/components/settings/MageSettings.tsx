@@ -321,7 +321,7 @@ const Tile: React.FC<{
   children: React.ReactNode;
 }> = ({ icon, title, hint, action, span, children }) => (
   <div
-    className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 flex flex-col ${
+    className={`rounded-xl border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] flex flex-col ${
       span ? 'sm:col-span-2 lg:col-span-3' : ''
     }`}
     style={{
@@ -389,10 +389,10 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
     onClick={onClose}
   >
     <div
-      className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-2xl my-8 shadow-xl"
+      className="bg-white dark:bg-[#000724] rounded-xl w-full max-w-2xl my-8 shadow-xl"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-blue-950/40 dark:bg-[#081331] rounded-t-xl">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
         <button
           onClick={onClose}
@@ -1089,7 +1089,7 @@ export const MageSettings: React.FC = () => {
       )}
 
       {/* status strip */}
-      <div className="flex items-center gap-4 flex-wrap rounded-lg bg-gray-50 dark:bg-gray-900/60 px-4 py-2.5">
+      <div className="flex items-center gap-4 flex-wrap rounded-lg bg-gray-50 dark:bg-[#071131] px-4 py-2.5">
         <span
           className="inline-flex items-center gap-1.5 text-xs"
           title={
@@ -1218,7 +1218,7 @@ export const MageSettings: React.FC = () => {
               <div
                 key={label}
                 title={hint}
-                className="rounded-lg bg-gray-50 dark:bg-gray-800/60"
+                className="rounded-lg bg-gray-50 dark:bg-[#071131]"
                 style={{ padding: 'clamp(0.4rem, 0.6vw, 0.6rem) clamp(0.5rem, 0.75vw, 0.75rem)' }}
               >
                 <div
@@ -1269,7 +1269,7 @@ export const MageSettings: React.FC = () => {
               );
             }
             return (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              <ul className="divide-y divide-gray-100 dark:divide-blue-950/40">
                 {rows.map((job) => (
                   <li
                     key={job.group_id}
@@ -1551,7 +1551,7 @@ export const MageSettings: React.FC = () => {
             onChange={(e) => setUploadInstruction(e.target.value)}
             rows={3}
             placeholder="What should the agent make? Added to whatever the filename already says."
-            className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 mb-3"
+            className="w-full text-sm rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 mb-3"
           />
           <label
             className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-4"
@@ -1578,7 +1578,7 @@ export const MageSettings: React.FC = () => {
             className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               uploadFile && busy !== 'upload'
                 ? 'bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700'
-                : 'border border-gray-200 dark:border-gray-800 text-gray-400 cursor-not-allowed'
+                : 'border border-gray-200 dark:border-blue-950/40 text-gray-400 cursor-not-allowed'
             }`}
           >
             {busy === 'upload' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -1599,7 +1599,7 @@ export const MageSettings: React.FC = () => {
               // cannot be started on top of the first.
               disabled={extractionRunning}
               title={extractionRunning ? 'Analysing this site. One at a time.' : undefined}
-              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60 disabled:cursor-not-allowed"
+              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60 disabled:cursor-not-allowed"
             />
             <button
               onClick={startExtraction}
@@ -1623,7 +1623,7 @@ export const MageSettings: React.FC = () => {
             const done = extractRun.status === 'completed';
             const pct = done ? 100 : Math.max(4, Math.min(extractRun.progress ?? 8, 99));
             return (
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-900/60 px-3 py-2.5 mb-3">
+              <div className="rounded-lg bg-gray-50 dark:bg-[#071131] px-3 py-2.5 mb-3">
                 <div className="flex items-center gap-2 text-xs mb-2">
                   {failed ? (
                     <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1666,7 +1666,7 @@ export const MageSettings: React.FC = () => {
               No profiles yet. Add one from a URL, or build one without a website.
             </p>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="divide-y divide-gray-100 dark:divide-blue-950/40">
               {profiles.map((p) => (
                 <li key={p.domain} className="flex items-center gap-2 py-2.5">
                   <button
@@ -1709,7 +1709,7 @@ export const MageSettings: React.FC = () => {
           )}
 
           {changeTarget && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-blue-950/40">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 What should change about {changeTargetLabel ? label(changeTargetLabel) : changeTarget}?
               </p>
@@ -1719,7 +1719,7 @@ export const MageSettings: React.FC = () => {
                 onChange={(e) => setChangeText(e.target.value)}
                 rows={3}
                 placeholder="The tagline is out of date, it should read..."
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 mb-2"
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2 mb-2"
               />
               <div className="flex gap-2">
                 <button onClick={submitChanges} disabled={busy === 'changes'} className="text-sm font-medium px-3 py-1.5 rounded-lg bg-[#0b1957] hover:bg-[#122572] text-white dark:bg-[#2563eb] dark:hover:bg-blue-700 disabled:opacity-50">
@@ -1827,13 +1827,13 @@ export const MageSettings: React.FC = () => {
                   ? 'A shortcut cannot be renamed. Delete it and add a new one instead.'
                   : 'No spaces. Hyphens are fine.'
               }
-              className="w-40 text-sm font-mono rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60"
+              className="w-40 text-sm font-mono rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-800/60"
             />
             <input
               value={kwValue}
               onChange={(e) => setKwValue(e.target.value)}
               placeholder="A launch poster, 1080x1080, brand colours, headline top left"
-              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2"
+              className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2"
             />
           </div>
           <div className="flex items-center gap-2 mb-4">
@@ -1869,7 +1869,7 @@ export const MageSettings: React.FC = () => {
           {Object.keys(keywords).length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">None yet.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="divide-y divide-gray-100 dark:divide-blue-950/40">
               {Object.entries(keywords).map(([token, value]) => (
                 <li key={token} className="flex items-center gap-2 py-2">
                   <span
@@ -1902,7 +1902,7 @@ export const MageSettings: React.FC = () => {
             </ul>
           )}
 
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-blue-950/40">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               Check what a brief expands to before you use it.
             </p>
@@ -1911,14 +1911,14 @@ export const MageSettings: React.FC = () => {
                 value={previewText}
                 onChange={(e) => setPreviewText(e.target.value)}
                 placeholder="launch-poster for the new release"
-                className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2"
+                className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2"
               />
               <button onClick={runPreview} disabled={!previewText.trim()} className="text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50">
                 Preview
               </button>
             </div>
             {previewResult && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/60 rounded-lg p-3 whitespace-pre-wrap">
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-[#071131] rounded-lg p-3 whitespace-pre-wrap">
                 {previewResult.expanded}
               </p>
             )}

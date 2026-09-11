@@ -85,29 +85,29 @@ export function AgentBuilderVideoOutput({
   };
 
   return (
-    <div className={`relative flex flex-col items-center w-[480px] max-w-full bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none ${hideHeader ? 'shadow-none border-0 h-auto p-0 bg-transparent' : 'h-[620px]'}`}>
+    <div className={`relative flex flex-col items-center w-[480px] max-w-full bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none ${hideHeader ? 'shadow-none border-0 h-auto p-0 bg-transparent dark:bg-transparent' : 'h-[620px]'}`}>
       {/* Header */}
       {!hideHeader && (
-        <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+        <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
           <div className="flex items-center gap-2 pl-4">
             {onBack && (
               <button
                 onClick={onBack}
-                className="mr-1 p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-transparent hover:border-slate-100"
+                className="mr-1 p-1 hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-transparent hover:border-slate-100 dark:hover:border-blue-900/60"
                 aria-label="Go back"
               >
                 <ArrowLeft className="size-4" />
               </button>
             )}
             <Video className="size-4 text-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider">
               {phase || "Animation Complete"}
             </span>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+              className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
             >
               <X className="size-4" />
             </button>
@@ -119,11 +119,11 @@ export function AgentBuilderVideoOutput({
       <div className={`relative flex-1 min-h-0 w-full flex flex-col overflow-y-auto scrollbar-none ${hideHeader ? 'p-0 overflow-visible' : 'pt-4 px-6'}`}>
         {!hideHeader && (
           <>
-            <h2 className="text-xl font-bold text-[#0b1957] text-center leading-snug mb-2">
+            <h2 className="text-xl font-bold text-[#0b1957] dark:text-slate-100 text-center leading-snug mb-2">
               {title}
             </h2>
             {description && (
-              <p className="text-xs text-slate-500 text-center mb-4 font-medium italic">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-4 font-medium italic">
                 {description}
               </p>
             )}
@@ -132,7 +132,7 @@ export function AgentBuilderVideoOutput({
 
         {/* Video Player Frame */}
         {videoUrl ? (
-          <div className="w-full max-w-[360px] mx-auto mb-6 rounded-2xl overflow-hidden border border-slate-200 shadow-lg bg-slate-950 aspect-video flex flex-col relative group">
+          <div className="w-full max-w-[360px] mx-auto mb-6 rounded-2xl overflow-hidden border border-slate-200 dark:border-blue-950/40 shadow-lg bg-slate-950 aspect-video flex flex-col relative group">
             <video
               ref={videoRef}
               src={videoUrl}
@@ -208,7 +208,7 @@ export function AgentBuilderVideoOutput({
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-[360px] mx-auto mb-6 aspect-video rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-xs font-semibold">
+          <div className="w-full max-w-[360px] mx-auto mb-6 aspect-video rounded-2xl bg-slate-100 dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 flex items-center justify-center text-slate-400 text-xs font-semibold">
             No video URL provided.
           </div>
         )}
@@ -216,7 +216,7 @@ export function AgentBuilderVideoOutput({
 
       {/* Action Buttons */}
       {!hideFooter && (
-        <div className="w-full flex-shrink-0 flex flex-col gap-2 pb-8 px-4 pt-2 bg-gradient-to-t from-white via-white to-transparent relative z-20 border-t border-slate-50">
+        <div className="w-full flex-shrink-0 flex flex-col gap-2 pb-8 px-4 pt-2 bg-gradient-to-t from-white dark:from-[#000724] via-white dark:via-[#000724] to-transparent relative z-20 border-t border-slate-50 dark:border-blue-950/40">
           {/* Row 1: Dialogue Overlay */}
           <button
             type="button"
@@ -232,7 +232,7 @@ export function AgentBuilderVideoOutput({
             <button
               type="button"
               onClick={() => onNext?.("[SHOW_GALLERY]")}
-              className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-[#0b1957] font-bold text-[10px] rounded-full transition-all active:scale-95 cursor-pointer text-center flex items-center justify-center gap-1"
+              className="flex-1 py-3 border border-slate-200 dark:border-blue-950/40 hover:bg-slate-50 dark:hover:bg-blue-950/40 text-[#0b1957] dark:text-slate-100 font-bold text-[10px] rounded-full transition-all active:scale-95 cursor-pointer text-center flex items-center justify-center gap-1"
             >
               <ArrowLeft className="size-3.5" />
               Back to Gallery
@@ -240,7 +240,7 @@ export function AgentBuilderVideoOutput({
             <button
               type="button"
               onClick={() => onNext?.("[EXTEND_VIDEO]")}
-              className="flex-1 py-3 border border-blue-200 hover:bg-blue-50/50 text-blue-700 bg-blue-50/25 font-bold text-[10px] rounded-full transition-all active:scale-95 cursor-pointer text-center flex items-center justify-center gap-1 shadow-sm hover:shadow"
+              className="flex-1 py-3 border border-blue-200 dark:border-blue-900/40 hover:bg-blue-50/50 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 bg-blue-50/25 dark:bg-blue-950/25 font-bold text-[10px] rounded-full transition-all active:scale-95 cursor-pointer text-center flex items-center justify-center gap-1 shadow-sm hover:shadow"
             >
               <Sparkles className="size-3.5 text-amber-500 animate-pulse" />
               Extend Video
@@ -248,7 +248,7 @@ export function AgentBuilderVideoOutput({
             <button
               type="button"
               onClick={handleDownload}
-              className="flex-1 py-3 bg-gradient-to-br from-[#0b1957] to-[#1e293b] hover:from-[#0b1957] hover:to-[#0b1957] text-white font-bold text-[10px] rounded-full transition-all active:scale-95 shadow-md hover:shadow-lg shadow-[#0b1957]/10 cursor-pointer text-center flex items-center justify-center gap-1"
+              className="flex-1 py-3 bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 hover:from-[#0b1957] dark:hover:from-blue-700 hover:to-[#0b1957] dark:hover:to-blue-800 text-white font-bold text-[10px] rounded-full transition-all active:scale-95 shadow-md hover:shadow-lg shadow-[#0b1957]/10 cursor-pointer text-center flex items-center justify-center gap-1"
             >
               <Download className="size-3.5" />
               Download
