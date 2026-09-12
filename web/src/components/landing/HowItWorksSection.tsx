@@ -445,7 +445,7 @@ export default function HowItWorksSection() {
           <p className="text-muted-foreground mb-6 text-lg">
             Ready to put Mr LAD to work?
           </p>
-          <Link href="/onboarding">
+          <Link href="/register">
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
               whileTap={{ scale: 0.95 }}
