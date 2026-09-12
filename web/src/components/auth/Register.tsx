@@ -21,10 +21,28 @@ import { MessageCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginSuccess } from "@/store/slices/authSlice";
 import { useAuth } from "@/contexts/AuthContext";
+import authService from "@/services/authService";
 import { saveSignupSession, type SignupIdentity } from "@/lib/signup-session";
+import { FEATURE } from "@/lib/page-permissions";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN_CLIENT_ID || "";
-const AFTER_LOGIN = "/onboarding/advanced-search-ai";
+
+/**
+ * Where a freshly signed-in user lands, by what their tenant is entitled to.
+ * First match wins; the last entry needs no feature. A wellness tenant has
+ * conversations and no ai-chat, so sending everyone to the AI assistant
+ * would greet them with "Feature Not Available".
+ */
+const LANDING: Array<{ features: readonly string[]; href: string }> = [
+  { features: FEATURE.AI_CHAT, href: "/onboarding/advanced-search-ai" },
+  { features: FEATURE.CONVERSATIONS, href: "/conversations" },
+  { features: FEATURE.OVERVIEW, href: "/overview" },
+  { features: [], href: "/settings" },
+];
+function landingFor(tenantFeatures: string[] | undefined): string {
+  const have = new Set(tenantFeatures || []);
+  return (LANDING.find((l) => l.features.length === 0 || l.features.some((f) => have.has(f))) || LANDING[LANDING.length - 1]).href;
+}
 
 /** Minimal surface of the GIS library we call. */
 interface GoogleCredentialResponse { credential: string }
@@ -63,13 +81,27 @@ const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // ── Shared outcome handling ─────────────────────────────────────────────
-  const handleIdentity = useCallback((data: IdentityResponse) => {
+  const handleIdentity = useCallback(async (data: IdentityResponse) => {
     if (data.mode === 'login' && data.user) {
-      // Same post-login steps as Login.tsx: the session cookie is already set
-      // by the proxy; hydrate the stores and go.
+      // The session cookie is already set by the proxy. The login payload has
+      // no tenantFeatures[] though — only /api/auth/me carries those — and
+      // every feature gate reads hasFeature() from it. Navigating on the bare
+      // payload rendered "Feature Not Available" on a tenant that HAD the
+      // feature, until a hard reload. Login.tsx backfills /me after
+      // navigating (password login is latency-tuned); a Google / OTP sign-in
+      // is not, so fetch it first and also pick the landing page from it.
       dispatch(loginSuccess(data.user));
       refreshUser(data.user);
-      router.push(AFTER_LOGIN);
+      let user: any = data.user;
+      try {
+        user = await authService.getCurrentUser();
+        dispatch(loginSuccess(user));
+        refreshUser(user);
+      } catch {
+        // /me unavailable — go anyway with the bare payload; AuthContext
+        // self-heals on next mount.
+      }
+      router.push(landingFor(user?.tenantFeatures));
       return;
     }
     if (data.mode === 'signup' && data.signupToken && data.identity) {
