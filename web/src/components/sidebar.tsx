@@ -29,6 +29,7 @@ import {
   Contact,
   Gauge,
   SlidersHorizontal,
+  UserPlus,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
@@ -377,6 +378,12 @@ export function Sidebar() {
           label: 'Platform Monitor',
           icon: Gauge,
           details: 'Internal cross-tenant observability (super-admin).',
+        },
+        {
+          href: '/tenant/signups',
+          label: 'Signup Requests',
+          icon: UserPlus,
+          details: 'Self-serve signup applications awaiting review (super-admin).',
         },
       ]
     : baseNav;
