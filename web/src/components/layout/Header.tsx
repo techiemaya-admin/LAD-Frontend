@@ -35,14 +35,19 @@ export function NavbarDemo() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // /register, not /onboarding: onboarding is an auth-only route, so for an
+  // anonymous visitor "Get Started" used to bounce to the login page with no
+  // way to sign up. A signed-in visitor is redirected from /register into the
+  // app by the middleware, so this is right for both.
   const handleGetStarted = () => {
-    router.push('/onboarding');
+    router.push('/register');
   };
 
   const login = () => {
     router.push('/login');
   };
   const isLoginPage = pathname === '/login';
+  const isRegisterPage = pathname === '/register' || pathname.startsWith('/register/');
   return (
     <div className="relative w-full">
       <Navbar>
@@ -55,7 +60,9 @@ export function NavbarDemo() {
             {!isLoginPage ? (
               <NavbarButton variant="secondary" onClick={login}>Login</NavbarButton>
             ) : ''}
-            <NavbarButton variant="primary" onClick={handleGetStarted}>Get Started</NavbarButton>
+            {!isRegisterPage ? (
+              <NavbarButton variant="primary" onClick={handleGetStarted}>Get Started</NavbarButton>
+            ) : ''}
           </div>
         </NavBody>
 

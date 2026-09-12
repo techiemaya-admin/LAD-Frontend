@@ -102,7 +102,7 @@ export default function HeroSection() {
               variants={itemVariants}
               className="flex flex-wrap gap-4"
             >
-              <Link href="/onboarding">
+              <Link href="/register">
                 <motion.button
                   whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(79, 70, 229, 0.3)' }}
                   whileTap={{ scale: 0.95 }}

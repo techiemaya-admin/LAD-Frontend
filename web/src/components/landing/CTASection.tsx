@@ -38,7 +38,7 @@ export default function CTASection() {
       label: 'Hire Mr LAD',
       description: 'Get 100 credits to test',
       icon: <Zap className="w-6 h-6" />,
-      action: '/onboarding',
+      action: '/register',
       highlight: false  
     },
     {
