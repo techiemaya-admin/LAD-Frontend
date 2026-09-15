@@ -1338,9 +1338,16 @@ interface AddToGroupDropdownProps {
   onDone: () => void;
   channel?: 'personal' | 'waba';
   variant?: 'default' | 'whatsapp';
+  dropdownPosition?: 'top' | 'bottom';
 }
 
-export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'default' }: AddToGroupDropdownProps) {
+export function AddToGroupDropdown({
+  selectedIds,
+  onDone,
+  channel,
+  variant = 'default',
+  dropdownPosition = 'bottom',
+}: AddToGroupDropdownProps) {
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1370,25 +1377,28 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'de
     onDone();
   }, [selectedIds, onDone, channel]);
 
+  const isDisabled = selectedIds.size === 0;
+
   if (!isOpen) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
+            disabled={isDisabled}
             className={cn(
-              "h-7 w-7 p-0 flex items-center justify-center transition-colors rounded-lg",
+              "h-8 w-8 flex items-center justify-center rounded-full transition-colors disabled:opacity-40 disabled:pointer-events-none",
               isWA
                 ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                 : "text-violet-600 hover:bg-violet-50"
             )}
             onClick={() => { setIsOpen(true); loadGroups(); }}
+            aria-label="Add to Group"
           >
-            <FolderPlus className="h-3.5 w-3.5" />
-          </Button>
+            <FolderPlus className="h-4 w-4" />
+          </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
           Add to Group
         </TooltipContent>
       </Tooltip>
@@ -1398,44 +1408,53 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'de
   return (
     <div className="relative">
       <div className={cn(
-        "absolute bottom-full right-0 mb-1 w-52 rounded-xl border shadow-xl z-50 overflow-hidden",
+        "absolute right-0 w-56 rounded-xl border shadow-xl z-50 overflow-hidden",
+        dropdownPosition === 'top' ? "bottom-full mb-1" : "top-full mt-1.5",
         isWA
-          ? "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
+          ? "bg-white dark:bg-[#161717] border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-[#e9edef]"
           : "border-border bg-card"
       )}>
         <div className={cn(
           "flex items-center justify-between px-3 py-2 border-b",
-          isWA ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60" : "border-border bg-muted/30"
+          isWA ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#111b21]" : "border-border bg-muted/30"
         )}>
           <span className={cn(
             "text-[10px] font-semibold uppercase tracking-wider",
-            isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground"
+            isWA ? "text-zinc-500 dark:text-[#8696a0]" : "text-muted-foreground"
           )}>Add to Group</span>
-          <button onClick={() => setIsOpen(false)} className={cn("hover:text-foreground", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")}>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className={cn(
+              "p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors",
+              isWA ? "text-zinc-400 dark:text-[#8696a0] hover:text-zinc-700 dark:hover:text-[#e9edef]" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="max-h-56 overflow-y-auto py-1">
           {loading ? (
             <div className="flex items-center justify-center py-4">
-              <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-zinc-500" : "text-muted-foreground")} />
+              <Loader2 className={cn("h-4 w-4 animate-spin", isWA ? "text-zinc-400 dark:text-[#8696a0]" : "text-muted-foreground")} />
             </div>
           ) : groups.length === 0 ? (
-            <p className={cn("text-xs px-3 py-4 text-center", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>No groups. Create one first.</p>
+            <p className={cn("text-xs px-3 py-4 text-center", isWA ? "text-zinc-500 dark:text-[#8696a0]" : "text-muted-foreground")}>No groups. Create one first.</p>
           ) : (
             groups.map((g) => (
               <button
                 key={g.id}
+                type="button"
                 onClick={() => handleAddToGroup(g.id)}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 transition-colors text-left",
-                  isWA ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "hover:bg-muted/50"
+                  isWA ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/80" : "hover:bg-muted/50"
                 )}
               >
                 <GroupAvatar name={g.name} color={g.color} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <span className={cn("text-xs font-medium truncate block", isWA ? "text-zinc-900 dark:text-zinc-100" : "")}>{g.name}</span>
-                  <span className={cn("text-[10px]", isWA ? "text-zinc-500 dark:text-zinc-400" : "text-muted-foreground")}>{g.conversation_count} chats</span>
+                  <span className={cn("text-xs font-medium truncate block", isWA ? "text-zinc-900 dark:text-[#e9edef]" : "")}>{g.name}</span>
+                  <span className={cn("text-[10px]", isWA ? "text-zinc-500 dark:text-[#8696a0]" : "text-muted-foreground")}>{g.conversation_count} chats</span>
                 </div>
               </button>
             ))
@@ -1444,20 +1463,21 @@ export function AddToGroupDropdown({ selectedIds, onDone, channel, variant = 'de
       </div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             className={cn(
-              "h-7 w-7 p-0 flex items-center justify-center transition-colors rounded-lg",
+              "h-8 w-8 flex items-center justify-center rounded-full transition-colors",
               isWA
-                ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-                : "text-violet-600 hover:bg-violet-50"
+                ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
+                : "text-violet-600 bg-violet-50"
             )}
+            onClick={() => setIsOpen(false)}
+            aria-label="Add to Group"
           >
-            <FolderPlus className="h-3.5 w-3.5" />
-          </Button>
+            <FolderPlus className="h-4 w-4" />
+          </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider">
+        <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
           Add to Group
         </TooltipContent>
       </Tooltip>

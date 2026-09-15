@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { useBusinessProfile } from '@lad/frontend-features/ai-icp-assistant';
+import { WhatsAppChatPreview } from './WhatsAppChatPreview';
 import { useWhatsAppAccounts } from '@lad/frontend-features/meta-onboarding';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -77,12 +79,20 @@ function insertVar(text: string, cursorPos: number, varNum: number): { text: str
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface CreateWabaTemplateModalProps {
-  open:          boolean;
-  onOpenChange:  (open: boolean) => void;
-  onCreated?:    () => void;  // called after successful submission to refresh template list
+  open:                boolean;
+  onOpenChange:        (open: boolean) => void;
+  onCreated?:          () => void;  // called after successful submission to refresh template list
+  defaultPhoneNumber?: string;
+  defaultUrl?:         string;
 }
 
-export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: CreateWabaTemplateModalProps) {
+export function CreateWabaTemplateModal({
+  open,
+  onOpenChange,
+  onCreated,
+  defaultPhoneNumber,
+  defaultUrl,
+}: CreateWabaTemplateModalProps) {
   // ── Basic info ──────────────────────────────────────────────────────────────
   const [name,     setName]     = useState('');
   // WhatsApp templates live on a WABA, not on a workspace, so a tenant with two
@@ -101,6 +111,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   const [headerText,        setHeaderText]         = useState('');
   const [headerMediaHandle, setHeaderMediaHandle] = useState('');   // Meta media_id from upload API
   const [mediaFileName,     setMediaFileName]     = useState('');
+  const [mediaPreviewUrl,   setMediaPreviewUrl]   = useState('');
   const [uploadStatus,      setUploadStatus]      = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [uploadError,       setUploadError]       = useState('');
   const [headerVarExample, setHeaderVarExample]   = useState('');  // example for {{1}} in text header
@@ -126,6 +137,23 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   const headerTextVars = useMemo(() => extractVars(headerText), [headerText]);
 
   const safeName = name.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 512);
+
+  // ── Company Defaults ─────────────────────────────────────────────────────────
+  const { profile } = useBusinessProfile();
+
+  const resolvedUrl = useMemo(() => {
+    if (defaultUrl?.trim()) return defaultUrl.trim();
+    const site = profile?.website?.trim();
+    if (site) {
+      return site.startsWith('http://') || site.startsWith('https://') ? site : `https://${site}`;
+    }
+    return '';
+  }, [defaultUrl, profile?.website]);
+
+  const resolvedPhone = useMemo(() => {
+    if (defaultPhoneNumber?.trim()) return defaultPhoneNumber.trim();
+    return profile?.contactPhone?.trim() || '';
+  }, [defaultPhoneNumber, profile?.contactPhone]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const addButton = () => {
@@ -156,6 +184,11 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     setUploadError('');
     setHeaderMediaHandle('');
     setMediaFileName(file.name);
+    if (file.type.startsWith('image/')) {
+      setMediaPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setMediaPreviewUrl('');
+    }
     try {
       // Read file as base64 and send as JSON - avoids multipart proxy issues
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -248,23 +281,6 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   }, [headerFmt, headerText, headerTextVars, headerVarExample, headerMediaHandle,
       bodyText, bodyVars, bodyExamples, footerText, buttons]);
 
-  // ── Preview ───────────────────────────────────────────────────────────────────
-  const previewBody = useMemo(() => {
-    let text = bodyText;
-    bodyVars.forEach(v => {
-      text = text.replace(new RegExp(`\\{\\{${v}\\}\\}`, 'g'), bodyExamples[v] || `[example${v}]`);
-    });
-    return text;
-  }, [bodyText, bodyVars, bodyExamples]);
-
-  const previewHeader = useMemo(() => {
-    if (headerFmt === 'NONE') return null;
-    if (headerFmt === 'TEXT') {
-      return headerText.replace(/\{\{1\}\}/g, headerVarExample || '[example]');
-    }
-    return mediaFileName || `[${headerFmt.toLowerCase()} upload required]`;
-  }, [headerFmt, headerText, headerVarExample, mediaFileName]);
-
   // ── Validation ────────────────────────────────────────────────────────────────
 
   // Meta rejects templates where variables are too dense relative to surrounding text.
@@ -296,7 +312,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
   // ── Reset ─────────────────────────────────────────────────────────────────────
   const reset = () => {
     setName(''); setLanguage('en_US'); setCategory('MARKETING');
-    setHeaderFmt('NONE'); setHeaderText(''); setHeaderMediaHandle(''); setMediaFileName('');
+    setHeaderFmt('NONE'); setHeaderText(''); setHeaderMediaHandle(''); setMediaFileName(''); setMediaPreviewUrl('');
     setUploadStatus('idle'); setUploadError(''); setHeaderVarExample('');
     setBodyText(''); setBodyExamples({}); setFooterText('');
     setButtons([]); setActiveTab('build'); setResult(null);
@@ -478,7 +494,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                         type="button"
                         onClick={() => setCategory(c.value)}
                         className={cn(
-                          'p-2.5 rounded-lg border text-left transition-colors',
+                          'p-2.5 rounded-lg border text-left transition-colors outline-none focus:outline-none',
                           category === c.value
                             ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 font-medium'
                             : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
@@ -503,7 +519,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                       type="button"
                       onClick={() => setHeaderFmt(f.value)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full border text-xs font-medium transition-colors',
+                        'px-3 py-1.5 rounded-full border text-xs font-medium transition-colors outline-none focus:outline-none',
                         headerFmt === f.value
                           ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 font-semibold'
                           : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -683,7 +699,16 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
                     <div className="flex items-center gap-2">
                       <Select
                         value={btn.type}
-                        onValueChange={val => updateButton(btn.id, { type: val as ButtonType })}
+                        onValueChange={(val) => {
+                          const nextType = val as ButtonType;
+                          const updates: Partial<TemplateButton> = { type: nextType };
+                          if (nextType === 'URL' && !btn.url?.trim() && resolvedUrl) {
+                            updates.url = resolvedUrl;
+                          } else if (nextType === 'PHONE_NUMBER' && !btn.phone?.trim() && resolvedPhone) {
+                            updates.phone = resolvedPhone;
+                          }
+                          updateButton(btn.id, updates);
+                        }}
                       >
                         <SelectTrigger className="h-7 text-xs w-[130px] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                           <SelectValue />
@@ -742,60 +767,39 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
             </>
           ) : (
             /* ── Preview tab ── */
-            <div className="space-y-4">
-              <div className="max-w-xs mx-auto">
-                {/* Phone mock */}
-                <div className="bg-zinc-200/60 dark:bg-zinc-900/60 rounded-2xl p-4 min-h-[200px]">
-                  <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm overflow-hidden max-w-[280px] mx-auto border border-zinc-200/80 dark:border-zinc-800">
-                    {/* Header */}
-                    {headerFmt !== 'NONE' && (
-                      <div className="bg-zinc-50 dark:bg-zinc-800 px-3 py-2 border-b border-zinc-200/60 dark:border-zinc-800">
-                        {headerFmt === 'TEXT' ? (
-                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{previewHeader}</p>
-                        ) : (
-                          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs">
-                            <span className="uppercase font-mono">{headerFmt}</span>
-                            {uploadStatus === 'done' && mediaFileName
-                              ? <span className="text-emerald-600 dark:text-emerald-400 truncate max-w-[160px]">{mediaFileName}</span>
-                              : <span className="text-amber-600 dark:text-amber-400">Upload required</span>}
-                          </div>
-                        )}
-                      </div>
-                    )}
+            <div className="space-y-5 max-w-sm mx-auto py-2">
+              <WhatsAppChatPreview
+                headerType={headerFmt}
+                headerText={headerText}
+                headerVarExample={headerVarExample}
+                headerMediaUrl={mediaPreviewUrl}
+                mediaFileName={mediaFileName}
+                mediaUploadStatus={uploadStatus}
+                bodyText={bodyText}
+                bodyVars={bodyVars}
+                bodyExamples={bodyExamples}
+                footerText={footerText}
+                buttons={buttons}
+              />
 
-                    {/* Body */}
-                    <div className="px-3 py-3">
-                      <p className="text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
-                        {previewBody || <span className="text-zinc-400 dark:text-zinc-400 italic">Body text appears here...</span>}
-                      </p>
-                    </div>
-
-                    {/* Footer */}
-                    {footerText && (
-                      <div className="px-3 pb-2">
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{footerText}</p>
-                      </div>
-                    )}
-
-                    {/* Buttons */}
-                    {buttons.filter(b => b.text).length > 0 && (
-                      <div className="border-t border-zinc-100 dark:border-zinc-800">
-                        {buttons.filter(b => b.text).map(b => (
-                          <div key={b.id} className="px-3 py-2 text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                            {b.text}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              {/* Meta submission summary */}
+              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
+                <p className="font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide text-[10px] mb-1">Template Summary</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500 dark:text-zinc-400">Name:</span>
+                  <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{safeName || '-'}</span>
                 </div>
-
-                {/* Meta submission summary */}
-                <div className="mt-4 p-3 bg-zinc-50 dark:bg-zinc-900/40 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
-                  <p><span className="text-zinc-500 dark:text-zinc-400">Name:</span> <span className="font-mono font-semibold text-zinc-800 dark:text-zinc-100">{safeName || '-'}</span></p>
-                  <p><span className="text-zinc-500 dark:text-zinc-400">Language:</span> <span className="text-zinc-800 dark:text-zinc-100">{LANGUAGES.find(l => l.code === language)?.label}</span></p>
-                  <p><span className="text-zinc-500 dark:text-zinc-400">Category:</span> <span className="text-zinc-800 dark:text-zinc-100">{category}</span></p>
-                  <p><span className="text-zinc-500 dark:text-zinc-400">Components:</span> <span className="text-zinc-800 dark:text-zinc-100">{buildComponents().map((c: any) => c.type).join(', ') || '-'}</span></p>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500 dark:text-zinc-400">Language:</span>
+                  <span className="text-zinc-900 dark:text-zinc-100">{LANGUAGES.find(l => l.code === language)?.label}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500 dark:text-zinc-400">Category:</span>
+                  <span className="text-zinc-900 dark:text-zinc-100 font-medium">{category}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500 dark:text-zinc-400">Components:</span>
+                  <span className="text-zinc-900 dark:text-zinc-100">{buildComponents().map((c: any) => c.type).join(', ') || '-'}</span>
                 </div>
               </div>
             </div>
