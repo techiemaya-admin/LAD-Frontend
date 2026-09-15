@@ -88,7 +88,7 @@ export const EXPORT_DEFAULT_COLUMNS = [
   'full_name', 'title', 'company_name', 'email', 'phone', 'linkedin_url', 'status', 'last_action', 'last_action_at',
 ];
 
-export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract';
+export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'linkedin_connections';
 
 export type TemplateNode = {
   type: StepType;
@@ -455,6 +455,38 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           ai_generate: true, frequency: 'daily', days: [1, 2, 3, 4, 5], time: '09:00', post_as: 'personal',
         },
       },
+    ],
+  },
+  {
+    key: 'network_engagement',
+    category: 'general',
+    badge: { label: 'New', tone: 'blue' },
+    meta: { cycleDays: 30, channels: 2 },
+    accent: '#0E7490',
+    name: 'Network Engagement Accelerator',
+    tagline: 'Turn the decision-makers already in your network into warm conversations - comment on their posts, with your approval',
+    chain: ['Your connections', 'ICP + decision-maker filter', 'Score the fit', 'Watch new posts', 'WhatsApp: approve or write', 'Comment posted'],
+    source: {
+      key: 'linkedin_connections',
+      title: 'Your LinkedIn connections', description: 'Decision-makers already in your network',
+      // Post engagement lives on the source: the campaign watches every
+      // enrolled connection for new posts and asks before commenting.
+      cfg: {
+        decision_maker_titles: '', min_seniority: 'director', keywords: '', min_icp_score: '50',
+        monitor_posts: true, comment_mode: 'approve', like_posts: true, notify_phone: '',
+      },
+    },
+    inputs: [
+      { key: 'decision_maker_titles', question: 'Which **titles** count as decision-makers for you? Comma-separate several - e.g. "Founder, CEO, Managing Director". Say **skip** to use Director-and-above.', optional: true },
+      { key: 'keywords', question: 'Any **industry keywords** their headline should contain? (e.g. "real estate, proptech" - or say **skip**)', optional: true },
+    ],
+    // Nobody here needs an invite or a cold message. The score node writes the
+    // hot/warm/cold band the tenant can filter on; the engagement itself is
+    // campaign-level and runs in the background (LinkedInPostMonitorService),
+    // so this is a complete pipeline with no outreach step - the builder's
+    // launch guard exempts a connections campaign with engagement on.
+    nodes: [
+      { type: 'lead_score', macroId: SCORE_STEP_ID, title: 'Score the fit', description: 'Hot / warm / cold from seniority and ICP' },
     ],
   },
   {
@@ -1126,6 +1158,9 @@ export function templateSearchQuery(t: WorkflowTemplate, sourceCfg: Record<strin
     if (!signal && !titles) return null;
     return [titles && `${titles} at companies`, signal].filter(Boolean).join(' - ');
   }
+  // Own connections are not a search: there is nothing to preview from the
+  // leads panel, the audience is whoever is already connected.
+  if (t.source.key === 'linkedin_connections') return null;
   if (t.source.key !== 'linkedin_search') return null;
   const titles = (cfg.job_titles || '').trim();
   const industries = (cfg.industries || '').trim();

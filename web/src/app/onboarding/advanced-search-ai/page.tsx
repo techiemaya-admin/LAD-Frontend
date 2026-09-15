@@ -423,6 +423,7 @@ const WF_MAX_ROUNDS = 6;
 const WF_SOURCE_LABELS: Record<string, { label: string; sub: string }> = {
     linkedin_search:  { label: 'LinkedIn Search',            sub: 'Find new leads by keywords' },
     linkedin_signal:  { label: 'LinkedIn Signal Search',     sub: 'Find leads from hiring/buying signals' },
+    linkedin_connections: { label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network' },
     file_import:      { label: 'File import (CSV / Excel)',  sub: 'Upload a list and map columns' },
     zoho_once:        { label: 'Zoho CRM (One-Time)',        sub: 'Import synced contacts now' },
     zoho_recurring:   { label: 'Zoho CRM (Recurring)',       sub: 'Import new contacts daily' },
