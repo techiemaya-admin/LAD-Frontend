@@ -233,9 +233,13 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   </p>
                 )}
               </div>
-              <Button variant="outline" size="sm" onClick={handleDisconnect}>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800 rounded-lg transition-colors cursor-pointer border-none shadow-sm"
+              >
                 Disconnect
-              </Button>
+              </button>
             </div>
           </div>
         ) : (

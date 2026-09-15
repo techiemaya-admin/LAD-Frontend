@@ -16,8 +16,16 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -242,8 +250,43 @@ export function TenantOnboarding() {
   return (
     <div className="bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+        {/* Mobile Header Layout */}
+        <div className="sm:hidden space-y-3">
+          {/* Line 1: Heading and Refresh button */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">WhatsApp Accounts</h2>
+            </div>
+            <button
+              onClick={loadAccounts}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 dark:hover:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Refresh accounts"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Line 2: Full button */}
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="w-full h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center justify-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              New Account
+            </button>
+          )}
+
+          {/* Line 3: Sub heading as a Para */}
+          <p className="text-sm text-gray-500 dark:text-slate-300 leading-relaxed">
+            Manage tenant WhatsApp accounts. Each account gets its own database, prompts, and conversation flow.
+          </p>
+        </div>
+
+        {/* Desktop Header Layout */}
+        <div className="hidden sm:flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -336,45 +379,61 @@ export function TenantOnboarding() {
             {/* Flow Template */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Conversation Flow</label>
-              <select
+              <Select
                 value={form.conversation_flow_template}
-                onChange={(e) => setForm((prev) => ({ ...prev, conversation_flow_template: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
+                onValueChange={(val) => setForm((prev) => ({ ...prev, conversation_flow_template: val }))}
               >
-                {FLOW_TEMPLATES.map((ft) => (
-                  <option key={ft.id} value={ft.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                    {ft.label}: {ft.description}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500/30">
+                  <SelectValue placeholder="Select flow template" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl max-h-60">
+                  {FLOW_TEMPLATES.map((ft) => (
+                    <SelectItem key={ft.id} value={ft.id}>
+                      {ft.label}: {ft.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* AI Model */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">AI Model</label>
-              <select
+              <Select
                 value={form.ai_model}
-                onChange={(e) => setForm((prev) => ({ ...prev, ai_model: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
+                onValueChange={(val) => setForm((prev) => ({ ...prev, ai_model: val }))}
               >
-                {AI_MODELS.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{m.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500/30">
+                  <SelectValue placeholder="Select AI model" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl max-h-60">
+                  {AI_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Timezone */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Timezone</label>
-              <select
+              <Select
                 value={form.timezone}
-                onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors [color-scheme:light_dark] autofill:shadow-[inset_0_0_0_1000px_#ffffff] autofill:[text-fill-color:#111827] autofill:[-webkit-text-fill-color:#111827] dark:autofill:shadow-[inset_0_0_0_1000px_#1f2937] dark:autofill:[text-fill-color:#f9fafb] dark:autofill:[-webkit-text-fill-color:#f9fafb]"
+                onValueChange={(val) => setForm((prev) => ({ ...prev, timezone: val }))}
               >
-                {TIMEZONES.map((tz) => (
-                  <option key={tz} value={tz} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{tz}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-indigo-500/30">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-xl p-1 shadow-xl max-h-60">
+                  {TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* AI API Key */}
@@ -489,12 +548,18 @@ export function TenantOnboarding() {
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
             <button
               onClick={handleCreate}
               disabled={creating || !form.display_name.trim() || !form.slug.trim() || !form.database_url.trim()}
-              // className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md shadow-sm transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 outline-none cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-6 py-2.5 text-sm font-bold text-white bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] dark:hover:bg-blue-700 rounded-xl shadow-md transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 outline-none cursor-pointer"
             >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Create Account
@@ -520,7 +585,7 @@ export function TenantOnboarding() {
               <div key={account.slug} className="group">
                 {/* Account header row */}
                 <div
-                  className="flex items-center gap-3 px-6 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                  className="flex items-center gap-3 px-4 sm:px-6 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                   onClick={() => setExpandedAccount(isExpanded ? null : account.slug)}
                 >
                   {isExpanded ? (
@@ -529,8 +594,9 @@ export function TenantOnboarding() {
                     <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-300 flex-shrink-0" />
                   )}
 
+                  {/* Name + badges */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                         {account.display_name}
                       </span>
@@ -546,21 +612,24 @@ export function TenantOnboarding() {
                     <p className="text-[11px] text-gray-400 dark:text-slate-300 font-mono mt-0.5">/webhook/{account.slug}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-300">
+                  {/* AI model + timezone — always visible, pushed to far right */}
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-400 dark:text-slate-300 shrink-0 ml-auto">
                     <span className="flex items-center gap-1">
                       <Bot className="h-3 w-3" />
-                      {account.ai_model}
+                      <span className="hidden sm:inline">{account.ai_model}</span>
+                      <span className="sm:hidden">{account.ai_model.split('-').slice(0, 2).join('-')}</span>
                     </span>
-                    <span>{account.timezone}</span>
+                    <span className="hidden sm:inline">{account.timezone}</span>
                   </div>
 
+                  {/* Delete — always visible on mobile too (was opacity-0 hover-only) */}
                   {isActive && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeactivate(account.slug, account.display_name);
                       }}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                      className="flex-shrink-0 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                       title="Deactivate account"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-400" />
