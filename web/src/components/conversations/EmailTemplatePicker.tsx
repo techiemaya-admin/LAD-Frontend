@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import {
   Mail, Plus, Send, Loader2, X, Check, AlertCircle,
-  FileText, Trash2, ChevronLeft, Sparkles, Paperclip,
+  FileText, Trash2, ChevronLeft, Sparkles, Paperclip, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { safeStorage } from '@lad/shared/storage';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActions,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,36 +113,37 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
   open, onOpenChange, group, provider,
 }: EmailTemplatePickerProps) {
   // View: 'list' | 'compose' | 'preview' | 'sending' | 'done'
-  const [view, setView]               = useState<'list' | 'compose' | 'preview' | 'sending' | 'done'>('list');
-  const [templates, setTemplates]     = useState<EmailTemplate[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [selected, setSelected]       = useState<EmailTemplate | null>(null);
+  const [view, setView]                           = useState<'list' | 'compose' | 'preview' | 'sending' | 'done'>('list');
+  const [templates, setTemplates]                 = useState<EmailTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates]   = useState(true);
+  const [selected, setSelected]                   = useState<EmailTemplate | null>(null);
+  const [search, setSearch]                       = useState('');
 
   // Compose form
-  const [formName, setFormName]       = useState('');
-  const [formSubject, setFormSubject] = useState('');
-  const [formBody, setFormBody]       = useState('');
-  const [formError, setFormError]     = useState('');
-  const [saving, setSaving]           = useState(false);
+  const [formName, setFormName]                   = useState('');
+  const [formSubject, setFormSubject]             = useState('');
+  const [formBody, setFormBody]                   = useState('');
+  const [formError, setFormError]                 = useState('');
+  const [saving, setSaving]                       = useState(false);
 
   // Preview / send
-  const [sendSubject, setSendSubject] = useState('');
-  const [sendBody, setSendBody]       = useState('');
-  const [sendError, setSendError]     = useState('');
-  const [sending, setSending]         = useState(false);
-  const [sendResult, setSendResult]   = useState<SendResult | null>(null);
+  const [sendSubject, setSendSubject]             = useState('');
+  const [sendBody, setSendBody]                   = useState('');
+  const [sendError, setSendError]                 = useState('');
+  const [sending, setSending]                     = useState(false);
+  const [sendResult, setSendResult]               = useState<SendResult | null>(null);
 
   // Attachments
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments]             = useState<File[]>([]);
+  const fileInputRef                              = useRef<HTMLInputElement>(null);
 
   // Test email
-  const [testEmailAddr, setTestEmailAddr] = useState('');
-  const [sendingTest, setSendingTest]     = useState(false);
-  const [testResult, setTestResult]       = useState<{ ok: boolean; message: string } | null>(null);
+  const [testEmailAddr, setTestEmailAddr]         = useState('');
+  const [sendingTest, setSendingTest]             = useState(false);
+  const [testResult, setTestResult]               = useState<{ ok: boolean; message: string } | null>(null);
 
   // Delete
-  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [deletingId, setDeletingId]               = useState<string | null>(null);
 
   // ── Load templates ──────────────────────────────────────────────────────────
 
@@ -163,6 +167,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
       loadTemplates();
       setView('list');
       setSelected(null);
+      setSearch('');
       setSendResult(null);
       setAttachments([]);
       setTestEmailAddr('');
@@ -170,6 +175,17 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
       setFormName(''); setFormSubject(''); setFormBody(''); setFormError('');
     }
   }, [open, loadTemplates]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return templates;
+    const q = search.toLowerCase();
+    return templates.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q) ||
+        (t.body && t.body.toLowerCase().includes(q))
+    );
+  }, [templates, search]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -374,7 +390,7 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
     } finally {
       setSending(false);
     }
-  }, [sendSubject, sendBody, group.members, provider, attachments]);
+  }, [sendSubject, sendBody, group.members, group.id, provider, attachments]);
 
   const handleSendTest = useCallback(async () => {
     const addr = testEmailAddr.trim();
@@ -426,11 +442,6 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
     }
   }, [testEmailAddr, sendSubject, sendBody, attachments, provider]);
 
-  const insertVar = useCallback((varLabel: string, field: 'subject' | 'body') => {
-    if (field === 'subject') setSendSubject(prev => prev + varLabel);
-    else setSendBody(prev => prev + varLabel);
-  }, []);
-
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const providerLabel =
@@ -440,324 +451,428 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[60vh] sm:max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent
+        className={cn(
+          "sm:w-[90vw] sm:max-w-5xl sm:h-[90vh] flex flex-col p-0 overflow-hidden",
+          "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-2xl rounded-2xl"
+        )}
+      >
         {/* Header */}
-        <DialogHeader className="p-4 pb-3 border-b border-border flex-shrink-0">
-          <DialogTitle className="flex items-start sm:items-center gap-2 text-sm font-semibold">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-shrink-0 flex-row items-center justify-between">
+          <DialogTitle className="flex items-center gap-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
             {(view === 'compose' || view === 'preview') && (
               <button
+                type="button"
                 onClick={() => {
-                  if (view === 'preview') { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }
-                  else setView('list');
+                  if (view === 'preview') {
+                    setView('list');
+                    setSelected(null);
+                    setAttachments([]);
+                    setTestResult(null);
+                    setTestEmailAddr('');
+                  } else {
+                    setView('list');
+                  }
                 }}
-                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors mr-1 mt-0.5 sm:mt-0"
+                className="h-8 w-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors shadow-2xs mr-1"
+                title="Back to templates"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
             <div
-              className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5 sm:mt-0"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-xs"
               style={{ backgroundColor: group.color }}
             >
               {group.name.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between pr-6 sm:pr-0 gap-0.5 sm:gap-2">
-              <span className="truncate">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="truncate text-zinc-900 dark:text-zinc-100 text-base font-semibold">
                 {view === 'list' && `Send Email to "${group.name}"`}
-                {view === 'compose' && 'New Template'}
-                {view === 'preview' && (selected?.name || 'Preview & Send')}
-                {view === 'sending' && 'Sending…'}
-                {view === 'done' && 'Sent!'}
+                {view === 'compose' && 'Create New Email Template'}
+                {view === 'preview' && (selected?.name || 'Preview & Send Email')}
+                {view === 'sending' && 'Sending Campaign…'}
+                {view === 'done' && 'Campaign Dispatched'}
               </span>
-              <span className="text-xs text-muted-foreground font-normal flex-shrink-0">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                 {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
               </span>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Body Container */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-zinc-50/40 dark:bg-zinc-950">
 
           {/* ── List view ─────────────────────────────────────────── */}
           {view === 'list' && (
-            <div className="p-4 space-y-3">
-              {/* Create new button */}
-              <button
-                onClick={() => {
-                  setFormName(''); setFormSubject(''); setFormBody(''); setFormError('');
-                  setView('compose');
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-primary transition-colors"
-              >
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Plus className="h-4 w-4" />
+            <>
+              {/* Search & Actions Bar */}
+              <div className="px-6 pt-5 pb-2 flex items-center gap-3 flex-shrink-0">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+                  <Input
+                    placeholder="Search email templates..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-10 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:border-sky-500"
+                  />
                 </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Create New Template</p>
-                  <p className="text-xs text-muted-foreground">Write a new email template</p>
-                </div>
-              </button>
-
-              {/* Template list */}
-              {loadingTemplates ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : templates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No templates yet</p>
-                  <p className="text-xs mt-1">Create your first email template above</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Saved Templates
-                  </p>
-                  {templates.map(tpl => (
-                    // div+role instead of <button> so the delete <button> inside is valid HTML
-                    <div
-                      key={tpl.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleSelectTemplate(tpl)}
-                      onKeyDown={e => e.key === 'Enter' && handleSelectTemplate(tpl)}
-                      className="w-full flex items-start gap-3 px-4 py-3 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/30 transition-colors text-left group cursor-pointer"
-                    >
-                      <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-4 w-4 text-blue-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{tpl.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{tpl.subject}</p>
-                      </div>
-                      <button
-                        onClick={(e) => handleDeleteTemplate(tpl.id, e)}
-                        disabled={deletingId === tpl.id}
-                        className="opacity-0 group-hover:opacity-100 h-7 w-7 flex items-center justify-center rounded hover:bg-red-50 text-red-400 transition-all flex-shrink-0"
-                      >
-                        {deletingId === tpl.id
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Trash2 className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Compose view ──────────────────────────────────────── */}
-          {view === 'compose' && (
-            <div className="p-4 space-y-3">
-              {/* Template name */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Template Name</label>
-                <Input
-                  placeholder="e.g. Follow-up, Welcome, Promo"
-                  value={formName}
-                  onChange={e => setFormName(e.target.value)}
-                  className="h-9 text-sm"
-                  autoFocus
-                />
-              </div>
-
-              {/* Subject */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</label>
-                <Input
-                  placeholder="Email subject..."
-                  value={formSubject}
-                  onChange={e => setFormSubject(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-
-              {/* Body */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Body</label>
-                <textarea
-                  placeholder={`Hi {name},\n\nWrite your email here...\n\nBest regards`}
-                  value={formBody}
-                  onChange={e => setFormBody(e.target.value)}
-                  className="w-full h-40 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                />
-              </div>
-
-              {/* Personalization hints */}
-              <PersonalizationHints onInsert={(v) => setFormBody(prev => prev + v)} />
-
-              {/* Error */}
-              {formError && (
-                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  {formError}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Preview / edit view ───────────────────────────────── */}
-          {view === 'preview' && (
-            <div className="p-4 space-y-3">
-              {/* Subject editor */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</label>
-                <Input
-                  placeholder="Email subject..."
-                  value={sendSubject}
-                  onChange={e => setSendSubject(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-
-              {/* Body editor */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Body</label>
-                <textarea
-                  placeholder="Email body..."
-                  value={sendBody}
-                  onChange={e => setSendBody(e.target.value)}
-                  className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 font-mono"
-                />
-              </div>
-
-              {/* Personalization hints */}
-              <PersonalizationHints onInsert={(v) => setSendBody(prev => prev + v)} />
-
-              {/* Attachments */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attachments</label>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-                  >
-                    <Paperclip className="h-3.5 w-3.5" />
-                    Attach file
-                  </button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={e => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files.length) setAttachments(prev => [...prev, ...files]);
-                    // reset so same file can be re-attached after removal
-                    e.target.value = '';
+                <Button
+                  size="sm"
+                  className="h-10 px-4 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-400 text-white shadow-sm transition-all shrink-0"
+                  onClick={() => {
+                    setFormName(''); setFormSubject(''); setFormBody(''); setFormError('');
+                    setView('compose');
                   }}
-                />
-                {attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {attachments.map((file, idx) => (
-                      <span
-                        key={idx}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted border border-border text-xs max-w-[200px]"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Template
+                </Button>
+              </div>
+
+              {/* Template List Area */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
+                {loadingTemplates ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <Loader2 className="h-6 w-6 animate-spin text-sky-600 dark:text-sky-400" />
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Loading templates...</span>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-zinc-500 dark:text-zinc-400">
+                    <FileText className="h-10 w-10 mb-2 text-zinc-400 dark:text-zinc-600 opacity-50" />
+                    <p className="text-sm font-medium">
+                      {templates.length === 0 ? 'No email templates yet' : 'No templates match your search'}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {templates.length === 0 ? 'Create your first email template to get started' : 'Try searching for another keyword'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filtered.map(tpl => (
+                      <div
+                        key={tpl.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectTemplate(tpl)}
+                        onKeyDown={e => e.key === 'Enter' && handleSelectTemplate(tpl)}
+                        className="w-full flex items-start gap-3.5 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 hover:border-sky-400/60 dark:hover:border-sky-500/60 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/70 transition-all text-left group cursor-pointer shadow-2xs"
                       >
-                        <Paperclip className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{file.name}</span>
+                        <div className="h-10 w-10 rounded-lg bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 flex items-center justify-center flex-shrink-0 text-sky-600 dark:text-sky-400 group-hover:scale-105 transition-transform mt-0.5">
+                          <Mail className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-semibold truncate text-zinc-900 dark:text-zinc-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                              {tpl.name}
+                            </p>
+                            {tpl.category && (
+                              <Badge variant="outline" className="text-[10px] font-medium px-2 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800/40 rounded-md">
+                                {tpl.category}
+                              </Badge>
+                            )}
+                            {tpl.attachments && tpl.attachments.length > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+                                <Paperclip className="h-3 w-3" />
+                                {tpl.attachments.length}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate mb-1">
+                            <span className="text-zinc-400 dark:text-zinc-500 font-normal">Subject: </span>
+                            {tpl.subject}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                            {tpl.body || (tpl.body_html ? tpl.body_html.replace(/<[^>]*>?/gm, '') : 'No content preview')}
+                          </p>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                          className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+                          onClick={(e) => handleDeleteTemplate(tpl.id, e)}
+                          disabled={deletingId === tpl.id}
+                          className="opacity-0 group-hover:opacity-100 h-8 w-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-all flex-shrink-0"
+                          title="Delete template"
                         >
-                          <X className="h-3 w-3" />
+                          {deletingId === tpl.id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Trash2 className="h-4 w-4" />}
                         </button>
-                      </span>
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
+            </>
+          )}
 
-              {/* ── Send test email ──────────────────────────────── */}
-              <div className="rounded-lg border border-border bg-amber-50/60 p-3 space-y-2">
-                <p className="text-xs font-medium flex items-center gap-1.5 text-amber-700">
-                  <Send className="h-3.5 w-3.5" />
-                  Send a test email before bulk send
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={testEmailAddr}
-                    onChange={e => { setTestEmailAddr(e.target.value); setTestResult(null); }}
-                    className="h-8 text-xs flex-1"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs px-3 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
-                    disabled={
-                      sendingTest ||
-                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmailAddr.trim()) ||
-                      !sendSubject.trim() ||
-                      !sendBody.trim()
-                    }
-                    onClick={handleSendTest}
-                  >
-                    {sendingTest
-                      ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending…</>
-                      : 'Send Test'}
-                  </Button>
-                </div>
-                {testResult && (
-                  <div className={`flex items-start gap-1.5 text-xs rounded px-2 py-1.5 ${
-                    testResult.ok
-                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
-                      : 'text-red-700 bg-red-50 border border-red-200'
-                  }`}>
-                    {testResult.ok
-                      ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                      : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
-                    <span>{testResult.message}</span>
+          {/* ── Compose view (2-column desktop layout) ─────────────── */}
+          {view === 'compose' && (
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Column: Form Editor (7 cols) */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Template Name</label>
+                    <Input
+                      placeholder="e.g. Follow-up, Welcome, Promotion"
+                      value={formName}
+                      onChange={e => setFormName(e.target.value)}
+                      className="h-10 text-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:border-sky-500 rounded-xl"
+                      autoFocus
+                    />
                   </div>
-                )}
-              </div>
 
-              {/* Recipients preview */}
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  Sending to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} in &quot;{group.name}&quot;
-                </p>
-                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                  {group.members.slice(0, 10).map(m => (
-                    <span key={m.id} className="text-xs bg-background border border-border rounded px-1.5 py-0.5 truncate max-w-[160px]">
-                      {m.contact_name || m.email}
-                    </span>
-                  ))}
-                  {group.members.length > 10 && (
-                    <span className="text-xs text-muted-foreground px-1">
-                      +{group.members.length - 10} more
-                    </span>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Subject Line</label>
+                    <Input
+                      placeholder="Email subject..."
+                      value={formSubject}
+                      onChange={e => setFormSubject(e.target.value)}
+                      className="h-10 text-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:border-sky-500 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Email Body</label>
+                    <textarea
+                      placeholder={`Hi {name},\n\nWrite your email content here...\n\nBest regards,\nYour Name`}
+                      value={formBody}
+                      onChange={e => setFormBody(e.target.value)}
+                      className="w-full h-64 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition-colors"
+                    />
+                  </div>
+
+                  <PersonalizationHints onInsert={(v) => setFormBody(prev => prev + v)} />
+
+                  {formError && (
+                    <div className="flex items-center gap-2 text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      {formError}
+                    </div>
                   )}
                 </div>
-              </div>
 
-              {/* Error */}
-              {sendError && (
-                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  {sendError}
+                {/* Right Column: Tips & Context (5 cols) */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/60 dark:bg-zinc-900 space-y-3">
+                    <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                      <Sparkles className="h-4 w-4" />
+                      Template Guidelines
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      Saved templates can be reused across all your email broadcast campaigns. You can personalize each message with dynamic merge tags like <code className="text-sky-600 dark:text-sky-400 font-semibold">{`{name}`}</code>, <code className="text-sky-600 dark:text-sky-400 font-semibold">{`{first_name}`}</code>, and <code className="text-sky-600 dark:text-sky-400 font-semibold">{`{company}`}</code>.
+                    </p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 space-y-3">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                      <Mail className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                      Target Broadcast Group
+                    </div>
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-zinc-50/70 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-xs"
+                        style={{ backgroundColor: group.color }}
+                      >
+                        {group.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate text-zinc-900 dark:text-zinc-100">{group.name}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{group.member_count} recipients via {providerLabel}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Preview view (2-column desktop layout) ─────────────── */}
+          {view === 'preview' && (
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Column: Email Subject, Body & Attachments (7 cols) */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Subject Line</label>
+                    <Input
+                      placeholder="Email subject..."
+                      value={sendSubject}
+                      onChange={e => setSendSubject(e.target.value)}
+                      className="h-10 text-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:border-sky-500 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Body Content</label>
+                    <textarea
+                      placeholder="Email body..."
+                      value={sendBody}
+                      onChange={e => setSendBody(e.target.value)}
+                      className="w-full h-64 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition-colors"
+                    />
+                  </div>
+
+                  <PersonalizationHints onInsert={(v) => setSendBody(prev => prev + v)} />
+
+                  {/* Attachments */}
+                  <div className="space-y-2.5 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">Attachments</label>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-medium transition-colors"
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                        Attach file
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={e => {
+                        const files = Array.from(e.target.files ?? []);
+                        if (files.length) setAttachments(prev => [...prev, ...files]);
+                        e.target.value = '';
+                      }}
+                    />
+                    {attachments.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {attachments.map((file, idx) => (
+                          <span
+                            key={idx}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-800 dark:text-zinc-200 max-w-[220px] shadow-2xs"
+                          >
+                            <Paperclip className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 flex-shrink-0" />
+                            <span className="truncate">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                              className="ml-1 text-zinc-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">No files attached</p>
+                    )}
+                  </div>
+
+                  {sendError && (
+                    <div className="flex items-center gap-2 text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      {sendError}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Send Test & Recipients Preview (5 cols) */}
+                <div className="lg:col-span-5 space-y-4">
+                  {/* Send test email */}
+                  <div className="rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50/70 dark:bg-zinc-900 p-4 space-y-3">
+                    <p className="text-xs font-semibold flex items-center gap-1.5 text-amber-800 dark:text-zinc-300">
+                      <Send className="h-3.5 w-3.5" />
+                      Send a test email before broadcast
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={testEmailAddr}
+                        onChange={e => { setTestEmailAddr(e.target.value); setTestResult(null); }}
+                        className="h-9 text-xs flex-1 border-amber-200 dark:border-amber-500/30 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:ring-amber-500/30 focus-visible:border-amber-500 rounded-xl"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-xs px-3.5 shrink-0 border-amber-300 dark:border-amber-500/30 bg-amber-100/50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-xl font-medium"
+                        disabled={
+                          sendingTest ||
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmailAddr.trim()) ||
+                          !sendSubject.trim() ||
+                          !sendBody.trim()
+                        }
+                        onClick={handleSendTest}
+                      >
+                        {sendingTest ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                            Sending…
+                          </>
+                        ) : (
+                          'Send Test'
+                        )}
+                      </Button>
+                    </div>
+                    {testResult && (
+                      <div className={`flex items-start gap-1.5 text-xs rounded-xl px-3 py-2 ${
+                        testResult.ok
+                          ? 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20'
+                          : 'text-red-800 dark:text-red-300 bg-red-50/80 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20'
+                      }`}>
+                        {testResult.ok ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                        )}
+                        <span>{testResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quota warning */}
+                  {group.member_count > SAFE_DAILY_VOLUME[provider] && (
+                    <div className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-50/80 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/25 rounded-2xl p-4 leading-relaxed">
+                      <p className="font-semibold mb-1 flex items-center gap-1.5 text-amber-900 dark:text-amber-200">
+                        <AlertCircle className="h-3.5 w-3.5" /> High volume notice
+                      </p>
+                      {group.member_count} recipients exceeds the recommended daily volume for a{' '}
+                      {providerLabel} mailbox (~{SAFE_DAILY_VOLUME[provider]}/day). Paced broadcast will protect your sender reputation.
+                    </div>
+                  )}
+
+                  {/* Recipients list card */}
+                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                        <Mail className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                        Recipients ({group.member_count})
+                      </p>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{group.name}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
+                      {group.members.slice(0, 20).map(m => (
+                        <span key={m.id} className="text-xs bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 truncate max-w-[170px] shadow-2xs">
+                          {m.contact_name || m.email}
+                        </span>
+                      ))}
+                      {group.members.length > 20 && (
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 px-2 py-1">
+                          +{group.members.length - 20} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           {/* ── Sending view ──────────────────────────────────────── */}
           {view === 'sending' && (
-            <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-sky-600 dark:text-sky-400" />
               </div>
               <div>
-                <p className="font-semibold">Sending emails…</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Sending to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
+                <p className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">Sending campaign…</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                  Dispatching to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''} via {providerLabel}
                 </p>
               </div>
             </div>
@@ -765,41 +880,41 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
           {/* ── Done view ─────────────────────────────────────────── */}
           {view === 'done' && sendResult && (
-            <div className="flex flex-col items-center justify-center py-10 px-6 text-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
-                <Check className="h-7 w-7 text-green-600" />
+            <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center">
+                <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="font-semibold text-lg">
-                  {sendResult.queued ? 'Broadcast queued' : 'Emails Sent!'}
+                <p className="font-semibold text-xl text-zinc-900 dark:text-zinc-100">
+                  {sendResult.queued ? 'Broadcast Queued' : 'Emails Dispatched!'}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-md">
                   {sendResult.queued
                     ? `Sending to ${sendResult.total} recipient${sendResult.total === 1 ? '' : 's'} via ${providerLabel} - paced to protect your sender reputation. Track progress and opens in the Sent tab.`
                     : `Campaign dispatched via ${providerLabel}`}
                 </p>
               </div>
               {!sendResult.queued && (
-                <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-                  <div className="p-3 rounded-xl bg-green-50 border border-green-200">
-                    <p className="text-2xl font-bold text-green-700">{sendResult.sent}</p>
-                    <p className="text-xs text-green-600 mt-0.5">Sent</p>
+                <div className="grid grid-cols-2 gap-3 w-full max-w-xs pt-2">
+                  <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-500/20">
+                    <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{sendResult.sent}</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Sent</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                    <p className="text-2xl font-bold text-red-700">{sendResult.failed}</p>
-                    <p className="text-xs text-red-600 mt-0.5">Failed</p>
+                  <div className="p-3.5 rounded-xl bg-red-50/80 dark:bg-zinc-900 border border-red-200 dark:border-red-500/20">
+                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">{sendResult.failed}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">Failed</p>
                   </div>
                 </div>
               )}
               {sendResult.errors.length > 0 && (
-                <details className="text-xs text-left w-full max-w-xs">
-                  <summary className="cursor-pointer text-red-500 font-medium">
+                <details className="text-xs text-left w-full max-w-md mt-2">
+                  <summary className="cursor-pointer text-red-600 dark:text-red-400 font-medium">
                     {sendResult.errors.length} failed recipients
                   </summary>
-                  <ul className="mt-2 space-y-1 max-h-24 overflow-y-auto">
+                  <ul className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
                     {sendResult.errors.map((err, i) => (
-                      <li key={i} className="text-muted-foreground">
-                        <span className="text-red-400">·</span> {err.email}: {err.error}
+                      <li key={i} className="text-zinc-500 dark:text-zinc-400">
+                        <span className="text-red-500 dark:text-red-400">·</span> {err.email}: {err.error}
                       </li>
                     ))}
                   </ul>
@@ -809,73 +924,94 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex-shrink-0">
-          {view === 'list' && (
-            <Button variant="ghost" size="sm" className="w-full" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-          )}
-
-          {view === 'compose' && (
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="flex-1" onClick={() => setView('list')}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={handleSaveTemplate}
-                disabled={saving || !formName.trim() || !formSubject.trim() || !formBody.trim()}
-              >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                Save & Preview
-              </Button>
-            </div>
-          )}
-
-          {view === 'preview' && (
-            <div className="space-y-2">
-              {group.member_count > SAFE_DAILY_VOLUME[provider] && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  {group.member_count} recipients exceeds the safe daily volume for a{' '}
-                  {providerLabel} mailbox (~{SAFE_DAILY_VOLUME[provider]}/day). Sending is
-                  paced and may spread across days to protect your sender reputation - for
-                  regular large sends, connect an email service (Brevo / Amazon SES) via
-                  Custom SMTP in Settings.
-                </p>
+        {/* Footer / Actions Bar */}
+        <DialogActions className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-6 py-3.5 sm:py-4 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+            <div className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center sm:text-left w-full sm:w-auto">
+              {view === 'list' && (
+                <span>Select a template to preview or create a new one</span>
               )}
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }}>
-                  Back
-                </Button>
+              {view === 'compose' && (
+                <span>Fill in template details to save & preview</span>
+              )}
+              {view === 'preview' && (
+                <span>Ready to send to {group.member_count} recipient{group.member_count !== 1 ? 's' : ''}</span>
+              )}
+              {view === 'sending' && (
+                <span>Sending in progress...</span>
+              )}
+              {view === 'done' && (
+                <span>Campaign dispatched successfully</span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 sm:gap-3 w-full sm:w-auto">
+              {view === 'compose' && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium flex-1 sm:flex-initial"
+                    onClick={() => setView('list')}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-9 sm:h-10 px-5 sm:px-6 rounded-xl gap-2 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-semibold shadow-sm flex-1 sm:flex-initial"
+                    onClick={handleSaveTemplate}
+                    disabled={saving || !formName.trim() || !formSubject.trim() || !formBody.trim()}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    Save & Preview
+                  </Button>
+                </>
+              )}
+
+              {view === 'preview' && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium flex-1 sm:flex-initial"
+                    onClick={() => { setView('list'); setSelected(null); setAttachments([]); setTestResult(null); setTestEmailAddr(''); }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-9 sm:h-10 px-5 sm:px-7 rounded-xl gap-2 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-semibold shadow-sm flex-1 sm:flex-initial"
+                    onClick={handleSend}
+                    disabled={sending || !sendSubject.trim() || !sendBody.trim()}
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Send to {group.member_count} Recipient{group.member_count !== 1 ? 's' : ''}
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {view === 'done' && (
                 <Button
                   size="sm"
-                  className="flex-1 gap-1.5"
-                  onClick={handleSend}
-                  disabled={sending || !sendSubject.trim() || !sendBody.trim()}
+                  className="h-9 sm:h-10 px-6 sm:px-8 rounded-xl gap-2 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-semibold shadow-sm w-full sm:w-auto"
+                  onClick={() => onOpenChange(false)}
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  Send to {group.member_count} Recipient{group.member_count !== 1 ? 's' : ''}
+                  <Check className="h-4 w-4" />
+                  Done
                 </Button>
-              </div>
+              )}
             </div>
-          )}
-
-          {view === 'sending' && (
-            <Button variant="ghost" size="sm" className="w-full" disabled>
-              <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
-              Sending…
-            </Button>
-          )}
-
-          {view === 'done' && (
-            <Button size="sm" className="w-full gap-1.5" onClick={() => onOpenChange(false)}>
-              <Check className="h-3.5 w-3.5" />
-              Done
-            </Button>
-          )}
-        </div>
+          </div>
+        </DialogActions>
       </DialogContent>
     </Dialog>
   );
@@ -885,22 +1021,22 @@ export const EmailTemplatePicker = memo(function EmailTemplatePicker({
 
 function PersonalizationHints({ onInsert }: { onInsert: (v: string) => void }) {
   return (
-    <div className="rounded-lg bg-muted/40 border border-border p-3 space-y-2">
+    <div className="rounded-xl bg-zinc-50/80 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2">
       <div className="flex items-center gap-1.5">
-        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-        <p className="text-xs font-medium">Personalisation variables</p>
+        <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Personalisation variables</p>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {PERSONALIZATION_VARS.map(({ label, desc }) => (
           <button
             key={label}
             type="button"
             onClick={() => onInsert(label)}
             title={`Insert ${label} - ${desc}`}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-background border border-border text-xs font-mono hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-sky-400 dark:hover:border-sky-500/60 hover:bg-sky-50/50 dark:hover:bg-sky-950/30 text-xs font-mono transition-all shadow-xs"
           >
-            <span className="text-primary">{label}</span>
-            <span className="text-muted-foreground hidden sm:inline">: {desc}</span>
+            <span className="text-sky-600 dark:text-sky-400 font-semibold">{label}</span>
+            <span className="text-zinc-500 dark:text-zinc-400 hidden sm:inline">: {desc}</span>
           </button>
         ))}
       </div>
