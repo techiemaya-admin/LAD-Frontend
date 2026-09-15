@@ -39,19 +39,19 @@ export function AgentBuilderMCQ({
   const isSubmitDisabled = !selectedId || (selectedId === "custom" && !customValue.trim());
 
   return (
-    <div className="relative flex flex-col items-center w-[448px] max-w-full h-[600px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
-      
-      <div className="w-full flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+    <div className="relative flex flex-col items-center w-[448px] max-w-full h-[600px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none focus:outline-none focus:ring-0">
+
+      <div className="w-full flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
          <div className="flex items-center gap-2 pl-10">
             <Sparkles className="size-4 text-emerald-500" />
-            <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider">
                {phase || "Builder / MCQ"}
             </span>
          </div>
          {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+              className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
             >
               <X className="size-4" />
             </button>
@@ -60,13 +60,13 @@ export function AgentBuilderMCQ({
 
       <div className="relative flex-1 min-h-0 w-full flex flex-col">
          <div className="flex-grow overflow-y-auto scrollbar-none pt-6 px-6 pb-12">
-           
+
            {/* Texts */}
            <div className="mb-6 space-y-4 px-2">
              {question.split('\n').map((line, i) => (
                 <p key={i} className={cn(
-                    "text-center text-[#0b1957]",
-                    i === 0 ? "text-xl md:text-2xl font-bold leading-snug" : "text-[14px] font-semibold text-slate-500 leading-relaxed"
+                    "text-center text-[#0b1957] dark:text-slate-100",
+                    i === 0 ? "text-xl md:text-2xl font-bold leading-snug" : "text-[14px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed"
                 )}>
                    {line}
                 </p>
@@ -99,17 +99,17 @@ export function AgentBuilderMCQ({
                  onClick={() => handleSelect(opt.id)}
                  onDoubleClick={() => setSelectedId(null)}
                  className={cn(
-                   "bg-white border text-left text-sm text-[#0b1957] flex items-center gap-3 transition-all hover:bg-slate-50 group",
+                   "bg-white dark:bg-[#071131] border text-left text-sm text-[#0b1957] dark:text-slate-100 flex items-center gap-3 transition-all hover:bg-slate-50 dark:hover:bg-blue-950/40 group",
                    isStacked ? "w-full rounded-2xl px-5 py-4 shadow-sm hover:shadow-md" : "w-auto rounded-full px-4 py-2 hover:shadow-sm",
-                   selectedId === opt.id ? "border-[#0b1957] ring-1 ring-[#0b1957] shadow-md z-10 bg-slate-50" : "border-slate-200"
+                   selectedId === opt.id ? "border-[#0b1957] dark:border-blue-500 ring-1 ring-[#0b1957] dark:ring-blue-500 shadow-md z-10 bg-slate-50 dark:bg-[#071131]" : "border-slate-200 dark:border-blue-950/40"
                  )}
                >
                  <div className={cn(
                      "size-3.5 rounded-full border shrink-0 transition-colors duration-200",
-                     selectedId === opt.id ? "border-[#0b1957] bg-[#0b1957]" : "border-slate-300 group-hover:border-[#0b1957]/50"
+                     selectedId === opt.id ? "border-[#0b1957] dark:border-blue-500 bg-[#0b1957]" : "border-slate-300 dark:border-blue-900/60 group-hover:border-[#0b1957]/50 dark:group-hover:border-blue-400/50"
                  )} />
                  <span className={cn(
-                   "flex-1 font-medium", 
+                   "flex-1 font-medium",
                    isStacked && selectedId !== opt.id ? "truncate" : "whitespace-normal break-words"
                  )}>
                    {opt.label}
@@ -120,11 +120,11 @@ export function AgentBuilderMCQ({
              {/* Plus custom option */}
              {showCustomInput ? (
                <div className={cn("w-full animate-in fade-in zoom-in-95 mt-1", isStacked ? "" : "w-full")}>
-                   <input 
-                     type="text" 
-                     placeholder="Type your option..." 
-                     className="w-full bg-white border border-[#0b1957] rounded-2xl px-5 py-4 text-sm text-[#0b1957] shadow-lg outline-none focus:ring-2 focus:ring-[#0b1957]/20" 
-                     autoFocus 
+                   <input
+                     type="text"
+                     placeholder="Type your option..."
+                     className="w-full bg-white dark:bg-[#000724] border border-[#0b1957] dark:border-blue-500 rounded-2xl px-5 py-4 text-sm text-[#0b1957] dark:text-slate-100 shadow-lg outline-none focus:ring-2 focus:ring-[#0b1957]/20 dark:focus:ring-blue-500/20"
+                     autoFocus
                      value={customValue}
                      onChange={(e) => setCustomValue(e.target.value)}
                      onKeyDown={(e) => {
@@ -138,7 +138,7 @@ export function AgentBuilderMCQ({
                <button
                  onClick={() => { setSelectedId("custom"); setShowCustomInput(true); }}
                  className={cn(
-                   "border border-slate-300 border-dashed text-left text-sm text-slate-500 font-medium flex items-center gap-3 hover:bg-slate-50 hover:text-[#0b1957] transition-all",
+                   "border border-slate-300 dark:border-blue-900/60 border-dashed text-left text-sm text-slate-500 dark:text-slate-400 font-medium flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-blue-950/40 hover:text-[#0b1957] dark:hover:text-white transition-all",
                    isStacked ? "w-full rounded-2xl px-5 py-3.5 bg-transparent" : "w-auto rounded-full px-4 py-2 bg-transparent/50"
                  )}
                >
@@ -151,10 +151,10 @@ export function AgentBuilderMCQ({
             </div>
          </div>
          {/* Fade overlay at the bottom of the scrollable MCQ area */}
-         <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none z-10" />
+         <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white dark:from-[#000724] via-white/80 dark:via-[#000724]/80 to-transparent pointer-events-none z-10" />
       </div>
 
-      <div className="w-full flex-shrink-0 flex justify-end pb-8 px-6 pt-2 bg-gradient-to-t from-white via-white to-transparent relative z-20">
+      <div className="w-full flex-shrink-0 flex justify-end pb-8 px-6 pt-2 bg-gradient-to-t from-white dark:from-[#000724] via-white dark:via-[#000724] to-transparent relative z-20">
          <button
             type="button"
             onClick={() => {
@@ -171,14 +171,14 @@ export function AgentBuilderMCQ({
             className={cn(
                "px-8 py-3 rounded-full font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2",
                !isSubmitDisabled
-                  ? "bg-gradient-to-br from-[#0b1957] to-[#1e293b] text-white hover:shadow-xl shadow-[#0b1957]/20 cursor-pointer" 
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
+                  ? "bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 text-white hover:shadow-xl shadow-[#0b1957]/20 cursor-pointer"
+                  : "bg-slate-100 dark:bg-[#071131] text-slate-400 cursor-not-allowed border border-slate-200 dark:border-blue-950/40 shadow-none"
             )}
          >
             Submit
          </button>
       </div>
-    
+
     </div>
   );
 }

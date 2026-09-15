@@ -75,28 +75,28 @@ export function AgentBuilderKeyframesConfirm({
   const isGenerating = phase === "Storyboard Generation";
 
   return (
-    <div className="relative flex flex-col items-center w-[460px] max-w-full h-[620px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
+    <div className="relative flex flex-col items-center w-[460px] max-w-full h-[620px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
       {/* Header */}
-      <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+      <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
         <div className="flex items-center gap-2 pl-4">
           {onBack && (
             <button
               onClick={onBack}
-              className="mr-1 p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-transparent hover:border-slate-100"
+              className="mr-1 p-1 hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-transparent hover:border-slate-100 dark:hover:border-blue-900/60"
               aria-label="Go back"
             >
               <ArrowLeft className="size-4" />
             </button>
           )}
-          <Film className="size-4 text-slate-700 animate-pulse" />
-          <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
+          <Film className="size-4 text-slate-700 dark:text-slate-200 animate-pulse" />
+          <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider">
             {phase || "Storyboard Review"}
           </span>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+            className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
           >
             <X className="size-4" />
           </button>
@@ -105,10 +105,10 @@ export function AgentBuilderKeyframesConfirm({
 
       {/* Main Content Area */}
       <div className="relative flex-1 min-h-0 w-full flex flex-col pt-4 overflow-y-auto scrollbar-none px-6 pb-2">
-        <h2 className="text-xl font-bold text-[#0b1957] text-center leading-snug mb-3">
+        <h2 className="text-xl font-bold text-[#0b1957] dark:text-slate-100 text-center leading-snug mb-3">
           {title}
         </h2>
-        
+
         <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-4 text-center">
           {description}
         </p>
@@ -129,11 +129,11 @@ export function AgentBuilderKeyframesConfirm({
                   onClick={() => setSelectedFrame(isSelected ? null : idx)}
                   className={cn(
                     "relative aspect-video rounded-xl border-2 bg-slate-900 overflow-hidden cursor-pointer group shadow-sm hover:shadow transition-all duration-200 select-none",
-                    isSelected ? "border-[#0b1957] ring-2 ring-[#0b1957]/20" : "border-slate-200 hover:border-slate-300"
+                    isSelected ? "border-[#0b1957] dark:border-blue-500 ring-2 ring-[#0b1957]/20" : "border-slate-200 dark:border-blue-950/40 hover:border-slate-300"
                   )}
                 >
                   <img src={url} alt={`Frame ${idx}`} className="w-full h-full object-cover pointer-events-none" />
-                  
+
                   {/* Expand Button */}
                   <button
                     type="button"
@@ -146,19 +146,19 @@ export function AgentBuilderKeyframesConfirm({
                   >
                     <Maximize2 className="size-3" />
                   </button>
-                  
+
                   {/* Badge */}
                   <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[8px] text-white font-bold tracking-wider uppercase z-10">
                     Frame {idx + 1}
                   </div>
-                  
+
                   {/* Selection Overlay */}
                   <div className={cn(
                     "absolute inset-0 bg-[#0b1957]/10 transition-opacity z-20 flex items-center justify-center",
                     isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-40"
                   )}>
                     {isSelected && (
-                      <div className="size-6 rounded-full bg-[#0b1957] border-2 border-white flex items-center justify-center shadow-md">
+                      <div className="size-6 rounded-full bg-[#0b1957] dark:bg-blue-600 border-2 border-white flex items-center justify-center shadow-md">
                         <Check className="size-3.5 text-white stroke-[3]" />
                       </div>
                     )}
@@ -177,7 +177,7 @@ export function AgentBuilderKeyframesConfirm({
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               {references.map((ref) => (
-                <div key={ref.path} className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shadow-sm group">
+                <div key={ref.path} className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-blue-950/40 bg-slate-50 dark:bg-[#071131] shadow-sm group">
                   <img src={ref.thumbnail} alt={ref.filename} className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -189,7 +189,7 @@ export function AgentBuilderKeyframesConfirm({
                 </div>
               ))}
               {isUploading && (
-                <div className="w-10 h-10 rounded-lg border border-dashed border-slate-300 flex items-center justify-center bg-slate-50 animate-pulse">
+                <div className="w-10 h-10 rounded-lg border border-dashed border-slate-300 dark:border-blue-900/60 flex items-center justify-center bg-slate-50 dark:bg-[#071131] animate-pulse">
                   <span className="loading loading-spinner loading-xs text-slate-400"></span>
                 </div>
               )}
@@ -200,10 +200,10 @@ export function AgentBuilderKeyframesConfirm({
       </div>
 
       {/* Action Buttons Panel */}
-      <div className="w-full flex-shrink-0 flex flex-col gap-2 px-6 pt-2 pb-2.5 border-t border-slate-50 bg-white">
+      <div className="w-full flex-shrink-0 flex flex-col gap-2 px-6 pt-2 pb-2.5 border-t border-slate-50 dark:border-blue-950/40 bg-white dark:bg-[#000724]">
         {selectedFrame !== null ? (
           <div className="flex gap-2">
-            <div 
+            <div
               title={isInstructionEmpty ? "First type the change request in the input box" : undefined}
               className="flex-1 flex"
             >
@@ -211,12 +211,12 @@ export function AgentBuilderKeyframesConfirm({
                 type="button"
                 disabled={isInstructionEmpty}
                 onClick={() => handleAction("change")}
-                className="w-full py-2 bg-gradient-to-br from-[#0b1957] to-[#1e293b] hover:from-[#0b1957] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[10px] rounded-xl transition-all active:scale-95 shadow-sm hover:shadow"
+                className="w-full py-2 bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 hover:from-[#0b1957] dark:hover:from-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-[10px] rounded-xl transition-all active:scale-95 shadow-sm hover:shadow"
               >
                 Request Frame Changes
               </button>
             </div>
-            <div 
+            <div
               title={isInstructionEmpty ? "First type the change request in the input box" : undefined}
               className="flex-1 flex"
             >
@@ -237,13 +237,13 @@ export function AgentBuilderKeyframesConfirm({
               type="button"
               disabled={isGenerating || keyframes.length === 0}
               onClick={() => handleAction("confirm")}
-              className="w-full py-2.5 bg-gradient-to-br from-[#0b1957] to-[#1e293b] hover:from-[#0b1957] hover:to-[#0b1957] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition-all active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 bg-gradient-to-br from-[#0b1957] dark:from-blue-600 to-[#1e293b] dark:to-blue-700 hover:from-[#0b1957] dark:hover:from-blue-700 hover:to-[#0b1957] dark:hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition-all active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-1.5"
             >
               <Film className="size-3.5" />
               Confirm Storyboard & Generate Video
             </button>
             <div className="flex gap-2 w-full">
-              <div 
+              <div
                 title={isInstructionEmpty ? "First type the change request in the input box" : undefined}
                 className="flex-1 flex"
               >
@@ -251,7 +251,7 @@ export function AgentBuilderKeyframesConfirm({
                   type="button"
                   disabled={isInstructionEmpty || isGenerating}
                   onClick={() => handleAction("regenerate")}
-                  className="w-full py-1.5 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 font-bold text-[10px] rounded-xl transition-all"
+                  className="w-full py-1.5 border border-slate-200 dark:border-blue-950/40 hover:bg-slate-50 dark:hover:bg-blue-950/40 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 dark:text-slate-300 font-bold text-[10px] rounded-xl transition-all"
                 >
                   Regenerate Storyboard
                 </button>
@@ -260,7 +260,7 @@ export function AgentBuilderKeyframesConfirm({
                 type="button"
                 disabled={isGenerating}
                 onClick={() => handleAction("cancel")}
-                className="flex-1 py-1.5 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 font-bold text-[10px] rounded-xl transition-all"
+                className="flex-1 py-1.5 border border-slate-200 dark:border-blue-950/40 hover:bg-slate-50 dark:hover:bg-blue-950/40 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 dark:text-slate-400 font-bold text-[10px] rounded-xl transition-all"
               >
                 Cancel Storyboard
               </button>
@@ -268,7 +268,7 @@ export function AgentBuilderKeyframesConfirm({
           </div>
         )}
         {selectedFrame !== null && isInstructionEmpty && (
-          <div className="flex items-center gap-1 mt-1.5 text-[9px] text-amber-600 font-bold justify-center select-none">
+          <div className="flex items-center gap-1 mt-1.5 text-[9px] text-amber-600 dark:text-amber-400 font-bold justify-center select-none">
             <AlertCircle className="size-3 shrink-0" />
             <span>
               {isSplitScreen
@@ -281,7 +281,7 @@ export function AgentBuilderKeyframesConfirm({
 
       {/* Dynamic input bar for instructions */}
       {!isSplitScreen && (
-        <div className="w-full flex flex-col pb-4 pt-2 bg-white relative z-20 border-t border-slate-50 shrink-0">
+        <div className="w-full flex flex-col pb-4 pt-2 bg-white dark:bg-[#000724] relative z-20 border-t border-slate-50 dark:border-blue-950/40 shrink-0">
           <BuilderBottomInput
             value={currentFeedbackText}
             onChange={currentSetFeedbackText}
