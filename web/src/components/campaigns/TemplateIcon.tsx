@@ -41,6 +41,8 @@ export function TemplateIcon({ tplKey, color, size = 16 }: { tplKey: string; col
 /** Human-readable category for a pipeline step (subtitle in the overview list). */
 export function stepCategory(type: string, isSource = false): string {
   if (isSource) return 'Contact source';
+  if (type === 'post_approval' || type === 'comment_approval') return 'Approval';
+  if (type === 'linkedin_post_engage') return 'Engagement';
   if (type.startsWith('linkedin')) return 'LinkedIn';
   if (type.startsWith('email')) return 'Email';
   if (type.startsWith('whatsapp')) return 'WhatsApp';
