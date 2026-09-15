@@ -144,7 +144,7 @@ const edgeTypes = { labeled: LabeledEdge };
 
 // ─── Palette definitions ─────────────────────────────────────────────────────
 
-type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts';
+type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts' | 'linkedin_connections';
 
 const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNode; chip: string; recurring?: boolean }[] = [
   { key: 'own_contacts', label: 'Your own contacts', sub: 'People who already gave you their details', icon: <Users className="h-4 w-4 text-amber-600" />, chip: 'bg-amber-50 dark:bg-amber-950/30', recurring: true },
@@ -156,6 +156,7 @@ const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNo
   { key: 'linkedin_search', label: 'LinkedIn Search', sub: 'Find new leads by keywords', icon: <Search className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30' },
   { key: 'web_extract', label: 'Web page (exhibitors, directories)', sub: 'Pull companies off a page, then find the roles you name', icon: <Globe className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30' },
   { key: 'linkedin_signal', label: 'LinkedIn Signal Search', sub: 'Find leads from hiring/buying signals', icon: <Radar className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
+  { key: 'linkedin_connections', label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network', icon: <UserCheck className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
 ];
 
 // Target fields the file columns map to. 'ignore' drops the column.
@@ -308,6 +309,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   file_import: "Imports leads from an uploaded CSV/Excel file. Needs a file with at least one column mapped to name, company, email, or LinkedIn URL. Rows with no LinkedIn URL are resolved automatically by name+company at send time - some may never match, and those retry indefinitely rather than fail. Map a LinkedIn URL column directly when you have one.",
   linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
   linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
+  linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed: with post engagement on, the campaign watches their new posts and drafts a comment for you to approve or rewrite on WhatsApp. Needs an active LinkedIn account in Settings.',
   // LinkedIn outreach
   linkedin_connect: "Sends a LinkedIn connection request - no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
   linkedin_message: "Sends a LinkedIn DM - but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
@@ -3328,7 +3330,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const analyticsNode = workflowPreview.find((s) => s.id === ANALYTICS_STEP_ID);
     const autopostNode = workflowPreview.find((s) => s.id === AUTOPOST_STEP_ID);
     const zohoUpdateNode = workflowPreview.find((s) => s.id === ZOHO_UPDATE_STEP_ID);
-    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly) { setError('Add at least one outreach step.'); return; }
+    // A connections campaign with post engagement on does its work in the
+    // background (the monitor cron comments on their posts), so it is a
+    // complete pipeline with no outreach step at all - like publisher-only.
+    const engagementOnly = source === 'linkedin_connections' && (configs[SOURCE_STEP_ID]?.monitor_posts !== false);
+    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly && !engagementOnly) { setError('Add at least one outreach step.'); return; }
 
     // InMail needs an entitlement the account may not have. Checking here means
     // the user finds out while looking at the canvas, instead of one lead
@@ -3473,6 +3479,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             zoho_account_location: srcCfg.zoho_modules === 'accounts'
               ? ((srcCfg.zoho_account_location || '').trim() || undefined)
               : undefined,
+            leadGenerationLimit: perDayN,
+          },
+        });
+      } else if (source === 'linkedin_connections') {
+        // The tenant's own 1st-degree network, a page a day, decision-makers
+        // only. Nobody here needs an invite. Post engagement is campaign-level
+        // (config.post_engagement below), not a step: the monitor cron sweeps
+        // every lead of the campaign for new posts.
+        steps.push({
+          type: 'lead_generation', title: 'Your LinkedIn connections', channel: 'linkedin', order_index: order++,
+          config: {
+            source: 'linkedin_connections',
+            decision_maker_titles: String(srcCfg.decision_maker_titles || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            min_seniority: srcCfg.min_seniority || 'director',
+            keywords: (srcCfg.keywords || '').trim() || undefined,
+            min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
             leadGenerationLimit: perDayN,
           },
         });
@@ -4008,7 +4030,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         campaign_start_date: start.toISOString(),
         campaign_end_date: end.toISOString(),
         config: {
-          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
+          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'linkedin_connections' ? 'linkedin_connections' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
           builder: 'custom_workflow',
           // The builder's own state, stored so "Edit Accelerator" can reopen it
           // exactly as it was. Launch flattens these nodes into config.* and
@@ -4042,6 +4064,20 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           leads_per_day: perDayN,
           campaign_days: daysN,
           working_days: 'monday-friday',
+          // Post engagement is the campaign-level opt-in the post-monitor cron
+          // keys on (LinkedInPostMonitorService._campaignMonitoredLeads). Only
+          // the connections source writes it: the toggle lives on that drawer,
+          // so a value left behind by a switched-away selection cannot enrol
+          // a search campaign's strangers into background commenting.
+          ...(source === 'linkedin_connections' && srcCfg.monitor_posts !== false ? {
+            post_engagement: {
+              enabled: true,
+              like: srcCfg.like_posts !== false,
+              comment_mode: srcCfg.comment_mode === 'auto' || srcCfg.comment_mode === 'off' ? srcCfg.comment_mode : 'approve',
+              min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
+              notify_phone: (srcCfg.notify_phone || '').trim() || undefined,
+            },
+          } : {}),
           ...(source === 'zoho_recurring' ? {
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
@@ -4641,6 +4677,68 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               </CustomSelect></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">How many (max 500)</label>
               <Input type="number" value={cfg.import_count || '100'} onChange={(e) => setCfg(editingId, { import_count: e.target.value })} /></div>
+          </>)}
+          {isSource && source === 'linkedin_connections' && (<>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Decision-maker titles (optional)</label>
+              <Input value={cfg.decision_maker_titles || ''} onChange={(e) => setCfg(editingId, { decision_maker_titles: e.target.value })} placeholder="e.g. Founder, CEO, Managing Director" />
+              <p className="text-[11px] text-muted-foreground">Matched against each connection&apos;s headline. Leave blank to use the seniority floor below instead.</p></div>
+            {!(cfg.decision_maker_titles || '').trim() && (
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum seniority</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={cfg.min_seniority || 'director'}
+                  onChange={(e) => setCfg(editingId, { min_seniority: e.target.value })}
+                >
+                  <option value="c_suite">C-suite &amp; founders only</option>
+                  <option value="vp">VP and above</option>
+                  <option value="director">Director and above</option>
+                  <option value="manager">Manager and above</option>
+                  <option value="any">Everyone</option>
+                </select></div>
+            )}
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Headline keywords (optional)</label>
+              <Input value={cfg.keywords || ''} onChange={(e) => setCfg(editingId, { keywords: e.target.value })} placeholder="e.g. real estate, proptech" />
+              <p className="text-[11px] text-muted-foreground">Comma-separated; at least one must appear in the headline. Narrows to your industry.</p></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum ICP fit (0&ndash;100)</label>
+              <Input type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(editingId, { min_icp_score: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">Scored from seniority, department and your business profile&apos;s target titles/industries. No AI credits are spent.</p></div>
+            <div className="rounded-lg border border-border p-3 space-y-2.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-foreground">
+                <input type="checkbox" checked={cfg.monitor_posts !== false} onChange={(e) => setCfg(editingId, { monitor_posts: e.target.checked })} />
+                Watch their posts and engage
+              </label>
+              {cfg.monitor_posts !== false && (<>
+                <div className="space-y-1"><label className="text-xs font-medium text-foreground">When someone posts</label>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={cfg.comment_mode || 'approve'}
+                    onChange={(e) => setCfg(editingId, { comment_mode: e.target.value })}
+                  >
+                    <option value="approve">Draft a comment and ask me on WhatsApp</option>
+                    <option value="auto">Post an AI comment automatically</option>
+                    <option value="off">Like only, never comment</option>
+                  </select>
+                  {(cfg.comment_mode || 'approve') === 'approve' && (
+                    <p className="text-[11px] text-muted-foreground">You get the post and a suggested comment. Approve posts it; Reject lets you write your own instead, or skip. Unanswered requests expire in 48h.</p>
+                  )}
+                  {cfg.comment_mode === 'auto' && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">Comments go out under your name without review. Every comment still passes a safety check, and the daily engagement cap applies.</p>
+                  )}</div>
+                <label className="flex items-center gap-2 text-xs text-foreground">
+                  <input type="checkbox" checked={cfg.like_posts !== false} onChange={(e) => setCfg(editingId, { like_posts: e.target.checked })} />
+                  Also like the post
+                </label>
+                {(cfg.comment_mode || 'approve') === 'approve' && (
+                  <div className="space-y-1"><label className="text-xs font-medium text-foreground">Send approvals to (optional)</label>
+                    <Input value={cfg.notify_phone || ''} onChange={(e) => setCfg(editingId, { notify_phone: e.target.value })} placeholder="+971 50 000 0000 - defaults to your account phone" /></div>
+                )}
+              </>)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Reviews your connections newest-first, up to {perDay} matches a day, carrying on where it
+              left off until the whole list has been seen. Post engagement keeps running after that, for as
+              long as the campaign is active.
+            </p>
           </>)}
           {isSource && source === 'own_contacts' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Who to include</label>
