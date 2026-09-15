@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Loader2, ExternalLink, ChevronDown, ChevronUp, Eye, EyeOff, X, Power, Linkedin } from 'lucide-react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogActions, DialogHeader, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { apiGet, apiPost } from '@/lib/api';
@@ -116,7 +116,7 @@ export const LinkedInIntegration: React.FC = () => {
   const [aiRepliesSaving, setAiRepliesSaving] = useState(false);
   const [aiToast, setAiToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null);
   const inputClass =
-      'w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#00051d] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#00051d_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#00051d_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
+      'w-full rounded-xl border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] px-3 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-400 outline-none focus:border-[#0B1957] dark:focus:border-blue-500 focus:ring-0 focus-visible:ring-0 transition-all [box-shadow:0_0_0_30px_white_inset] dark:[box-shadow:0_0_0_30px_#071131_inset] [-webkit-text-fill-color:#1e293b] dark:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[box-shadow:0_0_0_30px_white_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:#1e293b] dark:[&:-webkit-autofill]:[box-shadow:0_0_0_30px_#071131_inset] dark:[&:-webkit-autofill]:[-webkit-text-fill-color:white]';
 
   // Auto-dismiss the AI Replies toast after a few seconds (mirrors Instagram).
   useEffect(() => {
@@ -728,7 +728,6 @@ export const LinkedInIntegration: React.FC = () => {
   };
 
   // Modern browser autofill utility string with forced light/dark text fills
-  const autofillClasses = "autofill:shadow-[0_0_0_1000px_#1e293b_inset] dark:autofill:shadow-[0_0_0_1000px_#1e293b_inset] [webkit-text-fill-color:#111827_!important] dark:[webkit-text-fill-color:#f3f4f6_!important] transition-[background-color] duration-[99999s] ease-in-out";
 
   if (loading) {
     return (
@@ -914,33 +913,33 @@ export const LinkedInIntegration: React.FC = () => {
       </div>
       {/* Connection Modal */}
       <Dialog open={showConnectionModal} onOpenChange={setShowConnectionModal}>
-        <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0 bg-white dark:bg-[#000724] border border-slate-200 dark:border-slate-800/80 outline-none focus:outline-none focus-visible:outline-none">
+        <DialogContent className="sm:max-w-5xl sm:w-[90vw] p-0 bg-white dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40 outline-none focus:outline-none focus-visible:outline-none">
 
-          <DialogHeader className="bg-slate-50 dark:bg-[#000724] px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 rounded-t-2xl">
+          <DialogHeader className="bg-white dark:bg-[#081331] px-6 py-4 border-b border-gray-200 dark:border-blue-950/40 rounded-t-2xl">
             <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 dark:bg-[#000724] p-2 rounded-lg mr-3 flex-shrink-0">
-                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>
-                <Linkedin className="h-6 w-6 text-blue-700 "/>
+              <div className="bg-blue-100 dark:bg-blue-600/20 p-2 rounded-lg mr-3 flex-shrink-0">
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-600/20 flex items-center justify-center`}>
+                <Linkedin className="h-6 w-6 text-blue-700 dark:text-blue-400 "/>
                 </div>
               </div>
               <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-white">Sign in to LinkedIn</DialogTitle>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 max-h-[70vh]">
+          <div className="flex-1 overflow-y-auto bg-background dark:bg-[#000724] px-8 py-6 space-y-6 max-h-[70vh]">
             {/* Choose Method */}
-            <div className="bg-slate-50/60 dark:bg-[#00051d]/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/40 text-center">
-              <h4 className="mb-2.5 text-xs font-bold text-slate-400 dark:text-slate-300 uppercase tracking-wider">
+            <div className="bg-white dark:bg-[#071131] p-3.5 rounded-xl border border-gray-200 dark:border-blue-950/40 text-center">
+              <h4 className="mb-2.5 text-xs font-bold text-gray-500 dark:text-slate-300 uppercase tracking-wider">
                 Choose method
               </h4>
-              <div className="w-full flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800/80 dark:bg-[#00051d]">
+              <div className="w-full flex gap-1 rounded-xl border border-gray-200 bg-slate-50 p-1 dark:border-blue-950/40 dark:bg-[#071131]">
                 <button
                     type="button"
                   onClick={() => setAuthMethod('credentials')}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg h-11 text-sm font-bold transition-all cursor-pointer ${
                     authMethod === 'credentials'
                       ? 'bg-[#0b1957] text-white shadow-md dark:bg-[#2563eb]'
-                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/40'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#0e1a3a]'
                   }`}
                 >
                   Credentials
@@ -951,7 +950,7 @@ export const LinkedInIntegration: React.FC = () => {
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg h-11 text-sm font-bold transition-all cursor-pointer ${
                     authMethod === 'cookies'
                       ? 'bg-[#0b1957] text-white shadow-md dark:bg-[#2563eb]'
-                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/40'
+                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#0e1a3a]'
                   }`}
                 >
                   Cookies
@@ -982,7 +981,7 @@ export const LinkedInIntegration: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none cursor-pointer"
                     aria-label={showPin ? "Hide pin" : "Show pin"}
                   >
                     {showPin ? (
@@ -998,12 +997,12 @@ export const LinkedInIntegration: React.FC = () => {
             {/* Cookies Form */}
             {authMethod === 'cookies' && (
               <div className="space-y-4 animate-in fade-in duration-200">
-               <div className="bg-slate-50/50 dark:bg-[#00051d]/30 border border-slate-100 dark:border-slate-800/60 p-3 rounded-xl">
+               <div className="bg-white dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 p-3 rounded-xl">
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-300 leading-relaxed">
                     Copy your LinkedIn cookies.{' '}
                     <button
                       onClick={() => setShowCookieHelp(!showCookieHelp)}
-                      className="text-blue-500 font-bold hover:underline cursor-pointer inline-flex items-center gap-0.5"
+                      className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer inline-flex items-center gap-0.5"
                     >
                       How to find them?
                     </button>
@@ -1013,7 +1012,7 @@ export const LinkedInIntegration: React.FC = () => {
                   </p>
                 </div>
                 {showCookieHelp && (
-                  <div className="bg-slate-50 dark:bg-[#00051d]/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="bg-slate-50 dark:bg-[#071131] border border-gray-200 dark:border-blue-950/40 rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
                     <h4 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider mb-2">How to find my cookies?</h4>
                     <div className="text-xs text-slate-500 dark:text-slate-300 space-y-2 leading-relaxed font-medium"><p>Follow the steps to find your linkedin cookies (not available on mobile)</p>
                       <ol className="list-decimal list-inside space-y-1 ml-2">
@@ -1036,7 +1035,7 @@ export const LinkedInIntegration: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1 pt-1">
-                  <p className="text-[11px] font-medium text-slate-400 dark:text-slate-300 leading-normal mb-1">
+                  <p className="text-[11px] font-medium text-gray-500 dark:text-slate-300 leading-normal mb-1">
                     If your account has Recruiter or Sales Navigator subscription, copy the li_a too.
                   </p>
                   <input
@@ -1060,7 +1059,7 @@ export const LinkedInIntegration: React.FC = () => {
                 Optional settings
               </button>
               {showOptionalSettings && (
-                <div className="mt-2.5 p-3.5 bg-slate-50/50 dark:bg-[#00051d]/40 rounded-xl border border-slate-200 dark:border-slate-800/80 text-xs text-slate-400 dark:text-slate-300 font-medium leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="mt-2.5 p-3.5 bg-white dark:bg-[#071131] rounded-xl border border-gray-200 dark:border-blue-950/40 text-xs text-gray-500 dark:text-slate-300 font-medium leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
                   Additional configuration options will be available here for advanced users.
                 </div>
               )}
@@ -1089,7 +1088,7 @@ export const LinkedInIntegration: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50 dark:bg-[#000724] px-6 py-3.5 rounded-b-2xl">
+          <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331] px-6 py-3.5 rounded-b-2xl">
             <button
               onClick={handleConnect}
               disabled={connecting || (authMethod === 'credentials' ? !email || !pinCode : !liAtCookie)}
@@ -1098,7 +1097,7 @@ export const LinkedInIntegration: React.FC = () => {
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : connectionError
                   ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-700 text-white'
+                  : 'bg-[#0b1957] hover:bg-[#122572] dark:bg-[#2563eb] dark:hover:bg-blue-500 text-white'
               }`}
             >
               {connecting ? (
@@ -1122,24 +1121,28 @@ export const LinkedInIntegration: React.FC = () => {
       </Dialog>
       {/* Checkpoint Verification Modal (OTP or Yes/No) - LinkedIn-style UI */}
       <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
-        <DialogContent className="max-w-sm p-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <DialogHeader className="text-center justify-center pt-8 px-6">
-            <div className="bg-white dark:bg-gray-900 p-2 rounded-lg mr-3 flex-shrink-0">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center`}>
-                <Linkedin className="h-6 w-6 text-blue-700 "/>
+        <DialogContent showCloseButton={false} className="w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:w-[90vw] sm:max-w-5xl p-0 bg-background dark:bg-[#000724] border border-gray-200 dark:border-blue-950/40">
+          <DialogHeader className="flex-col items-stretch gap-2 px-4 py-4 sm:px-8 sm:py-6 text-left bg-white dark:bg-[#081331] border-gray-200 dark:border-blue-950/40">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 dark:bg-blue-600/20 flex items-center justify-center">
+                <Linkedin className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700 dark:text-blue-400" />
               </div>
+              <DialogTitle className="flex-1 min-w-0 text-base sm:text-xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
+              </DialogTitle>
+              <DialogClose className="shrink-0 border-0 bg-transparent p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md cursor-pointer">
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </div>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
-              {currentCheckpointAccount?.checkpoint?.is_yes_no ? 'Verify your identity' : 'Enter verification code'}
-            </DialogTitle>
-            <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">
+            <DialogDescription className="text-xs sm:text-sm text-gray-500 dark:text-slate-300">
               {currentCheckpointAccount?.checkpoint?.is_yes_no
                 ? 'Approve the sign-in request on your mobile device'
                 : 'We sent a code to complete your sign-in'}
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="px-8 py-6">
+          <div className="px-4 sm:px-8 py-6 overflow-y-auto bg-background dark:bg-[#000724]">
             {currentCheckpointAccount?.checkpoint?.is_yes_no ? (
               <div className="space-y-5">
                 {/* Phone icon + prompt */}
@@ -1207,7 +1210,7 @@ export const LinkedInIntegration: React.FC = () => {
                     setOtp(value);
                     setOtpError(null);
                   }}
-                  className={`w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2] focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono ${autofillClasses}`}
+                  className={`${inputClass} px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono`}
                   maxLength={6}
                   autoFocus
                 />
@@ -1226,15 +1229,15 @@ export const LinkedInIntegration: React.FC = () => {
             )}
           </div>
 
-          <DialogActions className="px-8 pb-8 pt-4">
+          <DialogActions className="px-4 sm:px-8 py-4 bg-white dark:bg-[#081331] border-gray-200 dark:border-blue-950/40">
             {!currentCheckpointAccount?.checkpoint?.is_yes_no && (
               <Button
                 onClick={handleVerifyOtp}
                 disabled={verifyingOtp || otp.length !== 6}
                 className={`w-full py-3 rounded-full text-sm font-semibold transition-colors ${
                   verifyingOtp || otp.length !== 6
-                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'bg-[#0A66C2] text-white hover:bg-[#004182]'
+                    ? 'bg-gray-200 dark:bg-[#071131] text-gray-400 dark:text-slate-400 cursor-not-allowed'
+                    : 'bg-[#0b1957] hover:bg-[#122572] dark:bg-blue-600 dark:hover:bg-blue-500 text-white'
                 }`}
               >
                 {verifyingOtp ? (

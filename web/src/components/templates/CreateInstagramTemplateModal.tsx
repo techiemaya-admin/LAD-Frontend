@@ -101,28 +101,30 @@ export default function CreateInstagramTemplateModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent showCloseButton={false} overlayClassName="bg-black/50 dark:bg-[#000724]/80 backdrop-blur-xs" className="w-[calc(100%-2rem)] sm:max-w-[660px] sm:w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000724] text-gray-900 dark:text-white p-0 rounded-2xl sm:rounded-3xl shadow-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between px-4 pt-5 pb-4 sm:px-8 sm:pt-7 sm:pb-5 border-b border-gray-200 dark:border-blue-900/40 bg-white dark:bg-[#000724] shrink-0">
-          <div className="flex items-center gap-3 sm:gap-3.5">
-            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 shadow-md shadow-[#DD2A7B]/25 shrink-0">
+      <DialogContent showCloseButton={false} overlayClassName="bg-black/50 dark:bg-[#000724]/80 backdrop-blur-xs" className="w-[calc(100%-2rem)] sm:max-w-[660px] sm:w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#000724] text-gray-900 dark:text-white p-0 rounded-2xl sm:rounded-3xl shadow-2xl">
+        <DialogHeader className="px-4 py-4 sm:px-8 sm:py-5 border-b border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331] shrink-0">
+          <div className="flex items-start gap-3 sm:gap-3.5 w-full">
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 shadow-md shadow-[#DD2A7B]/25 shrink-0 mt-0.5">
               <Instagram className="h-5 w-5 text-white" />
             </div>
-            <div className="flex flex-col">
-              <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                {editing ? 'Edit Instagram Template' : 'Create Instagram Template'}
-              </DialogTitle>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+                  {editing ? 'Edit Instagram Template' : 'Create Instagram Template'}
+                </DialogTitle>
+                <DialogClose className="border-0 bg-transparent p-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white opacity-70 hover:opacity-100 transition-opacity focus:outline-none cursor-pointer shrink-0">
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span className="sr-only">Close</span>
+                </DialogClose>
+              </div>
               <DialogDescription className="text-xs sm:text-sm text-gray-500 dark:text-slate-300 mt-0.5">
                 Reusable Instagram DM - no Meta approval required
               </DialogDescription>
             </div>
           </div>
-          <DialogClose className="p-1.5 sm:p-2 rounded-lg border border-gray-200 dark:border-blue-900/50 bg-gray-50 dark:bg-[#000c3b] text-gray-500 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-blue-950/60 transition-colors focus:outline-none cursor-pointer">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
         </DialogHeader>
 
-        <div className="space-y-5 px-4 py-5 sm:px-8 sm:py-6 bg-white dark:bg-[#000724]">
+        <div className="space-y-5 px-4 py-5 sm:px-8 sm:py-6 bg-background dark:bg-[#000724]">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="ig-name" className="text-sm font-medium text-gray-900 dark:text-white">
@@ -133,7 +135,7 @@ export default function CreateInstagramTemplateModal({
               placeholder="e.g. Welcome DM"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={`w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
+              className={`w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-950/40 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0 ${errors.name ? 'border-red-500' : ''}`}
             />
             {errors.name && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -158,7 +160,7 @@ export default function CreateInstagramTemplateModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
-              className={`w-full bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#DD2A7B] focus:ring-[#DD2A7B] ${errors.content ? 'border-red-500' : ''}`}
+              className={`w-full bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-950/40 placeholder:text-gray-400 dark:placeholder:text-slate-400 resize-none text-sm leading-relaxed p-3.5 rounded-xl focus:border-[#DD2A7B] focus:ring-[#DD2A7B] ${errors.content ? 'border-red-500' : ''}`}
             />
             {errors.content && (
               <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
@@ -166,9 +168,9 @@ export default function CreateInstagramTemplateModal({
               </p>
             )}
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5">
-              Use <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-900/50 font-mono text-xs">{'{{first_name}}'}</code>,{' '}
-              <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-900/50 font-mono text-xs">{'{{username}}'}</code>,{' '}
-              <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-900/50 font-mono text-xs">{'{{company}}'}</code> for personalization.
+              Use <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-950/40 font-mono text-xs">{'{{first_name}}'}</code>,{' '}
+              <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-950/40 font-mono text-xs">{'{{username}}'}</code>,{' '}
+              <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-blue-950/60 text-[#DD2A7B] dark:text-[#38BDF8] border border-gray-200 dark:border-blue-950/40 font-mono text-xs">{'{{company}}'}</code> for personalization.
             </p>
           </div>
 
@@ -180,7 +182,7 @@ export default function CreateInstagramTemplateModal({
               placeholder="https://… image or video to attach"
               value={mediaUrl}
               onChange={(e) => setMediaUrl(e.target.value)}
-              className="w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
+              className="w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-950/40 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
             />
           </div>
 
@@ -192,12 +194,12 @@ export default function CreateInstagramTemplateModal({
               placeholder="Internal note about this template"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-11 bg-white dark:bg-[#000c3b] text-gray-900 dark:text-white border-gray-200 dark:border-blue-900/50 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
+              className="w-full h-11 bg-white dark:bg-[#071131] text-gray-900 dark:text-white border-gray-200 dark:border-blue-950/40 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-[#DD2A7B] focus:ring-[#DD2A7B] rounded-lg min-w-0"
             />
           </div>
 
           {/* Default toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-900/50 rounded-xl bg-gray-50/50 dark:bg-[#000c3b]">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-blue-950/40 rounded-xl bg-white dark:bg-[#071131]">
             <div className="space-y-0.5">
               <Label htmlFor="ig-default" className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">Set as Default Template</Label>
               <p className="text-xs text-gray-500 dark:text-slate-400">Used automatically for new campaigns</p>
@@ -206,7 +208,7 @@ export default function CreateInstagramTemplateModal({
           </div>
         </div>
 
-        <DialogFooter className="px-4 py-4 sm:px-8 sm:py-5 border-t border-gray-200 dark:border-blue-900/40 bg-gray-50/50 dark:bg-[#000724] flex justify-end items-center sm:justify-end">
+        <DialogFooter className="px-4 py-4 sm:px-8 sm:py-5 border-t border-gray-200 dark:border-blue-950/40 bg-white dark:bg-[#081331] flex justify-end items-center sm:justify-end">
           <Button
             type="button"
             onClick={handleSave}
