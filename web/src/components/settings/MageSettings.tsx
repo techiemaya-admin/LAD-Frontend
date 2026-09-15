@@ -57,8 +57,12 @@ import {
 } from '@/components/voice-agent/playground/builder-steps/AgentBuilderBrandDNA';
 import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationModal';
 
+// Brand DNA, auto media and the gallery are served by the media generation
+// service (LAD-MAGe); without its URL set, by the playground worker as before.
 const WORKER_URL =
-  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+  process.env.NEXT_PUBLIC_MEDIA_GEN_URL ||
+  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL ||
+  'http://localhost:8080';
 
 /**
  * What to show for a profile: its website address, or the folder name when the
