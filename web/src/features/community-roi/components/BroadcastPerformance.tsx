@@ -15,6 +15,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // ─── Public data contract ────────────────────────────────────────────────────
 export type Template = {
@@ -155,14 +162,12 @@ const SCOPED_CSS = `
   min-width: 0;
 }
 .lad-bp-select-pill:hover { background: ${C.surface2}; }
-.lad-bp-select-pill:focus-within {
-  border-color: ${C.ink};
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+.lad-bp-select-pill:focus,
+.lad-bp-select-pill:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
-.lad-bp-select-pill > select {
-  appearance: none; -webkit-appearance: none; -moz-appearance: none;
-  border: 0; outline: 0; padding: 0;
-  background: transparent;
+.lad-bp-select-pill [data-slot="select-value"] {
   font-family: ${FONT_MONO};
   font-variant-numeric: tabular-nums;
   font-size: 14px;
@@ -172,12 +177,9 @@ const SCOPED_CSS = `
   width: 100%;
   text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
 }
-.lad-bp-select-pill > .chev {
-  position: absolute;
-  right: 12px;
-  display: flex; align-items: center;
-  color: ${C.muted};
-  pointer-events: none;
+.lad-bp-select-pill > svg {
+  width: 14px; height: 14px;
+  color: ${C.muted}; opacity: 1;
 }
 
 /* Subtitle: floats below the dropdown without contributing to the row's
@@ -248,11 +250,7 @@ const SCOPED_CSS = `
 .dark .lad-bp-select-pill:hover {
   background: #0c1a42;
 }
-.dark .lad-bp-select-pill > select {
-  color: #f8fafc;
-}
-.dark .lad-bp-select-pill > select option {
-  background: #071131;
+.dark .lad-bp-select-pill [data-slot="select-value"] {
   color: #f8fafc;
 }
 .dark .lad-bp-bar {
@@ -264,16 +262,6 @@ const SCOPED_CSS = `
   color: #94a3b8;
 }
 `;
-
-// ─── Chevron (inline SVG, 14px) ──────────────────────────────────────────────
-function Chevron() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
-      <path d="M3 5.5L7 9.5L11 5.5" fill="none" stroke="currentColor"
-            strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 // ─── Stacked delivery bar ────────────────────────────────────────────────────
 function DeliveryBar({ t }: { t: Template }) {
@@ -358,11 +346,9 @@ export function BroadcastPerformance({
   const readRate  = readDenom > 0 ? t.read / readDenom : 0;
   const band      = bandFor(readRate);
 
-  const handleChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
-    const id = e.target.value;
+  const handleChange = (id: string) => {
     setSelectedId(id);
     onSelect?.(id);
-    e.currentTarget.focus();
   };
 
   return (
@@ -433,21 +419,22 @@ export function BroadcastPerformance({
                 Select template
               </label>
               <div className="lad-bp-template-wrap">
-                <div className="lad-bp-select-pill">
-                  <select
+                <Select value={selectedId} onValueChange={handleChange}>
+                  <SelectTrigger
                     id="lad-bp-template-select"
-                    value={selectedId}
-                    onChange={handleChange}
+                    className="lad-bp-select-pill focus-visible:ring-0 focus-visible:ring-offset-0"
                     title={t.name}
                   >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
                     {templates.map(opt => (
-                      <option key={opt.id} value={opt.id}>
+                      <SelectItem key={opt.id} value={opt.id}>
                         {opt.channel ? `${opt.channel} · ${opt.name}` : opt.name}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                  <span className="chev"><Chevron /></span>
-                </div>
+                  </SelectContent>
+                </Select>
                 <div className="lad-bp-template-sub">
                   <span className="lad-bp-mono" style={{ color: C.ink2 }}>
                     {nf.format(t.recipients)}
@@ -485,7 +472,7 @@ export function BroadcastPerformance({
             </td>
             <td
               className="lad-bp-col-num"
-              style={{ color: t.read > 0 ? C.read : C.ink }}
+              style={t.read > 0 ? { color: C.read } : undefined}
               aria-label={`Read: ${nf.format(t.read)} messages`}
             >
               <span key={selectedId + '-read'} className="lad-bp-anim">{nf.format(t.read)}</span>
