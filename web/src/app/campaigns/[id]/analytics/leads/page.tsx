@@ -12,6 +12,7 @@ import { useCampaignLeads, useLeadsSummaries, type CampaignLead, useCampaign } f
 import { apiGet, apiPost, proxyPost } from '@/lib/api';
 import { EmployeeCard, ProfileSummaryDialog } from '@/components/campaigns';
 import { safeStorage } from '@lad/shared/storage';  
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 // Extended CampaignLead interface for UI needs
 interface ExtendedCampaignLead extends CampaignLead {
   lead_data?: any;
@@ -45,6 +46,7 @@ export default function CampaignLeadsPage() {
   const campaignId = params.id as string;
   const { push } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery.trim(), 300);
 
   // Fetch campaign to get campaign_type
   const { campaign, loading: campaignLoading } = useCampaign(campaignId);
@@ -59,10 +61,10 @@ export default function CampaignLeadsPage() {
   const { leads: campaignLeads, total, loading: leadsLoading, error: leadsError, refetch } = useCampaignLeads(
     campaignId,
     useMemo(() => ({
-      search: searchQuery || undefined,
+      search: debouncedSearchQuery || undefined,
       filter: filterParams as 'all' | 'sent' | 'connected' | 'replied',
       limit: 1000,
-    }), [searchQuery, filterParams])
+    }), [debouncedSearchQuery, filterParams])
   );
 
   // Convert to extended type for UI
@@ -466,24 +468,23 @@ export default function CampaignLeadsPage() {
     <div className="w-full h-screen overflow-auto bg-slate-50 dark:bg-[#000724]">
       <div className="p-6 pb-12">
         {/* Header */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
-              className="min-w-auto dark:bg-[#071131] dark:border-[#1e293b] dark:text-white"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-            </Button>
-            <div>
-              <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
-                {campaign?.name || 'Campaign Leads'}
-              </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
-                {total} {filterParams !== 'all' ? FILTER_LABELS[filterParams] ?? filterParams : ''} leads
-                {total > filteredLeads.length && ` (showing ${filteredLeads.length})`}
-              </p>
-            </div>
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push(`/campaigns/${campaignId}/analytics`)}
+            className="h-8 w-8 text-[#1E293B] dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <div className="mt-2">
+            <h4 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+              {campaign?.name || 'Campaign Leads'}
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              {total} {filterParams !== 'all' ? FILTER_LABELS[filterParams] ?? filterParams : ''} leads
+              {total > filteredLeads.length && ` (showing ${filteredLeads.length})`}
+            </p>
           </div>
         </div>
 
@@ -621,13 +622,15 @@ export default function CampaignLeadsPage() {
 
       {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
       <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-        <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-[#0b1957] dark:text-white">
-              <Send className="w-5 h-5" />
-              Manual Follow-up
+        <DialogContent className="w-[calc(100%-1.5rem)] max-w-[calc(100%-1.5rem)] sm:w-full sm:max-w-2xl bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden [&>[data-slot=dialog-close]]:top-5 sm:[&>[data-slot=dialog-close]]:top-6">
+          <DialogHeader className="shrink-0 pr-12 sm:pr-16">
+            <DialogTitle className="text-lg sm:text-2xl text-[#0b1957] dark:text-white">
+              <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                Manual Follow-up
+              </span>
               {followupContext?.leadName && (
-                <span className="text-slate-500 dark:text-slate-400 font-normal text-base ml-1">
+                <span className="block text-slate-500 dark:text-slate-400 font-normal text-sm sm:text-base mt-1">
                   → {followupContext.leadName}
                   {followupContext.company ? `, ${followupContext.company}` : ''}
                 </span>
@@ -652,7 +655,7 @@ export default function CampaignLeadsPage() {
                       if (followupLead) openFollowupDialog(followupLead, ch.key);
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                  className={`flex flex-1 sm:flex-none items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold border transition-all ${
                     followupChannel === ch.key
                       ? 'bg-[#0b1957] dark:bg-blue-600 text-white border-[#0b1957] dark:border-blue-600 shadow-sm'
                       : 'bg-white dark:bg-[#071131] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1e293b]/60 hover:border-[#0b1957] hover:text-[#0b1957] dark:hover:border-blue-500 dark:hover:text-white dark:hover:bg-[#0e1d4d]'
@@ -803,7 +806,7 @@ export default function CampaignLeadsPage() {
             <Button
               onClick={sendFollowup}
               disabled={followupSending || followupPreviewing || !followupMessage.trim()}
-              className="bg-[#0b1957] dark:bg-blue-600 hover:bg-[#1a2d8f] dark:hover:bg-blue-500 text-white gap-2"
+              className="bg-[#0b1957] dark:bg-blue-600 hover:bg-[#1a2d8f] dark:hover:bg-blue-500 text-xs sm:text-sm text-white gap-1.5 sm:gap-2"
             >
               {followupSending ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>

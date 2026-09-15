@@ -313,6 +313,7 @@ export const getCampaignLeadsOptions = (
   queryOptions({
     queryKey: campaignKeys.leads(campaignId, filters),
     queryFn: () => getCampaignLeads(campaignId, filters),
+    placeholderData: previousData => previousData,
     staleTime: 3 * 60 * 1000, // 3 minutes
     gcTime: 8 * 60 * 1000,
     enabled: !!campaignId,
