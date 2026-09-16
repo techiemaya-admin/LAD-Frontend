@@ -16,6 +16,12 @@ export async function GET(req: NextRequest) {
   return Response.json({
     gmail:   { connected: !!gmailData?.connected,   email: gmailData?.email   || null },
     outlook: { connected: !!outlookData?.connected, email: outlookData?.email || null },
-    custom:  { connected: !!customData?.connected,  email: customData?.email  || null },
+    custom:  {
+      connected: !!customData?.connected,
+      email: customData?.email || null,
+      // Inbox sync (IMAP) state - null when never set up - so the Email
+      // channel can say why replies are not showing.
+      imap: customData?.imap ?? null,
+    },
   });
 }

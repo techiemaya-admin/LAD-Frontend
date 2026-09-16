@@ -4,8 +4,9 @@
  * Custom SMTP / IMAP integration tile.
  *
  * For self-hosted webmail (Roundcube, Snappymail, cPanel mail), Zoho, Yandex,
- * Fastmail, and any other mailbox NOT federated with Google/Microsoft. Outbound
- * (SMTP) only - IMAP inbound parity is a separate, future feature.
+ * Fastmail, and any other mailbox NOT federated with Google/Microsoft. SMTP
+ * sends; optional IMAP "inbox sync" reads replies from leads into the Email
+ * channel's Inbox (backend CustomImapInboundService polls every few minutes).
  *
  * Flow:
  *   1. User fills SMTP host/port/secure/user/password + From address/name.
@@ -37,7 +38,22 @@ const DEFAULT_FORM = {
   password:     '',
   from_address: '',
   display_name: '',
+  // Inbox sync (IMAP). Same login as SMTP; host is guessed from the SMTP host
+  // (smtp.zoho.com → imap.zoho.com) unless the user edits it.
+  imap_enabled: true,
+  imap_host:    '',
+  imap_port:    '993',
+  imap_secure:  true,
 };
+
+interface ImapStatus {
+  host: string;
+  port: number;
+  secure: boolean;
+  status: 'ok' | 'error' | 'pending' | string;
+  error: string | null;
+  checked_at: string | null;
+}
 
 interface CustomStatus {
   connected: boolean;
@@ -45,6 +61,16 @@ interface CustomStatus {
   display_name?: string;
   host?: string;
   port?: number;
+  /** null = inbox sync never set up */
+  imap?: ImapStatus | null;
+  suggested_imap_host?: string;
+}
+
+/** smtp.zoho.com → imap.zoho.com; mail.example.com stays (cPanel serves both). */
+function guessImapHost(smtpHost: string): string {
+  const h = smtpHost.trim().toLowerCase();
+  if (/^smtp[.-]/.test(h)) return h.replace(/^smtp/, 'imap');
+  return h;
 }
 
 interface Props {
@@ -62,6 +88,38 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Inbox-sync panel on the connected card (set up / change / turn off IMAP
+  // without re-entering the SMTP password).
+  const [imapEdit, setImapEdit] = useState(false);
+  const [imapForm, setImapForm] = useState({ host: '', port: '993', secure: true });
+  const [imapSaving, setImapSaving] = useState(false);
+  const [imapError, setImapError] = useState<string | null>(null);
+
+  const handleSaveImap = async (enable: boolean) => {
+    setImapSaving(true);
+    setImapError(null);
+    try {
+      const r = await fetchWithTenant('/api/social-integration/email/custom/imap', {
+        method: 'POST',
+        body: JSON.stringify(enable ? {
+          imap_host: imapForm.host.trim(),
+          imap_port: Number(imapForm.port) || 993,
+          imap_secure: imapForm.secure,
+        } : { imap_host: '' }),
+      });
+      const data = await r.json();
+      if (r.ok && data.success) {
+        setImapEdit(false);
+        await refresh();
+      } else {
+        setImapError(data.message || data.error || 'Could not save inbox sync settings.');
+      }
+    } catch (e) {
+      setImapError(String(e));
+    } finally {
+      setImapSaving(false);
+    }
+  };
 
   // Stash onStatusChange in a ref so `refresh` doesn't take it as a dep.
   // Without this, the parent's inline arrow `onStatusChange={...}` would be a
@@ -148,6 +206,11 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
           password:     form.password,
           from_address: form.from_address || form.username,
           display_name: form.display_name,
+          ...(form.imap_enabled ? {
+            imap_host:   form.imap_host || guessImapHost(form.host),
+            imap_port:   Number(form.imap_port) || 993,
+            imap_secure: form.imap_secure,
+          } : {}),
         }),
       });
       const data = await r.json();
@@ -236,6 +299,86 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
               <Button variant="outline" size="sm" onClick={handleDisconnect}>
                 Disconnect
               </Button>
+            </div>
+
+            {/* Inbox sync (IMAP): replies from leads → Email channel Inbox */}
+            <div className="rounded-lg border bg-background p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                {status.imap?.status === 'error'
+                  ? <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  : status.imap
+                    ? <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    : <Server className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Inbox sync</p>
+                  {status.imap ? (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      IMAP: {status.imap.host}:{status.imap.port}
+                      {status.imap.status === 'error'
+                        ? <span className="text-red-600"> · login failed{status.imap.error ? `: ${status.imap.error}` : ''}</span>
+                        : status.imap.checked_at
+                          ? <span> · last checked {new Date(status.imap.checked_at).toLocaleString()}</span>
+                          : <span> · first check within a few minutes</span>}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Off - replies from leads will not appear in the Email channel Inbox. Uses the same login as SMTP.
+                    </p>
+                  )}
+                </div>
+                {!imapEdit && (
+                  <div className="flex gap-1.5">
+                    {status.imap && (
+                      <Button variant="ghost" size="sm" disabled={imapSaving} onClick={() => handleSaveImap(false)}>Turn off</Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setImapForm({
+                        host: status.imap?.host || status.suggested_imap_host || guessImapHost(status.host || ''),
+                        port: String(status.imap?.port || 993),
+                        secure: status.imap ? status.imap.secure : true,
+                      });
+                      setImapError(null);
+                      setImapEdit(true);
+                    }}>{status.imap ? 'Change' : 'Set up'}</Button>
+                  </div>
+                )}
+              </div>
+              {imapEdit && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-medium text-muted-foreground">IMAP host</label>
+                      <Input placeholder="imap.zoho.com" value={imapForm.host}
+                        onChange={e => setImapForm(f => ({ ...f, host: e.target.value }))}
+                        className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Port</label>
+                      <Input type="number" placeholder="993" value={imapForm.port}
+                        onChange={e => setImapForm(f => ({ ...f, port: e.target.value }))}
+                        className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button type="button" onClick={() => setImapForm(f => ({ ...f, secure: !f.secure, port: !f.secure ? '993' : '143' }))}
+                      className={`px-2.5 py-1 rounded-full border transition-colors ${imapForm.secure ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-muted/50 border-border text-muted-foreground'}`}>
+                      {imapForm.secure ? 'IMAPS (TLS) on 993' : 'STARTTLS on 143'}
+                    </button>
+                    <span className="text-muted-foreground">Nearly every provider uses 993.</span>
+                  </div>
+                  {imapError && (
+                    <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2 border text-red-700 bg-red-50 border-red-200">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" /><span>{imapError}</span>
+                    </div>
+                  )}
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" disabled={imapSaving} onClick={() => setImapEdit(false)}>Cancel</Button>
+                    <Button size="sm" disabled={imapSaving || !imapForm.host.trim()} onClick={() => handleSaveImap(true)}>
+                      {imapSaving ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Testing…</> : 'Test & save'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -360,6 +503,39 @@ export const CustomEmailIntegration: React.FC<Props> = ({ onStatusChange }) => {
                   className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
                 />
               </div>
+            </div>
+
+            {/* Inbox sync (IMAP) - replies from leads land in the Email channel Inbox */}
+            <div className="rounded-lg border p-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" checked={form.imap_enabled}
+                  onChange={e => setForm(f => ({ ...f, imap_enabled: e.target.checked }))} />
+                Also read replies (inbox sync via IMAP)
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Replies from leads show up in the Email channel Inbox and count as replies on your campaigns.
+                Same username and password as SMTP. Only mail from people you have emailed is read.
+              </p>
+              {form.imap_enabled && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">IMAP host</label>
+                    <Input
+                      placeholder={guessImapHost(form.host) || 'imap.example.com'}
+                      value={form.imap_host}
+                      onChange={e => setForm(f => ({ ...f, imap_host: e.target.value }))}
+                      className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Port</label>
+                    <Input type="number" placeholder="993" value={form.imap_port}
+                      onChange={e => setForm(f => ({ ...f, imap_port: e.target.value }))}
+                      className="mt-1 border-gray-200 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-[#0B1957] dark:focus:border-[#2B7CFF]"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Test result + error banners */}
