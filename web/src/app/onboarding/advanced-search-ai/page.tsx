@@ -1204,6 +1204,18 @@ const EDUCATION_OPTIONS = ['MBA', 'Bachelor\'s', 'Master\'s', 'PhD', 'Bootcamp',
 /* How long we will hold the transcript hostage waiting for the tidy-up. */
 const BEAUTIFY_TIMEOUT_MS = 4000;
 
+// How long a half-finished media journey is kept in this browser. Long enough
+// to survive a refresh or signing in again, short enough that coming back
+// later opens a clean page instead of the last journey.
+const MEDIA_JOURNEY_CACHE_MS = 30 * 60 * 1000;
+
+function clearCachedMediaJourney() {
+    for (const key of ['mrlad_media_mode', 'mrlad_active_media_session_id', 'mrlad_media_messages',
+                       'mrlad_chat_messages', 'mrlad_cp_step', 'mrlad_media_saved_at']) {
+        localStorage.removeItem(key);
+    }
+}
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════ */
@@ -1757,13 +1769,10 @@ export default function AdvancedSearchAIPage() {
             localStorage.setItem('mrlad_media_messages', JSON.stringify(mediaMessages));
             localStorage.setItem('mrlad_chat_messages', JSON.stringify(messages));
             localStorage.setItem('mrlad_cp_step', String(cpStep));
+            localStorage.setItem('mrlad_media_saved_at', String(Date.now()));
         } else {
             if (!mediaMode) {
-                localStorage.removeItem('mrlad_media_mode');
-                localStorage.removeItem('mrlad_active_media_session_id');
-                localStorage.removeItem('mrlad_media_messages');
-                localStorage.removeItem('mrlad_chat_messages');
-                localStorage.removeItem('mrlad_cp_step');
+                clearCachedMediaJourney();
             }
         }
     }, [mediaMode, mb.sessionId, mediaMessages, messages, cpStep, isHydrated]);
@@ -1772,6 +1781,17 @@ export default function AdvancedSearchAIPage() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         
+        const savedAt = Number(localStorage.getItem('mrlad_media_saved_at') || 0);
+        const isRecent = savedAt > 0 && Date.now() - savedAt < MEDIA_JOURNEY_CACHE_MS;
+        if (!isRecent) {
+            // Kept so a refresh, or signing in again after the token expired, drops
+            // you back where you were. Older than that and you are starting
+            // something new, so do not reopen the last journey over the page.
+            clearCachedMediaJourney();
+            setIsHydrated(true);
+            return;
+        }
+
         const cachedMediaMode = localStorage.getItem('mrlad_media_mode') === 'true';
         const cachedSessionId = localStorage.getItem('mrlad_active_media_session_id');
         const cachedMediaMessages = localStorage.getItem('mrlad_media_messages');
@@ -1794,11 +1814,7 @@ export default function AdvancedSearchAIPage() {
                 setIsHydrated(true);
             }).catch((err) => {
                 console.error("[SessionHydrate] Cached session validation failed, discarding cache", err);
-                localStorage.removeItem('mrlad_media_mode');
-                localStorage.removeItem('mrlad_active_media_session_id');
-                localStorage.removeItem('mrlad_media_messages');
-                localStorage.removeItem('mrlad_chat_messages');
-                localStorage.removeItem('mrlad_cp_step');
+                clearCachedMediaJourney();
                 setIsHydrated(true);
             });
         } else {
