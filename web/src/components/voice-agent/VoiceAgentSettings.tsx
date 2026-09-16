@@ -445,6 +445,7 @@ export function VoiceAgentSettings() {
                   <FormSkeleton />
                 ) : (
                   <AgentForm
+                    agentId={selectedAgentId}
                     formData={formData}
                     errors={errors}
                     isDirty={isDirty}
