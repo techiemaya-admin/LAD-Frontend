@@ -135,6 +135,8 @@ export function getNodeIcon(type: StepType, size: string = 'w-5 h-5'): React.Rea
   if (type === 'landing_page') return <LayoutTemplate className={size} />;
   if (type === 'linkedin_content') return <PenTool className={size} />;
   if (type === 'post_approval') return <ShieldCheck className={size} />;
+  if (type === 'comment_approval') return <ShieldCheck className={size} />;
+  if (type === 'linkedin_post_engage') return <MessageCircle className={size} />;
   if (type === 'linkedin_post') return <Megaphone className={size} />;
   if (type === 'instagram_post') return <Instagram className={size} />;
   if (type === 'human_task') return <UserCheck className={size} />;

@@ -83,6 +83,8 @@ const getRequiredFields = (stepType: StepType): string[] => {
     landing_page: [],
     linkedin_content: [],
     post_approval: [],
+    linkedin_post_engage: [],
+    comment_approval: [],
     web_scrape: [],
     web_research: [],
     lead_score: [],

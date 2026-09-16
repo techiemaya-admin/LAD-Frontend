@@ -131,6 +131,8 @@ function chipLabel(type: string): string {
   if (type === 'web_scrape') return 'Scrape';
   if (type === 'web_research') return 'Research';
   if (type === 'lead_score') return 'Score';
+  if (type === 'linkedin_post_engage') return 'Comment on posts';
+  if (type === 'comment_approval') return 'Approval';
   if (type === 'media_generation') return 'AI media';
   if (type === 'export_results') return 'Export';
   if (type === 'analytics_report') return 'Report';

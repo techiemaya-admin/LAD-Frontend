@@ -32,6 +32,14 @@ export const AUTOPOST_STEP_ID = 'linkedin-post-node';
 // All three merge into ONE campaigns.config.autopost object at launch.
 export const CONTENT_STEP_ID = 'linkedin-content-node';
 export const APPROVAL_STEP_ID = 'post-approval-node';
+/**
+ * Network Engagement: watch monitored connections' posts and comment
+ * (POST_ENGAGE), with each comment held for a WhatsApp tap (COMMENT_APPROVAL).
+ * Both compile into campaigns.config.post_engagement — campaign-level, like
+ * autopost — and are swept by LinkedInPostMonitorService.
+ */
+export const POST_ENGAGE_STEP_ID = 'post-engage-node';
+export const COMMENT_APPROVAL_STEP_ID = 'comment-approval-node';
 /** Instagram auto-post. Campaign-level: ONE post per campaign, not per lead. */
 export const IG_AUTOPOST_STEP_ID = 'instagram-post-node';
 /** Human task. Per-lead: pauses the lead until a person confirms. */
@@ -66,7 +74,7 @@ export const HTTP_STEP_ID = 'http-request-node';
 export const MACRO_STEP_IDS: readonly string[] = [
   FOLLOWUP_STEP_ID, ANALYTICS_STEP_ID, ZOHO_UPDATE_STEP_ID, MEDIA_STEP_ID,
   MULTICOND_STEP_ID, AI_STEP_ID, ENRICH_STEP_ID, EXPORT_STEP_ID, AUTOPOST_STEP_ID,
-  CONTENT_STEP_ID, APPROVAL_STEP_ID,
+  CONTENT_STEP_ID, APPROVAL_STEP_ID, POST_ENGAGE_STEP_ID, COMMENT_APPROVAL_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
   SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID,
   IG_AUTOPOST_STEP_ID, LANDING_STEP_ID,
@@ -469,24 +477,29 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     source: {
       key: 'linkedin_connections',
       title: 'Your LinkedIn connections', description: 'Decision-makers already in your network',
-      // Post engagement lives on the source: the campaign watches every
-      // enrolled connection for new posts and asks before commenting.
-      cfg: {
-        decision_maker_titles: '', min_seniority: 'director', keywords: '', min_icp_score: '50',
-        monitor_posts: true, comment_mode: 'approve', like_posts: true, notify_phone: '',
-      },
+      cfg: { decision_maker_titles: '', min_seniority: 'director', keywords: '', min_icp_score: '50' },
     },
     inputs: [
       { key: 'decision_maker_titles', question: 'Which **titles** count as decision-makers for you? Comma-separate several - e.g. "Founder, CEO, Managing Director". Say **skip** to use Director-and-above.', optional: true },
       { key: 'keywords', question: 'Any **industry keywords** their headline should contain? (e.g. "real estate, proptech" - or say **skip**)', optional: true },
     ],
     // Nobody here needs an invite or a cold message. The score node writes the
-    // hot/warm/cold band the tenant can filter on; the engagement itself is
-    // campaign-level and runs in the background (LinkedInPostMonitorService),
-    // so this is a complete pipeline with no outreach step - the builder's
-    // launch guard exempts a connections campaign with engagement on.
+    // hot/warm/cold band; the two engagement nodes are campaign-level macros
+    // (like content → approval → post) that compile into config.post_engagement
+    // and run in the background (LinkedInPostMonitorService). A complete
+    // pipeline with no outreach step - the launch guard exempts it.
     nodes: [
       { type: 'lead_score', macroId: SCORE_STEP_ID, title: 'Score the fit', description: 'Hot / warm / cold from seniority and ICP' },
+      {
+        type: 'linkedin_post_engage', macroId: POST_ENGAGE_STEP_ID,
+        title: 'Comment on new posts', description: 'Watch their posts · AI-drafted comment · like',
+        cfg: { like_posts: true, min_icp_score: '50' },
+      },
+      {
+        type: 'comment_approval', macroId: COMMENT_APPROVAL_STEP_ID,
+        title: 'Approval', description: 'WhatsApp · approve, or write your own',
+        cfg: { approval_to: '' },
+      },
     ],
   },
   {

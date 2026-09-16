@@ -107,6 +107,7 @@ import {
   SOURCE_STEP_ID, FOLLOWUP_STEP_ID, ANALYTICS_STEP_ID, ZOHO_UPDATE_STEP_ID,
   MEDIA_STEP_ID, MULTICOND_STEP_ID, AI_STEP_ID, ENRICH_STEP_ID, EXPORT_STEP_ID,
   AUTOPOST_STEP_ID, CONTENT_STEP_ID, APPROVAL_STEP_ID, AI_DEFAULT_INSTRUCTION, EXPORT_DEFAULT_COLUMNS,
+  POST_ENGAGE_STEP_ID, COMMENT_APPROVAL_STEP_ID,
   IG_AUTOPOST_STEP_ID, HUMAN_TASK_STEP_ID, REPORT_STEP_ID,
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
@@ -309,7 +310,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   file_import: "Imports leads from an uploaded CSV/Excel file. Needs a file with at least one column mapped to name, company, email, or LinkedIn URL. Rows with no LinkedIn URL are resolved automatically by name+company at send time - some may never match, and those retry indefinitely rather than fail. Map a LinkedIn URL column directly when you have one.",
   linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
   linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
-  linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed: with post engagement on, the campaign watches their new posts and drafts a comment for you to approve or rewrite on WhatsApp. Needs an active LinkedIn account in Settings.',
+  linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed. Pair it with the Comment on new posts + Approval nodes to engage their posts. Needs an active LinkedIn account in Settings.',
   // LinkedIn outreach
   linkedin_connect: "Sends a LinkedIn connection request - no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
   linkedin_message: "Sends a LinkedIn DM - but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
@@ -333,6 +334,8 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [EXPORT_STEP_ID]: 'Sends the final lead list to a file, database, email, WhatsApp, webhook, Sheet, or Slack. Needs at least one destination configured.',
   [AUTOPOST_STEP_ID]: "Publishes on a recurring schedule to the tenant's own LinkedIn feed - not sent to leads. Needs post content from a LinkedIn content node.",
   [CONTENT_STEP_ID]: 'Writes (or AI-generates) the text for the scheduled LinkedIn post.',
+  [POST_ENGAGE_STEP_ID]: "Watches every lead in this campaign for new LinkedIn posts (every few hours) and engages: likes, and an AI-drafted comment. Add the Approval node after it so each comment is sent to you on WhatsApp first - without it, comments post automatically. Meant for the Your LinkedIn connections source: engaging your own network reads as organic; commenting on strangers' posts does not.",
+  [COMMENT_APPROVAL_STEP_ID]: 'Holds each drafted comment for a WhatsApp tap before it is posted. Approve posts the suggestion as written; Reject opens a page where you write your own comment instead, or skip. Needs a Comment on new posts node in this workflow. The approver defaults to your account phone.',
   [APPROVAL_STEP_ID]: 'Holds a post for approval over WhatsApp/email before it publishes. Needs an approver contact, AND a LinkedIn auto-post node in this workflow - approval has nothing to gate without one.',
   // Rewritten against WebIntelStepService.executeWebScrapeStep, which resolves
   // `(stepConfig.url || '').trim() || resolveWebsite(leadData)`. The previous
@@ -2644,7 +2647,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
    */
   const leadConsumption = useMemo(() => {
     const outreachSteps = workflowPreview.filter(
-      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID
+      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID && s.id !== POST_ENGAGE_STEP_ID && s.id !== COMMENT_APPROVAL_STEP_ID
     );
     const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
     const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
@@ -2790,6 +2793,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       setCfg(APPROVAL_STEP_ID, { approval_channel: 'whatsapp', approval_to: '' });
     }
     setEditingId(APPROVAL_STEP_ID);
+  };
+
+  const addPostEngage = () => {
+    if (!workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      addWorkflowStep({ id: POST_ENGAGE_STEP_ID, type: 'linkedin_post_engage', channel: 'linkedin', title: 'Comment on new posts', description: 'Watch their posts · AI-drafted comment · like' });
+      setCfg(POST_ENGAGE_STEP_ID, { like_posts: true, min_icp_score: '50' });
+    }
+    setEditingId(POST_ENGAGE_STEP_ID);
+  };
+
+  const addCommentApproval = () => {
+    if (!workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID)) {
+      addWorkflowStep({ id: COMMENT_APPROVAL_STEP_ID, type: 'comment_approval', channel: 'whatsapp', title: 'Approval', description: 'WhatsApp · approve, or write your own' });
+      setCfg(COMMENT_APPROVAL_STEP_ID, { approval_to: '' });
+    }
+    setEditingId(COMMENT_APPROVAL_STEP_ID);
   };
 
   const addExport = () => {
@@ -3239,6 +3258,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (workflowPreview.some((s) => s.id === APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       issues.push({ id: APPROVAL_STEP_ID, message: 'The Approval node needs a LinkedIn post node - it gates what that node publishes.' });
     }
+    if (workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      issues.push({ id: COMMENT_APPROVAL_STEP_ID, message: 'The comment Approval node needs a Comment on new posts node - it gates the comments that node drafts.' });
+    }
     // Zoho Accounts: an account is a company, so without a target job title the
     // import has nobody to search for and the campaign would launch, run daily
     // and enrol zero leads without ever erroring. Same reasoning as the
@@ -3333,7 +3355,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     // A connections campaign with post engagement on does its work in the
     // background (the monitor cron comments on their posts), so it is a
     // complete pipeline with no outreach step at all - like publisher-only.
-    const engagementOnly = source === 'linkedin_connections' && (configs[SOURCE_STEP_ID]?.monitor_posts !== false);
+    const engagementOnly = workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID);
     if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly && !engagementOnly) { setError('Add at least one outreach step.'); return; }
 
     // InMail needs an entitlement the account may not have. Checking here means
@@ -4069,15 +4091,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           // the connections source writes it: the toggle lives on that drawer,
           // so a value left behind by a switched-away selection cannot enrol
           // a search campaign's strangers into background commenting.
-          ...(source === 'linkedin_connections' && srcCfg.monitor_posts !== false ? {
-            post_engagement: {
-              enabled: true,
-              like: srcCfg.like_posts !== false,
-              comment_mode: srcCfg.comment_mode === 'auto' || srcCfg.comment_mode === 'off' ? srcCfg.comment_mode : 'approve',
-              min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
-              notify_phone: (srcCfg.notify_phone || '').trim() || undefined,
-            },
-          } : {}),
+          ...(workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID) ? (() => {
+            const ec = configs[POST_ENGAGE_STEP_ID] || {};
+            const apc = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) ? (configs[COMMENT_APPROVAL_STEP_ID] || {}) : null;
+            return {
+              post_engagement: {
+                enabled: true,
+                like: ec.like_posts !== false,
+                // The Approval node's presence is the mode: with it every
+                // comment waits for a WhatsApp tap, without it comments post
+                // automatically (supervised). 'off' = like only.
+                comment_mode: ec.comment === 'off' ? 'off' : apc ? 'approve' : 'auto',
+                min_icp_score: Number(ec.min_icp_score) > 0 ? Number(ec.min_icp_score) : 0,
+                notify_phone: (apc?.approval_to || '').trim() || undefined,
+              },
+            };
+          })() : {}),
           ...(source === 'zoho_recurring' ? {
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
@@ -4394,6 +4423,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       macro(HTTP_STEP_ID, 'HTTP request', 'Call any API per lead', <Webhook className="h-4 w-4 text-slate-600" />, 'bg-slate-100 dark:bg-slate-800/50', addHttpRequest, 'Automation & output'),
       macro(CONTENT_STEP_ID, 'LinkedIn content', 'Write or AI-generate a post', <PenTool className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addLinkedInContent, 'Automation & output'),
       macro(APPROVAL_STEP_ID, 'Approval', 'Approve before posting', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addPostApproval, 'Automation & output'),
+      macro(POST_ENGAGE_STEP_ID, 'Comment on new posts', "Engage your connections' posts", <MessageCircle className="h-4 w-4 text-cyan-700" />, 'bg-cyan-50 dark:bg-cyan-950/30', addPostEngage, 'Automation & output'),
+      macro(COMMENT_APPROVAL_STEP_ID, 'Comment approval', 'Approve or rewrite on WhatsApp', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addCommentApproval, 'Automation & output'),
       macro(AUTOPOST_STEP_ID, 'LinkedIn auto-post', 'Recurring post to your feed', <Megaphone className="h-4 w-4 text-[#0077B5]" />, 'bg-sky-50 dark:bg-sky-950/30', addAutopost, 'Automation & output'),
       macro(IG_AUTOPOST_STEP_ID, 'Instagram auto-post', 'Image or Reel · on a schedule', <Instagram className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addInstagramPost, 'Automation & output'),
       macro(REPORT_STEP_ID, 'Audit report', 'PDF · attach or offer', <FileText className="h-4 w-4 text-teal-700" />, 'bg-teal-50 dark:bg-teal-950/30', addReport, 'Automation & output'),
@@ -4539,7 +4570,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isIgPost = editingId === IG_AUTOPOST_STEP_ID;
     const isHumanTask = editingId === HUMAN_TASK_STEP_ID;
     const isReport = editingId === REPORT_STEP_ID;
-    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport;
+    const isPostEngage = editingId === POST_ENGAGE_STEP_ID;
+    const isCommentApproval = editingId === COMMENT_APPROVAL_STEP_ID;
+    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport || isPostEngage || isCommentApproval;
     const visual = isSource
       ? SOURCES.find((s) => s.key === source)
       : isFollowup
@@ -4570,6 +4603,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ? { icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30' }
           : isScore
             ? { icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30' }
+          : isPostEngage
+            ? { icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30' }
+          : isCommentApproval
+            ? { icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30' }
           : isSplit
             ? { icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30' }
           : isSetField
@@ -4590,7 +4627,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-foreground truncate">{editingStep.title}</div>
             <div className="text-xs text-muted-foreground">
-              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
+              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isPostEngage ? 'What to engage' : isCommentApproval ? 'Who approves comments' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
             </div>
           </div>
           <button onClick={() => setEditingId(null)} className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
@@ -4702,42 +4739,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum ICP fit (0&ndash;100)</label>
               <Input type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(editingId, { min_icp_score: e.target.value })} />
               <p className="text-[11px] text-muted-foreground">Scored from seniority, department and your business profile&apos;s target titles/industries. No AI credits are spent.</p></div>
-            <div className="rounded-lg border border-border p-3 space-y-2.5">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-                <input type="checkbox" checked={cfg.monitor_posts !== false} onChange={(e) => setCfg(editingId, { monitor_posts: e.target.checked })} />
-                Watch their posts and engage
-              </label>
-              {cfg.monitor_posts !== false && (<>
-                <div className="space-y-1"><label className="text-xs font-medium text-foreground">When someone posts</label>
-                  <select
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={cfg.comment_mode || 'approve'}
-                    onChange={(e) => setCfg(editingId, { comment_mode: e.target.value })}
-                  >
-                    <option value="approve">Draft a comment and ask me on WhatsApp</option>
-                    <option value="auto">Post an AI comment automatically</option>
-                    <option value="off">Like only, never comment</option>
-                  </select>
-                  {(cfg.comment_mode || 'approve') === 'approve' && (
-                    <p className="text-[11px] text-muted-foreground">You get the post and a suggested comment. Approve posts it; Reject lets you write your own instead, or skip. Unanswered requests expire in 48h.</p>
-                  )}
-                  {cfg.comment_mode === 'auto' && (
-                    <p className="text-[11px] text-amber-700 dark:text-amber-300">Comments go out under your name without review. Every comment still passes a safety check, and the daily engagement cap applies.</p>
-                  )}</div>
-                <label className="flex items-center gap-2 text-xs text-foreground">
-                  <input type="checkbox" checked={cfg.like_posts !== false} onChange={(e) => setCfg(editingId, { like_posts: e.target.checked })} />
-                  Also like the post
-                </label>
-                {(cfg.comment_mode || 'approve') === 'approve' && (
-                  <div className="space-y-1"><label className="text-xs font-medium text-foreground">Send approvals to (optional)</label>
-                    <Input value={cfg.notify_phone || ''} onChange={(e) => setCfg(editingId, { notify_phone: e.target.value })} placeholder="+971 50 000 0000 - defaults to your account phone" /></div>
-                )}
-              </>)}
-            </div>
             <p className="text-xs text-muted-foreground">
               Reviews your connections newest-first, up to {perDay} matches a day, carrying on where it
-              left off until the whole list has been seen. Post engagement keeps running after that, for as
-              long as the campaign is active.
+              left off until the whole list has been seen. Add <strong>Comment on new posts</strong> and
+              <strong> Approval</strong> from the palette to engage their posts; that keeps running after the
+              list is done, for as long as the campaign is active.
             </p>
           </>)}
           {isSource && source === 'own_contacts' && (<>
@@ -5912,6 +5918,69 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 );
               })()}
 
+            </>);
+          })()}
+
+          {isPostEngage && (() => {
+            const eid = editingId!;
+            const hasApproval = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID);
+            const ownNetwork = source === 'linkedin_connections';
+            return (<>
+              <div className="rounded-md border border-cyan-200 bg-cyan-50 dark:border-cyan-900 dark:bg-cyan-950/30 px-3 py-2">
+                <p className="text-[11px] text-cyan-800 dark:text-cyan-300">
+                  Every few hours the campaign checks each lead for a new LinkedIn post (last 14 days,
+                  one post per person per check) and engages it. One engagement per post, ever; a daily
+                  cap keeps the pattern human.
+                </p>
+              </div>
+              {!ownNetwork && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  This source enrols people you are <strong>not</strong> connected to. Commenting on strangers&apos;
+                  posts reads as automation; this node is built for the <strong>Your LinkedIn connections</strong> source.
+                </div>
+              )}
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">When someone posts</label>
+                <CustomSelect className={field} value={cfg.comment === 'off' ? 'off' : 'comment'}
+                  onValueChange={(val) => { setCfg(eid, { comment: val }); updateWorkflowStep(eid, { description: val === 'off' ? 'Watch their posts · like only' : 'Watch their posts · AI-drafted comment · like' }); }}>
+                  <option value="comment">Draft an AI comment</option>
+                  <option value="off">Like only, never comment</option>
+                </CustomSelect></div>
+              {cfg.comment !== 'off' && (hasApproval ? (
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Each draft goes to the <strong>Approval</strong> node: you get the post and the suggested comment on WhatsApp.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  <strong>No Approval node</strong> - comments post automatically under your name (each one still
+                  passes a safety check). <button type="button" className="underline font-semibold" onClick={addCommentApproval}>Add the Approval node</button> to review each comment first.
+                </div>
+              ))}
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input type="checkbox" checked={cfg.like_posts !== false} onChange={(e) => setCfg(eid, { like_posts: e.target.checked })} />
+                Also like the post
+              </label>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only leads with ICP fit at least (0&ndash;100)</label>
+                <input className={field} type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(eid, { min_icp_score: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Uses the ICP score on each lead; leads without one are included.</p></div>
+            </>);
+          })()}
+
+          {isCommentApproval && (() => {
+            const eid = editingId!;
+            return (<>
+              <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-3 py-2">
+                <p className="text-[11px] text-green-800 dark:text-green-300">
+                  Nothing is posted until you tap. You get the post and a suggested comment on WhatsApp:
+                  <strong> Approve</strong> posts it as written; <strong>Reject</strong> opens a page where you
+                  write your own comment instead, or skip.
+                </p>
+              </div>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Approver WhatsApp number (optional)</label>
+                <input className={field} value={cfg.approval_to || ''} onChange={(e) => setCfg(eid, { approval_to: e.target.value })} placeholder="+971500000000 - defaults to your account phone" />
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                A request nobody answers expires after 48 hours and posts nothing - a comment days after the post reads as automation.
+              </p>
             </>);
           })()}
 
@@ -8932,6 +9001,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { id: HTTP_STEP_ID, on: addHttpRequest, icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50', label: 'HTTP request', sub: 'Call any API per lead' },
               { id: CONTENT_STEP_ID, on: addLinkedInContent, icon: <PenTool className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', label: 'LinkedIn content', sub: 'Write or AI-generate the post' },
               { id: APPROVAL_STEP_ID, on: addPostApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Approval', sub: 'Approve on WhatsApp before posting' },
+              { id: POST_ENGAGE_STEP_ID, on: addPostEngage, icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30', label: 'Comment on new posts', sub: "Like + AI comment on your connections' posts" },
+              { id: COMMENT_APPROVAL_STEP_ID, on: addCommentApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Comment approval', sub: 'Approve or write your own on WhatsApp' },
             ]).map((b) => {
               const added2 = workflowPreview.some((s) => s.id === b.id);
               return (
