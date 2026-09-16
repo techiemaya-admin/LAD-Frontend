@@ -1863,6 +1863,9 @@ export default function AdvancedSearchAIPage() {
                     description: m.description,
                     step: m.step,
                     payload: mappedPayload,
+                    // What was attached to the message, so a restored chat still
+                    // shows the picture a person sent or picked, not just its name.
+                    references: m.references,
                     timestamp: new Date(m.timestamp || Date.now())
                 };
             });
