@@ -25,6 +25,8 @@ export type MediaBuilderStep =
   | "gallery";
 
 export interface MediaUiPayload {
+  /** The session this screen and history came from. */
+  session_id?: string;
   step: MediaBuilderStep;
   question?: string;
   description?: string;
@@ -298,6 +300,11 @@ export function useMediaBuilder() {
   const loadSession = useCallback(async (targetSessionId: string) => {
     setStep("loading");
     setError("");
+    // The screen on display and the attachments waiting under it belong to the
+    // session being left. They go before the switch, so nothing from that session
+    // is on screen under this one's id while the load is in flight.
+    setUiPayload(null);
+    setReferences([]);
     setSessionId(targetSessionId);
     sessionIdRef.current = targetSessionId;
     try {
