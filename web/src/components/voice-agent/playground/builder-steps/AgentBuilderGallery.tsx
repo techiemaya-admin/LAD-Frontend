@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ArrowLeft, Play, Download, ExternalLink, Image as ImageIcon, Video, Trash2, Paperclip, Check, ChevronLeft, ChevronRight, Sparkles, Volume2 } from "lucide-react";
+import { X, ArrowLeft, Play, Download, ExternalLink, Image as ImageIcon, Video, Trash2, Paperclip, Check, ChevronLeft, ChevronRight, Sparkles, Volume2, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImageGroup {
@@ -299,7 +299,7 @@ export function AgentBuilderGallery({
     <div className="relative flex flex-col items-center w-[480px] max-w-full h-[620px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
       {/* ── HEADER (CONTEXTUAL OR STANDARD) ── */}
       {hasSelected ? (
-        <div className="w-full flex shrink-0 items-center justify-between p-4 bg-slate-900 text-white z-20 animate-in slide-in-from-top duration-200">
+        <div className="w-full flex shrink-0 items-center justify-between p-4 bg-slate-900 text-white z-[60] animate-in slide-in-from-top duration-200">
           <div className="flex items-center gap-3">
             <button
               onClick={handleDeselect}
@@ -470,9 +470,20 @@ export function AgentBuilderGallery({
                                   className="w-full h-full object-cover pointer-events-none"
                                   loading="lazy"
                                 />
+                                {/* Open it full size. A group opens its own sheet; a single image has this. */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImage({ url: topUrl, urls: [topUrl] });
+                                  }}
+                                  title="Open"
+                                  className="absolute top-1.5 left-1.5 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer active:scale-95"
+                                >
+                                  <Maximize2 className="size-3" />
+                                </button>
                                 {/* Selection check overlay */}
                                 <div className={cn(
-                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
+                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-20",
                                   isSel ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {isSel && <Check className="size-2.5 stroke-[3]" />}
@@ -504,7 +515,7 @@ export function AgentBuilderGallery({
                                   loading="lazy"
                                 />
                                 <div className={cn(
-                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
+                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-20",
                                   hasSelectedInGroup ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {hasSelectedInGroup && <Check className="size-2.5 stroke-[3]" />}
@@ -556,7 +567,7 @@ export function AgentBuilderGallery({
                                   </div>
                                 </div>
                                 <div className={cn(
-                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
+                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-20",
                                   isSel ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {isSel && <Check className="size-2.5 stroke-[3]" />}
@@ -608,7 +619,7 @@ export function AgentBuilderGallery({
                                   </div>
                                 </div>
                                 <div className={cn(
-                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-25",
+                                  "absolute top-1.5 right-1.5 size-4 rounded-full border flex items-center justify-center transition-all z-20",
                                   hasSelectedInGroup ? "bg-[#0b1957] border-[#0b1957] text-white" : "bg-white/70 border-slate-300 backdrop-blur-sm opacity-0 group-hover:opacity-100"
                                 )}>
                                   {hasSelectedInGroup && <Check className="size-2.5 stroke-[3]" />}
@@ -738,7 +749,7 @@ export function AgentBuilderGallery({
 
       {/* Video Modal Player Overlay */}
       {activeVideo && (
-        <div className="absolute inset-0 bg-slate-950/90 z-60 flex items-center justify-center p-6 animate-in fade-in duration-200">
+        <div className="absolute inset-0 bg-slate-950/90 z-[80] flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="w-full max-w-[380px] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200 border border-slate-800 flex flex-col">
             <button
               onClick={() => setActiveVideo(null)}
@@ -802,7 +813,7 @@ export function AgentBuilderGallery({
         const isSel = isAssetSelected(activeImage.url);
         return (
           <div 
-            className="absolute inset-0 bg-slate-950/95 z-55 flex flex-col items-center justify-between p-6 animate-in fade-in duration-200"
+            className="absolute inset-0 bg-slate-950/95 z-[70] flex flex-col items-center justify-between p-6 animate-in fade-in duration-200"
             onClick={() => setActiveImage(null)}
           >
             {/* Top bar */}
