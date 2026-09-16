@@ -25,6 +25,8 @@ export type MediaBuilderStep =
   | "gallery";
 
 export interface MediaUiPayload {
+  /** The session this screen and history came from. */
+  session_id?: string;
   step: MediaBuilderStep;
   question?: string;
   description?: string;
@@ -63,8 +65,12 @@ export function useMediaBuilder() {
   const wasInBrandDnaExtractionRef = useRef<boolean>(false);
   const isMageExtractionRef = useRef<boolean>(false);
 
+  // Media generation is its own service now (LAD-MAGe). Without its URL set,
+  // everything here goes to the playground worker as before.
   const workerUrl =
-    process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+    process.env.NEXT_PUBLIC_MEDIA_GEN_URL ||
+    process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL ||
+    "http://localhost:8080";
   // NEXT_PUBLIC_* is inlined at BUILD time, so a deployed bundle carries
   // whatever was set when it was built. When that value is missing the old
   // fallback pointed a hosted page at the user's own machine, which produced a
@@ -294,6 +300,11 @@ export function useMediaBuilder() {
   const loadSession = useCallback(async (targetSessionId: string) => {
     setStep("loading");
     setError("");
+    // The screen on display and the attachments waiting under it belong to the
+    // session being left. They go before the switch, so nothing from that session
+    // is on screen under this one's id while the load is in flight.
+    setUiPayload(null);
+    setReferences([]);
     setSessionId(targetSessionId);
     sessionIdRef.current = targetSessionId;
     try {

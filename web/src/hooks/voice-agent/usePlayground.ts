@@ -146,6 +146,9 @@ export function usePlayground({
   const [livekitUrl, setLivekitUrl] = useState("");
   const workerUrl =
     process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+  // The guided agent builder chat moved to the media generation service
+  // (LAD-MAGe); calls, agents and the hold stay on the playground worker.
+  const builderUrl = process.env.NEXT_PUBLIC_MEDIA_GEN_URL || workerUrl;
   const [callId, setCallId] = useState("");
   const callIdRef = useRef("");
 
@@ -543,7 +546,7 @@ export function usePlayground({
       try {
         await establishHold(id);
 
-        const res = await fetch(`${workerUrl}/playground-builder/chat`, {
+        const res = await fetch(`${builderUrl}/playground-builder/chat`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({ session_id: newSessionId }),
@@ -584,7 +587,7 @@ export function usePlayground({
       setStep("guided-journey"); // Show loading screen while waiting
 
       try {
-        const res = await fetch(`${workerUrl}/playground-builder/chat`, {
+        const res = await fetch(`${builderUrl}/playground-builder/chat`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({

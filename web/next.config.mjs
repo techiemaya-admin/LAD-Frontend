@@ -82,8 +82,12 @@ const nextConfig = {
   async rewrites() {
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL || '';
-    const playgroundWorkerUrl =
-      process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+    // Brand DNA media is served by the media generation service (LAD-MAGe);
+    // without its URL set, by the playground worker as before.
+    const mediaUrl =
+      process.env.NEXT_PUBLIC_MEDIA_GEN_URL ||
+      process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL ||
+      'http://localhost:8080';
     return [
       {
         source: '/api/social-integration/email/google/callback',
@@ -95,7 +99,7 @@ const nextConfig = {
       },
       {
         source: '/playground-media/media/:path*',
-        destination: `${playgroundWorkerUrl}/playground-media/media/:path*`,
+        destination: `${mediaUrl}/playground-media/media/:path*`,
       },
     ];
   },

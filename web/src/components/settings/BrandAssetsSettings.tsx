@@ -83,8 +83,12 @@ const ROLE_LABELS: Record<string, string> = {
   writer: 'Can edit',
 };
 
+// Brand assets and their Drive sync are served by the media generation service
+// (LAD-MAGe); without its URL set, by the playground worker as before.
 const WORKER_URL =
-  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+  process.env.NEXT_PUBLIC_MEDIA_GEN_URL ||
+  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL ||
+  'http://localhost:8080';
 
 const formatSize = (bytes?: number) => {
   if (!bytes) return null;
