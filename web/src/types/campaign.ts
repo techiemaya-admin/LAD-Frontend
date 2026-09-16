@@ -48,6 +48,10 @@ export type StepType =
   | 'landing_page'
   | 'linkedin_content'
   | 'post_approval'
+  // Network Engagement: watch monitored connections' new posts and comment;
+  // the approval node gates each comment on WhatsApp (campaign-level macros).
+  | 'linkedin_post_engage'
+  | 'comment_approval'
   | 'web_scrape'
   | 'web_research'
   | 'lead_score'

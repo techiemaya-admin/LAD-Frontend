@@ -26,7 +26,7 @@ import {
 /** Source keys the builder can actually restore (mirrors its SOURCES list). */
 const KNOWN_SOURCE_KEYS: TemplateSourceKey[] = [
   'zoho_recurring', 'zoho_once', 'ghl_recurring', 'ghl_once', 'linkedin_search', 'linkedin_signal', 'file_import',
-  'web_extract',
+  'web_extract', 'linkedin_connections',
 ];
 
 const MACRO_ID_SET = new Set(MACRO_STEP_IDS);
@@ -131,6 +131,8 @@ function chipLabel(type: string): string {
   if (type === 'web_scrape') return 'Scrape';
   if (type === 'web_research') return 'Research';
   if (type === 'lead_score') return 'Score';
+  if (type === 'linkedin_post_engage') return 'Comment on posts';
+  if (type === 'comment_approval') return 'Approval';
   if (type === 'media_generation') return 'AI media';
   if (type === 'export_results') return 'Export';
   if (type === 'analytics_report') return 'Report';
