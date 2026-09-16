@@ -585,6 +585,39 @@ export const MageSettings: React.FC = () => {
     }
   };
 
+  /**
+   * Animate, attach and the rest belong to the media journey, which lives on the
+   * builder page, not here. The pick is left where that page will find it and the
+   * browser goes there, the same way "Edit audience" opens it with ?open_icp=true.
+   *
+   * The pick travels in sessionStorage rather than the query string because a
+   * signed asset URL is hundreds of characters and there can be five of them.
+   */
+  const continueInMediaJourney = (action: 'attach' | 'animate' | 'extend' | 'dialogues', urls: string[]) => {
+    if (!urls.length) return;
+    try {
+      sessionStorage.setItem('mrlad_media_handoff', JSON.stringify({ action, urls, at: Date.now() }));
+    } catch {
+      // A browser that refuses storage still gets the page, just without the pick.
+    }
+    window.location.href = '/onboarding/advanced-search-ai?open_media=true';
+  };
+
+  const deleteGalleryAssets = async (urls: string[]) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/playground-media/delete-assets`, {
+        method: 'POST',
+        headers: { ...headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+      if (!res.ok) throw new Error(`Delete failed with status ${res.status}`);
+      setGalleryImages((prev) => (prev || []).filter((group) => !(group.urls || []).some((u: string) => urls.includes(u))));
+      setGalleryVideos((prev) => (prev || []).filter((video) => !urls.includes(video.url)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete those assets.');
+    }
+  };
+
   // ── brand DNA ─────────────────────────────────────────────────────────────
 
   const setDefault = async (domain: string | null) => {
@@ -1958,6 +1991,11 @@ export const MageSettings: React.FC = () => {
             onClose={() => setShowGallery(false)}
             isFullHistory={false}
             onLoadFullHistory={() => openGallery(true)}
+            onGenerateImages={(urls) => continueInMediaJourney('attach', urls)}
+            onAnimateImage={(url) => continueInMediaJourney('animate', [url])}
+            onExtendVideo={(url) => continueInMediaJourney('extend', [url])}
+            onAddDialogues={(url) => continueInMediaJourney('dialogues', [url])}
+            onDeleteAssets={deleteGalleryAssets}
           />
         </div>
       )}
