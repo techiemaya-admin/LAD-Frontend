@@ -1664,6 +1664,19 @@ export default function AdvancedSearchAIPage() {
             if (params.get('open_icp') === 'true') {
                 setShowPlayground(true);
             }
+            if (params.get('open_media') === 'true') {
+                try {
+                    const raw = sessionStorage.getItem('mrlad_media_handoff');
+                    sessionStorage.removeItem('mrlad_media_handoff');
+                    const pick = raw ? JSON.parse(raw) : null;
+                    // Only a fresh pick: an old one would hijack a later visit.
+                    if (pick?.urls?.length && Date.now() - (pick.at || 0) < 2 * 60 * 1000) {
+                        setHandedOverMedia({ action: pick.action, urls: pick.urls });
+                    }
+                } catch (e) {
+                    console.error('[MediaHandoff] Could not read the gallery pick', e);
+                }
+            }
         }
     }, []);
 
@@ -1754,6 +1767,11 @@ export default function AdvancedSearchAIPage() {
 
     const [mediaMode, setMediaMode] = useState(false);
     const [mediaMessages, setMediaMessages] = useState<Array<MediaChatMsg>>([]);
+    // An action picked in the gallery on the settings page, to carry out here.
+    // Settings leaves it in sessionStorage and sends the browser over with
+    // ?open_media=true, because a signed asset URL is far too long for the query
+    // string and there can be five of them.
+    const [handedOverMedia, setHandedOverMedia] = useState<{ action: string; urls: string[] } | null>(null);
     const mb = useMediaBuilder();
     const [brandDnaRequestedChanges, setBrandDnaRequestedChanges] = useState(false);
     const [isHydrated, setIsHydrated] = useState(false);
@@ -3113,6 +3131,26 @@ export default function AdvancedSearchAIPage() {
         ]);
         mb.startFlow();
     }, [mb]);
+
+    // An action picked in the settings gallery: animate this, attach that. It needs
+    // a journey to happen in, so if nothing was restored we start one and let this
+    // run again on the pass where the session id exists.
+    useEffect(() => {
+        if (!handedOverMedia || !isHydrated) return;
+        if (!mb.sessionId) {
+            handleStartMediaGeneration();
+            return;
+        }
+        const { action, urls } = handedOverMedia;
+        setHandedOverMedia(null);
+        setMediaMode(true);
+        if (action === 'attach') mb.generateImagesFromGallery(urls);
+        else if (action === 'animate') mb.animateImageFromGallery(urls[0]);
+        else if (action === 'extend') mb.extendVideoFromGallery(urls[0]);
+        else if (action === 'dialogues') mb.addDialoguesFromGallery(urls[0]);
+        else console.error('[MediaHandoff] Unknown action handed over:', action);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [handedOverMedia, isHydrated, mb.sessionId]);
 
     const submitMediaInput = useCallback((text: string, valueToSend?: string | string[], customReferences?: { path: string, thumbnail: string }[]) => {
         const finalRefs = customReferences || (mb.references && mb.references.length > 0 ? [...mb.references] : undefined);
