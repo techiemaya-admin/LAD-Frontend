@@ -1842,7 +1842,12 @@ export default function AdvancedSearchAIPage() {
 
     // Overwrite mediaMessages if backend returns history (during GCS re-hydration / load or dropdown switch)
     useEffect(() => {
-        if (mb.uiPayload?.history && mb.sessionId && lastRestoredSessionIdRef.current !== mb.sessionId) {
+        // A reply says which session it came from. While a switch is in flight the
+        // page can still be holding the session it just left, and restoring that
+        // chat under the new session's id left the chat one session behind: the
+        // conversation looked unchanged, then the next switch showed the last one.
+        const answersThisSession = !mb.uiPayload?.session_id || mb.uiPayload.session_id === mb.sessionId;
+        if (answersThisSession && mb.uiPayload?.history && mb.sessionId && lastRestoredSessionIdRef.current !== mb.sessionId) {
             console.warn("[SessionHydrate] Restoring messages list from session history payload for:", mb.sessionId);
             lastRestoredSessionIdRef.current = mb.sessionId;
             const restoredHistory = mb.uiPayload.history.map((m: any) => {
@@ -1871,7 +1876,7 @@ export default function AdvancedSearchAIPage() {
             });
             setMediaMessages(restoredHistory);
         }
-    }, [mb.uiPayload?.history, mb.sessionId]);
+    }, [mb.uiPayload?.history, mb.uiPayload?.session_id, mb.sessionId]);
 
     const hasOptionsOpen = mediaMode && (
         mb.step === "welcome" || 
