@@ -2098,6 +2098,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   const [groups, setGroups] = useState<EmailGroup[]>([]);
   const [labels, setLabels] = useState<EmailLabels[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  const [contactsError, setContactsError] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
 
   const [activeContact, setActiveContact] = useState<EmailContact | null>(null);
@@ -2180,6 +2181,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
       return;
     }
     setLoadingContacts(true);
+    setContactsError(false);
     try {
       const qs = new URLSearchParams({ limit: '500', ...(search ? { search } : {}) });
       const res = await fetch(`${API}/contacts?${qs}`, { headers: authHeaders() });
@@ -2192,16 +2194,14 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
         setLoadingContacts(false);
         return;
       }
-    } catch {
-      // Silently fall back to mock data - backend endpoint may not be implemented yet
+    } catch (err) {
+      // Failure is not emptiness: a 401/502 from the contacts service used to
+      // be swallowed into an empty list, which is how a proxy that never
+      // authenticated to WABA went unnoticed. Show nothing and say so.
+      console.error('Failed to load email contacts:', err);
     }
-    const filtered = search
-      ? MOCK_CONTACTS.filter(c =>
-        (c.contact_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (c.email ?? '').toLowerCase().includes(search.toLowerCase()),
-      )
-      : MOCK_CONTACTS;
-    setContacts(filtered);
+    setContacts([]);
+    setContactsError(true);
     setLoadingContacts(false);
   }, [isHostedProvider]);
 
@@ -3221,6 +3221,12 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                   For 'custom' provider or other folders, fall through to the existing
                   contacts-list path.
                 */}
+                {contactsError && (
+                  <div className="mx-4 mt-3 mb-1 flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-800 dark:text-red-200">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Could not load your email contacts - the list below may be incomplete. Try refresh; if it persists, sign out and back in.</span>
+                  </div>
+                )}
                 {provider === 'custom' && activeFolder === 'inbox' && customImap !== undefined && (customImap === null || customImap.status === 'error') && (
                   <div className="mx-4 mt-3 mb-1 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
