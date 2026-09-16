@@ -44,11 +44,14 @@ import { safeStorage } from '@lad/shared/storage';
 import { PromptEditor } from './PromptEditor';
 import { VoicePreview } from './VoicePreview';
 import { CharacterCounter } from './CharacterCounter';
+import { CorrectionsCard } from './corrections/CorrectionsCard';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 interface AgentFormProps {
+  /** Saved agent id; null for a new, unsaved agent. Drives the Corrections card. */
+  agentId?: number | string | null;
   formData: AgentFormData;
   errors: Partial<Record<keyof AgentFormData, string>>;
   
@@ -91,6 +94,7 @@ Remember to collect:
 };
 
 export function AgentForm({
+  agentId = null,
   formData,
   errors,
   isDirty,
@@ -696,6 +700,9 @@ export function AgentForm({
           />
         </CardContent>
       </Card>
+
+      {/* Corrections taught from transcripts (or added here) */}
+      <CorrectionsCard agentId={agentId} className="form-section animate-fade-in-up stagger-6" />
     </div>
   );
 }
