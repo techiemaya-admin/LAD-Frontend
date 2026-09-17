@@ -1888,11 +1888,7 @@ export default function AdvancedSearchAIPage() {
         ((mb.step === "builder-script-confirm" || mb.step === "builder-workflow-choice") && mb.uiPayload?.options && mb.uiPayload.options.length > 0)
     );
 
-    const isSplitScreenStep = mediaMode && (
-        mb.step === "builder-brand-dna" ||
-        mb.step === "builder-video-progress" ||
-        mb.step === "builder-keyframes-confirm"
-    );
+    const isSplitScreenStep = mediaMode && SPLIT_SCREEN_STEPS.includes(mb.step);
 
     const [mediaPlaceholder, setMediaPlaceholder] = useState('Ask Mr LAD / type response...');
     useEffect(() => {
@@ -15167,6 +15163,18 @@ function AgentBuilderTrendOptions({
     );
 }
 
+/**
+ * The steps that have their own panel on the right. While one of these is the
+ * live step it belongs to that panel and must not also be drawn in the chat, or
+ * the same screen is on the page twice. Once the journey moves past it, the
+ * finished card takes its place in the chat history.
+ *
+ * `isSplitScreenStep` and MediaStepWidget both read this list, so a step cannot
+ * be given a panel and then forgotten in the chat, which is what happened to the
+ * storyboard review.
+ */
+const SPLIT_SCREEN_STEPS = ["builder-brand-dna", "builder-video-progress", "builder-keyframes-confirm"];
+
 function MediaStepWidget({ 
     msg, 
     isActive, 
@@ -15180,6 +15188,7 @@ function MediaStepWidget({
     submitMediaInput: (text: string, valueToSend?: string | string[]) => void; 
     userSelectionText?: string;
 }) {
+    if (isActive && SPLIT_SCREEN_STEPS.includes(msg.step)) return null;
     switch (msg.step) {
         case "builder-image-output":
             return (
@@ -15245,7 +15254,6 @@ function MediaStepWidget({
                 </div>
             );
         case "builder-video-progress":
-            if (isActive) return null;
             return (
                 <div className="mt-2 w-[448px] max-w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-md">
                     <AgentBuilderVideoProgress
@@ -15262,7 +15270,6 @@ function MediaStepWidget({
                 </div>
             );
         case "builder-brand-dna":
-            if (isActive) return null;
             return (
                 <div className="mt-4 max-w-full w-[448px] bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-md">
                     <AgentBuilderBrandDNA
