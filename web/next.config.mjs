@@ -84,6 +84,9 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_BACKEND_URL || '';
     const playgroundWorkerUrl =
       process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+    // Media generation is its own service (LAD-MAGe) since 2026-09; falls back to
+    // the playground worker where the variable is not set yet. See lib/serviceUrls.ts.
+    const mediaGenUrl = process.env.NEXT_PUBLIC_MEDIA_GEN_URL || playgroundWorkerUrl;
     return [
       {
         source: '/api/social-integration/email/google/callback',
@@ -95,7 +98,7 @@ const nextConfig = {
       },
       {
         source: '/playground-media/media/:path*',
-        destination: `${playgroundWorkerUrl}/playground-media/media/:path*`,
+        destination: `${mediaGenUrl}/playground-media/media/:path*`,
       },
     ];
   },

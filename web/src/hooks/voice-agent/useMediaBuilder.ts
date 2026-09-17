@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { safeStorage } from "@lad/shared/storage";
+import { MEDIA_GEN_URL } from "@/lib/serviceUrls";
 
 export interface ReferenceImage {
   filename: string;
@@ -64,7 +65,7 @@ export function useMediaBuilder() {
   const isMageExtractionRef = useRef<boolean>(false);
 
   const workerUrl =
-    process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+    MEDIA_GEN_URL;
   // NEXT_PUBLIC_* is inlined at BUILD time, so a deployed bundle carries
   // whatever was set when it was built. When that value is missing the old
   // fallback pointed a hosted page at the user's own machine, which produced a

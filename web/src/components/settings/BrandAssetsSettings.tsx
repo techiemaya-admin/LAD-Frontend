@@ -32,6 +32,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { safeStorage } from '@lad/shared/storage';
+import { MEDIA_GEN_URL } from '@/lib/serviceUrls';
 
 type AssetSource = 'drive' | 'upload';
 
@@ -84,7 +85,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const WORKER_URL =
-  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+  MEDIA_GEN_URL;
 
 const formatSize = (bytes?: number) => {
   if (!bytes) return null;
