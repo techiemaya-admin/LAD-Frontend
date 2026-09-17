@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/app-toaster';
-import { type CorrectionKind, CORRECTION_KIND_LABELS } from './api';
+import { type CorrectionKind, CORRECTION_KIND_LABELS, PICKABLE_KINDS } from './api';
 import { useAgentCorrections } from './useAgentCorrections';
 import { CorrectionsList } from './CorrectionsList';
 
@@ -119,7 +119,7 @@ export function CorrectionsCard({ agentId, className }: CorrectionsCardProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(CORRECTION_KIND_LABELS) as CorrectionKind[]).map((k) => (
+                    {PICKABLE_KINDS.map((k) => (
                       <SelectItem key={k} value={k}>
                         {CORRECTION_KIND_LABELS[k].label}
                       </SelectItem>
