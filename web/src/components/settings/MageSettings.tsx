@@ -56,9 +56,10 @@ import {
   type BrandDnaData,
 } from '@/components/voice-agent/playground/builder-steps/AgentBuilderBrandDNA';
 import { MediaGenerationModal } from '@/components/voice-agent/MediaGenerationModal';
+import { MEDIA_GEN_URL } from '@/lib/serviceUrls';
 
 const WORKER_URL =
-  process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || 'http://localhost:8080';
+  MEDIA_GEN_URL;
 
 /**
  * What to show for a profile: its website address, or the folder name when the
