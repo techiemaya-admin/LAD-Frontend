@@ -101,6 +101,18 @@ export const LANGUAGES = [
   { value: 'ko-KR', label: 'Korean' },
   { value: 'zh-CN', label: 'Chinese (Simplified)' },
   { value: 'hi-IN', label: 'Hindi' },
+  // Indian languages the voice stack already supports end to end (Sarvam STT,
+  // Cartesia / Sarvam / Fish TTS). Values are what the worker derives the STT
+  // and TTS language from (agent.language → derive_stt_language / derive_language),
+  // so they must stay BCP-47 with the -IN region.
+  { value: 'te-IN', label: 'Telugu' },
+  { value: 'ta-IN', label: 'Tamil' },
+  { value: 'kn-IN', label: 'Kannada' },
+  { value: 'ml-IN', label: 'Malayalam' },
+  { value: 'mr-IN', label: 'Marathi' },
+  { value: 'gu-IN', label: 'Gujarati' },
+  { value: 'bn-IN', label: 'Bengali' },
+  { value: 'pa-IN', label: 'Punjabi' },
   { value: 'ar-SA', label: 'Arabic' },
 ];
 
