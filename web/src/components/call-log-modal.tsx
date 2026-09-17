@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneCall, SquarePen } from "lucide-react";
+import { PhoneCall, SquarePen, ThumbsDown, ThumbsUp } from "lucide-react";
 import {
   Play,
   Mic,
@@ -47,6 +47,7 @@ import { AgentAudioPlayer } from "./AgentAudioPlayer";
 import { useAgentCorrections } from "./voice-agent/corrections/useAgentCorrections";
 import { CorrectionPopover } from "./voice-agent/corrections/CorrectionPopover";
 import { CorrectionsList } from "./voice-agent/corrections/CorrectionsList";
+import { LineFeedbackPopover } from "./voice-agent/corrections/LineFeedbackPopover";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
 import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
 import { formatDateTimeUnified } from "@/utils/dateTime";
@@ -142,21 +143,76 @@ const TranscriptsTab = ({
   const { push: notify } = useToast();
   const corrections = useAgentCorrections(agentId ?? null);
   const [pending, setPending] = useState<{ wrong: string; anchor: { x: number; y: number } } | null>(null);
+  const [disliking, setDisliking] = useState<{ line: string; anchor: { x: number; y: number } } | null>(null);
   const [showList, setShowList] = useState(false);
 
   const canTeach = agentId !== null && agentId !== undefined && agentId !== "";
 
+  /**
+   * Two ways to pick text in an agent line: drag-select a phrase, or simply click
+   * a word. A click leaves the selection collapsed, so the word under the caret
+   * is expanded from the surrounding text node (whitespace/punctuation-bounded).
+   */
   const onAgentLineMouseUp = (e: React.MouseEvent<HTMLParagraphElement>) => {
     if (!canTeach) return;
     const sel = typeof window !== "undefined" ? window.getSelection() : null;
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     // Only honour a selection that lives entirely inside this bubble.
     if (!e.currentTarget.contains(range.commonAncestorContainer)) return;
-    const wrong = sel.toString().replace(/\s+/g, " ").trim();
+
+    let wrong = sel.toString().replace(/\s+/g, " ").trim();
+    let rect = range.getBoundingClientRect();
+
+    if (!wrong && sel.isCollapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
+      const text = range.startContainer.textContent || "";
+      const at = range.startOffset;
+      const isEdge = (ch: string) => /[\s.,!?;:'"()\[\]{}\-–—…/]/.test(ch);
+      let a = at;
+      let b = at;
+      while (a > 0 && !isEdge(text[a - 1])) a--;
+      while (b < text.length && !isEdge(text[b])) b++;
+      wrong = text.slice(a, b).trim();
+      if (wrong) {
+        const r = document.createRange();
+        r.setStart(range.startContainer, a);
+        r.setEnd(range.startContainer, b);
+        rect = r.getBoundingClientRect();
+        sel.removeAllRanges();
+        sel.addRange(r); // show the user what was picked
+      }
+    }
+
     if (!wrong || wrong.length > 200) return;
-    const rect = range.getBoundingClientRect();
     setPending({ wrong, anchor: { x: rect.left, y: rect.bottom } });
+  };
+
+  // Lines already rated, so the thumbs reflect what is saved and a repeat click undoes it.
+  const ratedLines = useMemo(() => {
+    const m = new Map<string, { id: string; kind: "liked" | "disliked" }>();
+    for (const c of corrections.items) {
+      if (c.kind === "liked" || c.kind === "disliked") m.set(c.wrong.trim(), { id: c.id, kind: c.kind });
+    }
+    return m;
+  }, [corrections.items]);
+
+  const rateLine = async (line: string, verdict: "liked" | "disliked", e: React.MouseEvent<HTMLButtonElement>) => {
+    const existing = ratedLines.get(line.trim());
+    try {
+      if (existing && existing.kind === verdict) {
+        await corrections.remove(existing.id); // toggle off
+        return;
+      }
+      if (verdict === "disliked") {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setDisliking({ line, anchor: { x: rect.left, y: rect.bottom } });
+        return;
+      }
+      const row = await corrections.save({ wrong: line.trim(), right: "", kind: "liked", source: "transcript", source_call_id: callId ?? null });
+      notify({ title: "Kept as an example", description: `"${row.wrong.slice(0, 60)}${row.wrong.length > 60 ? "…" : ""}"`, variant: "success" });
+    } catch (err) {
+      notify({ title: "Could not save feedback", description: err instanceof Error ? err.message : undefined, variant: "error" });
+    }
   };
 
   // Remembered per session so a struck word is shown as fixed in the transcript
@@ -164,7 +220,7 @@ const TranscriptsTab = ({
   const fixes = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of corrections.items) {
-      if (c.kind !== "style") m.set(c.wrong.toLowerCase(), c.right);
+      if (c.kind === "vocab" || c.kind === "pronunciation") m.set(c.wrong.toLowerCase(), c.right);
     }
     return m;
   }, [corrections.items]);
@@ -192,7 +248,7 @@ const TranscriptsTab = ({
       {canTeach && (
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-xs text-muted-foreground">
           <span>
-            Select a word in an agent line to teach a replacement.
+            Click a word (or select a phrase) in an agent line to teach a replacement; 👍 / 👎 a whole line.
             {corrections.items.length > 0 && (
               <> Applied on the next call.</>
             )}
@@ -224,7 +280,9 @@ const TranscriptsTab = ({
           />
         </div>
       )}
-      <ScrollArea className="flex-1 p-4 bg-transparent">
+      {/* min-h-0: a flex child defaults to min-height:auto and grows past the
+          container, which left this area unscrollable inside the tab. */}
+      <ScrollArea className="flex-1 min-h-0 p-4 bg-transparent">
         <div className="space-y-3">
           {segments.map((msg, i) => {
             const agent = isAgentSpeaker(msg.speaker);
@@ -249,9 +307,36 @@ const TranscriptsTab = ({
                   >
                     {agent ? renderAgentText(msg.text) : msg.text}
                   </p>
-                  <span className="text-[10px] text-muted-foreground dark:text-gray-500 block mt-1">
-                    {formatTimestamp(msg.time)}
-                  </span>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-muted-foreground dark:text-gray-500 block">
+                      {formatTimestamp(msg.time)}
+                    </span>
+                    {agent && canTeach && msg.text.trim() && (() => {
+                      const rated = ratedLines.get(msg.text.trim());
+                      return (
+                        <span className="flex items-center gap-1" aria-label="Rate this line">
+                          <button
+                            type="button"
+                            aria-label={rated?.kind === "liked" ? "Remove like" : "Like this line — keep as an example"}
+                            aria-pressed={rated?.kind === "liked"}
+                            className={cn("rounded p-0.5 transition-colors hover:bg-black/5 dark:hover:bg-white/10", rated?.kind === "liked" ? "text-emerald-600" : "text-blue-900/40 dark:text-blue-200/40")}
+                            onClick={(e) => void rateLine(msg.text, "liked", e)}
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={rated?.kind === "disliked" ? "Remove dislike" : "Dislike this line — teach what to say instead"}
+                            aria-pressed={rated?.kind === "disliked"}
+                            className={cn("rounded p-0.5 transition-colors hover:bg-black/5 dark:hover:bg-white/10", rated?.kind === "disliked" ? "text-destructive" : "text-blue-900/40 dark:text-blue-200/40")}
+                            onClick={(e) => void rateLine(msg.text, "disliked", e)}
+                          >
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 {(msg.speaker || "").toLowerCase() === "user" && (
                   <User className="h-5 w-5 text-orange-500 dark:text-orange-400 mt-1" />
@@ -261,6 +346,22 @@ const TranscriptsTab = ({
           })}
         </div>
       </ScrollArea>
+
+      {disliking && (
+        <LineFeedbackPopover
+          line={disliking.line}
+          anchor={disliking.anchor}
+          onClose={() => setDisliking(null)}
+          onSave={async (input) => {
+            const row = await corrections.save({ ...input, source: "transcript", source_call_id: callId ?? null });
+            notify({
+              title: row.right ? "Agent taught" : "Dislike saved",
+              description: row.right ? `It will say "${row.right.slice(0, 60)}${row.right.length > 60 ? "…" : ""}" instead.` : "It will not say that line again.",
+              variant: "success",
+            });
+          }}
+        />
+      )}
 
       {pending && (
         <CorrectionPopover

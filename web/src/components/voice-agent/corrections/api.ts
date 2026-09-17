@@ -9,7 +9,7 @@
  */
 import { safeStorage } from '@lad/shared/storage';
 
-export type CorrectionKind = 'vocab' | 'pronunciation' | 'style';
+export type CorrectionKind = 'vocab' | 'pronunciation' | 'style' | 'liked' | 'disliked';
 export type CorrectionTarget = 'tts' | 'prompt' | 'both';
 
 export interface AgentCorrection {
@@ -38,7 +38,12 @@ export const CORRECTION_KIND_LABELS: Record<CorrectionKind, { label: string; hin
   vocab: { label: 'Word', hint: 'Replace the word everywhere: in what the agent says and how it is written.' },
   pronunciation: { label: 'Pronunciation', hint: 'Keep the spelling in transcripts, but have the voice read it as the replacement.' },
   style: { label: 'Style rule', hint: 'A phrasing rule for the agent (no replacement needed).' },
+  liked: { label: '👍 Liked line', hint: 'A whole line the team liked — kept as an example of the right tone and length.' },
+  disliked: { label: '👎 Disliked line', hint: 'A whole line the team disliked — never said again; the replacement is used if given.' },
 };
+
+/** The kinds a user picks in the word popover / manual add. Line feedback comes from 👍/👎 only. */
+export const PICKABLE_KINDS: CorrectionKind[] = ['vocab', 'pronunciation', 'style'];
 
 function authHeaders(): HeadersInit {
   const token = safeStorage.getItem('token');

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type CorrectionInput, type CorrectionKind, CORRECTION_KIND_LABELS } from './api';
+import { type CorrectionInput, type CorrectionKind, CORRECTION_KIND_LABELS, PICKABLE_KINDS } from './api';
 
 interface CorrectionPopoverProps {
   /** The text the user struck out in the transcript. */
@@ -121,7 +121,7 @@ export function CorrectionPopover({ wrong, anchor, onSave, onClose }: Correction
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(CORRECTION_KIND_LABELS) as CorrectionKind[]).map((k) => (
+            {PICKABLE_KINDS.map((k) => (
               <SelectItem key={k} value={k} className="text-sm">
                 {CORRECTION_KIND_LABELS[k].label}
               </SelectItem>

@@ -47,8 +47,21 @@ export function CorrectionsList({ items, loading, error, onDelete, compact, clas
       {items.map((c) => (
         <li key={c.id} className={cn('flex items-center gap-3', compact ? 'px-2 py-1.5' : 'px-3 py-2')}>
           <div className="min-w-0 flex-1 text-sm">
-            <span className="line-through decoration-destructive/70 text-muted-foreground break-words">{c.wrong}</span>
-            {c.kind !== 'style' && (
+            <span
+              className={cn(
+                'break-words',
+                c.kind === 'liked' ? 'text-foreground' : 'line-through decoration-destructive/70 text-muted-foreground',
+              )}
+            >
+              {c.wrong}
+            </span>
+            {c.kind === 'disliked' && c.right && (
+              <>
+                <span className="mx-2 text-muted-foreground">→</span>
+                <span className="font-medium break-words">{c.right}</span>
+              </>
+            )}
+            {c.kind !== 'style' && c.kind !== 'liked' && c.kind !== 'disliked' && (
               <>
                 <span className="mx-2 text-muted-foreground">→</span>
                 <span className="font-medium break-words">{c.right || <em className="text-muted-foreground">never say it</em>}</span>
