@@ -2381,7 +2381,12 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
       // - all mirrored server-side), plus anything sent in this session.
       list = list.filter(c => outboundCount(c) > 0 || sentIds.has(c.id)).sort((a, b) => lastActivity(b) - lastActivity(a));
     } else if (activeFolder === 'inbox') {
-      list = list.filter(c => getEmailDetails(c).category === 'primary').sort(byActivity);
+      // Inbox = mail the tenant RECEIVED. A contact we have only written to
+      // belongs in Sent, not here - with the thread summary in place every
+      // campaign send was showing up as an "inbox" row (16 sends, 0 replies).
+      // Contacts with no mail at all stay out too; they are reachable from
+      // Compose and Broadcast Groups.
+      list = list.filter(c => inboundCount(c) > 0 && getEmailDetails(c).category === 'primary').sort(byActivity);
     }
     return list;
   }, [contacts, deletedIds, activeFolder, starredIds, importantIds, sentIds]);
@@ -2410,7 +2415,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   }, [selectedContacts, provider]);
 
   const unreadCount = useMemo(
-    () => contacts.filter(c => !deletedIds.has(c.id) && getEmailDetails(c).unread && getEmailDetails(c).category === 'primary').length,
+    () => contacts.filter(c => !deletedIds.has(c.id) && inboundCount(c) > 0 && getEmailDetails(c).unread && getEmailDetails(c).category === 'primary').length,
     [contacts, deletedIds],
   );
   const sentCount = useMemo(
@@ -3257,7 +3262,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                       {activeFolder === 'sent'
                         ? 'Emails sent to leads - from campaigns, compose, or replies - appear here.'
                         : activeFolder === 'inbox' && provider === 'custom'
-                          ? 'Replies from leads appear here. Import your leads or compose a new email.'
+                          ? 'No replies yet. Emails you have sent are under Sent; replies from leads appear here.'
                           : 'Import your leads or compose a new email.'}
                     </p>
                     <div className="flex gap-2">
