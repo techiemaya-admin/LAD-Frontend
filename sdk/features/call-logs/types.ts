@@ -268,6 +268,8 @@ export interface BatchStats {
   total_calls_scheduled: number;
   total_calls_completed: number;
   total_calls_failed: number;
+  /** Callee ended the ring (declined / busy / no answer). Optional until LAD-Backend #869 is deployed. */
+  total_calls_declined?: number;
 }
 
 // ============================================================================
