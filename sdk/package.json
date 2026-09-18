@@ -90,6 +90,10 @@
       "types": "./features/sales-playbook/index.ts",
       "default": "./features/sales-playbook/index.ts"
     },
+    "./tenant-studio": {
+      "types": "./features/tenant-studio/index.ts",
+      "default": "./features/tenant-studio/index.ts"
+    },
     "./prospects": {
       "types": "./features/prospects/index.ts",
       "default": "./features/prospects/index.ts"

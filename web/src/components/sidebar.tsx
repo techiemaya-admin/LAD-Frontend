@@ -30,7 +30,8 @@ import {
   Gauge,
   SlidersHorizontal,
   UserPlus,
-} from "lucide-react";
+  Sparkles,
+} from 'lucide-react';
 import { NavLink } from "./NavLink";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -310,6 +311,16 @@ export function Sidebar() {
       icon: Contact,
       details: "Unified cross-channel prospects, leads and clients from the Master Agent.",
       requiredCapability: "view_pipeline",
+    },
+    {
+      href: "/studio",
+      label: "Tenant Studio",
+      icon: Sparkles,
+      details: "Train the workspace on your business: interview, ICP training, rehearsal, and the Tailor.",
+      // No capability is granted to members on purpose: admins and owners pass
+      // the capability check automatically, everyone else stays out — the
+      // same rule the backend applies to applying a customisation.
+      requiredCapability: "manage_tenant_studio",
     },
     {
       href: "/follow-ups",
