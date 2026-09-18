@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   PhoneIncoming,
   PhoneOutgoing,
+  PhoneForwarded,
   StopCircle,
   ChevronDown,
   ChevronRight,
@@ -90,6 +91,8 @@ interface CallLogsTableProps {
   selectAllMode?: 'none' | 'page' | 'all';
   onRowClick: (id: string) => void;
   onEndCall: (id: string) => void;
+  /** Place a follow-up call to the same person after a completed call. */
+  onFollowUpCall?: (id: string) => void;
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
@@ -130,6 +133,7 @@ export function CallLogsTable({
   selectAllMode = 'none',
   onRowClick,
   onEndCall,
+  onFollowUpCall,
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
@@ -679,11 +683,20 @@ export function CallLogsTable({
                 <StopCircle className="w-5 h-5" />
               </button>
             )}
+            {onFollowUpCall && ["completed", "ended"].includes(item.status?.toLowerCase() ?? "") && (
+              <button
+                onClick={() => onFollowUpCall(item.id)}
+                className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                title="Follow-up call (same number, same agent, last call as context)"
+              >
+                <PhoneForwarded className="w-5 h-5" />
+              </button>
+            )}
           </div>
         );
       },
     },
-  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag, selectAllMode]);
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, onFollowUpCall, getLeadTag, selectAllMode]);
 
   // Setup table instance with filtered data
   const table = useReactTable({
