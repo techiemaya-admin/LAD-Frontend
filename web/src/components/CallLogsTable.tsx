@@ -937,6 +937,7 @@ export function CallLogsTable({
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="ended">Completed</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
                 <SelectItem value="calling">Calling</SelectItem>
                 <SelectItem value="ongoing">Ongoing</SelectItem>
                 <SelectItem value="queue">Queue</SelectItem>

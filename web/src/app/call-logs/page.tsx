@@ -87,7 +87,7 @@ export default function CallLogsPage() {
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<
-    "ended" | "failed" | "ongoing" | "queue" | null
+    "ended" | "failed" | "declined" | "ongoing" | "queue" | null
   >(null);
 
   // Memoize date range to prevent unnecessary re-renders and API calls
@@ -243,7 +243,7 @@ export default function CallLogsPage() {
 
     const status = (batch.status || "").toLowerCase();
     const isOngoing = ["running", "pending", "queued", "queue", "in_queue", "ongoing", "calling", "in_progress", "started"].includes(status);
-    const isFinished = ["completed", "failed", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
+    const isFinished = ["completed", "failed", "declined", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
 
     // If the batch we are tracking has finished, and we are in the 'Current Batch' view,
     // move to 'Batch View' so the user can see the final results.
@@ -312,7 +312,7 @@ export default function CallLogsPage() {
         is_batch_header: true,
         batch_total_calls: batch.total_calls || results.length,
         batch_completed_calls: batch.completed_calls || logs.filter(l => l.status === "completed" || l.status === "ended").length,
-        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed").length,
+        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed" || l.status === "declined").length,
       } as any;
 
       logger.debug("[Call Logs] Setting batch items", { count: logs.length });
@@ -897,9 +897,9 @@ export default function CallLogsPage() {
     const call = items.find((i) => i.id === id);
     const status = call?.status.toLowerCase() || "";
 
-    // Don't open modal for calling, queue, ongoing, or failed calls
+    // Don't open modal for calling, queue, ongoing, failed or declined calls (nothing to show)
     if (
-      ["calling", "queue", "queued", "ongoing", "in_queue", "failed"].includes(
+      ["calling", "queue", "queued", "ongoing", "in_queue", "failed", "declined"].includes(
         status,
       )
     ) {
@@ -1035,10 +1035,10 @@ export default function CallLogsPage() {
   }
 
 
-  // Check if any selected calls have "failed" status and count them
+  // Selected calls that never connected — failed on our side or declined by the callee — are retryable
   const failedCallIds = Array.from(selected).filter((id) => {
     const call = items.find((i) => i.id === id);
-    return call && call.status.toLowerCase() === "failed";
+    return call && ["failed", "declined"].includes(call.status.toLowerCase());
   });
   const hasFailedCalls = failedCallIds.length > 0;
   // Selected calls that are still live — the only ones End Selected can act on.
