@@ -9,6 +9,8 @@ import type {
   GetCallLogsLeadStatusParams,
   BatchViewParams,
   EndCallParams,
+  EndCallsParams,
+  CancelCallsResult,
   RetryCallsParams,
   RetryCallsResult,
   FollowUpCallParams,
@@ -147,10 +149,23 @@ export async function getBatchCallLogsByBatchId(batchId: string): Promise<BatchC
 /**
  * End a single call
  */
-export async function endCall({ callId }: EndCallParams): Promise<void> {
-  const response = await apiPost(`/api/voice-agent/calls/${callId}/end`, {});
+export async function endCall({ callId }: EndCallParams): Promise<CancelCallsResult> {
+  return endCalls({ callIds: [callId] });
+}
 
-  return;
+/**
+ * End one or more calls. Backend: POST /calls/cancel (there is no /calls/:id/end).
+ * `force: true` terminates calls that are already ringing / in progress, not just
+ * queued ones. A call already in a terminal state comes back with its status
+ * and cancelled_count 0 rather than an error.
+ */
+export async function endCalls({ callIds }: EndCallsParams): Promise<CancelCallsResult> {
+  const response = await apiPost<CancelCallsResult>(`/api/voice-agent/calls/cancel`, {
+    resource_id: callIds.length === 1 ? callIds[0] : callIds,
+    force: true,
+  });
+
+  return response.data;
 }
 
 /**

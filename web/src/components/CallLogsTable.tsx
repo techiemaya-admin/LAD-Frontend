@@ -98,6 +98,12 @@ interface CallLogsTableProps {
   followingUpId?: string | null;
   /** True while POST /calls/retry is out; both Retry buttons disable. */
   isRetrying?: boolean;
+  /** Row whose single End Call is in flight. */
+  endingId?: string | null;
+  /** True while End Selected is out. */
+  isEndingSelected?: boolean;
+  /** How many of the selected calls are live (what End Selected would act on). */
+  activeCount?: number;
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
@@ -141,6 +147,9 @@ export function CallLogsTable({
   onFollowUpCall,
   followingUpId = null,
   isRetrying = false,
+  endingId = null,
+  isEndingSelected = false,
+  activeCount,
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
@@ -681,13 +690,17 @@ export function CallLogsTable({
         const item = row.original;
         return (
           <div onClick={(e) => e.stopPropagation()} className="flex gap-2 items-center">
-            {item.status?.toLowerCase().includes("ongoing") && (
+            {["ongoing", "ringing", "in_progress", "calling"].includes(item.status?.toLowerCase() ?? "") && (
               <button
                 onClick={() => onEndCall(item.id)}
-                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                title="End Call"
+                disabled={endingId !== null}
+                aria-busy={endingId === item.id}
+                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                title={endingId === item.id ? "Ending call…" : "End Call"}
               >
-                <StopCircle className="w-5 h-5" />
+                {endingId === item.id
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <StopCircle className="w-5 h-5" />}
               </button>
             )}
             {onFollowUpCall && ["completed", "ended"].includes(item.status?.toLowerCase() ?? "") && (
@@ -707,7 +720,7 @@ export function CallLogsTable({
         );
       },
     },
-  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, onFollowUpCall, followingUpId, getLeadTag, selectAllMode]);
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, endingId, onFollowUpCall, followingUpId, getLeadTag, selectAllMode]);
 
   // Setup table instance with filtered data
   const table = useReactTable({
@@ -973,9 +986,11 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onEndSelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                    disabled={isEndingSelected || activeCount === 0}
+                    aria-busy={isEndingSelected}
+                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    End ({selectedCalls.size})
+                    {isEndingSelected ? "Ending…" : `End (${activeCount ?? selectedCalls.size})`}
                   </button>
                 )}
               </div>

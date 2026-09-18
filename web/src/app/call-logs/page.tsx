@@ -16,6 +16,7 @@ import {
   useBatchView,
   useBatchCallLogsByBatchId,
   useEndCall,
+  useEndCalls,
   useRetryFailedCalls,
   useFollowUpCall,
   useCallLogsStats,
@@ -164,12 +165,16 @@ export default function CallLogsPage() {
     timeFilter === "batch" && !!selectedBatchId && !batchJobId,
   );
   const endCallMutation = useEndCall();
+  const endCallsMutation = useEndCalls();
   const retryCallsMutation = useRetryFailedCalls();
   const followUpMutation = useFollowUpCall();
   const { push: toast } = useToast();
   // Which completed row has a follow-up in flight (one at a time is plenty).
   const [followingUpId, setFollowingUpId] = useState<string | null>(null);
   const isRetrying = retryCallsMutation.isPending;
+  const isEndingSelected = endCallsMutation.isPending;
+  // Which row's single End Call is in flight.
+  const [endingId, setEndingId] = useState<string | null>(null);
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -904,22 +909,70 @@ export default function CallLogsPage() {
     setOpenId(id);
   };
 
-  // End selected calls
+  // End selected calls. Only the live ones are sent — a finished call has
+  // nothing to end and the backend would just echo its status back.
   async function endSelectedCalls() {
-    alert("Ending " + selected.size + " calls");
-    // TODO: Implement bulk end API
-    // await callLogsQuery.refetch();
-    setSelected(new Set());
-    setSelectAllMode('none');
+    if (endCallsMutation.isPending) return;
+    const liveIds = activeCallIds;
+    if (liveIds.length === 0) {
+      toast({
+        variant: "warning",
+        title: "Nothing to end",
+        description: "None of the selected calls is ringing or in progress.",
+      });
+      return;
+    }
+    // Ending a live call hangs up on the person; make sure that is meant.
+    const ok = window.confirm(
+      `End ${liveIds.length} live call${liveIds.length === 1 ? "" : "s"}? The agent will hang up immediately.`,
+    );
+    if (!ok) return;
+    try {
+      const result = await endCallsMutation.mutateAsync({ callIds: liveIds });
+      const ended = result.results.filter((r) => r.status === "cancelled").length;
+      const finished = result.results.length - ended;
+      toast({
+        variant: finished ? "warning" : "success",
+        title: `Ended ${ended} call${ended === 1 ? "" : "s"}`,
+        description: finished ? `${finished} had already finished.` : undefined,
+      });
+      setSelected(new Set());
+      setSelectAllMode('none');
+    } catch (error) {
+      logger.error("Error ending calls", error);
+      const body = errorBody(error);
+      toast({
+        variant: "error",
+        title: "Could not end calls",
+        description: body?.error ?? body?.message ?? "Please try again.",
+        duration: 6000,
+      });
+    }
   }
 
   // End a single call using SDK
   async function endSingleCall(callId: string) {
+    if (endingId) return;
+    setEndingId(callId);
     try {
-      await endCallMutation.mutateAsync({ callId });
+      const result = await endCallMutation.mutateAsync({ callId });
+      const item = result.results[0];
+      if (item && item.status !== "cancelled") {
+        toast({ variant: "warning", title: "Call already finished", description: item.message });
+      } else {
+        toast({ variant: "success", title: "Call ended" });
+      }
     } catch (error) {
       logger.error("Error ending call", error);
-      alert("Failed to end call. Please try again.");
+      const body = errorBody(error);
+      toast({
+        variant: "error",
+        title: "Could not end call",
+        description: body?.error ?? body?.message ?? "Please try again.",
+        duration: 6000,
+      });
+    } finally {
+      setEndingId(null);
     }
   }
 
@@ -988,6 +1041,11 @@ export default function CallLogsPage() {
     return call && call.status.toLowerCase() === "failed";
   });
   const hasFailedCalls = failedCallIds.length > 0;
+  // Selected calls that are still live — the only ones End Selected can act on.
+  const activeCallIds = Array.from(selected).filter((id) => {
+    const call = items.find((i) => i.id === id);
+    return call && ["ongoing", "ringing", "in_progress", "calling", "pending", "queued", "queue", "in_queue"].includes(call.status.toLowerCase());
+  });
 
   // Show loading state in table body during fetch
   const isTableLoading =
@@ -1056,9 +1114,13 @@ export default function CallLogsPage() {
             )}
             <button
               onClick={endSelectedCalls}
-              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
+              disabled={isEndingSelected || activeCallIds.length === 0}
+              aria-busy={isEndingSelected}
+              title={activeCallIds.length === 0 ? "None of the selected calls is live" : `End ${activeCallIds.length} live call(s)`}
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 inline-flex items-center gap-2"
             >
-              End Selected ({selectAllMode === 'all' ? totalRecords : selected.size})
+              {isEndingSelected && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isEndingSelected ? "Ending…" : `End Selected (${activeCallIds.length})`}
             </button>
           </div>
         )}
@@ -1103,6 +1165,9 @@ export default function CallLogsPage() {
         onFollowUpCall={followUpCall}
         followingUpId={followingUpId}
         isRetrying={isRetrying}
+        endingId={endingId}
+        isEndingSelected={isEndingSelected}
+        activeCount={activeCallIds.length}
         leadTagFilter={leadTagFilter}
         batchGroups={batchGroupsProp}
         expandedBatches={expandedBatches}
