@@ -32,7 +32,8 @@ import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
-import { ScrollText } from "lucide-react";
+import { ScrollText, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/app-toaster";
 import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
@@ -165,6 +166,10 @@ export default function CallLogsPage() {
   const endCallMutation = useEndCall();
   const retryCallsMutation = useRetryFailedCalls();
   const followUpMutation = useFollowUpCall();
+  const { push: toast } = useToast();
+  // Which completed row has a follow-up in flight (one at a time is plenty).
+  const [followingUpId, setFollowingUpId] = useState<string | null>(null);
+  const isRetrying = retryCallsMutation.isPending;
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -921,13 +926,19 @@ export default function CallLogsPage() {
   // Retry failed calls using SDK. The backend answers per call; a selection
   // where nothing could be retried comes back as 422 with the reasons.
   async function retrySelectedCalls() {
+    // A second click while the first request is out would dial everyone twice.
+    if (retryCallsMutation.isPending) return;
     const failedCallIds = Array.from(selected);
     try {
       const result = await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
-      const skipped = result.skipped.length
-        ? ` ${result.skipped.length} skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
-        : "";
-      alert(`Retrying ${result.retried.length} failed call${result.retried.length === 1 ? "" : "s"}.${skipped}`);
+      const n = result.retried.length;
+      toast({
+        variant: result.skipped.length ? "warning" : "success",
+        title: `Retrying ${n} failed call${n === 1 ? "" : "s"}`,
+        description: result.skipped.length
+          ? `${result.skipped.length} skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
+          : "The new calls will appear in the list as they ring.",
+      });
       setSelected(new Set());
       setSelectAllMode('none');
     } catch (error) {
@@ -936,19 +947,37 @@ export default function CallLogsPage() {
       const reasons = Array.isArray(body?.skipped) && body.skipped.length
         ? body.skipped.map((s) => s.reason).join("; ")
         : body?.error || body?.message || null;
-      alert(reasons ? `No calls retried. ${reasons}` : "Failed to retry calls. Please try again.");
+      toast({
+        variant: "error",
+        title: "No calls retried",
+        description: reasons ?? "Please try again.",
+        duration: 6000,
+      });
     }
   }
 
   // Follow-up call on a completed call: same number, same agent, last call as context
   async function followUpCall(callId: string) {
+    if (followingUpId) return;
+    setFollowingUpId(callId);
     try {
       const result = await followUpMutation.mutateAsync({ callId });
-      alert(`Follow-up call started to ${result.data.to_number ?? "the same number"}.`);
+      toast({
+        variant: "success",
+        title: "Follow-up call started",
+        description: `Dialling ${result.data.to_number ?? "the same number"} — it will appear in the list as it rings.`,
+      });
     } catch (error) {
       logger.error("Error starting follow-up call", error);
       const body = errorBody(error);
-      alert(body?.error ? `Could not start follow-up: ${body.error}` : "Failed to start follow-up call. Please try again.");
+      toast({
+        variant: "error",
+        title: "Could not start follow-up",
+        description: body?.error ?? "Please try again.",
+        duration: 6000,
+      });
+    } finally {
+      setFollowingUpId(null);
     }
   }
 
@@ -1017,9 +1046,12 @@ export default function CallLogsPage() {
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
+                disabled={isRetrying}
+                aria-busy={isRetrying}
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100 inline-flex items-center gap-2"
               >
-                Retry Failed ({failedCallIds.length})
+                {isRetrying && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isRetrying ? "Retrying…" : `Retry Failed (${failedCallIds.length})`}
               </button>
             )}
             <button
@@ -1069,6 +1101,8 @@ export default function CallLogsPage() {
         onRowClick={handleRowClick}
         onEndCall={endSingleCall}
         onFollowUpCall={followUpCall}
+        followingUpId={followingUpId}
+        isRetrying={isRetrying}
         leadTagFilter={leadTagFilter}
         batchGroups={batchGroupsProp}
         expandedBatches={expandedBatches}

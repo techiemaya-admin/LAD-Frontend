@@ -6,6 +6,7 @@ import {
   PhoneIncoming,
   PhoneOutgoing,
   PhoneForwarded,
+  Loader2,
   StopCircle,
   ChevronDown,
   ChevronRight,
@@ -93,6 +94,10 @@ interface CallLogsTableProps {
   onEndCall: (id: string) => void;
   /** Place a follow-up call to the same person after a completed call. */
   onFollowUpCall?: (id: string) => void;
+  /** Row whose follow-up request is in flight — its button shows a spinner and ignores clicks. */
+  followingUpId?: string | null;
+  /** True while POST /calls/retry is out; both Retry buttons disable. */
+  isRetrying?: boolean;
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
@@ -134,6 +139,8 @@ export function CallLogsTable({
   onRowClick,
   onEndCall,
   onFollowUpCall,
+  followingUpId = null,
+  isRetrying = false,
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
@@ -686,17 +693,21 @@ export function CallLogsTable({
             {onFollowUpCall && ["completed", "ended"].includes(item.status?.toLowerCase() ?? "") && (
               <button
                 onClick={() => onFollowUpCall(item.id)}
-                className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-                title="Follow-up call (same number, same agent, last call as context)"
+                disabled={followingUpId !== null}
+                aria-busy={followingUpId === item.id}
+                className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                title={followingUpId === item.id ? "Starting follow-up call…" : "Follow-up call (same number, same agent, last call as context)"}
               >
-                <PhoneForwarded className="w-5 h-5" />
+                {followingUpId === item.id
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <PhoneForwarded className="w-5 h-5" />}
               </button>
             )}
           </div>
         );
       },
     },
-  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, onFollowUpCall, getLeadTag, selectAllMode]);
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, onFollowUpCall, followingUpId, getLeadTag, selectAllMode]);
 
   // Setup table instance with filtered data
   const table = useReactTable({
@@ -949,9 +960,11 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onRetrySelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                    disabled={isRetrying}
+                    aria-busy={isRetrying}
+                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                   >
-                    Retry ({failedCount})
+                    {isRetrying ? "Retrying…" : `Retry (${failedCount})`}
                   </button>
                 )}
                 {onEndSelected && (
