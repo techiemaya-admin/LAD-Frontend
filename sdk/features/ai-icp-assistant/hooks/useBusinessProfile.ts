@@ -1,7 +1,7 @@
 /**
  * useBusinessProfile
  *
- * Single hook for the 14-field business profile. Read on mount; write via
+ * Single hook for the business profile (the tenant pack's contract; 14 required in the baseline). Read on mount; write via
  * `save(partial)`; expose computed completeness so wizard / Settings /
  * chat all show the same "X / 14" indicator.
  *
@@ -13,11 +13,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   BusinessProfile,
-  computeCompleteness,
   emptyBusinessProfile,
   type BusinessProfileCompleteness,
 } from '../businessProfile';
-import { getBusinessProfile, saveBusinessProfile } from '../businessProfileApi';
+import { getBusinessProfile, getProfileContract, saveBusinessProfile } from '../businessProfileApi';
+import {
+  baselineProfileContract,
+  computeCompletenessFor,
+  computeOfferCompletenessFor,
+  type ProfileContract,
+} from '../profileContract';
 
 export interface UseBusinessProfileResult {
   /** The merged profile (server state + any locally-saved partial). Always
@@ -36,6 +41,14 @@ export interface UseBusinessProfileResult {
   refetch: () => Promise<void>;
   /** Shared completeness math - same source as the discovery drawer. */
   completeness: BusinessProfileCompleteness;
+  /** Offer-half completeness, over the contract's offer keys. */
+  offerCompleteness: BusinessProfileCompleteness;
+  /**
+   * The tenant's field contract (from their industry pack). Starts as the
+   * hardcoded baseline and is replaced once fetched; `contract.fallback` is
+   * true while (or if) the fetch has not succeeded.
+   */
+  contract: ProfileContract;
 }
 
 export function useBusinessProfile(): UseBusinessProfileResult {
@@ -43,6 +56,17 @@ export function useBusinessProfile(): UseBusinessProfileResult {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [contract, setContract] = useState<ProfileContract>(() => baselineProfileContract());
+
+  // The contract is small, per-tenant, and only changes on a deploy or a
+  // customisation: one fetch per mount, baseline on failure, never a throw.
+  useEffect(() => {
+    let cancelled = false;
+    getProfileContract()
+      .then((c) => { if (!cancelled) setContract(c); })
+      .catch(() => { /* keep the baseline — every surface still renders */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // Tracks the in-flight initial load so save() can wait for it. Without this a
   // caller that saves before the GET resolves merges its partial onto
@@ -140,6 +164,8 @@ export function useBusinessProfile(): UseBusinessProfileResult {
     error,
     save,
     refetch: load,
-    completeness: computeCompleteness(profile),
+    completeness: computeCompletenessFor(profile, contract),
+    offerCompleteness: computeOfferCompletenessFor(profile, contract),
+    contract,
   };
 }
