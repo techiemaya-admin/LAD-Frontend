@@ -101,8 +101,8 @@ interface CallLogsStatsCardsProps {
   loading?: boolean;
   selectedLeadTag?: "hot" | "warm" | "cold" | null;
   onLeadTagChange?: (tag: "hot" | "warm" | "cold" | null) => void;
-  selectedStatus?: "ended" | "failed" | "ongoing" | "queue" | null;
-  onStatusChange?: (status: "ended" | "failed" | "ongoing" | "queue" | null) => void;
+  selectedStatus?: "ended" | "failed" | "declined" | "ongoing" | "queue" | null;
+  onStatusChange?: (status: "ended" | "failed" | "declined" | "ongoing" | "queue" | null) => void;
 }
 
 export default function CallLogsStatsCards({ 
@@ -116,8 +116,8 @@ export default function CallLogsStatsCards({
   if (loading) {
     return (
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
-        {/* Show 8 skeleton cards to match the actual number of cards */}
-        {Array.from({ length: 8 }, (_, index) => (
+        {/* Show 9 skeleton cards to match the actual number of cards */}
+        {Array.from({ length: 9 }, (_, index) => (
           <SkeletonCard key={index} />
         ))}
       </div>
@@ -178,6 +178,17 @@ export default function CallLogsStatsCards({
         onClick={() => handleCardClick('status', 'failed')}
         isLeadTag
         isSelected={selectedStatus === 'failed'}
+      />
+      
+      {/* Declined — callee hung up on the ring; retryable, not a failure of ours */}
+      <StatCard 
+        title="Declined" 
+        value={stats.declined_calls || 0} 
+        icon={<PhoneOff className="w-6 h-6 text-orange-600" />} 
+        bgColor="bg-orange-100" 
+        onClick={() => handleCardClick('status', 'declined')}
+        isLeadTag
+        isSelected={selectedStatus === 'declined'}
       />
       
       {/* Ongoing Calls */}

@@ -246,6 +246,8 @@ export interface CallLogsStats {
   total_calls: number;
   completed_calls: number;
   failed_calls: number;
+  /** Callee ended the ring (declined / busy / no answer). Optional until the backend ships it. */
+  declined_calls?: number;
   ongoing: number;
   queue: number;
   hot_leads: number;
