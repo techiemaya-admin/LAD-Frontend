@@ -50,7 +50,7 @@ import {
     useVoiceAgent,
     useBilling,
     useBusinessProfile,
-    computeCompleteness,
+    computeCompletenessFor,
     computeOfferCompleteness,
     type BusinessProfile,
 } from '@lad/frontend-features/ai-icp-assistant';
@@ -1930,7 +1930,7 @@ export default function AdvancedSearchAIPage() {
     // iterates Object.keys) - any canonical key missing here is silently
     // dropped on load even when the server has it. Keep it in sync with
     // BUSINESS_PROFILE_ALL_FIELDS.
-    const { profile: loadedProfile, loading: profileLoading } = useBusinessProfile();
+    const { profile: loadedProfile, loading: profileLoading, contract: profileContract } = useBusinessProfile();
     const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
         companyName: '', industry: '', website: '', companyDescription: '',
         productsServices: '', targetCustomers: '', icpJobTitles: '',
@@ -8820,7 +8820,7 @@ export default function AdvancedSearchAIPage() {
                                     the wizard / Settings / this drawer always agree. When pgIsComplete
                                     we lock to 100% regardless of trailing blank optional fields. */}
                                 {(() => {
-                                    const c = computeCompleteness(businessProfile as BusinessProfile);
+                                    const c = computeCompletenessFor(businessProfile as BusinessProfile, profileContract);
                                     const filled = pgIsComplete ? c.total : c.filled;
                                     const total = c.total;
                                     const pct = pgIsComplete ? 100 : c.pct;

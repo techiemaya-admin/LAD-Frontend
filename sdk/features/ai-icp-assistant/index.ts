@@ -147,7 +147,14 @@ export {
   computeCompleteness,
   computeOfferCompleteness,
 } from './businessProfile';
-export { getBusinessProfile, saveBusinessProfile, uploadCompanyLogo } from './businessProfileApi';
+export { getBusinessProfile, saveBusinessProfile, uploadCompanyLogo, getProfileContract } from './businessProfileApi';
+export type { ProfileContract, ProfileContractField, ProfileFieldGroup } from './profileContract';
+export {
+  baselineProfileContract,
+  computeCompletenessFor,
+  computeOfferCompletenessFor,
+  humaniseFieldKey,
+} from './profileContract';
 export { useBusinessProfile } from './hooks/useBusinessProfile';
 export type { UseBusinessProfileResult } from './hooks/useBusinessProfile';
 export { useIcpDefinitionMutations } from './hooks/useIcpDefinitionMutations';
