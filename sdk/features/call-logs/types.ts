@@ -189,6 +189,27 @@ export interface RetryCallsParams {
   call_ids: string[];
 }
 
+/** POST /calls/retry — which selected calls were re-dialled and which were not, with the reason. */
+export interface RetryCallsResult {
+  success: boolean;
+  retried: Array<{ call_id: string; job_id: string | null; to_number: string | null }>;
+  skipped: Array<{ call_id: string; reason: string }>;
+  message?: string;
+}
+
+/** POST /calls/:id/follow-up — call the same person again after a completed call. */
+export interface FollowUpCallParams {
+  callId: string;
+  /** Optional operator note handed to the agent as context (<= 500 chars). */
+  note?: string;
+}
+
+export interface FollowUpCallResult {
+  success: boolean;
+  message?: string;
+  data: { job_id: string | null; follow_up_of: string; to_number: string | null };
+}
+
 export interface RecordingSignedUrlParams {
   callId: string;
 }

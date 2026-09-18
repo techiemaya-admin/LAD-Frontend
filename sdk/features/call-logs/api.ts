@@ -10,6 +10,9 @@ import type {
   BatchViewParams,
   EndCallParams,
   RetryCallsParams,
+  RetryCallsResult,
+  FollowUpCallParams,
+  FollowUpCallResult,
   RecordingSignedUrlParams,
   RecordingSignedUrlResponse,
   CallLogsStats,
@@ -161,12 +164,28 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
 
 
 /**
- * Retry failed calls
+ * Retry failed calls.
+ * The backend re-dials each failed call from its stored row (number, agent,
+ * outbound number, voice) and reports per call what happened. A body with
+ * nothing retried comes back as HTTP 422 with every reason in `skipped`.
  */
-export async function retryFailedCalls(params: RetryCallsParams): Promise<void> {
-  const response = await apiPost(`/api/voice-agent/calls/retry`, params);
+export async function retryFailedCalls(params: RetryCallsParams): Promise<RetryCallsResult> {
+  const response = await apiPost<RetryCallsResult>(`/api/voice-agent/calls/retry`, params);
 
-  return;
+  return response.data;
+}
+
+/**
+ * Follow-up call after a completed call: same person, same agent, with the last
+ * call's summary handed to the agent as context. 409 if the call did not complete.
+ */
+export async function followUpCall({ callId, note }: FollowUpCallParams): Promise<FollowUpCallResult> {
+  const response = await apiPost<FollowUpCallResult>(
+    `/api/voice-agent/calls/${callId}/follow-up`,
+    note ? { note } : {},
+  );
+
+  return response.data;
 }
 
 /**

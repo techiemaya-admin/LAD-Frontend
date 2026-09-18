@@ -17,6 +17,7 @@ import {
   useBatchCallLogsByBatchId,
   useEndCall,
   useRetryFailedCalls,
+  useFollowUpCall,
   useCallLogsStats,
   useBatchStats,
   useCallLogsLeadStatus,
@@ -35,6 +36,13 @@ import { ScrollText } from "lucide-react";
 import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
+
+/** The JSON body of a failed API call, when there is one. */
+type ApiErrorBody = { error?: string; message?: string; skipped?: Array<{ call_id: string; reason: string }> };
+function errorBody(error: unknown): ApiErrorBody | null {
+  const data = (error as { response?: { data?: unknown } } | null)?.response?.data;
+  return data && typeof data === "object" ? (data as ApiErrorBody) : null;
+}
 
 export default function CallLogsPage() {
   const router = useRouter();
@@ -156,6 +164,7 @@ export default function CallLogsPage() {
   );
   const endCallMutation = useEndCall();
   const retryCallsMutation = useRetryFailedCalls();
+  const followUpMutation = useFollowUpCall();
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -909,17 +918,37 @@ export default function CallLogsPage() {
     }
   }
 
-  // Retry failed calls using SDK
+  // Retry failed calls using SDK. The backend answers per call; a selection
+  // where nothing could be retried comes back as 422 with the reasons.
   async function retrySelectedCalls() {
     const failedCallIds = Array.from(selected);
     try {
-      await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
-      alert(`Retrying ${failedCallIds.length} failed calls`);
+      const result = await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
+      const skipped = result.skipped.length
+        ? ` ${result.skipped.length} skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
+        : "";
+      alert(`Retrying ${result.retried.length} failed call${result.retried.length === 1 ? "" : "s"}.${skipped}`);
       setSelected(new Set());
       setSelectAllMode('none');
     } catch (error) {
       logger.error("Error retrying calls", error);
-      alert("Failed to retry calls. Please try again.");
+      const body = errorBody(error);
+      const reasons = Array.isArray(body?.skipped) && body.skipped.length
+        ? body.skipped.map((s) => s.reason).join("; ")
+        : body?.error || body?.message || null;
+      alert(reasons ? `No calls retried. ${reasons}` : "Failed to retry calls. Please try again.");
+    }
+  }
+
+  // Follow-up call on a completed call: same number, same agent, last call as context
+  async function followUpCall(callId: string) {
+    try {
+      const result = await followUpMutation.mutateAsync({ callId });
+      alert(`Follow-up call started to ${result.data.to_number ?? "the same number"}.`);
+    } catch (error) {
+      logger.error("Error starting follow-up call", error);
+      const body = errorBody(error);
+      alert(body?.error ? `Could not start follow-up: ${body.error}` : "Failed to start follow-up call. Please try again.");
     }
   }
 
@@ -1039,6 +1068,7 @@ export default function CallLogsPage() {
         selectAllMode={selectAllMode}
         onRowClick={handleRowClick}
         onEndCall={endSingleCall}
+        onFollowUpCall={followUpCall}
         leadTagFilter={leadTagFilter}
         batchGroups={batchGroupsProp}
         expandedBatches={expandedBatches}
