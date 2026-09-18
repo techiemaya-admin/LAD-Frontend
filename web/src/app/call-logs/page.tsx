@@ -312,7 +312,8 @@ export default function CallLogsPage() {
         is_batch_header: true,
         batch_total_calls: batch.total_calls || results.length,
         batch_completed_calls: batch.completed_calls || logs.filter(l => l.status === "completed" || l.status === "ended").length,
-        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed" || l.status === "declined").length,
+        batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed").length,
+        batch_declined_calls: batch.declined_calls ?? logs.filter(l => l.status === "declined").length,
       } as any;
 
       logger.debug("[Call Logs] Setting batch items", { count: logs.length });
@@ -427,6 +428,7 @@ export default function CallLogsPage() {
         batch_total_calls: b.total_calls || 0,
         batch_completed_calls: b.completed_calls || 0,
         batch_failed_calls: b.failed_calls || 0,
+        batch_declined_calls: b.declined_calls || 0,
         attachments: b.attachments,
         attachment_file_name: b.attachment_file_name,
         attachment_signed_url: b.attachment_signed_url,

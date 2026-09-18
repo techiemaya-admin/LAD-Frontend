@@ -751,6 +751,12 @@ export function CallLogsTable({
     const completedCalls =
       (headerRow as any)?.batch_completed_calls ??
       detailCalls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
+    const failedCalls =
+      (headerRow as any)?.batch_failed_calls ??
+      detailCalls.filter(c => c.status?.toLowerCase() === 'failed').length;
+    const declinedCalls =
+      (headerRow as any)?.batch_declined_calls ??
+      detailCalls.filter(c => c.status?.toLowerCase() === 'declined').length;
     const totalCost = detailCalls.reduce((sum, call) => {
       const cost = Number(call.cost || call.call_cost || 0);
       return sum + (isNaN(cost) ? 0 : cost);
@@ -788,6 +794,16 @@ export function CallLogsTable({
                 <span className="text-muted-foreground min-w-[100px]">
                   <span className="font-semibold text-foreground">{completedCalls}</span> completed
                 </span>
+                {declinedCalls > 0 && (
+                  <span className="text-muted-foreground" title="The person declined, was busy or did not answer">
+                    <span className="font-semibold text-orange-600 dark:text-orange-400">{declinedCalls}</span> declined
+                  </span>
+                )}
+                {failedCalls > 0 && (
+                  <span className="text-muted-foreground" title="Carrier or trunk failure on our side">
+                    <span className="font-semibold text-red-600 dark:text-rose-400">{failedCalls}</span> failed
+                  </span>
+                )}
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>

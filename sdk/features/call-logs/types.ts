@@ -91,6 +91,8 @@ export interface VoiceAgentBatch {
   total_calls: number;
   completed_calls: number;
   failed_calls: number;
+  /** Optional until LAD-Backend #866 / LAD-VOAG #66 are deployed. */
+  declined_calls?: number;
   initiated_by_user_id?: string | null;
   agent_id?: string | null;
   voice_id?: string | null;
@@ -147,6 +149,8 @@ export interface CallLog {
   batch_total_calls?: number;
   batch_completed_calls?: number;
   batch_failed_calls?: number;
+  /** Callee ended the ring (declined / busy / no answer) — counted apart from failed. */
+  batch_declined_calls?: number;
   lead_category?: string;
   lead_score?: number;
   lead_tags?: string[];
