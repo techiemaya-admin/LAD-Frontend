@@ -133,6 +133,21 @@ export interface BatchCallLogsApiResponse {
   } | CallLogResponse[];
 }
 
+/** Why a call has no recording (VOAG `metadata.recording_error`). */
+export interface RecordingError {
+  code:
+    | "egress_quota_exceeded"
+    | "egress_auth_failed"
+    | "egress_start_failed"
+    | "no_audio"
+    | "upload_failed"
+    | "local_mix_failed"
+    | "local_recorder_unavailable"
+    | "disabled"
+    | string;
+  message?: string;
+}
+
 export interface CallLog {
   id: string;
   assistant: string;
@@ -157,6 +172,12 @@ export interface CallLog {
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
+  /** Written by the VOAG worker at cleanup: how the recording was made, or why there is none. */
+  metadata?: {
+    recording_mode?: "local" | "egress";
+    recording_error?: RecordingError;
+    [key: string]: unknown;
+  };
   attachments?: string | null;
   attachment_file_name?: string | null;
   attachment_signed_url?: string | null;
