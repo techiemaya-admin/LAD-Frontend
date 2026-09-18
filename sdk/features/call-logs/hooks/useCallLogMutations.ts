@@ -5,7 +5,7 @@
  * Framework-independent (no Next.js imports).
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { EndCallParams, FollowUpCallParams, RetryCallsParams } from "../types";
+import type { EndCallParams, EndCallsParams, FollowUpCallParams, RetryCallsParams } from "../types";
 import * as api from "../api";
 
 /**
@@ -18,6 +18,20 @@ export function useEndCall() {
     mutationFn: (params: EndCallParams) => api.endCall(params),
     onSuccess: () => {
       // Invalidate call logs to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["call-logs"] });
+    },
+  });
+}
+
+/**
+ * Hook to end several calls at once (the End Selected action)
+ */
+export function useEndCalls() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: EndCallsParams) => api.endCalls(params),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["call-logs"] });
     },
   });

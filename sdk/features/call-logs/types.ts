@@ -185,6 +185,26 @@ export interface EndCallParams {
   callId: string;
 }
 
+export interface EndCallsParams {
+  callIds: string[];
+}
+
+/** One entry of POST /calls/cancel — a call that was ended, or why it was not. */
+export interface CancelResultItem {
+  resource_id: string;
+  resource_type: "call" | "batch";
+  /** "cancelled" when ended; otherwise the call's existing terminal status, or "not_found". */
+  status: string;
+  cancelled_count: number;
+  message: string;
+}
+
+export interface CancelCallsResult {
+  success: boolean;
+  results: CancelResultItem[];
+  total_cancelled: number;
+}
+
 export interface RetryCallsParams {
   call_ids: string[];
 }
