@@ -230,6 +230,9 @@ export function useMediaBuilder() {
 
       const data = await res.json();
       setUiPayload(data);
+      // What was attached and not yet sent goes out with the next message, so it
+      // is shown again rather than left out after the switch cleared it.
+      setReferences(data.references ?? []);
       setStep(data.step as MediaBuilderStep);
     } catch (err) {
       const errorObj = err as Error;
