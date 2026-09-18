@@ -40,6 +40,19 @@ import {
   Clock,
   Download,
 } from "lucide-react";
+
+/** Plain-language reasons for a missing recording, keyed by VOAG's metadata.recording_error.code. */
+const RECORDING_ERROR_TEXT: Record<string, string> = {
+  egress_quota_exceeded:
+    "The LiveKit recording quota (egress minutes) for this project was exhausted when the call ran. The transcript and analysis are unaffected.",
+  egress_auth_failed: "The recording service rejected our credentials when the call ran.",
+  egress_start_failed: "The recording service could not start for this call.",
+  no_audio: "No audio was captured on this call — it most likely ended before anyone spoke.",
+  upload_failed: "The recording was made but could not be uploaded to storage.",
+  local_mix_failed: "The recording could not be assembled after the call.",
+  local_recorder_unavailable: "The recorder did not start on the worker for this call.",
+  disabled: "Recording is switched off for this agent.",
+};
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/app-toaster";
 import { logger } from "@/lib/logger";
@@ -1241,6 +1254,13 @@ export function CallLogModal({
   // Availability flags & default tab
   const hasTranscripts = segments && segments.length > 0;
   const hasAudio = Boolean(signedRecordingUrl);
+
+  // Why there is no player, when the worker told us (metadata.recording_error).
+  const recordingNotice = useMemo(() => {
+    const err = log?.metadata?.recording_error as { code?: string; message?: string } | undefined;
+    if (!err?.code) return null;
+    return RECORDING_ERROR_TEXT[err.code] ?? `Recording could not be saved (${err.code}).`;
+  }, [log]);
   const hasAnalysis = analysis && typeof analysis === "object" && Object.keys(analysis).length > 0;
 
   const availableTabs: Array<"transcripts" | "analysis" | "messages"> = [];
@@ -1333,6 +1353,18 @@ export function CallLogModal({
               {hasAudio && (
                 <div className="w-full">
                   <AgentAudioPlayer src={signedRecordingUrl} />
+                </div>
+              )}
+              {!hasAudio && recordingNotice && (
+                <div
+                  role="status"
+                  className="w-full flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-medium">Recording unavailable</div>
+                    <div className="text-xs opacity-90">{recordingNotice}</div>
+                  </div>
                 </div>
               )}
 
