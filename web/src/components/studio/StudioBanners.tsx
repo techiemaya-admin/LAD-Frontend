@@ -10,10 +10,27 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, MessagesSquare, Send, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, History, MessagesSquare, Rocket, Send, X } from 'lucide-react';
 import type { StudioState } from '@lad/frontend-features/tenant-studio';
+import { launchRowTitle } from './StudioLaunchBanner';
 
 const VOICE_DISMISS_KEY = 'studio.neutralVoiceBanner.dismissed';
+
+/** Green, once: the tenant just came back from the builder after Go live. */
+export function LiveBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" data-testid="live-banner" role="status">
+      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <span className="flex-1">
+        <span className="font-medium">You&rsquo;re live.</span> Your first campaign is sending. You&rsquo;ll get a daily summary, and it hands over to you the moment someone is interested.{' '}
+        <Link href="/campaigns" className="font-medium underline-offset-2 hover:underline">Watch it →</Link>
+      </span>
+      <button type="button" onClick={onDismiss} className="shrink-0 rounded p-0.5 hover:bg-emerald-100" aria-label="Dismiss">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 export function FirstCampaignBanner({ state, href }: { state: StudioState; href: string }) {
   const fc = state.firstCampaign;
@@ -60,14 +77,34 @@ export function NeutralVoiceBanner({ state, onAdd }: { state: StudioState; onAdd
   );
 }
 
-/** The rooms-view entry points into Steps 7 and 8, next to the team strip. */
-export function StudioEntries({ state, onFirstCampaign, onReferences }: { state: StudioState; onFirstCampaign: () => void; onReferences: () => void }) {
+/**
+ * The rooms-view entry points into Steps 7, 8 and 9, next to the team strip.
+ * The "Go live" tile shows only until setup is complete; `onGoLive` is
+ * omitted on backends that do not report `state.launch`.
+ */
+export function StudioEntries({ state, onFirstCampaign, onReferences, onGoLive }: { state: StudioState; onFirstCampaign: () => void; onReferences: () => void; onGoLive?: () => void }) {
   const fc = state.firstCampaign;
   const refs = state.references;
-  if (fc === undefined && refs === undefined) return null;
+  const launch = state.launch;
+  const showGoLive = Boolean(onGoLive && launch && state.setup && state.setup.completedAt === null);
+  if (fc === undefined && refs === undefined && !showGoLive) return null;
   const refCount = refs ? refs.documents + refs.links + refs.posts + refs.conversations + (refs.story ? 1 : 0) + refs.brand.logos + refs.brand.palette + refs.brand.fonts : 0;
+  const cols = [fc !== undefined, refs !== undefined, showGoLive].filter(Boolean).length;
   return (
-    <div className="grid gap-2 sm:grid-cols-2" data-testid="studio-entries">
+    <div className={`grid gap-2 ${cols >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} data-testid="studio-entries">
+      {showGoLive && launch && (
+        <button type="button" onClick={onGoLive} className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-left hover:bg-muted/60 ${launch.canGoLive ? 'border-emerald-200 bg-emerald-50/60' : 'bg-card'}`} data-testid="go-live-tile">
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 text-sm font-semibold"><Rocket className="h-3.5 w-3.5 text-primary" aria-hidden />Go live</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {launch.canGoLive
+                ? 'Everything is ready — try your agent, then press Go live'
+                : `${launch.blocking.length} thing${launch.blocking.length === 1 ? '' : 's'} first: ${launch.blocking.map(launchRowTitle).join(', ')}`}
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        </button>
+      )}
       {fc !== undefined && (
         <button type="button" onClick={onFirstCampaign} className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left hover:bg-muted/60">
           <span className="min-w-0">
@@ -91,5 +128,14 @@ export function StudioEntries({ state, onFirstCampaign, onReferences }: { state:
         </button>
       )}
     </div>
+  );
+}
+
+/** After go-live the setup entry points go away; this is the one link left. */
+export function SetupHistoryLink({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen} className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline" data-testid="setup-history-link">
+      <History className="h-3.5 w-3.5" aria-hidden />Setup history
+    </button>
   );
 }

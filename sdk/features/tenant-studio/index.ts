@@ -14,6 +14,8 @@ export {
   getFirstCampaign, draftFirstCampaign, updateFirstCampaign, rewriteFirstCampaignMessage, deleteFirstCampaign,
   getReferences, uploadReferences, updateReference, deleteReference, addReferenceLinks, pullReferencePosts,
   saveBrandStory, uploadBrandLogos, saveBrand, uploadBrandGuide, emptyBrand,
+  runTestRun, sendTestRunFeedback, applyAndUpdate, getLaunchStatus, goLive,
+  getStudioHistory, undoHistory, listQuestions, answerQuestion, dismissQuestion, createQuestion,
 } from './api';
 export type { ChannelsResponse } from './api';
 export {
@@ -23,6 +25,8 @@ export {
   useFirstCampaign, useDraftFirstCampaign, useUpdateFirstCampaign, useRewriteFirstCampaign, useDeleteFirstCampaign,
   useReferences, useUploadReferences, useUpdateReference, useDeleteReference, useAddReferenceLinks, usePullReferencePosts,
   useSaveBrandStory, useUploadBrandLogos, useSaveBrand, useUploadBrandGuide,
+  useTestRun, useTestRunFeedback, useApplyAndUpdate, useLaunchStatus, useGoLive,
+  useStudioHistory, useUndoHistory, useQuestions, useAnswerQuestion, useDismissQuestion, useCreateQuestion,
 } from './hooks';
 export type {
   Overlay, StudioState, ReviewChange, ReviewRow, Review, OverlayError, Proposal, ProfileSuggestion, TailorTurn,
@@ -38,4 +42,9 @@ export type {
   ReferenceKind, ReferencePurpose, ExtractionStatus, ReferenceExtracted, ReferenceItem, PaletteRole, PaletteSwatch,
   LogoVariant, BrandLogo, FontRole, BrandFont, ToneRule, BrandProfile, BrandInput, BrandStoryAnswers, ReferencesSummary,
   ReferencesResponse, PostsSource, PostsPullReason, PostsPullSourceResult, PostsPullResult,
+  TestRunChannel, TestRunPersona, TestRunTurn, TestRun, TestRunErrorReason, ReasonKey, TestRunVerdict, TestRunFeedbackInput,
+  ProposalLite, TestRunFeedback, PublishOutcome, ApplyAndUpdateResult, LaunchRowStatus, LaunchRowKey, LaunchRowFix, LaunchRow,
+  LaunchCostLine, LaunchCredits, LaunchSchedule, LaunchStatus, StudioLaunchSummary, GoLiveResult,
+  HistoryKind, UndoAction, HistoryEntry, UndoResult, UndoErrorReason,
+  QuestionSource, QuestionStatus, AgentQuestionContext, AgentQuestion, QuestionsResponse, AnswerQuestionResult,
 } from './types';

@@ -10,7 +10,7 @@
  * emptiness: a wallet that could not load shows as "unknown", not as zero.
  */
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Circle, CircleAlert, Loader2, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, CircleAlert, Loader2, Rocket, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import type { BriefFirstCampaign, StudioState } from '@lad/frontend-features/tenant-studio';
@@ -85,6 +85,8 @@ export interface SetupChecklistProps {
   onFirstCampaign?: () => void;
   /** Opens Step 8 (brand and references) in the flow; omitted on backends that do not report `state.references`. */
   onReferences?: () => void;
+  /** Opens Step 9 (try your agent and go live); omitted on backends that do not report `state.launch`. */
+  onGoLive?: () => void;
 }
 
 const CHANNEL_NAME: Record<string, string> = { linkedin: 'LinkedIn', email: 'email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'voice' };
@@ -93,7 +95,7 @@ function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening, onSetupChannels, onFirstCampaign, onReferences }: SetupChecklistProps) {
+export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening, onSetupChannels, onFirstCampaign, onReferences, onGoLive }: SetupChecklistProps) {
   const wallet = useCreditsBalance();
   const missing = new Set(state.interview.missing);
   const missingIn = (keys: string[]) => keys.filter((k) => missing.has(k));
@@ -237,6 +239,23 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
 
   const blockers = rows.filter((r) => r.status === 'needed').length;
 
+  // Once everything else is green, the "First campaign" and "Credits" rows
+  // lead to Step 9, where the launch list, the cost estimate and Go live are.
+  if (onGoLive) {
+    const othersGreen = rows.every((r) => r.status !== 'needed' || r.key === 'campaign' || r.key === 'credits');
+    if (othersGreen) {
+      for (const row of rows) {
+        if (row.key === 'campaign' && state.firstCampaign?.drafted && state.firstCampaign.status !== 'launched') {
+          row.action = { onClick: onGoLive, label: 'Try your agent and go live' };
+          row.link = undefined;
+        }
+        if (row.key === 'credits') {
+          row.action = { onClick: onGoLive, label: 'See what the first week costs' };
+        }
+      }
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -258,10 +277,15 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
             <Users className="h-4 w-4" />Set up your channels
           </Button>
         )}
-        <Button type="button" size="lg" onClick={onOpenStudio} disabled={opening} className="w-full sm:w-auto">
+        <Button type="button" size="lg" variant={onGoLive ? 'outline' : 'default'} onClick={onOpenStudio} disabled={opening} className="w-full sm:w-auto">
           {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Open the studio<ArrowRight className="h-4 w-4" />
         </Button>
+        {onGoLive && (
+          <Button type="button" size="lg" onClick={onGoLive} disabled={opening} className="w-full sm:w-auto" data-testid="checklist-go-live">
+            <Rocket className="h-4 w-4" />Try your agent and go live
+          </Button>
+        )}
       </div>
     </div>
   );

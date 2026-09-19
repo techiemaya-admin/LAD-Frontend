@@ -33,6 +33,12 @@ export interface StudioState {
   firstCampaign?: FirstCampaignSummary | null;
   /** Step 8 — what the tenant has shared; absent on backends that predate it. */
   references?: ReferencesSummary;
+  /** Step 9 — the cheap launch verdict (keys only; `GET /studio/launch` has the rows and the cost); absent on backends that predate it. */
+  launch?: StudioLaunchSummary;
+  /** Open questions Mr LAD has for the owner; absent on backends that predate the queue. */
+  questions?: { open: number };
+  /** The change timeline's headline; absent on backends that predate it. */
+  history?: { lastChangeAt: string | null; undoable: boolean };
 }
 
 /* ------------------------------------------------------------------ */
@@ -545,4 +551,251 @@ export interface PostsPullSourceResult {
 export interface PostsPullResult {
   results: PostsPullSourceResult[];
   items: ReferenceItem[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 9 — try your agent and go live                                  */
+/* ------------------------------------------------------------------ */
+
+/** Channels a test run can play against (instagram/voice are not testable). */
+export type TestRunChannel = 'linkedin' | 'email' | 'whatsapp';
+
+/** The invented prospect a test run plays — generated once per run from the profile's ideal customer. */
+export interface TestRunPersona {
+  name: string;
+  role: string;
+  company: string;
+  situation: string;
+}
+
+/** One prospect line and the agent's answer to it; `index` is 0, 1, 2. */
+export interface TestRunTurn {
+  index: number;
+  prospect: string;
+  reply: string;
+}
+
+/** `POST /studio/test-run` — nothing is stored server-side; carry it back into the feedback call. */
+export interface TestRun {
+  channel: TestRunChannel;
+  persona: TestRunPersona;
+  turns: TestRunTurn[];
+  /** The history array the refine turn expects — pass it back untouched. */
+  transcript: TranscriptTurn[];
+}
+
+/**
+ * Codes the test-run route returns as `{ success:false, error: <code>, message, channel? }`:
+ * 400 `channel_not_testable | validation`, 409 `no_ready_channel | no_agent_prompt`,
+ * 502 `no_persona | no_reply` (the model gave nothing usable).
+ */
+export type TestRunErrorReason = 'channel_not_testable' | 'validation' | 'no_ready_channel' | 'no_agent_prompt' | 'no_persona' | 'no_reply';
+
+/** Why a reply got a thumbs-down; the backend turns each into a feedback sentence. */
+export type ReasonKey = 'too_pushy' | 'gave_up_too_early' | 'missed_guarantee' | 'should_have_asked_first' | 'wrong_audience_voice' | 'other';
+
+export interface TestRunVerdict {
+  index: number;
+  thumbs: 'up' | 'down';
+  reasons?: ReasonKey[];
+  shouldHaveSaid?: string;
+}
+
+export interface TestRunFeedbackInput {
+  channel: TestRunChannel;
+  persona: TestRunPersona;
+  transcript: TranscriptTurn[];
+  verdicts: TestRunVerdict[];
+}
+
+/** A Tailor proposal without the validation errors list (the feedback and question routes return this slimmer shape). */
+export interface ProposalLite {
+  ok: boolean;
+  overlay: Overlay;
+  review: Review | null;
+  errors?: OverlayError[];
+}
+
+/** `POST /studio/test-run/feedback` — `proposal` is null when every reply got a thumbs-up. */
+export interface TestRunFeedback {
+  proposal: ProposalLite | null;
+  /** One plain sentence: "The agent will now …" */
+  summary: string;
+  thumbsDown: number;
+  /** The Tailor's own words for the turn, when it had any. */
+  reply?: string;
+  /** Thumbs-downs without an "it should have said" became questions in the inbox. */
+  questionsQueued?: number;
+}
+
+export interface PublishOutcome {
+  channel: StudioChannel;
+  ok: boolean;
+  readBy?: string;
+  promptId?: string;
+  error?: string;
+}
+
+/** `POST /studio/apply-and-update` — the overlay applied, then every ON + ready channel's agent regenerated and published. */
+export interface ApplyAndUpdateResult {
+  overlayVersion: number;
+  published: PublishOutcome[];
+  /** Channels that are off or not ready — nothing to update there. */
+  skipped: StudioChannel[];
+}
+
+export type LaunchRowStatus = 'ready' | 'needed' | 'optional';
+
+/** Row keys in the order the backend emits them. */
+export type LaunchRowKey = 'company' | 'offering' | 'audience' | 'channel' | 'campaign' | 'credits' | 'goals' | 'references';
+
+export interface LaunchRowFix {
+  /** The setup step (1–8) that fixes this row. */
+  step?: number;
+  /** A page outside the flow (e.g. `/settings?tab=credits`). */
+  href?: string;
+  label: string;
+}
+
+export interface LaunchRow {
+  key: LaunchRowKey | string;
+  title: string;
+  status: LaunchRowStatus;
+  detail: string;
+  fix?: LaunchRowFix | null;
+}
+
+export interface LaunchCostLine {
+  item: string;
+  qty: number;
+  credits: number;
+}
+
+export interface LaunchCredits {
+  /** null with `unknown: true` when the wallet could not be read — not zero. An unknown wallet blocks go-live. */
+  balance: number | null;
+  unknown: boolean;
+  /** `model` = the tenant's default model the copy cost was priced at. */
+  firstWeek: { credits: number; usd: number; model?: string | null; breakdown: LaunchCostLine[] } | null;
+  /** null when there is no estimate or no balance to compare; false = ready but the balance runs out mid-week. */
+  enough: boolean | null;
+}
+
+export interface LaunchSchedule {
+  startsAt: string;
+  timezone: string;
+  perDay: number;
+  businessHours: string | null;
+}
+
+/** `GET /studio/launch` — the launch checklist, cost and the plain-English summary, all computed server-side. */
+export interface LaunchStatus {
+  rows: LaunchRow[];
+  blocking: string[];
+  optionalMissing: string[];
+  credits: LaunchCredits;
+  schedule: LaunchSchedule;
+  summary: string;
+  canGoLive: boolean;
+  /** When the tenant went live; null until then. */
+  completedAt?: string | null;
+}
+
+/** The slice `studioService.state()` carries: the verdict without the LLM/cost parts. */
+export interface StudioLaunchSummary {
+  canGoLive: boolean;
+  blocking: string[];
+  completedAt: string | null;
+}
+
+export interface GoLiveResult {
+  state: StudioState;
+}
+
+/* ------------------------------------------------------------------ */
+/* History + undo                                                       */
+/* ------------------------------------------------------------------ */
+
+export type HistoryKind = 'overlay' | 'prompt' | 'first_campaign' | 'brief' | 'go_live';
+
+export type UndoAction =
+  | { type: 'overlay_rollback'; version: number }
+  | { type: 'prompt_restore'; channel: StudioChannel; promptId: string };
+
+export interface HistoryEntry {
+  id: string;
+  at: string;
+  kind: HistoryKind;
+  title: string;
+  detail: string;
+  by?: string;
+  /** Present only while this entry can still be put back (email prompt entries never are). */
+  undo: UndoAction | null;
+  /** Overlay entries: the version this entry is, and whether it is the one in use. */
+  version?: number;
+  active?: boolean;
+  /** Prompt entries: which channel's agent, and which `prompts` row. */
+  channel?: StudioChannel;
+  promptId?: string;
+}
+
+/** `POST /studio/history/undo` — the entry's `undo` object goes up verbatim; an overlay rollback also republishes the agents. */
+export interface UndoResult {
+  entry: HistoryEntry;
+  state: StudioState;
+  published?: PublishOutcome[];
+  skipped?: StudioChannel[];
+}
+
+/** 400/404/409 codes the undo route returns. */
+export type UndoErrorReason = 'bad_action' | 'invalid' | 'not_found' | 'nothing_to_undo';
+
+/* ------------------------------------------------------------------ */
+/* Questions Mr LAD has for the owner                                   */
+/* ------------------------------------------------------------------ */
+
+export type QuestionSource = 'handover' | 'rehearsal' | 'test_run' | 'manual';
+export type QuestionStatus = 'open' | 'answered' | 'dismissed';
+
+export interface AgentQuestionContext {
+  prospectMessage?: string;
+  agentReply?: string;
+  leadName?: string;
+  conversationId?: string;
+  reasonChips?: string[];
+  [key: string]: unknown;
+}
+
+/** A question Mr LAD has for the owner, as the backend returns it (camelCase). */
+export interface AgentQuestion {
+  id: string;
+  channel: StudioChannel;
+  source: QuestionSource;
+  question: string;
+  context: AgentQuestionContext;
+  status: QuestionStatus;
+  answer: string | null;
+  /** The Tailor proposal made from the answer, once answered. */
+  proposal: ProposalLite | null;
+  /** The overlay version the proposal was applied as, once applied. */
+  appliedVersion: number | null;
+  createdAt: string;
+  answeredAt: string | null;
+  updatedAt?: string;
+}
+
+export interface QuestionsResponse {
+  questions: AgentQuestion[];
+  openCount: number;
+}
+
+/**
+ * `POST /studio/questions/:id/answer` — the answer becomes a Tailor proposal;
+ * applying it is a separate press. `proposal` is always an object: with
+ * `ok: false` the Tailor asked for a fact or found nothing to change, and
+ * `reply` says so (`overlay`/`review` are then null).
+ */
+export interface AnswerQuestionResult {
+  question: AgentQuestion;
+  proposal: { ok: boolean; overlay: Overlay | null; review: Review | null; reply: string; errors?: OverlayError[] };
 }

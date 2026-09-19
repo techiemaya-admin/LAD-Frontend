@@ -10,6 +10,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addReferenceLinks,
+  answerQuestion,
+  applyAndUpdate,
+  createQuestion,
+  dismissQuestion,
+  getLaunchStatus,
+  getStudioHistory,
+  goLive,
+  listQuestions,
+  runTestRun,
+  sendTestRunFeedback,
+  undoHistory,
   applyBrief,
   applyOverlay,
   deleteFirstCampaign,
@@ -46,6 +57,7 @@ import {
   studioKeys,
   tailorChat,
 } from './api';
+import type { QuestionStatus } from './types';
 
 export function useStudioState() {
   return useQuery({
@@ -291,4 +303,79 @@ export function useSaveBrand() {
 
 export function useUploadBrandGuide() {
   return useStudioMutation(uploadBrandGuide);
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 9 — try your agent and go live                                  */
+/* ------------------------------------------------------------------ */
+
+export function useTestRun() {
+  return useMutation({ mutationFn: runTestRun });
+}
+
+export function useTestRunFeedback() {
+  return useMutation({ mutationFn: sendTestRunFeedback });
+}
+
+/** Changes the overlay AND the live agents, so everything studio-shaped refreshes. */
+export function useApplyAndUpdate() {
+  return useStudioMutation(applyAndUpdate);
+}
+
+export function useLaunchStatus(enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.launch(),
+    queryFn: getLaunchStatus,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useGoLive() {
+  return useStudioMutation(goLive);
+}
+
+/* ------------------------------------------------------------------ */
+/* History + undo                                                       */
+/* ------------------------------------------------------------------ */
+
+export function useStudioHistory(enabled = true, limit = 50) {
+  return useQuery({
+    queryKey: studioKeys.history(limit),
+    queryFn: () => getStudioHistory(limit),
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useUndoHistory() {
+  return useStudioMutation(undoHistory);
+}
+
+/* ------------------------------------------------------------------ */
+/* Questions Mr LAD has for the owner                                   */
+/* ------------------------------------------------------------------ */
+
+export function useQuestions(status: QuestionStatus = 'open', enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.questions(status),
+    queryFn: () => listQuestions(status),
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useAnswerQuestion() {
+  return useStudioMutation(answerQuestion);
+}
+
+export function useDismissQuestion() {
+  return useStudioMutation(dismissQuestion);
+}
+
+export function useCreateQuestion() {
+  return useStudioMutation(createQuestion);
 }

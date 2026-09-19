@@ -14,7 +14,7 @@ import { AlertTriangle, Check, Loader2, Minus, Pencil, Plus } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApplyOverlay, type Proposal, type ReviewChange, type ReviewRow } from '@lad/frontend-features/tenant-studio';
+import { useApplyAndUpdate, useApplyOverlay, type Proposal, type ReviewChange, type ReviewRow } from '@lad/frontend-features/tenant-studio';
 
 const ICON: Record<ReviewChange, typeof Plus> = { added: Plus, removed: Minus, reworded: Pencil };
 const TONE: Record<ReviewChange, string> = {
@@ -69,15 +69,25 @@ export interface ReviewCardProps {
   reply?: string;
   /** Shown under the card when the change only reaches the agent on the next prompt generation. */
   appliesOnNextGenerate?: boolean;
+  /**
+   * Apply through POST /studio/apply-and-update instead of the plain overlay
+   * PUT: one press applies the change AND regenerates every ready channel's
+   * agent, so nothing waits for a manual regenerate.
+   */
+  applyAndUpdate?: boolean;
   onApplied?: () => void;
   onDiscard?: () => void;
   noteDefault?: string;
 }
 
-export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, onApplied, onDiscard, noteDefault }: ReviewCardProps) {
+const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
+
+export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, applyAndUpdate, onApplied, onDiscard, noteDefault }: ReviewCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const apply = useApplyOverlay();
+  const applyPlain = useApplyOverlay();
+  const applyFull = useApplyAndUpdate();
+  const apply = applyAndUpdate ? applyFull : applyPlain;
   const canApply = user?.role === 'admin' || user?.role === 'owner';
   const [applied, setApplied] = useState(false);
 
@@ -94,9 +104,21 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, onA
 
   const doApply = async () => {
     try {
-      const v = await apply.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
-      setApplied(true);
-      toast({ title: `Applied as version ${v.version}`, description: appliesOnNextGenerate ? 'Regenerate your agent prompt for the change to reach conversations.' : undefined });
+      if (applyAndUpdate) {
+        const r = await applyFull.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
+        setApplied(true);
+        const ok = r.published.filter((p) => p.ok).map((p) => CHANNEL_LABEL[p.channel] ?? p.channel);
+        const failed = r.published.filter((p) => !p.ok).map((p) => `${CHANNEL_LABEL[p.channel] ?? p.channel}${p.error ? ` (${p.error})` : ''}`);
+        toast({
+          title: failed.length ? `Applied as version ${r.overlayVersion}, with one thing to check` : `Applied as version ${r.overlayVersion}`,
+          description: [ok.length ? `${ok.join(', ')} agent${ok.length === 1 ? '' : 's'} updated.` : '', failed.length ? `Could not update ${failed.join(', ')} — try again from the Tailor.` : ''].filter(Boolean).join(' ') || undefined,
+          variant: failed.length ? 'destructive' : undefined,
+        });
+      } else {
+        const v = await applyPlain.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
+        setApplied(true);
+        toast({ title: `Applied as version ${v.version}`, description: appliesOnNextGenerate ? 'Regenerate your agent prompt for the change to reach conversations.' : undefined });
+      }
       onApplied?.();
     } catch (e: unknown) {
       toast({ title: 'Could not apply', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });

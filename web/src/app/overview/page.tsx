@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { DashboardHeader } from '@/components/overview/DashboardHeader';
 import { DashboardGrid } from '@/components/overview/DashboardGrid';
 import { WidgetLibrary } from '@/components/overview/WidgetLibrary';
+import StudioLaunchBanner from '@/components/studio/StudioLaunchBanner';
 
 const DashboardSkeleton: React.FC = () => {
   return (
@@ -91,6 +92,7 @@ const Dashboard: React.FC = () => {
         >
           <DashboardHeader />
         </motion.div>
+        <StudioLaunchBanner className="mt-4" />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
