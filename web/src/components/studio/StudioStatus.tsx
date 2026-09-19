@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { CheckCircle2, Circle, History, MessageSquareText, Target, Theater } from 'lucide-react';
 import type { StudioState } from '@lad/frontend-features/tenant-studio';
 import { timeAgo } from './StudioHistory';
+import { CARD, CARD_ACTIVE, ICON_TILE, LINK, READY_PULSE, TILE_OFF, TINT } from './studio-theme';
 
 const FIELD_LABELS: Record<string, string> = {
   companyName: 'Company name', industry: 'Industry', valueProposition: 'Value proposition', productsServices: 'Products / services',
@@ -20,20 +21,20 @@ function Room({ icon: Icon, title, ready, detail, action }: {
   icon: typeof Target; title: string; ready: boolean; detail: string; action?: { href: string; label: string };
 }) {
   return (
-    <div className={`flex gap-3 rounded-lg border p-4 ${ready ? 'bg-card' : 'bg-muted/40'}`}>
-      <div className={`mt-0.5 rounded-md p-2 ${ready ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+    <div className={`flex gap-3 p-4 ${ready ? CARD_ACTIVE : `${CARD} ${TILE_OFF}`}`}>
+      <div className={`mt-0.5 h-9 w-9 shrink-0 ${ready ? ICON_TILE : 'inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400'}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-semibold">{title}</span>
+          <span className="font-semibold tracking-tight">{title}</span>
           {ready
-            ? <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-label="ready" />
+            ? <CheckCircle2 className={`h-4 w-4 ${TINT.ready} ${READY_PULSE}`} aria-label="ready" />
             : <Circle className="h-4 w-4 text-muted-foreground" aria-label="not ready" />}
         </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{detail}</p>
         {action && (
-          <Link href={action.href} className="mt-2 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline">
+          <Link href={action.href} className={`mt-2 inline-block text-sm ${LINK}`}>
             {action.label} →
           </Link>
         )}
@@ -52,7 +53,7 @@ export default function StudioStatus({ state, onHistory }: { state: StudioState;
         <History className="h-3.5 w-3.5" aria-hidden />
         <span>{history.lastChangeAt ? `Last change: ${timeAgo(history.lastChangeAt)}` : 'No changes yet'}</span>
         <span aria-hidden>·</span>
-        <button type="button" onClick={onHistory} className="font-medium text-primary underline-offset-2 hover:underline">
+        <button type="button" onClick={onHistory} className={LINK}>
           {history.undoable ? 'Undo' : 'History'}
         </button>
       </p>

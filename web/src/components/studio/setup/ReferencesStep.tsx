@@ -51,6 +51,7 @@ import {
 } from '@lad/frontend-features/tenant-studio';
 import { StyleImport } from './ChannelsStep';
 import { useDictation } from './speech';
+import { BORDER, CARD, CARD_ACTIVE, CARD_HOVER, CTA_PRIMARY, DIVIDE, H_STEP, INPUT_FOCUS, PANEL, READY_PULSE, SKELETON, STATUS, TINT } from '../studio-theme';
 
 /** Where this step sits in the 9-step setup. */
 export const REFERENCES_STEP = 8;
@@ -112,10 +113,10 @@ const STORY_PROMPTS: { key: keyof BrandStoryAnswers; question: string; hint: str
 ];
 
 const STATUS_COPY: Record<ReferenceItem['extraction_status'], { label: string; className: string }> = {
-  pending: { label: 'Reading…', className: 'bg-muted text-muted-foreground' },
-  done: { label: 'Read', className: 'bg-emerald-50 text-emerald-700' },
-  failed: { label: 'Could not read', className: 'bg-rose-50 text-rose-700' },
-  skipped: { label: 'Stored', className: 'bg-muted text-muted-foreground' },
+  pending: { label: 'Reading…', className: STATUS.optional },
+  done: { label: 'Read', className: STATUS.ready },
+  failed: { label: 'Could not read', className: STATUS.needed },
+  skipped: { label: 'Stored', className: STATUS.optional },
 };
 
 type TileKey = 'talk' | 'worked' | 'story' | 'brand' | 'documents';
@@ -185,7 +186,7 @@ function NativeSelect({ id, value, onChange, options, disabled, ariaLabel, class
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`h-9 rounded-md border border-input bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C5CFF]/60 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
@@ -200,19 +201,19 @@ function Tile({ icon: Icon, title, hint, count, open, onOpen }: {
       type="button"
       onClick={onOpen}
       aria-expanded={open}
-      className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors ${open ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/60'}`}
+      className={`flex w-full items-center gap-3 p-3 text-left ${open ? CARD_ACTIVE : `${CARD} ${CARD_HOVER}`}`}
     >
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${count > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${count > 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_2px_8px_-2px_rgba(16,185,129,.5)]' : 'bg-gradient-to-br from-[#2B7CFF]/15 to-[#C049FF]/15 text-[#7C5CFF] dark:from-[#2B7CFF]/25 dark:to-[#C049FF]/25 dark:text-[#B69CFF]'}`}>
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold">{title}</span>
-          {count > 0 && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="has content" />}
+          {count > 0 && <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 ${TINT.ready}`} aria-label="has content" />}
         </span>
         <span className="block truncate text-[11px] text-muted-foreground">{hint}</span>
       </span>
-      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${count > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-muted text-muted-foreground'}`} data-testid={`tile-count-${title}`}>
+      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${count > 0 ? STATUS.ready : STATUS.optional}`} data-testid={`tile-count-${title}`}>
         {count}
       </span>
       <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden />
@@ -221,7 +222,7 @@ function Tile({ icon: Icon, title, hint, count, open, onOpen }: {
 }
 
 function Panel({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border bg-card p-4">{children}</div>;
+  return <div className={`${CARD} p-4`}>{children}</div>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -264,15 +265,15 @@ function WorkedPanel({ items, onItems, onRemoved }: { items: ReferenceItem[]; on
   return (
     <Panel>
       <p className="text-sm text-muted-foreground">A post that got replies, a page that converts, a message that landed. It learns what worked, not just what you say.</p>
-      <Button type="button" variant="outline" className="mt-3 w-full justify-start sm:w-auto" onClick={pullPosts} disabled={busy}>
+      <Button type="button" variant="outline" className="mt-3 w-full justify-start hover:border-[#7C5CFF]/50 sm:w-auto" onClick={pullPosts} disabled={busy}>
         {pull.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessagesSquare className="h-4 w-4" />}Pull my recent LinkedIn and Instagram posts
       </Button>
       <div className="mt-4 space-y-2">
         <p className="text-sm font-medium">Links</p>
         {rows.map((row) => (
           <div key={row.id} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <Input type="url" inputMode="url" value={row.url} onChange={(e) => setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, url: e.target.value } : r)))} placeholder="https://…" aria-label="Link" disabled={busy} className="h-9 text-sm" />
-            <Input value={row.note} onChange={(e) => setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, note: e.target.value } : r)))} placeholder="What made this one work?" aria-label="What made this one work?" disabled={busy} className="h-9 text-sm" />
+            <Input type="url" inputMode="url" value={row.url} onChange={(e) => setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, url: e.target.value } : r)))} placeholder="https://…" aria-label="Link" disabled={busy} className={`h-9 text-sm ${INPUT_FOCUS}`} />
+            <Input value={row.note} onChange={(e) => setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, note: e.target.value } : r)))} placeholder="What made this one work?" aria-label="What made this one work?" disabled={busy} className={`h-9 text-sm ${INPUT_FOCUS}`} />
             <Button type="button" size="icon-sm" variant="ghost" onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== row.id) : rs))} aria-label="Remove link" disabled={busy || rows.length === 1} className="justify-self-end">
               <X className="h-4 w-4" />
             </Button>
@@ -282,14 +283,14 @@ function WorkedPanel({ items, onItems, onRemoved }: { items: ReferenceItem[]; on
           <Button type="button" size="sm" variant="outline" onClick={() => setRows((rs) => [...rs, { id: nextId.current++, url: '', note: '' }])} disabled={busy || rows.length + existing.length >= MAX_LINKS}>
             <Plus className="h-4 w-4" />Another link
           </Button>
-          <Button type="button" size="sm" onClick={save} disabled={busy || !clean.length}>
+          <Button type="button" size="sm" onClick={save} disabled={busy || !clean.length} className={CTA_PRIMARY}>
             {addLinks.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Read {clean.length || ''} link{clean.length === 1 ? '' : 's'}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">Up to {MAX_LINKS} links.</p>
       </div>
       {existing.length > 0 && (
-        <ul className="mt-4 divide-y border-t text-sm">
+        <ul className={`mt-4 divide-y border-t ${DIVIDE} ${BORDER} text-sm`}>
           {existing.map((it) => (
             <li key={it.id} className="flex items-start gap-2 py-2">
               {it.kind === 'post' ? <MessagesSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /> : <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
@@ -339,8 +340,8 @@ function StoryPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
       <p className="text-sm text-muted-foreground">Four short questions. Your answers become the story your agents tell, the promises they make and the lines they never cross.</p>
       {mode === null ? (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Button type="button" variant="outline" className="justify-start" onClick={() => setMode('type')}><Keyboard className="h-4 w-4" />{hasStory ? 'Answer again' : 'Type it'}</Button>
-          <Button type="button" variant="outline" className="justify-start" onClick={() => setMode('record')} disabled={!mic.supported} title={mic.supported ? undefined : 'Your browser has no microphone dictation'}>
+          <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => setMode('type')}><Keyboard className="h-4 w-4" />{hasStory ? 'Answer again' : 'Type it'}</Button>
+          <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => setMode('record')} disabled={!mic.supported} title={mic.supported ? undefined : 'Your browser has no microphone dictation'}>
             <Mic className="h-4 w-4" />Record 60 seconds
           </Button>
         </div>
@@ -363,14 +364,14 @@ function StoryPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
               maxLength={2000}
               placeholder={mode === 'record' ? 'Tap the mic and talk — you have a minute.' : 'A sentence or two is plenty.'}
               disabled={saveStory.isPending}
-              className={`min-h-[110px] text-sm ${mode === 'record' ? 'pr-14' : ''}`}
+              className={`min-h-[110px] text-sm ${INPUT_FOCUS} ${mode === 'record' ? 'pr-14' : ''}`}
             />
             {mode === 'record' && mic.supported && (
               <Button
                 type="button"
                 size="icon"
                 variant={mic.listening ? 'destructive' : 'outline'}
-                className={`absolute right-2 top-2 rounded-full ${mic.listening ? 'animate-pulse' : ''}`}
+                className={`absolute right-2 top-2 rounded-full ${mic.listening ? 'animate-pulse motion-reduce:animate-none' : 'hover:border-[#7C5CFF]/50'}`}
                 onClick={() => (mic.listening ? mic.stop() : mic.start(answers[prompt.key]))}
                 aria-pressed={mic.listening}
                 aria-label={mic.listening ? 'Stop recording' : 'Record your answer'}
@@ -394,7 +395,7 @@ function StoryPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
             </div>
             <div className="flex gap-2">
               <Button type="button" size="sm" variant="ghost" onClick={() => { if (mic.listening) mic.stop(); setMode(null); }} disabled={saveStory.isPending}>Cancel</Button>
-              <Button type="button" size="sm" onClick={submit} disabled={saveStory.isPending || filled === 0}>
+              <Button type="button" size="sm" onClick={submit} disabled={saveStory.isPending || filled === 0} className={CTA_PRIMARY}>
                 {saveStory.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Write it up
               </Button>
             </div>
@@ -402,10 +403,10 @@ function StoryPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
         </div>
       )}
       {hasStory && brand && (
-        <div className="mt-4 rounded-lg border bg-muted/30 p-4" data-testid="story-card">
+        <div className={`${PANEL} mt-4 p-4`} data-testid="story-card">
           <div className="flex items-start justify-between gap-3">
-            <h4 className="font-semibold">Your story</h4>
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-label="story written" />
+            <h4 className="font-semibold tracking-tight">Your story</h4>
+            <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="story written" />
           </div>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{brand.story}</p>
           {(brand.promises.length > 0 || brand.never_do.length > 0 || brand.known_for) && (
@@ -523,14 +524,14 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Logo</p>
-          <Button type="button" size="sm" variant="outline" onClick={() => logoRef.current?.click()} disabled={busy || b.logos.length >= 3}>
+          <Button type="button" size="sm" variant="outline" onClick={() => logoRef.current?.click()} disabled={busy || b.logos.length >= 3} className="hover:border-[#7C5CFF]/50">
             {uploadLogos.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}Upload logo
           </Button>
         </div>
         {b.logos.length ? (
           <ul className="mt-2 flex flex-wrap gap-2">
             {b.logos.map((l, i) => (
-              <li key={`${l.url}-${i}`} className={`flex h-16 w-24 items-center justify-center overflow-hidden rounded-md border p-1 ${l.variant === 'dark' ? 'bg-zinc-900' : 'bg-background'}`} title={l.fileName ?? undefined}>
+              <li key={`${l.url}-${i}`} className={`flex h-16 w-24 items-center justify-center overflow-hidden rounded-xl border ${BORDER} p-1 ${l.variant === 'dark' ? 'bg-zinc-900 dark:bg-zinc-900' : 'bg-white dark:bg-white'}`} title={l.fileName ?? undefined}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={l.url} alt={l.fileName ?? 'Logo'} className="max-h-full max-w-full object-contain" />
               </li>
@@ -546,11 +547,11 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Colours</p>
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => guideRef.current?.click()} disabled={busy}>
+            <Button type="button" size="sm" variant="outline" onClick={() => guideRef.current?.click()} disabled={busy} className="hover:border-[#7C5CFF]/50">
               {uploadGuide.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}Upload brand guide
             </Button>
             {palette.length === 0 && (
-              <Button type="button" size="sm" variant="outline" onClick={() => setPalette([{ hex: '#0B3C5D', role: 'primary' }])} disabled={busy}>
+              <Button type="button" size="sm" variant="outline" onClick={() => setPalette([{ hex: '#0B3C5D', role: 'primary' }])} disabled={busy} className="hover:border-[#7C5CFF]/50">
                 <Palette className="h-4 w-4" />Enter colours myself
               </Button>
             )}
@@ -565,7 +566,7 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
                   value={isHex(sw.hex) ? sw.hex : '#000000'}
                   onChange={(e) => setPalette((p) => p.map((x, j) => (j === i ? { ...x, hex: e.target.value.toUpperCase() } : x)))}
                   aria-label={`Colour ${i + 1}`}
-                  className="h-9 w-10 shrink-0 cursor-pointer rounded-md border bg-background p-0.5"
+                  className={`h-9 w-10 shrink-0 cursor-pointer rounded-md border ${BORDER} bg-background p-0.5`}
                   disabled={busy}
                 />
                 <Input
@@ -573,7 +574,7 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
                   onChange={(e) => setPalette((p) => p.map((x, j) => (j === i ? { ...x, hex: e.target.value.trim() } : x)))}
                   aria-label={`Colour ${i + 1} hex`}
                   aria-invalid={!isHex(sw.hex)}
-                  className={`h-9 w-28 font-mono text-sm ${isHex(sw.hex) ? '' : 'border-rose-400'}`}
+                  className={`h-9 w-28 font-mono text-sm ${INPUT_FOCUS} ${isHex(sw.hex) ? '' : 'border-rose-400 dark:border-rose-500'}`}
                   disabled={busy}
                 />
                 <NativeSelect value={sw.role ?? ''} onChange={(v) => setPalette((p) => p.map((x, j) => (j === i ? { ...x, role: (v || null) as PaletteRole | null } : x)))} options={ROLES} ariaLabel={`Colour ${i + 1} role`} disabled={busy} className="min-w-0 flex-1" />
@@ -588,13 +589,13 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
         )}
         {palette.length > 0 && (
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <Button type="button" size="sm" variant="outline" onClick={() => setPalette((p) => [...p, { hex: '#FFFFFF', role: null }])} disabled={busy || palette.length >= MAX_PALETTE}>
+            <Button type="button" size="sm" variant="outline" onClick={() => setPalette((p) => [...p, { hex: '#FFFFFF', role: null }])} disabled={busy || palette.length >= MAX_PALETTE} className="hover:border-[#7C5CFF]/50">
               <Plus className="h-4 w-4" />Add a colour
             </Button>
-            <Button type="button" size="sm" onClick={() => persist({ palette })} disabled={busy || !paletteDirty || !paletteValid}>
+            <Button type="button" size="sm" onClick={() => persist({ palette })} disabled={busy || !paletteDirty || !paletteValid} className={CTA_PRIMARY}>
               {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save colours
             </Button>
-            {!paletteValid && <span className="self-center text-xs text-rose-600">Use the form #RRGGBB.</span>}
+            {!paletteValid && <span className={`self-center text-xs ${TINT.neededText}`}>Use the form #RRGGBB.</span>}
           </div>
         )}
       </div>
@@ -604,21 +605,21 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Fonts</p>
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => fontRef.current?.click()} disabled={busy || fonts.length >= MAX_FONTS}>
+            <Button type="button" size="sm" variant="outline" onClick={() => fontRef.current?.click()} disabled={busy || fonts.length >= MAX_FONTS} className="hover:border-[#7C5CFF]/50">
               <Upload className="h-4 w-4" />Upload a font file
             </Button>
-            <Button type="button" size="sm" variant={showFontSearch ? 'default' : 'outline'} onClick={() => setShowFontSearch((v) => !v)} disabled={busy || fonts.length >= MAX_FONTS}>
+            <Button type="button" size="sm" variant={showFontSearch ? 'default' : 'outline'} onClick={() => setShowFontSearch((v) => !v)} disabled={busy || fonts.length >= MAX_FONTS} className={showFontSearch ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}>
               <Type className="h-4 w-4" />Pick a Google Font
             </Button>
           </div>
         </div>
         {showFontSearch && (
-          <div className="mt-2 rounded-md border bg-muted/30 p-2">
-            <Input value={fontQuery} onChange={(e) => setFontQuery(e.target.value)} placeholder="Search fonts…" aria-label="Search Google Fonts" className="h-9 text-sm" autoFocus />
+          <div className={`${PANEL} mt-2 p-2`}>
+            <Input value={fontQuery} onChange={(e) => setFontQuery(e.target.value)} placeholder="Search fonts…" aria-label="Search Google Fonts" className={`h-9 text-sm ${INPUT_FOCUS}`} autoFocus />
             <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Font matches">
               {fontMatches.map((f) => (
                 <li key={f}>
-                  <button type="button" onClick={() => addGoogleFont(f)} className="rounded-full border bg-background px-3 py-1 text-xs hover:bg-accent hover:text-accent-foreground">{f}</button>
+                  <button type="button" onClick={() => addGoogleFont(f)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 transition-colors duration-150 hover:border-[#7C5CFF]/50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">{f}</button>
                 </li>
               ))}
               {fontMatches.length === 0 && <li className="text-xs text-muted-foreground">No match — upload the file instead.</li>}
@@ -644,7 +645,7 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
         )}
         {fontsDirty && (
           <div className="mt-2">
-            <Button type="button" size="sm" onClick={() => persist({ fonts })} disabled={busy}>
+            <Button type="button" size="sm" onClick={() => persist({ fonts })} disabled={busy} className={CTA_PRIMARY}>
               {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save fonts
             </Button>
           </div>
@@ -652,7 +653,7 @@ function BrandPanel({ brand, onBrand, onItem }: { brand: BrandProfile | null; on
       </div>
 
       {b.tone_rules.length > 0 && (
-        <div className="mt-5 border-t pt-3">
+        <div className={`mt-5 border-t ${BORDER} pt-3`}>
           <p className="text-sm font-medium">From your brand guide</p>
           <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
             {b.tone_rules.slice(0, 6).map((r, i) => <li key={i}>{r.do ? `Do: ${r.do}` : r.dont ? `Don't: ${r.dont}` : null}</li>)}
@@ -693,10 +694,10 @@ function DocumentsPanel({ items, onItem, onRemoved, onAdd }: { items: ReferenceI
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">Decks, price lists, case studies, proposals. Tell it what each one is and it pulls out the claims, prices and results it can quote.</p>
-        <Button type="button" size="sm" variant="outline" onClick={onAdd}><Upload className="h-4 w-4" />Add documents</Button>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd} className="hover:border-[#7C5CFF]/50"><Upload className="h-4 w-4" />Add documents</Button>
       </div>
       {docs.length ? (
-        <ul className="mt-3 divide-y" data-testid="documents">
+        <ul className={`mt-3 divide-y ${DIVIDE}`} data-testid="documents">
           {docs.map((it) => {
             const st = STATUS_COPY[it.extraction_status] ?? STATUS_COPY.pending;
             const summary = typeof it.extracted.summary === 'string' ? it.extracted.summary : null;
@@ -707,13 +708,13 @@ function DocumentsPanel({ items, onItem, onRemoved, onAdd }: { items: ReferenceI
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="truncate text-sm font-medium">{it.title || 'Document'}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] ${st.className}`} title={it.extraction_error ?? undefined}>{st.label}</span>
-                      {it.kind === 'brand_guide' && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">Brand guide</span>}
-                      {it.kb_document_name && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">Voice agent can search it</span>}
+                      <span className={`rounded-full border px-2 py-0.5 text-[11px] ${st.className}`} title={it.extraction_error ?? undefined}>{st.label}</span>
+                      {it.kind === 'brand_guide' && <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATUS.info}`}>Brand guide</span>}
+                      {it.kb_document_name && <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATUS.optional}`}>Voice agent can search it</span>}
                       {it.size_bytes ? <span className="text-[11px] text-muted-foreground">{fmtBytes(it.size_bytes)}</span> : null}
                     </div>
                     {summary && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{summary}</p>}
-                    {it.extraction_status === 'failed' && it.extraction_error && <p className="mt-0.5 text-xs text-rose-600">{it.extraction_error}</p>}
+                    {it.extraction_status === 'failed' && it.extraction_error && <p className={`mt-0.5 text-xs ${TINT.neededText}`}>{it.extraction_error}</p>}
                   </div>
                   <Button type="button" size="icon-sm" variant="ghost" onClick={() => del(it)} aria-label={`Delete ${it.title || 'document'}`} disabled={busyId === it.id}>
                     {busyId === it.id && remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -837,12 +838,19 @@ export default function ReferencesStep({ onContinue, continuing }: ReferencesSte
     if (refs.data === undefined && refs.isError) {
       return (
         <div className="space-y-3">
-          <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Your references could not load right now. Refresh, or try again in a moment.</p>
+          <p className={`rounded-2xl border p-4 text-sm ${STATUS.needed}`}>Your references could not load right now. Refresh, or try again in a moment.</p>
           <Button type="button" variant="outline" onClick={() => refs.refetch()}>Try again</Button>
         </div>
       );
     }
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Looking at what you have shared…</div>;
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Looking at what you have shared…</div>
+        <div className={`${SKELETON} h-28`} />
+        <div className={`${SKELETON} h-14`} />
+        <div className={`${SKELETON} h-14`} />
+      </div>
+    );
   }
 
   const tiles: { key: TileKey; icon: typeof FileText; title: string; hint: string }[] = [
@@ -858,7 +866,7 @@ export default function ReferencesStep({ onContinue, continuing }: ReferencesSte
   return (
     <div className="space-y-6" ref={topRef}>
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Give it your real material, so it sounds like you.</h2>
+        <h2 className={H_STEP}>Give it your real material, so it sounds like you.</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">Drop files, paste links, tell your story. Nothing here is required — every bit makes the messages more yours.</p>
       </div>
 
@@ -866,14 +874,14 @@ export default function ReferencesStep({ onContinue, continuing }: ReferencesSte
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`rounded-lg border-2 border-dashed p-5 text-center transition-colors ${dragging ? 'border-primary bg-primary/5' : 'bg-muted/30'}`}
+        className={`rounded-[20px] border-2 border-dashed p-5 text-center transition-all duration-200 ease-out ${dragging ? 'border-[#7C5CFF] bg-[#7C5CFF]/[.06] shadow-[0_0_0_4px_rgba(124,92,255,.15)] dark:bg-[#7C5CFF]/[.12]' : 'border-slate-300/80 bg-white/60 backdrop-blur hover:border-[#7C5CFF]/50 dark:border-white/15 dark:bg-white/[.03]'}`}
         data-testid="drop-zone"
       >
         <input ref={fileRef} type="file" accept={ACCEPT} multiple className="sr-only" onChange={onPick} aria-label="Files to share" data-testid="drop-input" />
-        <Upload className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden />
+        <span className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 text-white shadow-[0_6px_18px_-6px_rgba(124,92,255,.7)]"><Upload className="h-5 w-5" aria-hidden /></span>
         <p className="mt-2 text-sm font-medium">Drop anything here — decks, price lists, logos, a brand guide</p>
         <p className="mt-0.5 text-xs text-muted-foreground">It sorts them for you. Up to {MAX_DROP_FILES} files, 20 MB each.</p>
-        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => fileRef.current?.click()} disabled={Boolean(uploading)}>
+        <Button type="button" variant="outline" size="sm" className="mt-3 hover:border-[#7C5CFF]/50" onClick={() => fileRef.current?.click()} disabled={Boolean(uploading)}>
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}{uploading ? 'Uploading…' : 'Tap to browse'}
         </Button>
         {uploading && <p className="mt-2 text-xs text-muted-foreground" role="status" aria-live="polite">{uploading}</p>}
@@ -896,13 +904,13 @@ export default function ReferencesStep({ onContinue, continuing }: ReferencesSte
         ))}
       </div>
 
-      <section className="rounded-lg border bg-card p-4" data-testid="brand-summary">
+      <section className={`${CARD} p-4`} data-testid="brand-summary">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-semibold">Here&rsquo;s your brand profile.</h3>
+            <h3 className="font-semibold tracking-tight">Here&rsquo;s your brand profile.</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">Edit anything that looks wrong.</p>
           </div>
-          {shared > 0 && <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-label="profile has content" />}
+          {shared > 0 && <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="profile has content" />}
         </div>
         <p className="mt-3 text-sm leading-relaxed">
           {summaryLine ?? (shared > 0
@@ -910,10 +918,10 @@ export default function ReferencesStep({ onContinue, continuing }: ReferencesSte
             : 'Nothing shared yet, so it writes in a neutral voice. Add a few real conversations and it will sound like you.')}
         </p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" size="lg" onClick={() => { setOpen(null); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} disabled={continuing} className="w-full sm:w-auto">
+          <Button type="button" variant="outline" size="lg" onClick={() => { setOpen(null); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} disabled={continuing} className="w-full hover:border-[#7C5CFF]/50 sm:w-auto">
             <Plus className="h-4 w-4" />Add more
           </Button>
-          <Button type="button" size="lg" onClick={onContinue} disabled={continuing || Boolean(uploading)} className="w-full sm:w-auto">
+          <Button type="button" size="lg" onClick={onContinue} disabled={continuing || Boolean(uploading)} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
             {continuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Looks right, continue
           </Button>
         </div>

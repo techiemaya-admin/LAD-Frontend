@@ -41,6 +41,7 @@ import {
   type StudioChannelSummary,
 } from '@lad/frontend-features/tenant-studio';
 import { useDictation } from './speech';
+import { BORDER, CARD, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, H_STEP, INPUT_FOCUS, LINK, PANEL, READY_PULSE, SKELETON, STATUS, TINT } from '../studio-theme';
 
 /** Where this step sits in the 9-step setup. */
 export const FIRST_CAMPAIGN_STEP = 7;
@@ -115,9 +116,7 @@ function Chip({ selected, onClick, disabled, children }: { selected: boolean; on
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-accent hover:text-accent-foreground'
-      }`}
+      className={`${CHIP_BASE} gap-1.5 px-3 py-1.5 text-xs ${selected ? CHIP_SELECTED : CHIP_IDLE}`}
     >
       {selected && <Check className="h-3 w-3" />}{children}
     </button>
@@ -126,8 +125,8 @@ function Chip({ selected, onClick, disabled, children }: { selected: boolean; on
 
 function Card({ title, hint, children, className = '', 'data-testid': testId }: { title: string; hint?: string; children: ReactNode; className?: string; 'data-testid'?: string }) {
   return (
-    <section className={`rounded-lg border bg-card p-4 ${className}`} data-testid={testId}>
-      <h3 className="font-semibold">{title}</h3>
+    <section className={`${CARD} p-4 ${className}`} data-testid={testId}>
+      <h3 className="font-semibold tracking-tight">{title}</h3>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-3">{children}</div>
     </section>
@@ -162,15 +161,15 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
     setInstruction('');
   };
   return (
-    <section className="rounded-lg border bg-card p-4" data-testid={`message-card-${index}`}>
+    <section className={`${kept ? 'ring-1 ring-emerald-400/50 dark:ring-emerald-400/40' : ''} ${CARD} p-4`} data-testid={`message-card-${index}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold">Message {index + 1} · {dayLabel(message.day)}</h3>
+          <h3 className="font-semibold tracking-tight">Message {index + 1} · {dayLabel(message.day)}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {index === 0 ? 'The first thing they read' : index === 1 ? 'A nudge three days later' : 'A last note ten days in'}{from ? ` · from ${from}` : ''}
           </p>
         </div>
-        {kept && <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-label="kept" />}
+        {kept && <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="kept" />}
       </div>
       <div className="mt-3 space-y-2">
         {isEmail && (
@@ -183,7 +182,7 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
               onChange={(e) => onChange({ ...message, subject: e.target.value })}
               onBlur={onBlur}
               disabled={rewriting}
-              className="mt-1 h-9 text-sm"
+              className={`mt-1 h-9 text-sm ${INPUT_FOCUS}`}
             />
           </div>
         )}
@@ -197,7 +196,7 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
             onChange={(e) => onChange({ ...message, body: e.target.value })}
             onBlur={onBlur}
             disabled={rewriting}
-            className="min-h-[120px] text-sm leading-relaxed"
+            className={`min-h-[120px] text-sm leading-relaxed ${INPUT_FOCUS}`}
           />
           <p className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{message.body.length} / {BODY_MAX}</span>
@@ -219,7 +218,7 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
               onChange={(e) => setInstruction(e.target.value)}
               placeholder="Shorter, mention the free trial, less formal…"
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitRewrite(); } }}
-              className={`h-9 text-sm ${mic.supported ? 'pr-11' : ''}`}
+              className={`h-9 text-sm ${INPUT_FOCUS} ${mic.supported ? 'pr-11' : ''}`}
             />
             {mic.supported && (
               <Button
@@ -236,18 +235,18 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
             )}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" size="sm" onClick={submitRewrite}><Sparkles className="h-4 w-4" />Rewrite it</Button>
+            <Button type="button" size="sm" onClick={submitRewrite} className={CTA_PRIMARY}><Sparkles className="h-4 w-4" />Rewrite it</Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => { if (mic.listening) mic.stop(); setAskRewrite(false); }}>Never mind</Button>
           </div>
         </div>
       ) : (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           {kept ? (
-            <span className="inline-flex h-8 items-center gap-1 rounded-md bg-emerald-50 px-3 text-xs font-medium text-emerald-700"><Check className="h-3.5 w-3.5" />Kept</span>
+            <span className={`inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-medium ${STATUS.ready}`}><Check className="h-3.5 w-3.5" />Kept</span>
           ) : (
-            <Button type="button" size="sm" onClick={onKeep}><Check className="h-4 w-4" />Sounds like me</Button>
+            <Button type="button" size="sm" onClick={onKeep} className={CTA_PRIMARY}><Check className="h-4 w-4" />Sounds like me</Button>
           )}
-          <Button type="button" size="sm" variant="outline" onClick={() => setAskRewrite(true)}>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAskRewrite(true)} className="hover:border-[#7C5CFF]/50">
             <RefreshCw className="h-4 w-4" />Rewrite this
           </Button>
         </div>
@@ -369,12 +368,18 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
   const fromName = draft?.from.agentName?.trim() || null;
 
   if (existing.isLoading || stage === null) {
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Checking for a draft…</div>;
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Checking for a draft…</div>
+        <div className={`${SKELETON} h-28`} />
+        <div className={`${SKELETON} h-20`} />
+      </div>
+    );
   }
   if (existing.data === undefined && existing.isError) {
     return (
       <div className="space-y-3">
-        <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Your first campaign could not load right now. Refresh, or try again in a moment.</p>
+        <p className={`rounded-2xl border p-4 text-sm ${STATUS.needed}`}>Your first campaign could not load right now. Refresh, or try again in a moment.</p>
         <Button type="button" variant="outline" onClick={() => existing.refetch()}>Try again</Button>
       </div>
     );
@@ -387,23 +392,23 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Who do you want to reach first, on which channel, saying what?</h2>
+          <h2 className={H_STEP}>Who do you want to reach first, on which channel, saying what?</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">It already knows your business. Pick an offer and a channel, or just let it draft one.</p>
         </div>
 
-        <section className="rounded-lg border bg-muted/30 p-4">
+        <section className={`${PANEL} p-4`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h3 className="font-semibold">Fastest path</h3>
+            <h3 className="font-semibold tracking-tight">Fastest path</h3>
             <p className="text-xs text-muted-foreground">Three messages, ten days, ready in a minute.</p>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <Button type="button" className="justify-start" onClick={draftIt} disabled={drafting || !readyChannels.length}>
+            <Button type="button" className={`justify-start ${CTA_PRIMARY}`} onClick={draftIt} disabled={drafting || !readyChannels.length}>
               {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Draft one for me
             </Button>
-            <Button type="button" variant="outline" className="justify-start" onClick={() => router.push('/campaigns')} disabled={drafting}>
+            <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => router.push('/campaigns')} disabled={drafting}>
               <LayoutTemplate className="h-4 w-4" />Start from a template
             </Button>
-            <Button type="button" variant="outline" className="justify-start" onClick={() => router.push('/campaigns/workflow')} disabled={drafting}>
+            <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => router.push('/campaigns/workflow')} disabled={drafting}>
               <Wrench className="h-4 w-4" />I&rsquo;ll set it up
             </Button>
           </div>
@@ -426,7 +431,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
             placeholder={offerChips.length ? 'Or something else…' : 'e.g. Contract nursing staff for hospitals'}
             aria-label="What you are leading with"
             disabled={drafting}
-            className="h-9 text-sm"
+            className={`h-9 text-sm ${INPUT_FOCUS}`}
           />
         </Card>
 
@@ -446,7 +451,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
             <div className="text-sm text-muted-foreground">
               <p>No channel is ready yet. Switch one on and give it a first line, then come back.</p>
               {onSetupChannels && (
-                <button type="button" onClick={onSetupChannels} className="mt-1 inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline">
+                <button type="button" onClick={onSetupChannels} className={`mt-1 inline-flex items-center gap-1 ${LINK}`}>
                   Set up your channels<ChevronRight className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -478,7 +483,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
     return (
       <div className="space-y-5">
         <div>
-          <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Here are your three messages.</h2>
+          <h2 className={H_STEP}>Here are your three messages.</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {draft.count} people{draft.audience.summary ? ` — ${draft.audience.summary}` : ''}, on {CHANNEL_META[draft.channel].label}, leading with &ldquo;{draft.offering}&rdquo;. Read each one; keep it or ask for a rewrite.
           </p>
@@ -518,7 +523,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
           <Button type="button" variant="ghost" onClick={() => setStage('setup')} disabled={rewritingIndex !== null} className="w-full sm:w-auto">
             <ChevronLeft className="h-4 w-4" />Change the offer or channel
           </Button>
-          <Button type="button" size="lg" onClick={() => { saveMessages(); setStage('confirm'); }} disabled={rewritingIndex !== null} className="w-full sm:w-auto">
+          <Button type="button" size="lg" onClick={() => { saveMessages(); setStage('confirm'); }} disabled={rewritingIndex !== null} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
             Looks good<ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -531,18 +536,18 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
   const launched = draft.status === 'launched';
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-card p-4" data-testid="first-campaign-summary">
+      <section className={`${CARD} p-4`} data-testid="first-campaign-summary">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold leading-snug sm:text-xl">Here&rsquo;s your first campaign.</h2>
+            <h2 className="text-lg font-semibold leading-snug tracking-tight sm:text-xl">Here&rsquo;s your first campaign.</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {launched ? 'It is live — you can watch it on the campaigns page.' : 'It won’t send until you press Go live on the last step.'}
             </p>
           </div>
-          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-label="drafted" />
+          <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="drafted" />
         </div>
         <p className="mt-3 text-sm leading-relaxed">{draft.summary}</p>
-        <ul className="mt-3 space-y-1.5 border-t pt-3 text-xs text-muted-foreground">
+        <ul className={`mt-3 space-y-1.5 border-t ${BORDER} pt-3 text-xs text-muted-foreground`}>
           {messages.map((m, i) => (
             <li key={i} className="flex gap-2">
               <span className="w-12 shrink-0 font-medium text-foreground">{dayLabel(m.day)}</span>
@@ -552,17 +557,17 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
         </ul>
         {!launched && (
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Button type="button" size="sm" variant="outline" onClick={() => { setCurrent(0); setStage('messages'); }} disabled={continuing}>
+            <Button type="button" size="sm" variant="outline" onClick={() => { setCurrent(0); setStage('messages'); }} disabled={continuing} className="hover:border-[#7C5CFF]/50">
               <Pencil className="h-4 w-4" />Edit
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => router.push(FIRST_CAMPAIGN_BUILDER_HREF)} disabled={continuing}>
+            <Button type="button" size="sm" variant="outline" onClick={() => router.push(FIRST_CAMPAIGN_BUILDER_HREF)} disabled={continuing} className="hover:border-[#7C5CFF]/50">
               <Send className="h-4 w-4" />Review and send
             </Button>
           </div>
         )}
       </section>
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" size="lg" onClick={onContinue} disabled={continuing} className="w-full sm:w-auto">
+        <Button type="button" size="lg" onClick={onContinue} disabled={continuing} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
           {continuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Looks right, continue
         </Button>

@@ -50,6 +50,7 @@ import {
   type TestRunVerdict,
 } from '@lad/frontend-features/tenant-studio';
 import { useDictation } from './speech';
+import { BORDER, BUBBLE_AGENT, BUBBLE_ME, CARD, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, DIVIDE, H_STEP, INPUT_FOCUS, LINK, PANEL, ROW_NEEDED, SKELETON, STATUS, TINT } from '../studio-theme';
 
 /** Where this step sits in the 9-step setup. */
 export const GO_LIVE_STEP = 9;
@@ -120,8 +121,8 @@ function whenLabel(iso: string, timezone: string): string {
 
 function Card({ title, hint, children, 'data-testid': testId }: { title: string; hint?: string; children: ReactNode; 'data-testid'?: string }) {
   return (
-    <section className="rounded-lg border bg-card p-4" data-testid={testId}>
-      <h3 className="font-semibold">{title}</h3>
+    <section className={`${CARD} p-4`} data-testid={testId}>
+      <h3 className="font-semibold tracking-tight">{title}</h3>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-3">{children}</div>
     </section>
@@ -134,9 +135,7 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-        selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-accent hover:text-accent-foreground'
-      }`}
+      className={`${CHIP_BASE} gap-1.5 px-3 py-1.5 text-xs ${selected ? CHIP_SELECTED : CHIP_IDLE}`}
     >
       {selected && <Check className="h-3 w-3" />}{children}
     </button>
@@ -163,7 +162,7 @@ function ShouldHaveSaid({ value, onChange }: { value: string; onChange: (v: stri
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="It should have said…"
-          className="min-h-[56px] text-sm"
+          className={`min-h-[56px] text-sm ${INPUT_FOCUS}`}
           aria-label="It should have said"
         />
         {mic.supported && (
@@ -174,7 +173,7 @@ function ShouldHaveSaid({ value, onChange }: { value: string; onChange: (v: stri
             onClick={() => (mic.listening ? mic.stop() : mic.start(value))}
             aria-label={mic.listening ? 'Stop dictating' : 'Dictate'}
             aria-pressed={mic.listening}
-            className="shrink-0"
+            className={`shrink-0 ${mic.listening ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}`}
           >
             {mic.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
@@ -204,13 +203,13 @@ function TurnCard({ index, prospect, reply, personaName, agentName, vertical, ve
   return (
     <div className="space-y-2" data-testid={`test-turn-${index}`}>
       <div className="flex justify-end">
-        <div className="max-w-[88%] whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
-          <div className="mb-0.5 text-[10px] uppercase tracking-wide opacity-70">{personaName}</div>
+        <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md px-3 py-2 text-sm ${BUBBLE_ME}`}>
+          <div className="mb-0.5 text-[10px] uppercase tracking-wide opacity-80">{personaName}</div>
           {prospect}
         </div>
       </div>
       <div className="flex justify-start">
-        <div className="max-w-[88%] whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-sm">
+        <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-bl-md px-3 py-2 text-sm ${BUBBLE_AGENT}`}>
           <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{agentName}</div>
           {reply}
         </div>
@@ -224,6 +223,7 @@ function TurnCard({ index, prospect, reply, personaName, agentName, vertical, ve
           aria-pressed={verdict?.thumbs === 'up'}
           aria-label={`Thumbs up for reply ${index + 1}`}
           onClick={() => onVerdict({ thumbs: 'up', reasons: [], shouldHaveSaid: '' })}
+          className={verdict?.thumbs === 'up' ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}
         >
           <ThumbsUp className="h-4 w-4" />
         </Button>
@@ -234,12 +234,13 @@ function TurnCard({ index, prospect, reply, personaName, agentName, vertical, ve
           aria-pressed={down}
           aria-label={`Thumbs down for reply ${index + 1}`}
           onClick={() => onVerdict({ thumbs: 'down', reasons: verdict?.reasons ?? [], shouldHaveSaid: verdict?.shouldHaveSaid ?? '' })}
+          className={down ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}
         >
           <ThumbsDown className="h-4 w-4" />
         </Button>
       </div>
       {down && verdict && (
-        <div className="rounded-md border bg-background p-3" data-testid={`test-turn-${index}-reasons`}>
+        <div className={`${PANEL} p-3`} data-testid={`test-turn-${index}-reasons`}>
           <p className="text-xs font-medium">What went wrong?</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {REASON_KEYS.map((k) => (
@@ -259,8 +260,8 @@ function PublishResults({ result }: { result: ApplyAndUpdateResult }) {
       {result.published.map((p) => (
         <li key={p.channel} className="flex items-start gap-2">
           {p.ok
-            ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
-            : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />}
+            ? <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.ready}`} aria-hidden />
+            : <XCircle className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.needed}`} aria-hidden />}
           <span>
             {p.ok
               ? `${CHANNEL_LABEL[p.channel] ?? p.channel} agent updated${p.readBy && p.readBy !== 'stored-only' ? '' : p.readBy === 'stored-only' ? ' — it reads this once the channel is connected' : ''}.`
@@ -376,7 +377,7 @@ function TryYourAgent({ state }: { state: StudioState }) {
       )}
 
       {!run && (
-        <Button type="button" onClick={start} disabled={testRun.isPending || testable.length === 0} className="w-full sm:w-auto" data-testid="run-test">
+        <Button type="button" onClick={start} disabled={testRun.isPending || testable.length === 0} className={`w-full sm:w-auto ${CTA_PRIMARY}`} data-testid="run-test">
           {testRun.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
           {testRun.isPending ? 'Running the test…' : 'Run a 3-message test'}
         </Button>
@@ -384,7 +385,7 @@ function TryYourAgent({ state }: { state: StudioState }) {
 
       {run && (
         <div className="space-y-4">
-          <p className="rounded-md bg-muted/60 px-3 py-2 text-sm" data-testid="test-persona">
+          <p className={`${PANEL} px-3 py-2 text-sm`} data-testid="test-persona">
             Meet <span className="font-medium">{run.persona.name}</span>, {run.persona.role} at {run.persona.company}. {run.persona.situation}
           </p>
           <div className="space-y-4" aria-live="polite">
@@ -408,7 +409,7 @@ function TryYourAgent({ state }: { state: StudioState }) {
 
           {!result && (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="button" onClick={send} disabled={!allJudged || feedback.isPending} className="w-full sm:w-auto" data-testid="send-feedback">
+              <Button type="button" onClick={send} disabled={!allJudged || feedback.isPending} className={`w-full sm:w-auto ${CTA_PRIMARY}`} data-testid="send-feedback">
                 {feedback.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {feedback.isPending ? 'Reading your feedback…' : 'Send my feedback'}
               </Button>
@@ -419,9 +420,9 @@ function TryYourAgent({ state }: { state: StudioState }) {
           )}
 
           {result && (
-            <div className="rounded-md border bg-background p-3" data-testid="feedback-summary">
+            <div className={`${PANEL} p-3`} data-testid="feedback-summary">
               <div className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#7C5CFF] dark:text-[#B69CFF]" aria-hidden />
                 <p className="text-sm">{result.summary}</p>
               </div>
               {(result.questionsQueued ?? 0) > 0 && (
@@ -432,7 +433,7 @@ function TryYourAgent({ state }: { state: StudioState }) {
               {result.proposal && !applied && !declined && (
                 canApply ? (
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" size="sm" onClick={doApply} disabled={apply.isPending || !result.proposal.ok} data-testid="apply-and-update">
+                    <Button type="button" size="sm" onClick={doApply} disabled={apply.isPending || !result.proposal.ok} data-testid="apply-and-update" className={CTA_PRIMARY}>
                       {apply.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                       {apply.isPending ? 'Updating your agent…' : 'Apply and update my agent'}
                     </Button>
@@ -443,12 +444,12 @@ function TryYourAgent({ state }: { state: StudioState }) {
                 )
               )}
               {result.proposal && !result.proposal.ok && !applied && (
-                <p className="mt-2 text-xs text-amber-700">The change it proposed does not fit the rules, so it cannot be applied as is. Run the test again with different words.</p>
+                <p className={`mt-2 text-xs ${TINT.warnText}`}>The change it proposed does not fit the rules, so it cannot be applied as is. Run the test again with different words.</p>
               )}
               {applied && <PublishResults result={applied} />}
               {declined && <p className="mt-2 text-xs text-muted-foreground">Kept as is. You can run another test any time.</p>}
               <div className="mt-3">
-                <Button type="button" size="sm" variant="outline" onClick={start} disabled={testRun.isPending || apply.isPending}>
+                <Button type="button" size="sm" variant="outline" onClick={start} disabled={testRun.isPending || apply.isPending} className="hover:border-[#7C5CFF]/50">
                   <RefreshCw className="h-4 w-4" />Run it again
                 </Button>
               </div>
@@ -470,22 +471,22 @@ function CreditsDetail({ launch }: { launch: LaunchStatus }) {
   const balance = c.unknown || c.balance === null ? null : Number(c.balance);
   return (
     <div className="mt-1 space-y-1 text-sm text-muted-foreground" data-testid="credits-detail">
-      <p className={balance === null ? 'text-amber-700' : undefined}>
+      <p className={balance === null ? TINT.warnText : undefined}>
         {balance === null ? 'We couldn’t read your wallet, so it cannot tell whether the first week is covered. Open your wallet to check.' : `${balance.toLocaleString()} credits available.`}
         {c.firstWeek && ` About ${Math.ceil(c.firstWeek.credits).toLocaleString()} credits for the first week (≈ ${money(c.firstWeek.usd)}).`}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {c.firstWeek && c.firstWeek.breakdown.length > 0 && (
-          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`inline-flex items-center gap-1 text-sm ${LINK}`}>
             {open ? 'Hide the breakdown' : 'See the breakdown'}{open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
         )}
-        <Link href={CREDITS_HREF} className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+        <Link href={CREDITS_HREF} className={`inline-flex items-center gap-1 text-sm ${LINK}`}>
           <Coins className="h-3.5 w-3.5" />{balance === null ? 'Open your wallet' : 'Add credits'}
         </Link>
       </div>
       {open && c.firstWeek && (
-        <ul className="mt-1 divide-y rounded-md border bg-background text-xs" data-testid="credits-breakdown">
+        <ul className={`${PANEL} mt-1 divide-y ${DIVIDE} text-xs`} data-testid="credits-breakdown">
           {c.firstWeek.breakdown.map((line, i) => (
             <li key={`${line.item}-${i}`} className="flex items-center justify-between gap-2 px-3 py-1.5">
               <span className="min-w-0 flex-1 truncate">{line.item}{line.qty > 1 ? ` × ${line.qty.toLocaleString()}` : ''}</span>
@@ -504,31 +505,31 @@ function CreditsDetail({ launch }: { launch: LaunchStatus }) {
 
 function LaunchRowItem({ row, launch, onJumpToStep }: { row: LaunchRow; launch: LaunchStatus; onJumpToStep: (step: number) => void }) {
   const icon = row.status === 'ready'
-    ? <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-label="ready" />
+    ? <CheckCircle2 className={`h-5 w-5 ${TINT.ready}`} aria-label="ready" />
     : row.status === 'needed'
-      ? <CircleAlert className="h-5 w-5 text-amber-600" aria-label="needed" />
+      ? <CircleAlert className={`h-5 w-5 ${TINT.warn}`} aria-label="needed" />
       : <Circle className="h-5 w-5 text-muted-foreground" aria-label="optional" />;
   const fix = row.fix ?? null;
   const isCredits = row.key === 'credits';
   // Ready, but the balance will not last the first week: the row stays green and the detail turns amber.
   const amberDetail = isCredits && row.status === 'ready' && launch.credits.enough === false;
   return (
-    <li className={`flex gap-3 px-4 py-3 ${row.status === 'needed' ? 'bg-amber-50/60' : ''}`} data-testid={`launch-row-${row.key}`}>
+    <li className={`flex gap-3 px-4 py-3 first:rounded-t-2xl last:rounded-b-2xl ${row.status === 'needed' ? ROW_NEEDED : ''}`} data-testid={`launch-row-${row.key}`}>
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className={`font-medium ${row.status === 'optional' ? 'text-muted-foreground' : ''}`}>{row.title}</span>
           {row.status === 'optional' && <span className="text-[11px] text-muted-foreground">Improves results, not required</span>}
         </div>
-        <p className={`mt-0.5 text-sm ${amberDetail ? 'text-amber-700' : 'text-muted-foreground'}`} data-testid={amberDetail ? 'credits-amber' : undefined}>{row.detail}</p>
+        <p className={`mt-0.5 text-sm ${amberDetail ? TINT.warnText : 'text-muted-foreground'}`} data-testid={amberDetail ? 'credits-amber' : undefined}>{row.detail}</p>
         {isCredits && <CreditsDetail launch={launch} />}
         {fix && !(isCredits && fix.href === CREDITS_HREF) && (
           fix.step !== undefined && fix.step !== null ? (
-            <button type="button" onClick={() => onJumpToStep(fix.step as number)} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+            <button type="button" onClick={() => onJumpToStep(fix.step as number)} className={`mt-1 inline-flex items-center gap-1 text-sm ${LINK}`}>
               {fix.label}<ArrowRight className="h-3.5 w-3.5" />
             </button>
           ) : fix.href ? (
-            <Link href={fix.href} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+            <Link href={fix.href} className={`mt-1 inline-flex items-center gap-1 text-sm ${LINK}`}>
               {fix.label}<ArrowRight className="h-3.5 w-3.5" />
             </Link>
           ) : null
@@ -553,16 +554,21 @@ function LaunchChecklist({ launch, loading, failed, onJumpToStep, onRetry }: {
       data-testid="launch-checklist"
     >
       {loading && (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking what a launch needs…</p>
+        <div className="space-y-2" aria-busy="true">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking what a launch needs…</p>
+          <div className={`${SKELETON} h-12`} />
+          <div className={`${SKELETON} h-12`} />
+          <div className={`${SKELETON} h-12`} />
+        </div>
       )}
       {failed && !loading && (
-        <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className={`rounded-xl border px-3 py-2 text-sm ${STATUS.needed}`}>
           Could not check the launch list right now.{' '}
           <button type="button" onClick={onRetry} className="font-medium underline-offset-2 hover:underline">Try again</button>
         </p>
       )}
       {launch && (
-        <ul className="divide-y rounded-lg border bg-card">
+        <ul className={`divide-y ${DIVIDE} overflow-hidden rounded-2xl border ${BORDER}`}>
           {launch.rows.map((row) => <LaunchRowItem key={row.key} row={row} launch={launch} onJumpToStep={onJumpToStep} />)}
         </ul>
       )}
@@ -617,7 +623,7 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
       {launch && (
         <div className="space-y-3">
           {!ready && (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" data-testid="go-live-blockers">
+            <p className={`rounded-xl border px-3 py-2 text-sm ${STATUS.warn}`} data-testid="go-live-blockers">
               Go live is off until {blockingRows.length ? 'these are done: ' : 'the checklist is green.'}
               {blockingRows.length > 0 && <span className="font-medium">{blockingRows.map((r) => r.title).join(', ')}</span>}
             </p>
@@ -626,7 +632,7 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
             rows={4}
             value={summary}
             onChange={(e) => { setTouched(true); setSummary(e.target.value); }}
-            className="min-h-[96px] text-sm leading-relaxed"
+            className={`min-h-[96px] text-sm leading-relaxed ${INPUT_FOCUS}`}
             aria-label="What happens when you go live"
             data-testid="go-live-summary"
           />
@@ -635,11 +641,11 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
             {launch.schedule.businessHours ? `, during ${launch.schedule.businessHours}` : ''}. It pauses on its own if credits run out.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" size="lg" onClick={onSaveForLater} disabled={saving || goLive.isPending} className="w-full sm:w-auto" data-testid="save-decide-later">
+            <Button type="button" variant="outline" size="lg" onClick={onSaveForLater} disabled={saving || goLive.isPending} className="w-full hover:border-[#7C5CFF]/50 sm:w-auto" data-testid="save-decide-later">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save and decide later
             </Button>
-            <Button type="button" size="lg" onClick={go} disabled={!ready || !canGo || saving || goLive.isPending} className="w-full sm:w-auto" data-testid="go-live">
+            <Button type="button" size="lg" onClick={go} disabled={!ready || !canGo || saving || goLive.isPending} className={`w-full sm:w-auto ${CTA_PRIMARY}`} data-testid="go-live">
               {goLive.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
               {goLive.isPending ? 'Going live…' : 'Go live'}
             </Button>
@@ -671,7 +677,7 @@ export default function GoLiveStep({ state, onJumpToStep, onWentLive, onSaveForL
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Does this sound like you, and are you ready to send?</h2>
+        <h2 className={H_STEP}>Does this sound like you, and are you ready to send?</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Try your agent on a made-up prospect first. Then check the list, read what will happen, and press Go live when it looks right.
         </p>
