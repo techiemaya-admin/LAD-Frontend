@@ -241,7 +241,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
           </ul>
         )}
         <p className="text-xs text-muted-foreground">
-          Up to {MAX_LINKS} links. {links.length > 0 ? `${links.length} of ${MAX_LINKS} added.` : 'Your website is the most useful one.'}
+          Optional, up to {MAX_LINKS}. {links.length > 0 ? `${links.length} added.` : 'Your website is the most useful one.'}
         </p>
       </div>
 
@@ -254,7 +254,11 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
           <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
             Reading your website and writing your plan…
           </p>
-        ) : brief.trim().length > 0 && brief.trim().length < 20 ? (
+        ) : brief.trim().length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {links.length > 0 ? 'Links are optional — a couple of sentences about your business is what it needs to start.' : 'A couple of sentences about your business is all it needs to start.'}
+          </p>
+        ) : brief.trim().length < 20 ? (
           <p className="text-xs text-muted-foreground">A sentence or two more and it can start.</p>
         ) : null}
       </div>
