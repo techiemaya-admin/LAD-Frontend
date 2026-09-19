@@ -14,8 +14,23 @@ import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../shared/apiCl
 import { apiErrorFromResponse } from '../../shared/apiError';
 import { safeStorage } from '../../shared/storage';
 import type {
+  AgentQuestion,
+  AgentQuestionContext,
+  AnswerQuestionResult,
+  ApplyAndUpdateResult,
   ApplyResult,
   ApprovalMode,
+  GoLiveResult,
+  HistoryEntry,
+  LaunchStatus,
+  QuestionStatus,
+  QuestionsResponse,
+  TestRun,
+  TestRunChannel,
+  TestRunFeedback,
+  TestRunFeedbackInput,
+  UndoAction,
+  UndoResult,
   BrandInput,
   BrandProfile,
   BrandStoryAnswers,
@@ -72,6 +87,9 @@ export const studioKeys = {
   style: () => [...studioKeys.all, 'style'] as const,
   firstCampaign: () => [...studioKeys.all, 'firstCampaign'] as const,
   references: () => [...studioKeys.all, 'references'] as const,
+  launch: () => [...studioKeys.all, 'launch'] as const,
+  history: (limit?: number) => [...studioKeys.all, 'history', limit ?? 50] as const,
+  questions: (status?: QuestionStatus) => [...studioKeys.all, 'questions', status ?? 'open'] as const,
 };
 
 /**
@@ -340,4 +358,91 @@ export async function uploadBrandGuide(input: { file: File }): Promise<{ brand: 
 /** What the UI shows before the tenant has a brand row. */
 export function emptyBrand(): BrandProfile {
   return { palette: [], logos: [], fonts: [], story: null, promises: [], never_do: [], known_for: null, tone_rules: [], summary: null, updated_at: null };
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 9 — try your agent and go live                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * LLM-backed: invents one prospect and three lines, then lets the agent
+ * answer each. Nothing is stored server-side. 400 `channel_not_testable`,
+ * 409 `no_ready_channel` | `no_agent_prompt`. Never fire on render.
+ */
+export async function runTestRun(input: { channel?: TestRunChannel } = {}): Promise<TestRun> {
+  const res = await apiPost<Envelope<TestRun>>(`${BASE}/studio/test-run`, input);
+  return res.data.data;
+}
+
+/** LLM-backed: thumbs + reasons become one Tailor proposal and a one-line summary. All thumbs-up → `proposal: null`. */
+export async function sendTestRunFeedback(input: TestRunFeedbackInput): Promise<TestRunFeedback> {
+  const res = await apiPost<Envelope<TestRunFeedback>>(`${BASE}/studio/test-run/feedback`, input);
+  return res.data.data;
+}
+
+/**
+ * One press: applies the overlay (same validation as `applyOverlay`), then
+ * regenerates and publishes every ON + ready channel's agent. A channel that
+ * fails to publish is reported, not rolled back. Admin/owner only.
+ */
+export async function applyAndUpdate(input: { overlay: Overlay; note?: string }): Promise<ApplyAndUpdateResult> {
+  const res = await apiPost<Envelope<ApplyAndUpdateResult>>(`${BASE}/studio/apply-and-update`, input);
+  return res.data.data;
+}
+
+/** The launch checklist, first-week cost and plain-English summary — computed server-side so every surface agrees. */
+export async function getLaunchStatus(): Promise<LaunchStatus> {
+  const res = await apiGet<Envelope<LaunchStatus>>(`${BASE}/studio/launch`);
+  return res.data.data;
+}
+
+/**
+ * Marks setup complete and stores the (possibly edited) summary. Does NOT
+ * launch the campaign — the builder does that through its one proven path.
+ * 409 `not_ready` with `blocking` when the checklist is not green.
+ */
+export async function goLive(input: { summary?: string } = {}): Promise<GoLiveResult> {
+  const res = await apiPost<Envelope<GoLiveResult>>(`${BASE}/studio/go-live`, input);
+  return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* History + undo                                                       */
+/* ------------------------------------------------------------------ */
+
+export async function getStudioHistory(limit = 50): Promise<HistoryEntry[]> {
+  const res = await apiGet<Envelope<{ entries: HistoryEntry[] }>>(`${BASE}/studio/history`, { params: { limit } });
+  return res.data.data?.entries ?? [];
+}
+
+/** Puts back the previous overlay version (and republishes the agents) or the previous prompt for one channel. Admin/owner only. */
+export async function undoHistory(action: UndoAction): Promise<UndoResult> {
+  const res = await apiPost<Envelope<UndoResult>>(`${BASE}/studio/history/undo`, action);
+  return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Questions Mr LAD has for the owner                                   */
+/* ------------------------------------------------------------------ */
+
+export async function listQuestions(status: QuestionStatus = 'open'): Promise<QuestionsResponse> {
+  const res = await apiGet<Envelope<QuestionsResponse>>(`${BASE}/studio/questions`, { params: { status } });
+  const d = res.data.data;
+  return { questions: d?.questions ?? [], openCount: d?.openCount ?? 0 };
+}
+
+/** LLM-backed: the answer becomes a Tailor proposal; applying it is a separate press. Admin/owner only. */
+export async function answerQuestion(input: { id: string; answer: string }): Promise<AnswerQuestionResult> {
+  const res = await apiPost<Envelope<AnswerQuestionResult>>(`${BASE}/studio/questions/${encodeURIComponent(input.id)}/answer`, { answer: input.answer });
+  return res.data.data;
+}
+
+export async function dismissQuestion(id: string): Promise<AgentQuestion> {
+  const res = await apiPost<Envelope<{ question: AgentQuestion }>>(`${BASE}/studio/questions/${encodeURIComponent(id)}/dismiss`, {});
+  return res.data.data.question;
+}
+
+export async function createQuestion(input: { channel: StudioChannel; question: string; context?: AgentQuestionContext }): Promise<AgentQuestion> {
+  const res = await apiPost<Envelope<{ question: AgentQuestion }>>(`${BASE}/studio/questions`, input);
+  return res.data.data.question;
 }

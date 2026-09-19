@@ -9,29 +9,34 @@
  * done. The tenant briefs their new business development manager (Step 1),
  * edits the plan it proposes, applies it, and lands on the launch checklist
  * ("Step 9 of 9"). "Skip to the studio" marks step 1 done without a brief.
- * From the checklist (or the rooms view) Steps 6, 7 and 8 — how your agents
- * talk, your first campaign, brand and references — open in the same frame
- * and return where they came from; a visit that was saved mid-step resumes
- * on that step.
+ * From the checklist (or the rooms view) Steps 6, 7, 8 and 9 — how your
+ * agents talk, your first campaign, brand and references, try your agent
+ * and go live — open in the same frame and return where they came from; a
+ * visit that was saved mid-step resumes on that step. Go live (Step 9) marks
+ * setup complete and hands off to the campaign builder, which launches the
+ * first campaign and comes back here with `?live=1`.
  *
  * STUDIO (returning): three rooms share one loop — every room ends in a
  * Tailor proposal with a review card, applied through the same customisation
  * PUT a hand-made change takes. The unapplied proposal is a DRAFT the next
  * request builds on, across rooms, until it is applied or discarded.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, MessagesSquare, Target, Theater } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import StudioStatus from '@/components/studio/StudioStatus';
 import TeamStrip from '@/components/studio/TeamStrip';
-import { FirstCampaignBanner, NeutralVoiceBanner, StudioEntries } from '@/components/studio/StudioBanners';
+import { FirstCampaignBanner, LiveBanner, NeutralVoiceBanner, SetupHistoryLink, StudioEntries } from '@/components/studio/StudioBanners';
+import StudioHistory from '@/components/studio/StudioHistory';
+import QuestionsInbox from '@/components/studio/QuestionsInbox';
 import RehearsalRoom from '@/components/studio/RehearsalRoom';
 import IcpRoom from '@/components/studio/IcpRoom';
 import TailorRoom from '@/components/studio/TailorRoom';
 import {
-  BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, PlanReview,
-  ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
+  BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, GoLiveStep,
+  GO_LIVE_BUILDER_HREF, GO_LIVE_STEP, PlanReview, ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
 } from '@/components/studio/setup';
 import {
   useSaveSetup,
@@ -42,8 +47,10 @@ import {
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
 
-type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'studio';
-type StepPhase = Extract<SetupPhase, 'channels' | 'campaign' | 'references'>;
+type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'golive' | 'studio';
+type StepPhase = Extract<SetupPhase, 'channels' | 'campaign' | 'references' | 'golive'>;
+/** Where the profile answers (setup steps 1–5) are fixed when a launch row points at one of them. */
+const PROFILE_HREF = '/settings?tab=businessprofile';
 
 function needsSetup(state: StudioState): boolean {
   const setup = state.setup;
@@ -55,25 +62,40 @@ function needsSetup(state: StudioState): boolean {
 function reports(state: StudioState, phase: StepPhase): boolean {
   if (phase === 'channels') return Array.isArray(state.channels);
   if (phase === 'campaign') return state.firstCampaign !== undefined;
+  if (phase === 'golive') return state.launch !== undefined;
   return state.references !== undefined;
 }
 
-const STEP_OF: Record<StepPhase, number> = { channels: CHANNELS_STEP, campaign: FIRST_CAMPAIGN_STEP, references: REFERENCES_STEP };
-const STEP_TITLE: Record<StepPhase, string> = { channels: 'How your agents talk', campaign: 'Your first campaign', references: 'Brand and references' };
+const STEP_OF: Record<StepPhase, number> = { channels: CHANNELS_STEP, campaign: FIRST_CAMPAIGN_STEP, references: REFERENCES_STEP, golive: GO_LIVE_STEP };
+const PHASE_OF_STEP: Partial<Record<number, StepPhase>> = { [CHANNELS_STEP]: 'channels', [FIRST_CAMPAIGN_STEP]: 'campaign', [REFERENCES_STEP]: 'references', [GO_LIVE_STEP]: 'golive' };
+const STEP_TITLE: Record<StepPhase, string> = { channels: 'How your agents talk', campaign: 'Your first campaign', references: 'Brand and references', golive: 'Try your agent and go live' };
 
-/** "Save and continue later" on Step 6, 7 or 8 lands the next visit back on that step. */
+/**
+ * "Save and continue later" on Step 6, 7, 8 or 9 lands the next visit back on
+ * that step. Step 9 only resumes for a tenant who walked the later steps —
+ * "Open the studio" on the checklist also records step 9, and a tenant who
+ * skipped straight to the rooms must not be pulled back into a launch flow.
+ */
 function resumesStep(state: StudioState): StepPhase | null {
   const setup = state.setup;
   if (!setup || setup.completedAt !== null) return null;
-  for (const phase of ['channels', 'campaign', 'references'] as StepPhase[]) {
+  for (const phase of ['channels', 'campaign', 'references', 'golive'] as StepPhase[]) {
     const step = STEP_OF[phase];
-    if (setup.currentStep === step && !setup.completedSteps.includes(step) && reports(state, phase)) return phase;
+    if (setup.currentStep !== step || setup.completedSteps.includes(step) || !reports(state, phase)) continue;
+    if (phase === 'golive' && !setup.completedSteps.some((s) => s >= CHANNELS_STEP && s < GO_LIVE_STEP)) continue;
+    return phase;
   }
   return null;
 }
 
+const BACK_LABEL: Record<SetupPhase, string> = {
+  studio: 'Back to the studio', checklist: 'Back to the checklist', golive: 'Back to go live',
+  brief: 'Back', review: 'Back', channels: 'Back', campaign: 'Back', references: 'Back',
+};
+
 export default function StudioPage() {
   const state = useStudioState();
+  const router = useRouter();
   const { toast } = useToast();
   const saveSetup = useSaveSetup();
   const [draft, setDraft] = useState<Overlay | undefined>(undefined);
@@ -85,7 +107,22 @@ export default function StudioPage() {
   const [applied, setApplied] = useState<ApplyResult | null>(null);
   // Where a step (6, 7, 8) returns to: the checklist mid-setup, the rooms otherwise.
   const [stepReturn, setStepReturn] = useState<SetupPhase>('checklist');
+  // Step 9 keeps its own way back: its fix links open Steps 6–8 with `stepReturn = 'golive'`.
+  const [goLiveReturn, setGoLiveReturn] = useState<SetupPhase>('studio');
   const [stepVisited, setStepVisited] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // `?live=1` — the builder just launched the first campaign after Go live.
+  // Read once and cleared from the address bar so a refresh does not repeat it.
+  const [justLive, setJustLive] = useState(false);
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('live') !== '1') return;
+      setJustLive(true);
+      url.searchParams.delete('live');
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch { /* no window: nothing to read */ }
+  }, []);
 
   const markStepDone = (step: number, nextStep: number, then: () => void) => {
     const done = state.data?.setup?.completedSteps ?? [];
@@ -100,9 +137,16 @@ export default function StudioPage() {
   const markStepOneDone = (then: () => void) => markStepDone(1, SETUP_TOTAL_STEPS, then);
 
   const openStep = (step: StepPhase, from: SetupPhase) => {
-    setStepReturn(from);
+    if (step === 'golive') setGoLiveReturn(from);
+    else setStepReturn(from);
     setStepVisited(true);
     setPhase(step);
+  };
+  /** A launch row's `fix.step`: Steps 6–8 open in the frame and return to Step 9; 1–5 live in the profile settings. */
+  const jumpToStep = (step: number) => {
+    const target = PHASE_OF_STEP[step];
+    if (target && target !== 'golive' && state.data && reports(state.data, target)) openStep(target, 'golive');
+    else router.push(PROFILE_HREF);
   };
 
   if (state.isLoading) {
@@ -125,6 +169,9 @@ export default function StudioPage() {
   const hasChannels = reports(data, 'channels');
   const hasFirstCampaign = reports(data, 'campaign');
   const hasReferences = reports(data, 'references');
+  const hasLaunch = reports(data, 'golive');
+  const hasHistory = data.history !== undefined;
+  const setupDone = Boolean(data.setup && data.setup.completedAt !== null);
   const plan = applied?.plan ?? proposal?.result.plan;
   const personaName = plan?.profile.senderName ?? null;
 
@@ -198,7 +245,7 @@ export default function StudioPage() {
         title={STEP_TITLE[effectivePhase]}
         aside={(
           <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
-            {backTo === 'studio' ? 'Back to the studio' : 'Back to the checklist'}
+            {BACK_LABEL[backTo]}
           </button>
         )}
       >
@@ -220,6 +267,37 @@ export default function StudioPage() {
     );
   }
 
+  if (effectivePhase === 'golive') {
+    const backTo: SetupPhase = phase === null ? 'studio' : goLiveReturn;
+    const saveForLater = () => saveSetup.mutate(
+      { currentStep: GO_LIVE_STEP },
+      {
+        onSuccess: () => { setGoLiveReturn('studio'); setPhase('studio'); },
+        onError: () => toast({ title: 'Could not save', description: 'Try again in a moment.', variant: 'destructive' }),
+      },
+    );
+    return (
+      <SetupShell
+        step={GO_LIVE_STEP}
+        progress={100}
+        title={STEP_TITLE.golive}
+        aside={(
+          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
+            {BACK_LABEL[backTo]}
+          </button>
+        )}
+      >
+        <GoLiveStep
+          state={data}
+          onJumpToStep={jumpToStep}
+          onWentLive={() => router.push(GO_LIVE_BUILDER_HREF)}
+          onSaveForLater={saveForLater}
+          saving={saveSetup.isPending}
+        />
+      </SetupShell>
+    );
+  }
+
   if (effectivePhase === 'checklist' || (effectivePhase === 'review' && !proposal)) {
     // The apply snapshot is freshest right after the apply; once a later step has written, the live state is.
     const latest: StudioState = stepVisited ? data : (applied?.state ?? data);
@@ -235,6 +313,7 @@ export default function StudioPage() {
           onSetupChannels={hasChannels ? () => openStep('channels', 'checklist') : undefined}
           onFirstCampaign={hasFirstCampaign ? () => openStep('campaign', 'checklist') : undefined}
           onReferences={hasReferences ? () => openStep('references', 'checklist') : undefined}
+          onGoLive={hasLaunch ? () => openStep('golive', 'checklist') : undefined}
         />
       </SetupShell>
     );
@@ -249,20 +328,34 @@ export default function StudioPage() {
         </p>
       </header>
       <div className="mb-3 space-y-3 empty:hidden">
-        <FirstCampaignBanner state={data} href={FIRST_CAMPAIGN_BUILDER_HREF} />
+        {justLive && <LiveBanner onDismiss={() => setJustLive(false)} />}
+        {!justLive && <FirstCampaignBanner state={data} href={FIRST_CAMPAIGN_BUILDER_HREF} />}
         <NeutralVoiceBanner state={data} onAdd={() => openStep('references', 'studio')} />
       </div>
-      <StudioStatus state={data} />
+      <StudioStatus state={data} onHistory={hasHistory ? () => setHistoryOpen(true) : undefined} />
       {hasChannels && (
         <div className="mt-3">
           <TeamStrip channels={data.channels} onEdit={() => openStep('channels', 'studio')} />
         </div>
       )}
-      {(hasFirstCampaign || hasReferences) && (
+      {/* The setup entry points go away once the tenant is live; the history link is what remains. */}
+      {!setupDone && (hasFirstCampaign || hasReferences || hasLaunch) && (
         <div className="mt-3">
-          <StudioEntries state={data} onFirstCampaign={() => openStep('campaign', 'studio')} onReferences={() => openStep('references', 'studio')} />
+          <StudioEntries
+            state={data}
+            onFirstCampaign={() => openStep('campaign', 'studio')}
+            onReferences={() => openStep('references', 'studio')}
+            onGoLive={hasLaunch ? () => openStep('golive', 'studio') : undefined}
+          />
         </div>
       )}
+      {setupDone && hasHistory && (
+        <div className="mt-3"><SetupHistoryLink onOpen={() => setHistoryOpen(true)} /></div>
+      )}
+      <div className="mt-3 empty:hidden">
+        <QuestionsInbox state={data} />
+      </div>
+      {hasHistory && <StudioHistory open={historyOpen} onOpenChange={setHistoryOpen} />}
       {draft && (
         <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           You have an unapplied proposal. The next request in any room builds on it; apply or discard it from its review card.

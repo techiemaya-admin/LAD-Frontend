@@ -26,13 +26,15 @@ export interface SetupShellProps {
   children: ReactNode;
   /** Small secondary link under the header (e.g. "Skip to the studio"). */
   aside?: ReactNode;
+  /** Progress bar override (0–100); the last step shows 100 rather than "eight of nine done". */
+  progress?: number;
 }
 
-export default function SetupShell({ step, title, children, aside }: SetupShellProps) {
+export default function SetupShell({ step, title, children, aside, progress }: SetupShellProps) {
   const router = useRouter();
   const { toast } = useToast();
   const save = useSaveSetup();
-  const pct = Math.round((Math.max(0, step - 1) / SETUP_TOTAL_STEPS) * 100);
+  const pct = progress ?? Math.round((Math.max(0, step - 1) / SETUP_TOTAL_STEPS) * 100);
 
   const saveAndLeave = () => {
     save.mutate(

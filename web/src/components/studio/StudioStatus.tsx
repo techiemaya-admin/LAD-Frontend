@@ -5,8 +5,9 @@
  * when one is not. The interview room IS the existing Business Profile chat.
  */
 import Link from 'next/link';
-import { CheckCircle2, Circle, MessageSquareText, Target, Theater } from 'lucide-react';
+import { CheckCircle2, Circle, History, MessageSquareText, Target, Theater } from 'lucide-react';
 import type { StudioState } from '@lad/frontend-features/tenant-studio';
+import { timeAgo } from './StudioHistory';
 
 const FIELD_LABELS: Record<string, string> = {
   companyName: 'Company name', industry: 'Industry', valueProposition: 'Value proposition', productsServices: 'Products / services',
@@ -41,10 +42,21 @@ function Room({ icon: Icon, title, ready, detail, action }: {
   );
 }
 
-export default function StudioStatus({ state }: { state: StudioState }) {
-  const { interview, agentPrompt, rehearsal, icpTraining } = state;
+export default function StudioStatus({ state, onHistory }: { state: StudioState; onHistory?: () => void }) {
+  const { interview, agentPrompt, rehearsal, icpTraining, history } = state;
   const missing = interview.missing.map(k => FIELD_LABELS[k] ?? k);
   return (
+    <div className="space-y-2">
+    {history !== undefined && onHistory && (
+      <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground" data-testid="last-change">
+        <History className="h-3.5 w-3.5" aria-hidden />
+        <span>{history.lastChangeAt ? `Last change: ${timeAgo(history.lastChangeAt)}` : 'No changes yet'}</span>
+        <span aria-hidden>·</span>
+        <button type="button" onClick={onHistory} className="font-medium text-primary underline-offset-2 hover:underline">
+          {history.undoable ? 'Undo' : 'History'}
+        </button>
+      </p>
+    )}
     <div className="grid gap-3 md:grid-cols-3">
       <Room
         icon={MessageSquareText}
@@ -74,6 +86,7 @@ export default function StudioStatus({ state }: { state: StudioState }) {
             : 'Finish the interview, then generate the agent prompt.'}
         action={rehearsal.ready ? undefined : { href: '/settings?tab=chat', label: 'Generate the agent prompt' }}
       />
+    </div>
     </div>
   );
 }

@@ -1642,7 +1642,7 @@ function useBuilderResources() {
   };
 }
 
-export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId, onLaunched }: {
+export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId, onLaunched, afterLaunchHref }: {
   onClose: () => void;
   /**
    * Called once a NEW campaign has been created, before the redirect to
@@ -1676,6 +1676,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   initialNodeCfg?: Record<string, any>;
   /** Fire launch() automatically once the template is applied. */
   autoLaunch?: boolean;
+  /** Where a successful NEW launch lands; defaults to the campaigns list. */
+  afterLaunchHref?: string;
   /** Reopen an existing custom workflow for editing; launch updates it in place. */
   editCampaignId?: string;
 }) {
@@ -4307,7 +4309,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           const createdId = data?.data?.id ?? data?.id ?? data?.campaign?.id ?? data?.data?.campaign?.id ?? null;
           try { await onLaunched(createdId != null ? String(createdId) : null); } catch { /* the campaign is live either way */ }
         }
-        window.location.href = '/campaigns';
+        window.location.href = (!editCampaignId && afterLaunchHref) || '/campaigns';
       } else {
         setError(data?.error || `${editCampaignId ? 'Could not save changes' : 'Failed to launch Accelerator'} (${res.status})`);
         setLaunching(false);
