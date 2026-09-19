@@ -5,12 +5,20 @@
  * which forwards `snapshot` to LAD_backend /api/snapshot/*. Tenant scoping is
  * the caller's token, applied server-side — never sent from here.
  *
- * Nothing in the studio writes except `applyOverlay`, which is the same PUT a
- * hand-made customisation takes and is admin-only on the backend.
+ * The rooms write only through `applyOverlay`, which is the same PUT a
+ * hand-made customisation takes and is admin-only on the backend. The Setup
+ * flow adds its own small writes (setup progress, goals, and the brief
+ * apply that saves the profile keys the tenant approved on the review card).
  */
-import { apiGet, apiPost, apiPut } from '../../shared/apiClient';
+import { apiDelete, apiGet, apiPost, apiPut } from '../../shared/apiClient';
 import type {
+  ApplyResult,
+  ApprovalMode,
+  BriefPlan,
+  BriefResult,
   ChatTurn,
+  Goal,
+  GoalInput,
   IcpScoreResult,
   IcpTrainResult,
   Overlay,
@@ -19,6 +27,7 @@ import type {
   RefineResult,
   RehearsalResult,
   SampleLead,
+  StudioSetup,
   StudioState,
   TailorTurn,
   TrainingSample,
@@ -36,6 +45,7 @@ export const studioKeys = {
   all: ['tenantStudio'] as const,
   state: () => [...studioKeys.all, 'state'] as const,
   versions: () => [...studioKeys.all, 'versions'] as const,
+  goals: () => [...studioKeys.all, 'goals'] as const,
 };
 
 export async function getStudioState(): Promise<StudioState> {
@@ -88,5 +98,51 @@ export async function applyOverlay(input: { overlay: Overlay; note?: string }): 
 
 export async function listOverlayVersions(): Promise<OverlayVersion[]> {
   const res = await apiGet<Envelope<OverlayVersion[]>>(`${BASE}/tailor/overlay/versions`);
+  return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Setup flow                                                           */
+/* ------------------------------------------------------------------ */
+
+export async function getSetup(): Promise<StudioSetup | undefined> {
+  const state = await getStudioState();
+  return state.setup;
+}
+
+export async function saveSetup(input: Partial<StudioSetup>): Promise<StudioSetup> {
+  const res = await apiPut<Envelope<StudioSetup>>(`${BASE}/studio/setup`, input);
+  return res.data.data;
+}
+
+export async function listGoals(): Promise<Goal[]> {
+  const res = await apiGet<Envelope<Goal[]>>(`${BASE}/studio/goals`);
+  return res.data.data;
+}
+
+export async function upsertGoal(goal: GoalInput): Promise<Goal> {
+  const res = await apiPost<Envelope<Goal>>(`${BASE}/studio/goals`, goal);
+  return res.data.data;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await apiDelete<Envelope<unknown>>(`${BASE}/studio/goals/${encodeURIComponent(id)}`);
+}
+
+/** The brain-dump → plan turn. LLM-backed: bills the caller, never fire on render. */
+export async function proposeBrief(input: { brief: string; links: string[] }): Promise<BriefResult> {
+  const res = await apiPost<Envelope<BriefResult>>(`${BASE}/studio/brief`, input);
+  return res.data.data;
+}
+
+export async function applyBrief(input: {
+  plan: BriefPlan;
+  answers?: Record<string, string>;
+  approvalMode?: ApprovalMode;
+  /** Stored with the setup so the proposal can be re-read later. */
+  brief?: string;
+  links?: string[];
+}): Promise<ApplyResult> {
+  const res = await apiPost<Envelope<ApplyResult>>(`${BASE}/studio/brief/apply`, input);
   return res.data.data;
 }
