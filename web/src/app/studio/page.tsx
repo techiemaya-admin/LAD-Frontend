@@ -9,8 +9,10 @@
  * done. The tenant briefs their new business development manager (Step 1),
  * edits the plan it proposes, applies it, and lands on the launch checklist
  * ("Step 9 of 9"). "Skip to the studio" marks step 1 done without a brief.
- * From the checklist (or the rooms' "Your team" strip) Step 6 — how your
- * agents talk — opens in the same frame and returns where it came from.
+ * From the checklist (or the rooms view) Steps 6, 7 and 8 — how your agents
+ * talk, your first campaign, brand and references — open in the same frame
+ * and return where they came from; a visit that was saved mid-step resumes
+ * on that step.
  *
  * STUDIO (returning): three rooms share one loop — every room ends in a
  * Tailor proposal with a review card, applied through the same customisation
@@ -23,10 +25,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import StudioStatus from '@/components/studio/StudioStatus';
 import TeamStrip from '@/components/studio/TeamStrip';
+import { FirstCampaignBanner, NeutralVoiceBanner, StudioEntries } from '@/components/studio/StudioBanners';
 import RehearsalRoom from '@/components/studio/RehearsalRoom';
 import IcpRoom from '@/components/studio/IcpRoom';
 import TailorRoom from '@/components/studio/TailorRoom';
-import { BriefStep, ChannelsStep, CHANNELS_STEP, PlanReview, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS } from '@/components/studio/setup';
+import {
+  BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, PlanReview,
+  ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
+} from '@/components/studio/setup';
 import {
   useSaveSetup,
   useStudioState,
@@ -36,7 +42,8 @@ import {
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
 
-type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'studio';
+type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'studio';
+type StepPhase = Extract<SetupPhase, 'channels' | 'campaign' | 'references'>;
 
 function needsSetup(state: StudioState): boolean {
   const setup = state.setup;
@@ -44,11 +51,25 @@ function needsSetup(state: StudioState): boolean {
   return setup.completedAt === null && !setup.completedSteps.includes(1);
 }
 
-/** "Save and continue later" on Step 6 lands the next visit back on it. */
-function resumesChannels(state: StudioState): boolean {
+/** Whether the backend reports the data a step is built on (absence = not reported, so the step stays hidden). */
+function reports(state: StudioState, phase: StepPhase): boolean {
+  if (phase === 'channels') return Array.isArray(state.channels);
+  if (phase === 'campaign') return state.firstCampaign !== undefined;
+  return state.references !== undefined;
+}
+
+const STEP_OF: Record<StepPhase, number> = { channels: CHANNELS_STEP, campaign: FIRST_CAMPAIGN_STEP, references: REFERENCES_STEP };
+const STEP_TITLE: Record<StepPhase, string> = { channels: 'How your agents talk', campaign: 'Your first campaign', references: 'Brand and references' };
+
+/** "Save and continue later" on Step 6, 7 or 8 lands the next visit back on that step. */
+function resumesStep(state: StudioState): StepPhase | null {
   const setup = state.setup;
-  if (!setup || !Array.isArray(state.channels)) return false;
-  return setup.completedAt === null && setup.currentStep === CHANNELS_STEP && !setup.completedSteps.includes(CHANNELS_STEP);
+  if (!setup || setup.completedAt !== null) return null;
+  for (const phase of ['channels', 'campaign', 'references'] as StepPhase[]) {
+    const step = STEP_OF[phase];
+    if (setup.currentStep === step && !setup.completedSteps.includes(step) && reports(state, phase)) return phase;
+  }
+  return null;
 }
 
 export default function StudioPage() {
@@ -62,9 +83,9 @@ export default function StudioPage() {
   const [phase, setPhase] = useState<SetupPhase | null>(null);
   const [proposal, setProposal] = useState<{ result: BriefResult; brief: string; links: string[] } | null>(null);
   const [applied, setApplied] = useState<ApplyResult | null>(null);
-  // Where Step 6 returns to: the checklist mid-setup, the rooms otherwise.
-  const [channelsReturn, setChannelsReturn] = useState<SetupPhase>('checklist');
-  const [channelsVisited, setChannelsVisited] = useState(false);
+  // Where a step (6, 7, 8) returns to: the checklist mid-setup, the rooms otherwise.
+  const [stepReturn, setStepReturn] = useState<SetupPhase>('checklist');
+  const [stepVisited, setStepVisited] = useState(false);
 
   const markStepDone = (step: number, nextStep: number, then: () => void) => {
     const done = state.data?.setup?.completedSteps ?? [];
@@ -78,10 +99,10 @@ export default function StudioPage() {
   };
   const markStepOneDone = (then: () => void) => markStepDone(1, SETUP_TOTAL_STEPS, then);
 
-  const openChannels = (from: SetupPhase) => {
-    setChannelsReturn(from);
-    setChannelsVisited(true);
-    setPhase('channels');
+  const openStep = (step: StepPhase, from: SetupPhase) => {
+    setStepReturn(from);
+    setStepVisited(true);
+    setPhase(step);
   };
 
   if (state.isLoading) {
@@ -100,8 +121,10 @@ export default function StudioPage() {
   }
 
   const data = state.data;
-  const effectivePhase: SetupPhase = phase ?? (needsSetup(data) ? 'brief' : resumesChannels(data) ? 'channels' : 'studio');
-  const hasChannels = Array.isArray(data.channels);
+  const effectivePhase: SetupPhase = phase ?? (needsSetup(data) ? 'brief' : resumesStep(data) ?? 'studio');
+  const hasChannels = reports(data, 'channels');
+  const hasFirstCampaign = reports(data, 'campaign');
+  const hasReferences = reports(data, 'references');
   const plan = applied?.plan ?? proposal?.result.plan;
   const personaName = plan?.profile.senderName ?? null;
 
@@ -152,31 +175,54 @@ export default function StudioPage() {
     );
   }
 
-  if (effectivePhase === 'channels') {
+  if (effectivePhase === 'channels' || effectivePhase === 'campaign' || effectivePhase === 'references') {
     // A returning tenant resumed here: go to the rooms afterwards, not a checklist they already passed.
-    const backTo: SetupPhase = phase === null ? 'studio' : channelsReturn;
+    const backTo: SetupPhase = phase === null ? 'studio' : stepReturn;
+    const step = STEP_OF[effectivePhase];
+    // Continue mid-setup (from the checklist, or a resumed visit) walks 6 → 7 → 8
+    // as far as the backend supports; opened from the rooms it goes straight back.
+    const resumed = phase === null;
+    const nextPhase = (): SetupPhase => {
+      if (backTo !== 'checklist' && !resumed) return backTo;
+      if (effectivePhase === 'channels' && hasFirstCampaign) return 'campaign';
+      if ((effectivePhase === 'channels' || effectivePhase === 'campaign') && hasReferences) return 'references';
+      return backTo;
+    };
+    const onContinue = () => markStepDone(step, step + 1, () => {
+      if (resumed) setStepReturn('studio'); // the later steps of a resumed visit still end in the rooms
+      setPhase(nextPhase());
+    });
     return (
       <SetupShell
-        step={CHANNELS_STEP}
-        title="How your agents talk"
+        step={step}
+        title={STEP_TITLE[effectivePhase]}
         aside={(
           <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
             {backTo === 'studio' ? 'Back to the studio' : 'Back to the checklist'}
           </button>
         )}
       >
-        <ChannelsStep
-          defaultAgentName={personaName}
-          continuing={saveSetup.isPending}
-          onContinue={() => markStepDone(CHANNELS_STEP, CHANNELS_STEP + 1, () => setPhase(backTo))}
-        />
+        {effectivePhase === 'channels' && (
+          <ChannelsStep defaultAgentName={personaName} continuing={saveSetup.isPending} onContinue={onContinue} />
+        )}
+        {effectivePhase === 'campaign' && (
+          <FirstCampaignStep
+            channels={data.channels}
+            continuing={saveSetup.isPending}
+            onContinue={onContinue}
+            onSetupChannels={hasChannels ? () => openStep('channels', backTo) : undefined}
+          />
+        )}
+        {effectivePhase === 'references' && (
+          <ReferencesStep continuing={saveSetup.isPending} onContinue={onContinue} />
+        )}
       </SetupShell>
     );
   }
 
   if (effectivePhase === 'checklist' || (effectivePhase === 'review' && !proposal)) {
-    // The apply snapshot is freshest right after the apply; once Step 6 has written, the live state is.
-    const latest: StudioState = channelsVisited ? data : (applied?.state ?? data);
+    // The apply snapshot is freshest right after the apply; once a later step has written, the live state is.
+    const latest: StudioState = stepVisited ? data : (applied?.state ?? data);
     return (
       <SetupShell step={SETUP_TOTAL_STEPS} title="Review and go live">
         <SetupChecklist
@@ -186,7 +232,9 @@ export default function StudioPage() {
           hasReferences={(proposal?.links.length ?? 0) > 0}
           opening={saveSetup.isPending}
           onOpenStudio={() => markStepOneDone(() => setPhase('studio'))}
-          onSetupChannels={hasChannels ? () => openChannels('checklist') : undefined}
+          onSetupChannels={hasChannels ? () => openStep('channels', 'checklist') : undefined}
+          onFirstCampaign={hasFirstCampaign ? () => openStep('campaign', 'checklist') : undefined}
+          onReferences={hasReferences ? () => openStep('references', 'checklist') : undefined}
         />
       </SetupShell>
     );
@@ -200,10 +248,19 @@ export default function StudioPage() {
           Teach the platform your business: finish the interview, train it on real leads, rehearse against your own agent, and turn feedback into changes you review before they apply.
         </p>
       </header>
+      <div className="mb-3 space-y-3 empty:hidden">
+        <FirstCampaignBanner state={data} href={FIRST_CAMPAIGN_BUILDER_HREF} />
+        <NeutralVoiceBanner state={data} onAdd={() => openStep('references', 'studio')} />
+      </div>
       <StudioStatus state={data} />
       {hasChannels && (
         <div className="mt-3">
-          <TeamStrip channels={data.channels} onEdit={() => openChannels('studio')} />
+          <TeamStrip channels={data.channels} onEdit={() => openStep('channels', 'studio')} />
+        </div>
+      )}
+      {(hasFirstCampaign || hasReferences) && (
+        <div className="mt-3">
+          <StudioEntries state={data} onFirstCampaign={() => openStep('campaign', 'studio')} onReferences={() => openStep('references', 'studio')} />
         </div>
       )}
       {draft && (

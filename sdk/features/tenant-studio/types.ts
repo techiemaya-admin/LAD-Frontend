@@ -29,6 +29,10 @@ export interface StudioState {
   goals?: Goal[];
   /** Per-channel agent summary (Step 6); absent on backends that predate it. */
   channels?: StudioChannelSummary[];
+  /** Step 7 — the first campaign draft, `null` when none; absent on backends that predate it. */
+  firstCampaign?: FirstCampaignSummary | null;
+  /** Step 8 — what the tenant has shared; absent on backends that predate it. */
+  references?: ReferencesSummary;
 }
 
 /* ------------------------------------------------------------------ */
@@ -331,4 +335,214 @@ export interface ChannelPromptResult {
 export interface FieldError {
   path: string;
   message: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 7 — your first campaign                                         */
+/* ------------------------------------------------------------------ */
+
+export type FirstCampaignStatus = 'drafted' | 'launched';
+
+/** Channels a first campaign can be drafted on (instagram/voice are not). */
+export type FirstCampaignChannel = 'linkedin' | 'email' | 'whatsapp';
+
+export interface FirstCampaignMessage {
+  /** Days after the first send: 0, 3, 10. */
+  day: number;
+  /** Email only. */
+  subject?: string | null;
+  body: string;
+}
+
+export interface FirstCampaignAudience {
+  industries: string[];
+  locations: string[];
+  roles: string[];
+  summary: string;
+}
+
+/**
+ * The builder-ready template the backend drafts alongside the messages —
+ * `{ name, tagline, notes, source: { key, cfg }, nodes[] }`. Opaque here: it
+ * is handed to `CustomWorkflowBuilder` as `initialAiTemplate` untouched.
+ */
+export interface FirstCampaignTemplate {
+  name?: string;
+  tagline?: string;
+  notes?: string;
+  source?: { key: string; cfg?: Record<string, unknown> };
+  nodes: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export interface FirstCampaignDraft {
+  status: FirstCampaignStatus;
+  offering: string;
+  channel: FirstCampaignChannel;
+  count: number;
+  audience: FirstCampaignAudience;
+  from: { agentName: string | null; agentTitle: string | null };
+  messages: FirstCampaignMessage[];
+  template: FirstCampaignTemplate | null;
+  /** One plain sentence: "50 … leads at …, on LinkedIn, leading with …, three messages over ten days, from Rachana." */
+  summary: string;
+  draftedAt: string | null;
+  launchedCampaignId: string | null;
+  updatedAt: string | null;
+}
+
+/** The slice `studioService.state()` carries for the checklist and the rooms view. */
+export interface FirstCampaignSummary {
+  drafted: boolean;
+  status: FirstCampaignStatus | null;
+  channel: string | null;
+  offering: string | null;
+  count: number | null;
+  launchedCampaignId: string | null;
+  /** The same one-sentence summary as the draft's, for the checklist row. */
+  summary: string | null;
+}
+
+/**
+ * What every first-campaign write returns. `warnings` carries
+ * `'not_persisted'` when the backend's column is missing — the draft is
+ * still usable this session, so the UI toasts and carries on.
+ */
+export interface FirstCampaignResult {
+  draft: FirstCampaignDraft;
+  warnings?: string[];
+}
+
+/** The editable subset — PUT body, partial. */
+export interface FirstCampaignInput {
+  offering?: string;
+  channel?: FirstCampaignChannel;
+  count?: number;
+  messages?: FirstCampaignMessage[];
+  launchedCampaignId?: string | null;
+}
+
+/**
+ * Codes the first-campaign routes return as `{ success:false, error: <code>, message, details? }`:
+ * 400 `channel_not_draftable | no_offering | validation`, 409 `no_ready_channel`,
+ * 404 `no_draft` (edit/rewrite with nothing drafted), 502 `no_draft | no_rewrite` (model gave nothing usable).
+ */
+export type FirstCampaignErrorReason = 'channel_not_draftable' | 'no_offering' | 'validation' | 'no_ready_channel' | 'no_draft' | 'no_rewrite';
+
+/* ------------------------------------------------------------------ */
+/* Step 8 — brand and references                                        */
+/* ------------------------------------------------------------------ */
+
+export type ReferenceKind = 'document' | 'link' | 'post' | 'story' | 'logo' | 'brand_guide' | 'font';
+export type ReferencePurpose = 'pitch_deck' | 'price_list' | 'case_study' | 'proposal_template' | 'tone_guide' | 'other';
+export type ExtractionStatus = 'pending' | 'done' | 'failed' | 'skipped';
+
+/** What the backend pulled out of an item; shape depends on `purpose`/`kind` (see the Phase 3 contract). */
+export type ReferenceExtracted = Record<string, unknown> & {
+  summary?: string;
+  claims?: string[];
+  text?: string;
+  hook?: string;
+  format?: string;
+};
+
+/** The `tenant_reference_items` row as the backend returns it — snake_case, not remapped. */
+export interface ReferenceItem {
+  id: string;
+  tenant_id?: string;
+  kind: ReferenceKind;
+  purpose: ReferencePurpose | null;
+  title: string | null;
+  source_url: string | null;
+  storage_url: string | null;
+  storage_path?: string | null;
+  mime: string | null;
+  size_bytes: number | null;
+  note: string | null;
+  extracted: ReferenceExtracted;
+  extraction_status: ExtractionStatus;
+  extraction_error: string | null;
+  /** Set once the file is also searchable by the voice agent's knowledge base. */
+  kb_document_name: string | null;
+  created_by?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type PaletteRole = 'primary' | 'secondary' | 'accent' | 'background' | 'text';
+export interface PaletteSwatch { hex: string; role: PaletteRole | null }
+
+export type LogoVariant = 'dark' | 'light' | 'default';
+export interface BrandLogo { url: string; variant: LogoVariant; fileName: string | null }
+
+export type FontRole = 'headline' | 'body';
+export interface BrandFont { family: string; role: FontRole | null; source: 'google' | 'upload'; url?: string | null }
+
+export interface ToneRule { do?: string; dont?: string }
+
+/** The `tenant_brand_profiles` row as the backend returns it — snake_case, not remapped. */
+export interface BrandProfile {
+  tenant_id?: string;
+  palette: PaletteSwatch[];
+  logos: BrandLogo[];
+  fonts: BrandFont[];
+  story: string | null;
+  promises: string[];
+  never_do: string[];
+  known_for: string | null;
+  tone_rules: ToneRule[];
+  /** One confirmation sentence, regenerated by the backend on every change. */
+  summary: string | null;
+  updated_at: string | null;
+}
+
+/** PUT /studio/brand body — the same snake_case keys as the row, all optional. */
+export interface BrandInput {
+  palette?: PaletteSwatch[];
+  fonts?: BrandFont[];
+  story?: string | null;
+  promises?: string[];
+  never_do?: string[];
+  known_for?: string | null;
+  tone_rules?: ToneRule[];
+}
+
+export interface BrandStoryAnswers {
+  why: string;
+  promise: string;
+  refuse: string;
+  knownFor: string;
+}
+
+/** The counts `studioService.state().references` carries; also `GET /studio/references` → `summary`. */
+export interface ReferencesSummary {
+  documents: number;
+  links: number;
+  posts: number;
+  /** Real threads shared in Step 6 (the style profile's sampleCount). */
+  conversations: number;
+  story: boolean;
+  brand: { palette: number; logos: number; fonts: number };
+  summary: string | null;
+}
+
+export interface ReferencesResponse {
+  items: ReferenceItem[];
+  brand: BrandProfile | null;
+  summary: ReferencesSummary;
+}
+
+export type PostsSource = 'linkedin' | 'instagram';
+export type PostsPullReason = 'not_connected' | 'unsupported';
+
+export interface PostsPullSourceResult {
+  source: PostsSource;
+  ok: boolean;
+  count: number;
+  reason?: PostsPullReason | string;
+}
+
+export interface PostsPullResult {
+  results: PostsPullSourceResult[];
+  items: ReferenceItem[];
 }

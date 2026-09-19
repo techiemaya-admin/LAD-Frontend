@@ -9,9 +9,24 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  addReferenceLinks,
   applyBrief,
   applyOverlay,
+  deleteFirstCampaign,
   deleteGoal,
+  deleteReference,
+  draftFirstCampaign,
+  getFirstCampaign,
+  getReferences,
+  pullReferencePosts,
+  rewriteFirstCampaignMessage,
+  saveBrand,
+  saveBrandStory,
+  updateFirstCampaign,
+  updateReference,
+  uploadBrandGuide,
+  uploadBrandLogos,
+  uploadReferences,
   generateChannelPrompt,
   getChannels,
   getStudioState,
@@ -185,4 +200,95 @@ export function useGenerateChannelPrompt() {
       qc.invalidateQueries({ queryKey: studioKeys.all });
     },
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 7 — your first campaign                                         */
+/* ------------------------------------------------------------------ */
+
+/** Every write below invalidates the whole studio: the checklist and the rooms read `state.firstCampaign`. */
+function useStudioMutation<TData, TVars>(fn: (vars: TVars) => Promise<TData>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+export function useFirstCampaign(enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.firstCampaign(),
+    queryFn: getFirstCampaign,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useDraftFirstCampaign() {
+  return useStudioMutation(draftFirstCampaign);
+}
+
+export function useUpdateFirstCampaign() {
+  return useStudioMutation(updateFirstCampaign);
+}
+
+export function useRewriteFirstCampaign() {
+  return useStudioMutation(rewriteFirstCampaignMessage);
+}
+
+export function useDeleteFirstCampaign() {
+  return useStudioMutation(deleteFirstCampaign);
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 8 — brand and references                                        */
+/* ------------------------------------------------------------------ */
+
+export function useReferences(enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.references(),
+    queryFn: getReferences,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useUploadReferences() {
+  return useStudioMutation(uploadReferences);
+}
+
+export function useUpdateReference() {
+  return useStudioMutation(updateReference);
+}
+
+export function useDeleteReference() {
+  return useStudioMutation(deleteReference);
+}
+
+export function useAddReferenceLinks() {
+  return useStudioMutation(addReferenceLinks);
+}
+
+export function usePullReferencePosts() {
+  return useStudioMutation(pullReferencePosts);
+}
+
+export function useSaveBrandStory() {
+  return useStudioMutation(saveBrandStory);
+}
+
+export function useUploadBrandLogos() {
+  return useStudioMutation(uploadBrandLogos);
+}
+
+export function useSaveBrand() {
+  return useStudioMutation(saveBrand);
+}
+
+export function useUploadBrandGuide() {
+  return useStudioMutation(uploadBrandGuide);
 }

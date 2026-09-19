@@ -11,12 +11,18 @@ export {
   getStudioState, rehearse, refine, icpScore, icpTrain, tailorChat, applyOverlay, listOverlayVersions, studioKeys,
   getSetup, saveSetup, listGoals, upsertGoal, deleteGoal, proposeBrief, applyBrief,
   getChannels, saveChannel, getStyle, importStyle, importStyleFromMailbox, generateChannelPrompt,
+  getFirstCampaign, draftFirstCampaign, updateFirstCampaign, rewriteFirstCampaignMessage, deleteFirstCampaign,
+  getReferences, uploadReferences, updateReference, deleteReference, addReferenceLinks, pullReferencePosts,
+  saveBrandStory, uploadBrandLogos, saveBrand, uploadBrandGuide, emptyBrand,
 } from './api';
 export type { ChannelsResponse } from './api';
 export {
   useStudioState, useOverlayVersions, useRehearse, useRefine, useIcpScore, useIcpTrain, useTailorChat, useApplyOverlay,
   useSaveSetup, useGoals, useProposeBrief, useApplyBrief,
   useChannels, useSaveChannel, useStyle, useImportStyle, useImportStyleFromMailbox, useGenerateChannelPrompt,
+  useFirstCampaign, useDraftFirstCampaign, useUpdateFirstCampaign, useRewriteFirstCampaign, useDeleteFirstCampaign,
+  useReferences, useUploadReferences, useUpdateReference, useDeleteReference, useAddReferenceLinks, usePullReferencePosts,
+  useSaveBrandStory, useUploadBrandLogos, useSaveBrand, useUploadBrandGuide,
 } from './hooks';
 export type {
   Overlay, StudioState, ReviewChange, ReviewRow, Review, OverlayError, Proposal, ProfileSuggestion, TailorTurn,
@@ -27,4 +33,9 @@ export type {
   StudioChannel, ChannelMissing, PushbackRow, ChannelProfile, ChannelProfileInput, StudioChannelSummary, StyleProfile,
   StyleSampleSource, StyleSample, MailboxSource, StyleImportResult, MailboxImportReason, ChannelPromptMissingField,
   ChannelPromptResult, FieldError,
+  FirstCampaignStatus, FirstCampaignChannel, FirstCampaignMessage, FirstCampaignAudience, FirstCampaignTemplate,
+  FirstCampaignDraft, FirstCampaignSummary, FirstCampaignInput, FirstCampaignResult, FirstCampaignErrorReason,
+  ReferenceKind, ReferencePurpose, ExtractionStatus, ReferenceExtracted, ReferenceItem, PaletteRole, PaletteSwatch,
+  LogoVariant, BrandLogo, FontRole, BrandFont, ToneRule, BrandProfile, BrandInput, BrandStoryAnswers, ReferencesSummary,
+  ReferencesResponse, PostsSource, PostsPullReason, PostsPullSourceResult, PostsPullResult,
 } from './types';
