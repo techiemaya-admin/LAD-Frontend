@@ -27,6 +27,8 @@ export interface StudioState {
   /** Onboarding progress; absent on backends that predate the Setup flow. */
   setup?: StudioSetup;
   goals?: Goal[];
+  /** Per-channel agent summary (Step 6); absent on backends that predate it. */
+  channels?: StudioChannelSummary[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -237,4 +239,96 @@ export interface OverlayVersion {
   appliedBy: string | null;
   isActive: boolean;
   createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 6 — how your agents talk (channel profiles + writing style)     */
+/* ------------------------------------------------------------------ */
+
+export type StudioChannel = BriefChannel;
+
+/** What a channel profile can still be missing before it counts as ready. */
+export type ChannelMissing = 'opener' | 'handover';
+
+export interface PushbackRow {
+  say: string;
+  answer: string;
+}
+
+/** One channel's agent: who it is, how it talks, when it hands over. */
+export interface ChannelProfile {
+  channel: StudioChannel;
+  isOn: boolean;
+  agentName: string | null;
+  agentTitle: string | null;
+  /** Tone chips; emoji preference rides along as `emoji:none|rarely|sometimes`. */
+  tone: string[];
+  opener: string | null;
+  pushback: PushbackRow[];
+  handover: string[];
+  neverSay: string[];
+  generatedPromptAt: string | null;
+  /** Backend-computed: on, with an opener and at least one hand-over rule. */
+  ready: boolean;
+  missing: ChannelMissing[];
+}
+
+/** The editable subset of a ChannelProfile — PUT body, camelCase, partial. */
+export type ChannelProfileInput = Partial<Pick<ChannelProfile, 'isOn' | 'agentName' | 'agentTitle' | 'tone' | 'opener' | 'pushback' | 'handover' | 'neverSay'>>;
+
+/** The slice of a ChannelProfile the studio state carries for the rooms view. */
+export type StudioChannelSummary = Pick<ChannelProfile, 'channel' | 'isOn' | 'ready' | 'missing' | 'agentName' | 'agentTitle'>;
+
+/** How the tenant sounds, distilled from real threads they shared. */
+export interface StyleProfile {
+  summary: string;
+  greeting: string;
+  sentenceLength: string;
+  openers: string[];
+  closers: string[];
+  objectionAnswers: PushbackRow[];
+  neverWords: string[];
+  sampleCount: number;
+  sources: string[];
+}
+
+export type StyleSampleSource = 'paste' | 'whatsapp_export' | 'linkedin_export';
+
+export interface StyleSample {
+  source: StyleSampleSource;
+  text: string;
+}
+
+export type MailboxSource = 'gmail' | 'outlook';
+
+export interface StyleImportResult {
+  style: StyleProfile;
+  sampleCount: number;
+  sources: string[];
+  persisted: boolean;
+}
+
+/** 409/501 reasons the mailbox import returns as `{ success:false, error, reason }`. */
+export type MailboxImportReason = 'not_connected' | 'unsupported';
+
+/** A field a channel prompt still needs (from the generate-prompt route). */
+export interface ChannelPromptMissingField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  severity?: 'required' | 'optional';
+}
+
+/** POST /api/ai-playground/generate-prompt with publish:true — not enveloped. */
+export interface ChannelPromptResult {
+  success: boolean;
+  prompt_text: string | null;
+  missing_fields?: ChannelPromptMissingField[];
+  published: { saved: boolean; readBy: string; note: string };
+}
+
+/** 400 validation errors come back as `{ success:false, error, errors:[{path,message}] }`. */
+export interface FieldError {
+  path: string;
+  message: string;
 }

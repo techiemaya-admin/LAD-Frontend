@@ -10,7 +10,7 @@
  * emptiness: a wallet that could not load shows as "unknown", not as zero.
  */
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Circle, CircleAlert, Loader2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, CircleAlert, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import type { BriefFirstCampaign, StudioState } from '@lad/frontend-features/tenant-studio';
@@ -23,6 +23,8 @@ interface RowSpec {
   status: Status;
   detail: string;
   link?: { href: string; label: string };
+  /** An in-flow action instead of (or as well as) a link — e.g. open Step 6. */
+  action?: { onClick: () => void; label: string };
 }
 
 /* Profile keys grouped by the question each checklist row answers. Keys a
@@ -33,6 +35,7 @@ const OFFER_KEYS = ['valueProposition', 'productsServices', 'campaignTone'];
 const TARGET_KEYS = ['targetCustomers', 'icpJobTitles', 'icpCompanySize', 'icpLocations', 'icpPainPoints', 'geographicFocus', 'excludedCompanies', 'doNotContact'];
 
 const PROFILE_HREF = '/settings?tab=businessprofile';
+const CHANNEL_LABELS: Record<string, string> = { email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', linkedin: 'LinkedIn', voice: 'Voice' };
 
 function Row({ row }: { row: RowSpec }) {
   const icon = row.status === 'ready'
@@ -51,8 +54,13 @@ function Row({ row }: { row: RowSpec }) {
           {row.status === 'optional' && <span className="text-[11px] text-muted-foreground">Improves results, not required</span>}
         </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{row.detail}</p>
+        {row.action && (
+          <button type="button" onClick={row.action.onClick} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+            {row.action.label}<ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        )}
         {row.link && (
-          <Link href={row.link.href} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+          <Link href={row.link.href} className={`${row.action ? 'ml-3 ' : ''}mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline`}>
             {row.link.label}<ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}
@@ -71,9 +79,11 @@ export interface SetupChecklistProps {
   hasReferences?: boolean;
   onOpenStudio: () => void;
   opening?: boolean;
+  /** Opens Step 6 (how your agents talk) in the flow; omitted on backends without channel profiles. */
+  onSetupChannels?: () => void;
 }
 
-export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening }: SetupChecklistProps) {
+export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening, onSetupChannels }: SetupChecklistProps) {
   const wallet = useCreditsBalance();
   const missing = new Set(state.interview.missing);
   const missingIn = (keys: string[]) => keys.filter((k) => missing.has(k));
@@ -84,6 +94,8 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
   const goals = state.goals ?? [];
   const balance = wallet.data ? (wallet.data.availableBalance ?? wallet.data.currentBalance ?? null) : null;
   const walletUnknown = wallet.data === undefined;
+  const channelsOn = (state.channels ?? []).filter((c) => c.isOn);
+  const channelsReady = channelsOn.filter((c) => c.ready);
 
   const rows: RowSpec[] = [
     {
@@ -119,10 +131,15 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
       status: state.rehearsal.ready ? 'ready' : 'needed',
       detail: state.rehearsal.ready
         ? `Your agent prompt is live (${state.agentPrompt.chars.toLocaleString()} characters).`
-        : state.rehearsal.reason === 'no_agent_prompt'
-          ? 'Generate the agent prompt so at least one channel can speak for you.'
-          : 'Finish the profile, then generate the agent prompt.',
-      link: state.rehearsal.ready ? undefined : { href: '/settings?tab=chat', label: 'Set up a channel' },
+        : channelsReady.length
+          ? `${channelsReady.map((c) => c.agentName?.trim() ? `${c.agentName.trim()} (${CHANNEL_LABELS[c.channel] ?? c.channel})` : CHANNEL_LABELS[c.channel] ?? c.channel).join(', ')} ${channelsReady.length === 1 ? 'is' : 'are'} set up — generate the agents so they can speak for you.`
+          : channelsOn.length
+            ? `${channelsOn.length} channel${channelsOn.length === 1 ? '' : 's'} switched on but not ready yet: each needs a first line and hand-over rules.`
+            : state.rehearsal.reason === 'no_agent_prompt'
+              ? 'Generate the agent prompt so at least one channel can speak for you.'
+              : 'Finish the profile, then generate the agent prompt.',
+      action: onSetupChannels ? { onClick: onSetupChannels, label: 'Set up your channels' } : undefined,
+      link: state.rehearsal.ready || onSetupChannels ? undefined : { href: '/settings?tab=chat', label: 'Set up a channel' },
     },
     {
       key: 'campaign',
@@ -182,6 +199,11 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
         {rows.map((row) => <Row key={row.key} row={row} />)}
       </ul>
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        {onSetupChannels && (
+          <Button type="button" size="lg" variant="outline" onClick={onSetupChannels} disabled={opening} className="w-full sm:w-auto">
+            <Users className="h-4 w-4" />Set up your channels
+          </Button>
+        )}
         <Button type="button" size="lg" onClick={onOpenStudio} disabled={opening} className="w-full sm:w-auto">
           {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Open the studio<ArrowRight className="h-4 w-4" />

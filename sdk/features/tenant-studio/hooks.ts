@@ -12,7 +12,13 @@ import {
   applyBrief,
   applyOverlay,
   deleteGoal,
+  generateChannelPrompt,
+  getChannels,
   getStudioState,
+  getStyle,
+  importStyle,
+  importStyleFromMailbox,
+  saveChannel,
   listGoals,
   proposeBrief,
   saveSetup,
@@ -111,6 +117,70 @@ export function useApplyBrief() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: applyBrief,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 6 — channel profiles + writing style                            */
+/* ------------------------------------------------------------------ */
+
+export function useChannels(enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.channels(),
+    queryFn: getChannels,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useSaveChannel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveChannel,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+export function useStyle(enabled = true) {
+  return useQuery({
+    queryKey: studioKeys.style(),
+    queryFn: getStyle,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useImportStyle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: importStyle,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+export function useImportStyleFromMailbox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: importStyleFromMailbox,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+export function useGenerateChannelPrompt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: generateChannelPrompt,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: studioKeys.all });
     },

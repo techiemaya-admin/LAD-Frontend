@@ -9,6 +9,8 @@
  * done. The tenant briefs their new business development manager (Step 1),
  * edits the plan it proposes, applies it, and lands on the launch checklist
  * ("Step 9 of 9"). "Skip to the studio" marks step 1 done without a brief.
+ * From the checklist (or the rooms' "Your team" strip) Step 6 — how your
+ * agents talk — opens in the same frame and returns where it came from.
  *
  * STUDIO (returning): three rooms share one loop — every room ends in a
  * Tailor proposal with a review card, applied through the same customisation
@@ -20,10 +22,11 @@ import { Loader2, MessagesSquare, Target, Theater } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import StudioStatus from '@/components/studio/StudioStatus';
+import TeamStrip from '@/components/studio/TeamStrip';
 import RehearsalRoom from '@/components/studio/RehearsalRoom';
 import IcpRoom from '@/components/studio/IcpRoom';
 import TailorRoom from '@/components/studio/TailorRoom';
-import { BriefStep, PlanReview, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS } from '@/components/studio/setup';
+import { BriefStep, ChannelsStep, CHANNELS_STEP, PlanReview, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS } from '@/components/studio/setup';
 import {
   useSaveSetup,
   useStudioState,
@@ -33,12 +36,19 @@ import {
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
 
-type SetupPhase = 'brief' | 'review' | 'checklist' | 'studio';
+type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'studio';
 
 function needsSetup(state: StudioState): boolean {
   const setup = state.setup;
   if (!setup) return false; // backend predates the setup flow: straight to the rooms
   return setup.completedAt === null && !setup.completedSteps.includes(1);
+}
+
+/** "Save and continue later" on Step 6 lands the next visit back on it. */
+function resumesChannels(state: StudioState): boolean {
+  const setup = state.setup;
+  if (!setup || !Array.isArray(state.channels)) return false;
+  return setup.completedAt === null && setup.currentStep === CHANNELS_STEP && !setup.completedSteps.includes(CHANNELS_STEP);
 }
 
 export default function StudioPage() {
@@ -52,16 +62,26 @@ export default function StudioPage() {
   const [phase, setPhase] = useState<SetupPhase | null>(null);
   const [proposal, setProposal] = useState<{ result: BriefResult; brief: string; links: string[] } | null>(null);
   const [applied, setApplied] = useState<ApplyResult | null>(null);
+  // Where Step 6 returns to: the checklist mid-setup, the rooms otherwise.
+  const [channelsReturn, setChannelsReturn] = useState<SetupPhase>('checklist');
+  const [channelsVisited, setChannelsVisited] = useState(false);
 
-  const markStepOneDone = (then: () => void) => {
+  const markStepDone = (step: number, nextStep: number, then: () => void) => {
     const done = state.data?.setup?.completedSteps ?? [];
     saveSetup.mutate(
-      { completedSteps: done.includes(1) ? done : [...done, 1], currentStep: SETUP_TOTAL_STEPS },
+      { completedSteps: done.includes(step) ? done : [...done, step], currentStep: nextStep },
       {
         onSuccess: then,
         onError: () => toast({ title: 'Could not save', description: 'Try again in a moment.', variant: 'destructive' }),
       },
     );
+  };
+  const markStepOneDone = (then: () => void) => markStepDone(1, SETUP_TOTAL_STEPS, then);
+
+  const openChannels = (from: SetupPhase) => {
+    setChannelsReturn(from);
+    setChannelsVisited(true);
+    setPhase('channels');
   };
 
   if (state.isLoading) {
@@ -80,7 +100,10 @@ export default function StudioPage() {
   }
 
   const data = state.data;
-  const effectivePhase: SetupPhase = phase ?? (needsSetup(data) ? 'brief' : 'studio');
+  const effectivePhase: SetupPhase = phase ?? (needsSetup(data) ? 'brief' : resumesChannels(data) ? 'channels' : 'studio');
+  const hasChannels = Array.isArray(data.channels);
+  const plan = applied?.plan ?? proposal?.result.plan;
+  const personaName = plan?.profile.senderName ?? null;
 
   if (effectivePhase === 'brief') {
     return (
@@ -129,9 +152,31 @@ export default function StudioPage() {
     );
   }
 
+  if (effectivePhase === 'channels') {
+    // A returning tenant resumed here: go to the rooms afterwards, not a checklist they already passed.
+    const backTo: SetupPhase = phase === null ? 'studio' : channelsReturn;
+    return (
+      <SetupShell
+        step={CHANNELS_STEP}
+        title="How your agents talk"
+        aside={(
+          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
+            {backTo === 'studio' ? 'Back to the studio' : 'Back to the checklist'}
+          </button>
+        )}
+      >
+        <ChannelsStep
+          defaultAgentName={personaName}
+          continuing={saveSetup.isPending}
+          onContinue={() => markStepDone(CHANNELS_STEP, CHANNELS_STEP + 1, () => setPhase(backTo))}
+        />
+      </SetupShell>
+    );
+  }
+
   if (effectivePhase === 'checklist' || (effectivePhase === 'review' && !proposal)) {
-    const latest: StudioState = applied?.state ?? data;
-    const plan = applied?.plan ?? proposal?.result.plan;
+    // The apply snapshot is freshest right after the apply; once Step 6 has written, the live state is.
+    const latest: StudioState = channelsVisited ? data : (applied?.state ?? data);
     return (
       <SetupShell step={SETUP_TOTAL_STEPS} title="Review and go live">
         <SetupChecklist
@@ -141,6 +186,7 @@ export default function StudioPage() {
           hasReferences={(proposal?.links.length ?? 0) > 0}
           opening={saveSetup.isPending}
           onOpenStudio={() => markStepOneDone(() => setPhase('studio'))}
+          onSetupChannels={hasChannels ? () => openChannels('checklist') : undefined}
         />
       </SetupShell>
     );
@@ -155,6 +201,11 @@ export default function StudioPage() {
         </p>
       </header>
       <StudioStatus state={data} />
+      {hasChannels && (
+        <div className="mt-3">
+          <TeamStrip channels={data.channels} onEdit={() => openChannels('studio')} />
+        </div>
+      )}
       {draft && (
         <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           You have an unapplied proposal. The next request in any room builds on it; apply or discard it from its review card.
