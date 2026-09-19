@@ -314,7 +314,16 @@ function SaveBadge({ status }: { status: SaveStatus }) {
 
 type ImportMode = null | 'paste' | 'upload';
 
-function StyleImport({ style, onImported }: { style: StyleProfile | null; onImported: (r: StyleImportResult) => void }) {
+export interface StyleImportProps {
+  style: StyleProfile | null;
+  onImported: (r: StyleImportResult) => void;
+  /** Step 8 reuses the importer inside its "How you talk" tile, where the heading is the tile's. */
+  heading?: string | null;
+  hint?: string | null;
+}
+
+/** Paste / .txt export / Gmail / Outlook → a StyleProfile. Shared by Step 6 and Step 8's "How you talk" tile. */
+export function StyleImport({ style, onImported, heading = 'Fastest path', hint = 'Five real threads beat five pages of instructions.' }: StyleImportProps) {
   const { toast } = useToast();
   const importStyle = useImportStyle();
   const importMailbox = useImportStyleFromMailbox();
@@ -379,11 +388,13 @@ function StyleImport({ style, onImported }: { style: StyleProfile | null; onImpo
 
   return (
     <section className="rounded-lg border bg-muted/30 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="font-semibold">Fastest path</h3>
-        <p className="text-xs text-muted-foreground">Five real threads beat five pages of instructions.</p>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {(heading || hint) && (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          {heading && <h3 className="font-semibold">{heading}</h3>}
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </div>
+      )}
+      <div className={`grid gap-2 sm:grid-cols-2 ${heading || hint ? 'mt-3' : ''}`}>
         <Button type="button" variant={mode === 'paste' ? 'default' : 'outline'} className="justify-start" onClick={() => setMode(mode === 'paste' ? null : 'paste')} disabled={busy}>
           <ClipboardPaste className="h-4 w-4" />Paste a conversation that went well
         </Button>

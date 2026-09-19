@@ -81,9 +81,19 @@ export interface SetupChecklistProps {
   opening?: boolean;
   /** Opens Step 6 (how your agents talk) in the flow; omitted on backends without channel profiles. */
   onSetupChannels?: () => void;
+  /** Opens Step 7 (your first campaign) in the flow; omitted on backends that do not report `state.firstCampaign`. */
+  onFirstCampaign?: () => void;
+  /** Opens Step 8 (brand and references) in the flow; omitted on backends that do not report `state.references`. */
+  onReferences?: () => void;
 }
 
-export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening, onSetupChannels }: SetupChecklistProps) {
+const CHANNEL_NAME: Record<string, string> = { linkedin: 'LinkedIn', email: 'email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'voice' };
+
+function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+export default function SetupChecklist({ state, firstCampaign, blockingMissing = [], hasReferences = false, onOpenStudio, opening, onSetupChannels, onFirstCampaign, onReferences }: SetupChecklistProps) {
   const wallet = useCreditsBalance();
   const missing = new Set(state.interview.missing);
   const missingIn = (keys: string[]) => keys.filter((k) => missing.has(k));
@@ -141,17 +151,40 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
       action: onSetupChannels ? { onClick: onSetupChannels, label: 'Set up your channels' } : undefined,
       link: state.rehearsal.ready || onSetupChannels ? undefined : { href: '/settings?tab=chat', label: 'Set up a channel' },
     },
-    {
-      key: 'campaign',
-      title: 'First campaign',
-      status: firstCampaign && blockingMissing.length === 0 ? 'ready' : 'needed',
-      detail: firstCampaign
-        ? blockingMissing.length
-          ? `"${firstCampaign.offering}" via ${firstCampaign.channel ?? 'the channel you pick'} is drafted; ${blockingMissing.length} answer${blockingMissing.length === 1 ? '' : 's'} still needed before it can launch.`
-          : `"${firstCampaign.offering}" via ${firstCampaign.channel ?? 'the channel you pick'}, to ${firstCampaign.audience}.`
-        : 'No first campaign yet — build one from the campaigns page when the rows above are green.',
-      link: firstCampaign && blockingMissing.length === 0 ? undefined : firstCampaign ? { href: PROFILE_HREF, label: 'Answer what is needed' } : { href: '/campaigns', label: 'Build a campaign' },
-    },
+    // Once the backend reports `firstCampaign` (Step 7), the saved draft is the
+    // truth; the brief's proposal only stands in on backends that predate it.
+    state.firstCampaign !== undefined
+      ? {
+        key: 'campaign',
+        title: 'First campaign',
+        status: state.firstCampaign?.status === 'launched' ? 'ready' : state.firstCampaign?.drafted && blockingMissing.length === 0 ? 'ready' : 'needed',
+        detail: state.firstCampaign?.status === 'launched'
+          ? `Live${state.firstCampaign.offering ? ` — "${state.firstCampaign.offering}"` : ''}${state.firstCampaign.channel ? ` on ${CHANNEL_NAME[state.firstCampaign.channel] ?? state.firstCampaign.channel}` : ''}. Watch it on the campaigns page.`
+          : state.firstCampaign?.drafted
+            ? blockingMissing.length
+              ? `Drafted${state.firstCampaign.offering ? ` — "${state.firstCampaign.offering}"` : ''}; ${plural(blockingMissing.length, 'answer')} still needed before it can launch.`
+              : `Drafted and waiting${state.firstCampaign.summary ? ` — ${state.firstCampaign.summary}` : `${state.firstCampaign.offering ? ` — "${state.firstCampaign.offering}"` : ''}${state.firstCampaign.channel ? ` on ${CHANNEL_NAME[state.firstCampaign.channel] ?? state.firstCampaign.channel}` : ''}${state.firstCampaign.count ? `, ${state.firstCampaign.count} people this week` : ''}.`} It sends when you press Go live.`
+            : 'No first campaign yet — it can draft one for you in a minute.',
+        action: onFirstCampaign && state.firstCampaign?.status !== 'launched'
+          ? { onClick: onFirstCampaign, label: state.firstCampaign?.drafted ? 'Review your first campaign' : 'Draft your first campaign' }
+          : undefined,
+        link: state.firstCampaign?.status === 'launched'
+          ? { href: '/campaigns', label: 'Open campaigns' }
+          : state.firstCampaign?.drafted && blockingMissing.length
+            ? { href: PROFILE_HREF, label: 'Answer what is needed' }
+            : onFirstCampaign ? undefined : { href: '/campaigns', label: 'Build a campaign' },
+      }
+      : {
+        key: 'campaign',
+        title: 'First campaign',
+        status: firstCampaign && blockingMissing.length === 0 ? 'ready' : 'needed',
+        detail: firstCampaign
+          ? blockingMissing.length
+            ? `"${firstCampaign.offering}" via ${firstCampaign.channel ?? 'the channel you pick'} is drafted; ${blockingMissing.length} answer${blockingMissing.length === 1 ? '' : 's'} still needed before it can launch.`
+            : `"${firstCampaign.offering}" via ${firstCampaign.channel ?? 'the channel you pick'}, to ${firstCampaign.audience}.`
+          : 'No first campaign yet — build one from the campaigns page when the rows above are green.',
+        link: firstCampaign && blockingMissing.length === 0 ? undefined : firstCampaign ? { href: PROFILE_HREF, label: 'Answer what is needed' } : { href: '/campaigns', label: 'Build a campaign' },
+      },
     {
       key: 'credits',
       title: 'Credits',
@@ -171,14 +204,35 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
         ? `${goals.length} goal${goals.length === 1 ? '' : 's'} set — the overview tracks pace against ${goals.length === 1 ? 'it' : 'them'}.`
         : 'A 90-day target lets the overview tell you whether you are on pace.',
     },
-    {
-      key: 'references',
-      title: 'References',
-      status: hasReferences ? 'ready' : 'optional',
-      detail: hasReferences
-        ? 'It read your links; messages borrow your own wording.'
-        : 'A website or LinkedIn page gives it your wording and proof points.',
-    },
+    state.references !== undefined
+      ? (() => {
+        const r = state.references;
+        const parts: string[] = [];
+        if (r.conversations) parts.push(plural(r.conversations, 'conversation'));
+        if (r.documents) parts.push(plural(r.documents, 'document'));
+        if (r.links + r.posts) parts.push(plural(r.links + r.posts, 'link or post', 'links and posts'));
+        if (r.story) parts.push('your story');
+        const brandBits = r.brand.logos + r.brand.palette + r.brand.fonts;
+        if (brandBits) parts.push('colours and logo');
+        const any = parts.length > 0;
+        return {
+          key: 'references',
+          title: 'References',
+          status: any ? 'ready' : 'optional',
+          detail: any
+            ? `${parts.join(', ')} shared — messages borrow your own wording.`
+            : 'A few real conversations, a deck or your logo make it sound and look like you.',
+          action: onReferences ? { onClick: onReferences, label: any ? 'Add more' : 'Share your material' } : undefined,
+        } as RowSpec;
+      })()
+      : {
+        key: 'references',
+        title: 'References',
+        status: hasReferences ? 'ready' : 'optional',
+        detail: hasReferences
+          ? 'It read your links; messages borrow your own wording.'
+          : 'A website or LinkedIn page gives it your wording and proof points.',
+      },
   ];
 
   const blockers = rows.filter((r) => r.status === 'needed').length;

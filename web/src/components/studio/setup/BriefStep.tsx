@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { isApiError } from '@lad/shared/apiError';
 import { useProposeBrief, type BriefErrorReason, type BriefResult } from '@lad/frontend-features/tenant-studio';
+import { getSpeechRecognition, isMicBlocked, speechLang, type SpeechRecognitionLike } from './speech';
 
 /* The brief endpoint's 400/502 reasons, in the tenant's words. */
 const REASON_COPY: Record<BriefErrorReason, string> = {
@@ -36,28 +37,6 @@ function describeBriefError(err: unknown): string {
     if (err.status === 401) return 'Your session has expired — sign in again.';
   }
   return err instanceof Error ? err.message : 'Try again in a moment.';
-}
-
-/* Minimal Web Speech API surface — TS's DOM lib does not ship it. */
-interface SpeechAlternativeLike { transcript: string }
-interface SpeechResultLike { isFinal: boolean; 0: SpeechAlternativeLike }
-interface SpeechResultEventLike { resultIndex: number; results: ArrayLike<SpeechResultLike> }
-interface SpeechRecognitionLike {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((e: SpeechResultEventLike) => void) | null;
-  onerror: ((e: { error: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-}
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-
-function getSpeechRecognition(): SpeechRecognitionCtor | null {
-  if (typeof window === 'undefined') return null;
-  const w = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor };
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
 type LinkKind = 'website' | 'linkedin' | 'instagram' | 'other';
@@ -113,7 +92,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
     const rec = new Ctor();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+    rec.lang = speechLang();
     baseRef.current = brief.trim() ? `${brief.trim()} ` : '';
     finalRef.current = '';
     rec.onresult = (e) => {
@@ -126,7 +105,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
       setBrief((baseRef.current + finalRef.current + interim).trimStart());
     };
     rec.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      if (isMicBlocked(e.error)) {
         toast({ title: 'Microphone blocked', description: 'Allow microphone access in your browser, or type instead.', variant: 'destructive' });
       }
       if (e.error !== 'aborted') setListening(false);

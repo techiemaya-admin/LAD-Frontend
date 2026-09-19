@@ -1642,8 +1642,15 @@ function useBuilderResources() {
   };
 }
 
-export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId }: {
+export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId, onLaunched }: {
   onClose: () => void;
+  /**
+   * Called once a NEW campaign has been created, before the redirect to
+   * /campaigns, with the created campaign's id when the response carried one.
+   * The Studio's first-campaign hand-off records the launch here. Awaited but
+   * never allowed to fail the launch - the campaign already exists.
+   */
+  onLaunched?: (campaignId: string | null) => void | Promise<void>;
   /**
    * A pipeline drafted from a description in the chat, applied to the canvas on
    * mount. Unlike `initialTemplateKey` this is the template itself: it was
@@ -2247,6 +2254,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   /** Put a finished draft on the canvas via the one existing apply path. */
   const applyAiTemplate = (t: any) => {
     const srcDef = SOURCES.find((s) => s.key === t.source?.key);
+    // A drafter may say how many leads a day it planned for (the Studio's
+    // first campaign does); the source cfg has no such key of its own.
+    if (Number(t.perDay) > 0) setPerDay(String(Math.round(Number(t.perDay))));
     // silent: replacing the canvas was already confirmed when the draft started.
     applyTemplate({
       key: `ai-${Date.now()}`,
@@ -4292,8 +4302,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       const raw = await res.text();
       let data: any = null;
       try { data = raw ? JSON.parse(raw) : null; } catch { /* not JSON */ }
-      if (res.ok && (data?.success || data?.id || data?.data?.id)) window.location.href = '/campaigns';
-      else {
+      if (res.ok && (data?.success || data?.id || data?.data?.id)) {
+        if (!editCampaignId && onLaunched) {
+          const createdId = data?.data?.id ?? data?.id ?? data?.campaign?.id ?? data?.data?.campaign?.id ?? null;
+          try { await onLaunched(createdId != null ? String(createdId) : null); } catch { /* the campaign is live either way */ }
+        }
+        window.location.href = '/campaigns';
+      } else {
         setError(data?.error || `${editCampaignId ? 'Could not save changes' : 'Failed to launch Accelerator'} (${res.status})`);
         setLaunching(false);
       }
@@ -4366,6 +4381,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     appliedTplRef.current = true;
     setPaletteTab('ai');
     applyAiTemplate(initialAiTemplate);
+    // Re-arm on cleanup: the "fresh canvas on mount" effect above clears the
+    // store again when React re-runs effects (dev Strict Mode), and a one-shot
+    // ref would leave the draft applied-then-wiped. Callers pass a stable
+    // template object, so this never re-applies on an ordinary re-render.
+    return () => { appliedTplRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAiTemplate]);
   // Re-arm the banner if a fresh draft arrives while the builder is already
