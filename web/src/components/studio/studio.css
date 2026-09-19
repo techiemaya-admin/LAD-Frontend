@@ -1,0 +1,51 @@
+/* Tenant Studio — the few keyframes the theme needs (see studio-theme.ts).
+   Imported once from app/studio/page.tsx. Everything here stops under
+   prefers-reduced-motion. */
+
+/* A 30% white highlight sliding across the progress fill. */
+@keyframes studio-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+.studio-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0) 100%);
+  animation: studio-shimmer 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* One-shot pulse on a tick that just turned green. */
+@keyframes studio-ready-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  100% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+.studio-ready-pulse {
+  border-radius: 9999px;
+  animation: studio-ready-pulse 0.9s ease-out 1;
+}
+
+/* Gradient skeleton for loading and empty states — not a grey block. */
+@keyframes studio-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.studio-skeleton {
+  background: linear-gradient(90deg, rgba(43, 124, 255, 0.10) 0%, rgba(124, 92, 255, 0.22) 50%, rgba(192, 73, 255, 0.10) 100%);
+  background-size: 200% 100%;
+  animation: studio-skeleton 1.8s ease-in-out infinite;
+}
+.dark .studio-skeleton {
+  background: linear-gradient(90deg, rgba(43, 124, 255, 0.16) 0%, rgba(124, 92, 255, 0.34) 50%, rgba(192, 73, 255, 0.16) 100%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-shimmer::after,
+  .studio-ready-pulse,
+  .studio-skeleton {
+    animation: none;
+  }
+}

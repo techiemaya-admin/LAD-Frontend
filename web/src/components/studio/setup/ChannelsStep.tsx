@@ -48,6 +48,10 @@ import {
   type StyleImportResult,
   type StyleProfile,
 } from '@lad/frontend-features/tenant-studio';
+import {
+  AVATAR, AVATAR_OFF, BORDER, CARD, CARD_ACTIVE, CHANNEL_GRADIENT, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, H_STEP, INPUT_FOCUS,
+  PANEL, READY_PULSE, SKELETON, STATUS, TILE_OFF, TINT,
+} from '../studio-theme';
 
 /* ------------------------------------------------------------------ */
 /* Copy                                                                 */
@@ -239,9 +243,7 @@ function Chip({ selected, onClick, children, disabled }: { selected: boolean; on
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-accent'
-      }`}
+      className={`${CHIP_BASE} gap-1 px-3 py-1.5 text-xs ${selected ? CHIP_SELECTED : CHIP_IDLE}`}
     >
       {selected && <Check className="h-3 w-3" />}{children}
     </button>
@@ -277,9 +279,9 @@ function ChipList({ id, options, value, onChange, placeholder, disabled }: {
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
           placeholder={placeholder}
           disabled={disabled}
-          className="h-9 text-sm"
+          className={`h-9 text-sm ${INPUT_FOCUS}`}
         />
-        <Button type="button" size="sm" variant="outline" onClick={add} disabled={disabled || !text.trim()} aria-label="Add">
+        <Button type="button" size="sm" variant="outline" onClick={add} disabled={disabled || !text.trim()} aria-label="Add" className="hover:border-[#7C5CFF]/50">
           <Plus className="h-4 w-4" />Add
         </Button>
       </div>
@@ -289,8 +291,8 @@ function ChipList({ id, options, value, onChange, placeholder, disabled }: {
 
 function Card({ title, hint, children, className = '' }: { title: string; hint?: string; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-lg border bg-card p-4 ${className}`}>
-      <h4 className="font-semibold">{title}</h4>
+    <section className={`${CARD} p-4 ${className}`}>
+      <h4 className="font-semibold tracking-tight">{title}</h4>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-3">{children}</div>
     </section>
@@ -302,8 +304,8 @@ function SaveBadge({ status }: { status: SaveStatus }) {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" role="status" aria-live="polite">
       {status === 'saving' && <><Loader2 className="h-3 w-3 animate-spin" />Saving…</>}
-      {status === 'saved' && <><Check className="h-3 w-3 text-emerald-600" />Saved</>}
-      {status === 'error' && <><CircleAlert className="h-3 w-3 text-rose-600" />Not saved</>}
+      {status === 'saved' && <><Check className={`h-3 w-3 ${TINT.ready}`} />Saved</>}
+      {status === 'error' && <><CircleAlert className={`h-3 w-3 ${TINT.needed}`} />Not saved</>}
     </span>
   );
 }
@@ -387,24 +389,24 @@ export function StyleImport({ style, onImported, heading = 'Fastest path', hint 
   };
 
   return (
-    <section className="rounded-lg border bg-muted/30 p-4">
+    <section className={`${PANEL} p-4`}>
       {(heading || hint) && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          {heading && <h3 className="font-semibold">{heading}</h3>}
+          {heading && <h3 className="font-semibold tracking-tight">{heading}</h3>}
           {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
       )}
       <div className={`grid gap-2 sm:grid-cols-2 ${heading || hint ? 'mt-3' : ''}`}>
-        <Button type="button" variant={mode === 'paste' ? 'default' : 'outline'} className="justify-start" onClick={() => setMode(mode === 'paste' ? null : 'paste')} disabled={busy}>
+        <Button type="button" variant={mode === 'paste' ? 'default' : 'outline'} className={`justify-start ${mode === 'paste' ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}`} onClick={() => setMode(mode === 'paste' ? null : 'paste')} disabled={busy}>
           <ClipboardPaste className="h-4 w-4" />Paste a conversation that went well
         </Button>
-        <Button type="button" variant={mode === 'upload' ? 'default' : 'outline'} className="justify-start" onClick={() => setMode(mode === 'upload' ? null : 'upload')} disabled={busy}>
+        <Button type="button" variant={mode === 'upload' ? 'default' : 'outline'} className={`justify-start ${mode === 'upload' ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}`} onClick={() => setMode(mode === 'upload' ? null : 'upload')} disabled={busy}>
           <FileUp className="h-4 w-4" />Upload a chat export
         </Button>
-        <Button type="button" variant="outline" className="justify-start" onClick={() => pull('gmail')} disabled={busy}>
+        <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => pull('gmail')} disabled={busy}>
           {mailbox === 'gmail' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Pull my sent replies from Gmail
         </Button>
-        <Button type="button" variant="outline" className="justify-start" onClick={() => pull('outlook')} disabled={busy}>
+        <Button type="button" variant="outline" className="justify-start hover:border-[#7C5CFF]/50" onClick={() => pull('outlook')} disabled={busy}>
           {mailbox === 'outlook' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}…from Outlook
         </Button>
       </div>
@@ -419,10 +421,10 @@ export function StyleImport({ style, onImported, heading = 'Fastest path', hint 
             rows={6}
             placeholder={'Them: Hi, do you do contract Databricks engineers?\nYou: We do — mostly 3 to 6 month placements. What are you building?'}
             disabled={busy}
-            className="min-h-[140px] text-sm"
+            className={`min-h-[140px] text-sm ${INPUT_FOCUS}`}
           />
           <div className="flex justify-end">
-            <Button type="button" onClick={submitPaste} disabled={busy || pasted.trim().length < 20}>
+            <Button type="button" onClick={submitPaste} disabled={busy || pasted.trim().length < 20} className={CTA_PRIMARY}>
               {importStyle.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Read it
             </Button>
           </div>
@@ -440,13 +442,13 @@ export function StyleImport({ style, onImported, heading = 'Fastest path', hint 
             {zipPicked && <span className="text-xs text-muted-foreground">{zipPicked}</span>}
           </div>
           {zipPicked && (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className={`rounded-xl border px-3 py-2 text-xs ${STATUS.warn}`}>
               Zip exports: coming soon. Unzip it and upload the .txt inside for now.
             </p>
           )}
           <p className="text-xs text-muted-foreground">WhatsApp: Chat → Export chat → Without media. LinkedIn: Settings → Get a copy of your data → Messages.</p>
           <div className="flex justify-end">
-            <Button type="button" onClick={submitFile} disabled={busy || !fileText || Boolean(zipPicked)}>
+            <Button type="button" onClick={submitFile} disabled={busy || !fileText || Boolean(zipPicked)} className={CTA_PRIMARY}>
               {importStyle.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Read it
             </Button>
           </div>
@@ -454,15 +456,15 @@ export function StyleImport({ style, onImported, heading = 'Fastest path', hint 
       )}
 
       {style && (
-        <div className="mt-4 rounded-lg border bg-card p-4" data-testid="style-card">
+        <div className={`${CARD} mt-4 p-4`} data-testid="style-card">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h4 className="font-semibold">Here&rsquo;s how you sound</h4>
+              <h4 className="font-semibold tracking-tight">Here&rsquo;s how you sound</h4>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 From {style.sampleCount} sample{style.sampleCount === 1 ? '' : 's'}{style.sources.length ? ` · ${style.sources.join(', ')}` : ''}
               </p>
             </div>
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-label="style read" />
+            <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="style read" />
           </div>
           <p className="mt-2 text-sm leading-relaxed">{style.summary}</p>
           {(style.openers.length > 0 || style.neverWords.length > 0) && (
@@ -485,12 +487,12 @@ export function StyleImport({ style, onImported, heading = 'Fastest path', hint 
 /** Looks right / Edit — the summary is read-only for now; Edit just points at the paste box. */
 function StyleVerdict() {
   const [verdict, setVerdict] = useState<'ok' | 'edit' | null>(null);
-  if (verdict === 'ok') return <p className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-700"><Check className="h-3.5 w-3.5" />Great — your agents will borrow this.</p>;
+  if (verdict === 'ok') return <p className={`mt-3 inline-flex items-center gap-1 text-xs ${TINT.readyText}`}><Check className="h-3.5 w-3.5" />Great — your agents will borrow this.</p>;
   if (verdict === 'edit') return <p className="mt-3 text-xs text-muted-foreground">Paste another thread above and it will re-read you. Editing the summary by hand is coming soon.</p>;
   return (
     <div className="mt-3 flex gap-2">
-      <Button type="button" size="sm" onClick={() => setVerdict('ok')}><Check className="h-4 w-4" />Looks right</Button>
-      <Button type="button" size="sm" variant="outline" onClick={() => setVerdict('edit')}>Edit</Button>
+      <Button type="button" size="sm" onClick={() => setVerdict('ok')} className={CTA_PRIMARY}><Check className="h-4 w-4" />Looks right</Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => setVerdict('edit')} className="hover:border-[#7C5CFF]/50">Edit</Button>
     </div>
   );
 }
@@ -518,14 +520,14 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
   const filled = filledCount(row);
   return (
     <div
-      className={`rounded-lg border p-3 transition-colors ${open ? 'border-primary ring-1 ring-primary/30' : ''} ${row.isOn ? 'bg-card' : 'bg-muted/40'}`}
+      className={`p-3 transition-all duration-200 ease-out ${open ? CARD_ACTIVE : CARD} ${row.isOn ? '' : TILE_OFF}`}
       data-testid={`agent-tile-${row.channel}`}
     >
       <div className="flex items-start gap-3">
         <button
           type="button"
           onClick={onOpen}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ${row.isOn ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+          className={`${AVATAR} h-11 w-11 text-sm transition-transform duration-150 hover:scale-105 motion-reduce:transform-none ${row.isOn ? CHANNEL_GRADIENT[row.channel] : AVATAR_OFF}`}
           aria-label={`Open ${meta.label} agent`}
         >
           {initials(row.agentName, defaultName)}
@@ -536,7 +538,7 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
             <button type="button" onClick={onOpen} className="truncate text-left text-sm font-semibold underline-offset-2 hover:underline">
               {meta.label}
             </button>
-            {ready && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-label="ready" data-testid={`ready-${row.channel}`} />}
+            {ready && <CheckCircle2 className={`h-4 w-4 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="ready" data-testid={`ready-${row.channel}`} />}
             <span className="ml-auto flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground">{filled}/{FIELD_TOTAL}</span>
               <Switch checked={row.isOn} onCheckedChange={onToggle} aria-label={`${meta.label} on or off`} />
@@ -549,7 +551,7 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
               onBlur={(e) => onBlurSave({ agentName: e.target.value.trim() || null })}
               placeholder={defaultName}
               aria-label={`${meta.label} agent name`}
-              className="h-8 text-sm"
+              className={`h-8 text-sm ${INPUT_FOCUS}`}
             />
             <Input
               value={row.agentTitle ?? ''}
@@ -557,12 +559,12 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
               onBlur={(e) => onBlurSave({ agentTitle: e.target.value.trim() || null })}
               placeholder="Title, e.g. Client Partner"
               aria-label={`${meta.label} agent title`}
-              className="h-8 text-sm"
+              className={`h-8 text-sm ${INPUT_FOCUS}`}
             />
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {row.isOn && !ready && (
-              <span className="inline-flex items-center gap-1 text-xs text-rose-600" data-testid={`hint-${row.channel}`}>
+              <span className={`inline-flex items-center gap-1 text-xs ${TINT.neededText}`} data-testid={`hint-${row.channel}`}>
                 <CircleAlert className="h-3.5 w-3.5" />Needs a first line and hand-over rules
               </span>
             )}
@@ -608,7 +610,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
   const visible = (i: number) => (i === card ? '' : 'hidden md:block');
 
   return (
-    <div className="rounded-lg border bg-muted/20 p-3 sm:p-4" data-testid={`agent-editor-${row.channel}`}>
+    <div className={`${PANEL} p-3 sm:p-4`} data-testid={`agent-editor-${row.channel}`}>
       <div className="mb-3 flex items-center justify-between md:hidden">
         <Button type="button" size="sm" variant="ghost" onClick={() => setCard((c) => Math.max(0, c - 1))} disabled={card === 0} aria-label="Previous card">
           <ChevronLeft className="h-4 w-4" />Prev
@@ -642,7 +644,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
                 onBlur={() => saveEmailOpener(subject, line)}
                 placeholder="Subject line"
                 aria-label="Email subject line"
-                className="h-9 text-sm"
+                className={`h-9 text-sm ${INPUT_FOCUS}`}
               />
               <Textarea
                 value={line}
@@ -651,7 +653,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
                 placeholder={meta.openerPlaceholder}
                 rows={3}
                 aria-label="Email first line"
-                className="min-h-[80px] text-sm"
+                className={`min-h-[80px] text-sm ${INPUT_FOCUS}`}
               />
             </div>
           ) : (
@@ -663,7 +665,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
               rows={3}
               aria-label={`${meta.label} first line`}
               data-testid={`opener-${row.channel}`}
-              className="min-h-[88px] text-sm"
+              className={`min-h-[88px] text-sm ${INPUT_FOCUS}`}
             />
           )}
         </Card>
@@ -678,14 +680,14 @@ function AgentEditor({ row, style, onPatch, onSave }: {
           {row.pushback.length > 0 && (
             <ul className="mt-3 space-y-2">
               {row.pushback.map((p, i) => (
-                <li key={i} className="grid gap-1.5 rounded-md border bg-background p-2 sm:grid-cols-[1fr_1.4fr_auto]">
+                <li key={i} className={`grid gap-1.5 rounded-xl border ${BORDER} bg-white/80 p-2 dark:bg-[#071131]/80 sm:grid-cols-[1fr_1.4fr_auto]`}>
                   <Input
                     value={p.say}
                     onChange={(e) => updatePushback(i, { say: e.target.value })}
                     onBlur={() => savePushback(row.pushback)}
                     placeholder="They say…"
                     aria-label={`Pushback ${i + 1}: they say`}
-                    className="h-8 text-sm"
+                    className={`h-8 text-sm ${INPUT_FOCUS}`}
                   />
                   <Input
                     value={p.answer}
@@ -693,7 +695,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
                     onBlur={() => savePushback(row.pushback)}
                     placeholder="You answer…"
                     aria-label={`Pushback ${i + 1}: you answer`}
-                    className="h-8 text-sm"
+                    className={`h-8 text-sm ${INPUT_FOCUS}`}
                   />
                   <Button type="button" size="icon-sm" variant="ghost" onClick={() => removePushback(i)} aria-label={`Remove pushback ${i + 1}`}>
                     <Trash2 className="h-4 w-4" />
@@ -712,7 +714,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
             onChange={(next) => { onPatch({ handover: next }); onSave({ handover: next }); }}
             placeholder="Something else, e.g. asks about a refund"
           />
-          <h4 className="mt-4 font-semibold">Never say</h4>
+          <h4 className="mt-4 font-semibold tracking-tight">Never say</h4>
           <div className="mt-2">
             <ChipList
               id={`neversay-${row.channel}`}
@@ -838,12 +840,19 @@ export default function ChannelsStep({ defaultAgentName, onContinue, continuing 
   };
 
   if (channels.isLoading || (channels.data && rows === null)) {
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Meeting your team…</div>;
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Meeting your team…</div>
+        <div className={`${SKELETON} h-24`} />
+        <div className={`${SKELETON} h-16`} />
+        <div className={`${SKELETON} h-16`} />
+      </div>
+    );
   }
   if (channels.data === undefined) {
     return (
       <div className="space-y-3">
-        <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Your channels could not load right now. Refresh, or try again in a moment.</p>
+        <p className={`rounded-2xl border p-4 text-sm ${STATUS.needed}`}>Your channels could not load right now. Refresh, or try again in a moment.</p>
         <Button type="button" variant="outline" onClick={() => channels.refetch()}>Try again</Button>
       </div>
     );
@@ -852,14 +861,14 @@ export default function ChannelsStep({ defaultAgentName, onContinue, continuing 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Meet your team, and tell them how to talk.</h2>
+        <h2 className={H_STEP}>Meet your team, and tell them how to talk.</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">Only switch on what you&rsquo;ll use. You can add channels later.</p>
       </div>
 
       <StyleImport style={style ?? null} onImported={onImported} />
 
       <div className="space-y-3">
-        <h3 className="font-semibold">Your team</h3>
+        <h3 className="font-semibold tracking-tight">Your team</h3>
         <div className="space-y-2">
           {list.map((row) => (
             <div key={row.channel} className="space-y-2">
@@ -887,29 +896,29 @@ export default function ChannelsStep({ defaultAgentName, onContinue, continuing 
         </div>
       </div>
 
-      <section className="rounded-lg border bg-card p-4" data-testid="team-summary">
-        <h3 className="font-semibold">Here&rsquo;s how your agents will sound.</h3>
+      <section className={`${CARD} p-4`} data-testid="team-summary">
+        <h3 className="font-semibold tracking-tight">Here&rsquo;s how your agents will sound.</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">Edit anything that looks wrong.</p>
         <ul className="mt-3 space-y-1.5 text-sm leading-relaxed">
           {summary.map((line, i) => <li key={i}>{line}</li>)}
         </ul>
-        <ul className="mt-3 space-y-1 border-t pt-3 text-xs">
+        <ul className={`mt-3 space-y-1 border-t ${BORDER} pt-3 text-xs`}>
           {list.map((r) => {
             const missing = computeMissing(r);
             const pub = generated[r.channel];
             return (
               <li key={r.channel} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 {r.isOn && missing.length === 0
-                  ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-label="ready" />
+                  ? <CheckCircle2 className={`h-3.5 w-3.5 ${TINT.ready}`} aria-label="ready" />
                   : r.isOn
-                    ? <CircleAlert className="h-3.5 w-3.5 text-rose-600" aria-label="not ready" />
-                    : <span className="inline-block h-3.5 w-3.5 rounded-full border" aria-label="off" />}
+                    ? <CircleAlert className={`h-3.5 w-3.5 ${TINT.needed}`} aria-label="not ready" />
+                    : <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300 dark:border-white/20" aria-label="off" />}
                 <span className="font-medium">{CHANNEL_META[r.channel].label}</span>
                 <span className="text-muted-foreground">
                   {!r.isOn ? 'off' : missing.length === 0 ? (r.agentName?.trim() ? `${r.agentName.trim()} is ready` : 'ready') : `needs ${joinNatural(missing.map((m) => (m === 'opener' ? 'a first line' : 'hand-over rules')))}`}
                 </span>
                 {pub && (
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${pub.saved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`} title={pub.note}>
+                  <span className={`rounded-full border px-2 py-0.5 text-[11px] ${pub.saved ? STATUS.ready : STATUS.warn}`} title={pub.note}>
                     {pub.saved ? `read by ${pub.readBy}` : 'not saved'}{pub.note ? ` · ${pub.note}` : ''}
                   </span>
                 )}
@@ -925,11 +934,11 @@ export default function ChannelsStep({ defaultAgentName, onContinue, continuing 
             Generating {CHANNEL_META[progress.channel].label}… {progress.index} of {progress.total}
           </p>
         )}
-        <Button type="button" variant="outline" size="lg" onClick={generateAll} disabled={!readyOn.length || Boolean(progress) || continuing} className="w-full sm:w-auto">
+        <Button type="button" size="lg" onClick={generateAll} disabled={!readyOn.length || Boolean(progress) || continuing} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
           {progress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Generate my agents
         </Button>
-        <Button type="button" size="lg" onClick={onContinue} disabled={Boolean(progress) || continuing} className="w-full sm:w-auto">
+        <Button type="button" variant="outline" size="lg" onClick={onContinue} disabled={Boolean(progress) || continuing} className="w-full hover:border-[#7C5CFF]/50 sm:w-auto">
           {continuing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Continue<ChevronRight className="h-4 w-4" />
         </Button>

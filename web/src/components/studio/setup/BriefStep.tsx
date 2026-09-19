@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { isApiError } from '@lad/shared/apiError';
 import { useProposeBrief, type BriefErrorReason, type BriefResult } from '@lad/frontend-features/tenant-studio';
 import { getSpeechRecognition, isMicBlocked, speechLang, type SpeechRecognitionLike } from './speech';
+import { CARD, CHIP_BASE, CHIP_IDLE, CTA_PRIMARY, H_STEP, INPUT_FOCUS } from '../studio-theme';
 
 /* The brief endpoint's 400/502 reasons, in the tenant's words. */
 const REASON_COPY: Record<BriefErrorReason, string> = {
@@ -145,7 +146,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">
+        <h2 className={H_STEP}>
           Tell your new business development manager about your business
         </h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
@@ -162,7 +163,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
           placeholder={PLACEHOLDER}
           rows={9}
           disabled={propose.isPending}
-          className={`min-h-[220px] resize-y text-base leading-relaxed ${speechSupported ? 'pr-14' : ''}`}
+          className={`min-h-[220px] resize-y rounded-2xl border-slate-200/80 bg-white/80 text-base leading-relaxed backdrop-blur dark:border-white/10 dark:bg-[#071131]/80 ${INPUT_FOCUS} ${speechSupported ? 'pr-14' : ''}`}
           aria-describedby="setup-brief-hint"
         />
         {speechSupported && (
@@ -170,7 +171,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
             type="button"
             size="icon"
             variant={listening ? 'destructive' : 'outline'}
-            className={`absolute right-2 top-2 rounded-full ${listening ? 'animate-pulse' : 'text-foreground'}`}
+            className={`absolute right-2 top-2 rounded-full ${listening ? 'animate-pulse motion-reduce:animate-none' : 'text-foreground hover:border-[#7C5CFF]/50'}`}
             onClick={listening ? stopListening : startListening}
             disabled={propose.isPending}
             aria-pressed={listening}
@@ -189,7 +190,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
         </p>
       </div>
 
-      <div className="space-y-2.5">
+      <div className={`${CARD} space-y-2.5 p-4`}>
         <p className="text-sm font-medium">Links it should read</p>
         <div className="flex flex-wrap gap-2">
           {CHIPS.map(({ kind, label, icon: Icon }) => (
@@ -198,7 +199,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
               type="button"
               onClick={() => addLink(kind)}
               disabled={links.length >= MAX_LINKS || propose.isPending}
-              className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${CHIP_BASE} ${CHIP_IDLE} gap-1.5 px-3 py-1.5 text-xs`}
             >
               <Icon className="h-3.5 w-3.5" />{label}<Plus className="h-3 w-3 text-muted-foreground" />
             </button>
@@ -207,7 +208,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
             type="button"
             onClick={() => addLink('other')}
             disabled={links.length >= MAX_LINKS || propose.isPending}
-            className="inline-flex items-center gap-1.5 rounded-full border border-dashed bg-background px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${CHIP_BASE} gap-1.5 border-dashed border-slate-300 bg-transparent px-3 py-1.5 text-xs font-normal text-muted-foreground hover:border-[#7C5CFF]/50 dark:border-white/15`}
           >
             <Link2 className="h-3.5 w-3.5" />Other link
           </button>
@@ -219,7 +220,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
               const Icon = meta.icon;
               return (
                 <li key={row.id} className="flex items-center gap-2">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground" title={meta.label}>
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/80 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300" title={meta.label}>
                     <Icon className="h-4 w-4" />
                   </span>
                   <Input
@@ -230,7 +231,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
                     placeholder={meta.placeholder}
                     aria-label={`${meta.label} URL`}
                     disabled={propose.isPending}
-                    className="h-9"
+                    className={`h-9 ${INPUT_FOCUS}`}
                   />
                   <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeLink(row.id)} aria-label={`Remove ${meta.label}`} disabled={propose.isPending}>
                     <X className="h-4 w-4" />
@@ -246,7 +247,7 @@ export default function BriefStep({ onProposed }: BriefStepProps) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="button" size="lg" onClick={submit} disabled={!canPropose} className="w-full sm:w-auto">
+        <Button type="button" size="lg" onClick={submit} disabled={!canPropose} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
           {propose.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Propose my setup
         </Button>

@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { useTailorChat, type ChatTurn, type Overlay, type TailorTurn } from '@lad/frontend-features/tenant-studio';
 import ReviewCard from './ReviewCard';
+import { BORDER, BUBBLE_AGENT, BUBBLE_ME, CARD, CTA_PRIMARY, INPUT_FOCUS, PANEL } from './studio-theme';
 
 const EXAMPLES = [
   'Treat "bill rate" and "markup" as pricing questions worth handing to a human.',
@@ -47,9 +48,9 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <section className="rounded-lg border bg-card">
-        <div className="border-b px-4 py-2">
-          <h3 className="text-sm font-semibold">Tell the Tailor what to change</h3>
+      <section className={CARD}>
+        <div className={`border-b ${BORDER} px-4 py-2`}>
+          <h3 className="text-sm font-semibold tracking-tight">Tell the Tailor what to change</h3>
           <p className="text-xs text-muted-foreground">Handoff phrases, pipeline stages, signals, research, the agent&apos;s instructions, the profile questions — in your words.</p>
         </div>
         <div className="max-h-[420px] min-h-[160px] space-y-2 overflow-y-auto px-4 py-3" aria-live="polite">
@@ -57,21 +58,21 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Try one of these:</p>
               {EXAMPLES.map(ex => (
-                <button key={ex} type="button" onClick={() => void send(ex)} className="block w-full rounded-md bg-muted px-3 py-2 text-left text-sm hover:bg-muted/70">{ex}</button>
+                <button key={ex} type="button" onClick={() => void send(ex)} className={`${PANEL} block w-full px-3 py-2 text-left text-sm transition-all duration-150 ease-out hover:border-[#7C5CFF]/50 hover:bg-[#7C5CFF]/[.06] dark:hover:bg-[#7C5CFF]/[.12]`}>{ex}</button>
               ))}
             </div>
           )}
           {history.map((t, i) => (
             <div key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${t.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{t.content}</div>
+              <div className={`max-w-[85%] whitespace-pre-wrap px-3 py-2 text-sm ${t.role === 'user' ? `rounded-2xl rounded-br-md ${BUBBLE_ME}` : `rounded-2xl rounded-bl-md ${BUBBLE_AGENT}`}`}>{t.content}</div>
             </div>
           ))}
         </div>
-        <div className="flex gap-2 border-t p-3">
+        <div className={`flex gap-2 border-t ${BORDER} p-3`}>
           <Textarea rows={2} value={message} onChange={e => setMessage(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }}
-            placeholder={draft ? 'Refine the proposal on the right, or ask for something else…' : 'What should change?'} disabled={chat.isPending} />
-          <Button onClick={() => void send()} disabled={chat.isPending || !message.trim()} aria-label="Send">
+            placeholder={draft ? 'Refine the proposal on the right, or ask for something else…' : 'What should change?'} disabled={chat.isPending} className={INPUT_FOCUS} />
+          <Button onClick={() => void send()} disabled={chat.isPending || !message.trim()} aria-label="Send" className={CTA_PRIMARY}>
             {chat.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
@@ -93,7 +94,7 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
             )}
           </>
         ) : (
-          <p className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+          <p className={`${PANEL} p-4 text-sm text-muted-foreground`}>
             {last ? 'No change proposed yet — answer the Tailor\'s question on the left.' : 'A proposal appears here with every change spelled out. Nothing is applied until you say so.'}
           </p>
         )}

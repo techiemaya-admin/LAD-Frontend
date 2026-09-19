@@ -39,6 +39,7 @@ import {
   type GoalHorizon,
   type GoalInput,
 } from '@lad/frontend-features/tenant-studio';
+import { BORDER, CARD, CTA_PRIMARY, DIVIDE, H_STEP, ICON_TILE, INPUT_FOCUS, STATUS } from '../studio-theme';
 
 const CHANNEL_META: Record<BriefChannel, { label: string; icon: typeof Mail }> = {
   email: { label: 'Email', icon: Mail },
@@ -64,19 +65,19 @@ function Section({ icon: Icon, title, count, defaultOpen = true, children }: {
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="rounded-lg border bg-card">
+    <section className={CARD}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2.5 px-4 py-3 text-left"
+        className="flex w-full items-center gap-2.5 rounded-[20px] px-4 py-3 text-left transition-colors duration-150 hover:bg-slate-50/60 dark:hover:bg-white/[.03]"
       >
-        <span className="rounded-md bg-primary/10 p-1.5 text-primary"><Icon className="h-4 w-4" /></span>
-        <span className="flex-1 font-semibold">{title}</span>
+        <span className={`${ICON_TILE} h-7 w-7`}><Icon className="h-4 w-4" /></span>
+        <span className="flex-1 font-semibold tracking-tight">{title}</span>
         {count && <span className="text-xs text-muted-foreground">{count}</span>}
         {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
       </button>
-      {open && <div className="border-t px-4 py-3">{children}</div>}
+      {open && <div className={`border-t ${BORDER} px-4 py-3`}>{children}</div>}
     </section>
   );
 }
@@ -90,9 +91,9 @@ function ValueRow({ label, value, onChange, multiline }: {
     <div className="grid gap-1 py-2 sm:grid-cols-[180px_1fr] sm:gap-3">
       <Label htmlFor={id} className="text-xs text-muted-foreground sm:pt-2.5 sm:text-sm">{label}</Label>
       {multiline || value.length > 80 ? (
-        <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={2} className="min-h-[60px] text-sm" />
+        <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={2} className={`min-h-[60px] text-sm ${INPUT_FOCUS}`} />
       ) : (
-        <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} className="h-9 text-sm" />
+        <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} className={`h-9 text-sm ${INPUT_FOCUS}`} />
       )}
     </div>
   );
@@ -175,7 +176,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">Here&apos;s what we understood. Edit anything that looks wrong.</h2>
+        <h2 className={H_STEP}>Here&apos;s what we understood. Edit anything that looks wrong.</h2>
         {sources.length > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">Read your {sources.join(', ')} alongside what you told it.</p>
         )}
@@ -185,7 +186,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
           value={plan.summary}
           onChange={(e) => setPlan((p) => ({ ...p, summary: e.target.value }))}
           rows={4}
-          className="mt-3 min-h-[100px] text-base leading-relaxed"
+          className={`mt-3 min-h-[100px] rounded-2xl border-slate-200/80 bg-white/80 text-base leading-relaxed backdrop-blur dark:border-white/10 dark:bg-[#071131]/80 ${INPUT_FOCUS}`}
         />
       </div>
 
@@ -193,7 +194,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
         {profileEntries.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing proposed yet — the questions below fill this in.</p>
         ) : (
-          <div className="divide-y">
+          <div className={`divide-y ${DIVIDE}`}>
             {profileEntries.map(([key, value]) => (
               <ValueRow key={key} label={labelFor(key)} value={value} onChange={(v) => setProfile(key, v)} />
             ))}
@@ -205,7 +206,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
         <div className="space-y-3">
           {plan.goals.length === 0 && <p className="text-sm text-muted-foreground">No goals proposed. Add one, or skip — goals improve results but are not required.</p>}
           {plan.goals.map((g, i) => (
-            <div key={i} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_100px_100px_110px_auto] sm:items-end">
+            <div key={i} className={`grid gap-2 rounded-2xl border ${BORDER} bg-slate-50/60 p-3 dark:bg-white/[.03] sm:grid-cols-[1fr_100px_100px_110px_auto] sm:items-end`}>
               <div>
                 <Label htmlFor={`goal-metric-${i}`} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   What to hit
@@ -227,7 +228,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
                   id={`goal-horizon-${i}`}
                   value={g.horizon ?? '90d'}
                   onChange={(e) => setGoal(i, { horizon: e.target.value as GoalHorizon })}
-                  className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  className="mt-1 h-9 w-full rounded-md border border-slate-200/80 bg-background px-2 text-sm dark:border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C5CFF]/60"
                 >
                   {HORIZONS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
@@ -245,7 +246,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
       </Section>
 
       <Section icon={Mail} title="Channels" count={`${plan.channels.filter((c) => c.on).length} on`}>
-        <ul className="divide-y">
+        <ul className={`divide-y ${DIVIDE}`}>
           {plan.channels.map((c) => {
             const meta = CHANNEL_META[c.key] ?? { label: c.key, icon: Mail };
             const Icon = meta.icon;
@@ -267,7 +268,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
         {plan.routines.length === 0 ? (
           <p className="text-sm text-muted-foreground">No routines proposed.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className={`divide-y ${DIVIDE}`}>
             {plan.routines.map((r) => (
               <li key={r.key} className="flex items-center gap-3 py-2.5">
                 <Label htmlFor={`routine-${r.key}`} className="flex-1 font-normal">{ROUTINE_LABELS[r.key] ?? humaniseFieldKey(r.key)}</Label>
@@ -280,7 +281,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
 
       <Section icon={Rocket} title="First campaign" defaultOpen={Boolean(plan.firstCampaign)}>
         {plan.firstCampaign ? (
-          <div className="divide-y">
+          <div className={`divide-y ${DIVIDE}`}>
             <ValueRow label="What to offer" value={plan.firstCampaign.offering} onChange={(v) => setCampaign('offering', v)} />
             <ValueRow label="Channel" value={plan.firstCampaign.channel ?? ''} onChange={(v) => setCampaign('channel', v)} />
             <ValueRow label="Who to reach" value={plan.firstCampaign.audience} onChange={(v) => setCampaign('audience', v)} />
@@ -292,12 +293,12 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
       </Section>
 
       {plan.questions.length > 0 && (
-        <section className="rounded-lg border bg-card">
+        <section className={CARD}>
           <div className="px-4 py-3">
-            <h3 className="font-semibold">A few things we still need</h3>
+            <h3 className="font-semibold tracking-tight">A few things we still need</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">Short answers are fine. You can leave the optional ones for later.</p>
           </div>
-          <ul className="divide-y border-t">
+          <ul className={`divide-y border-t ${DIVIDE} ${BORDER}`}>
             {plan.questions.map((q) => {
               const needed = isNeeded(q);
               const id = `answer-${q.field}`;
@@ -306,7 +307,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
                   <div className="flex flex-wrap items-center gap-2">
                     <Label htmlFor={id} className="font-medium">{labelFor(q.field, q.label)}</Label>
                     {needed && (
-                      <Badge variant="destructive" className="gap-1 text-[11px]"><AlertCircle className="h-3 w-3" />Needed before launch</Badge>
+                      <Badge variant="outline" className={`gap-1 text-[11px] ${STATUS.needed}`}><AlertCircle className="h-3 w-3" />Needed before launch</Badge>
                     )}
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{q.question}</p>
@@ -314,7 +315,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
                     id={id}
                     value={answers[q.field] ?? ''}
                     onChange={(e) => setAnswers((a) => ({ ...a, [q.field]: e.target.value }))}
-                    className="mt-2 h-9 text-sm"
+                    className={`mt-2 h-9 text-sm ${INPUT_FOCUS}`}
                     aria-required={needed}
                   />
                 </li>
@@ -324,17 +325,17 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
         </section>
       )}
 
-      <section className="rounded-lg border bg-card px-4 py-3">
-        <h3 className="font-semibold">How should it work?</h3>
+      <section className={`${CARD} px-4 py-3`}>
+        <h3 className="font-semibold tracking-tight">How should it work?</h3>
         <RadioGroup value={approvalMode} onValueChange={(v) => setApprovalMode(v as ApprovalMode)} className="mt-3 gap-2.5">
-          <label htmlFor="approval-ask" className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+          <label htmlFor="approval-ask" className={`flex cursor-pointer items-start gap-3 rounded-2xl border ${BORDER} p-3 transition-all duration-150 hover:border-[#7C5CFF]/40 has-[[data-state=checked]]:border-[#7C5CFF]/60 has-[[data-state=checked]]:bg-[#7C5CFF]/[.06] has-[[data-state=checked]]:ring-1 has-[[data-state=checked]]:ring-[#7C5CFF]/40 dark:has-[[data-state=checked]]:bg-[#7C5CFF]/[.12]`}>
             <RadioGroupItem id="approval-ask" value="ask_first" className="mt-0.5" />
             <span className="text-sm">
               <span className="font-medium">Ask me before anything is sent</span>
               <span className="block text-xs text-muted-foreground">Recommended for the first weeks.</span>
             </span>
           </label>
-          <label htmlFor="approval-auto" className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+          <label htmlFor="approval-auto" className={`flex cursor-pointer items-start gap-3 rounded-2xl border ${BORDER} p-3 transition-all duration-150 hover:border-[#7C5CFF]/40 has-[[data-state=checked]]:border-[#7C5CFF]/60 has-[[data-state=checked]]:bg-[#7C5CFF]/[.06] has-[[data-state=checked]]:ring-1 has-[[data-state=checked]]:ring-[#7C5CFF]/40 dark:has-[[data-state=checked]]:bg-[#7C5CFF]/[.12]`}>
             <RadioGroupItem id="approval-auto" value="autopilot" className="mt-0.5" />
             <span className="text-sm">
               <span className="font-medium">Let it run</span>
@@ -354,7 +355,7 @@ export default function PlanReview({ result, brief, links, onApplied, onStartOve
         <Button type="button" variant="ghost" onClick={onStartOver} disabled={apply.isPending}>
           <RotateCcw className="h-4 w-4" />Start over
         </Button>
-        <Button type="button" size="lg" onClick={save} disabled={apply.isPending} className="w-full sm:w-auto">
+        <Button type="button" size="lg" onClick={save} disabled={apply.isPending} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
           {apply.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Looks right, save
         </Button>

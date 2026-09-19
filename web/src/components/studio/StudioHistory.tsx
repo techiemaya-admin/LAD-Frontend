@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { isApiError } from '@lad/shared/apiError';
 import { useStudioHistory, useUndoHistory, type HistoryEntry, type HistoryKind, type UndoResult } from '@lad/frontend-features/tenant-studio';
+import { CTA_PRIMARY, HISTORY_DOT, HISTORY_RAIL, ICON_TILE, SKELETON, STATUS, SURFACE } from './studio-theme';
 
 const ICON: Record<HistoryKind, typeof Wand2> = { overlay: Wand2, prompt: MessagesSquare, first_campaign: Send, brief: FileText, go_live: Rocket };
 const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
@@ -70,27 +71,27 @@ function Entry({ entry, canUndo, confirming, onAsk, onConfirm, onCancel, undoing
 }) {
   const Icon = ICON[entry.kind] ?? Clock;
   return (
-    <li className="flex gap-3 py-3" data-testid={`history-${entry.kind}`}>
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <li className="relative flex gap-3 py-3" data-testid={`history-${entry.kind}`}>
+      <span className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${HISTORY_DOT[entry.kind] ?? 'bg-slate-400 text-white'}`}>
         <Icon className="h-3.5 w-3.5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-          <span className="font-medium">{entry.title}</span>
+          <span className="font-medium tracking-tight">{entry.title}</span>
           <span className="text-xs text-muted-foreground" title={entry.at}>{timeAgo(entry.at)}</span>
         </div>
         {entry.detail && <p className="mt-0.5 text-sm text-muted-foreground">{entry.detail}</p>}
         {entry.by && <p className="mt-0.5 text-xs text-muted-foreground">by {entry.by}</p>}
         {entry.undo && canUndo && !confirming && (
-          <Button type="button" size="sm" variant="outline" className="mt-2" onClick={onAsk} disabled={undoing} data-testid="history-undo">
+          <Button type="button" size="sm" variant="outline" className="mt-2 hover:border-[#7C5CFF]/50" onClick={onAsk} disabled={undoing} data-testid="history-undo">
             {undoing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}Undo
           </Button>
         )}
         {entry.undo && canUndo && confirming && (
-          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="alertdialog" aria-label={`Undo ${entry.title}?`} data-testid="history-undo-confirm">
+          <div className={`mt-2 rounded-xl border p-3 text-sm ${STATUS.warn}`} role="alertdialog" aria-label={`Undo ${entry.title}?`} data-testid="history-undo-confirm">
             <p>This puts back the previous version and updates your agents.</p>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Button type="button" size="sm" onClick={onConfirm} disabled={undoing} data-testid="history-undo-yes">
+              <Button type="button" size="sm" onClick={onConfirm} disabled={undoing} data-testid="history-undo-yes" className={CTA_PRIMARY}>
                 {undoing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}Undo
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={undoing}>Keep it</Button>
@@ -135,22 +136,30 @@ export default function StudioHistory({ open, onOpenChange }: StudioHistoryProps
   const entries = history.data ?? [];
   return (
       <Sheet open={open} onOpenChange={(o) => { if (!o) setConfirmId(null); onOpenChange(o); }}>
-        <SheetContent side="right" className="flex w-full flex-col sm:max-w-md" data-testid="studio-history">
+        <SheetContent side="right" className={`flex w-full flex-col sm:max-w-md ${SURFACE}`} data-testid="studio-history">
           <SheetHeader className="text-left">
-            <SheetTitle className="flex items-center gap-2"><History className="h-4 w-4" aria-hidden />Setup history</SheetTitle>
+            <SheetTitle className="flex items-center gap-2 tracking-tight"><span className={`${ICON_TILE} h-7 w-7`}><History className="h-4 w-4" aria-hidden /></span>Setup history</SheetTitle>
             <SheetDescription>Every change to how your agents work, newest first. Undo puts the previous version back.</SheetDescription>
           </SheetHeader>
           <div className="-mx-1 mt-2 flex-1 overflow-y-auto px-1">
-            {history.isLoading && <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</p>}
+            {history.isLoading && (
+              <div className="space-y-3 py-4" aria-busy="true">
+                <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</p>
+                <div className={`${SKELETON} h-14`} />
+                <div className={`${SKELETON} h-14`} />
+                <div className={`${SKELETON} h-14`} />
+              </div>
+            )}
             {history.data === undefined && !history.isLoading && (
-              <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <p className={`rounded-xl border px-3 py-2 text-sm ${STATUS.needed}`}>
                 Could not load the history right now.{' '}
                 <button type="button" onClick={() => { void history.refetch(); }} className="font-medium underline-offset-2 hover:underline">Try again</button>
               </p>
             )}
             {history.data && entries.length === 0 && <p className="py-4 text-sm text-muted-foreground">Nothing has changed yet.</p>}
             {entries.length > 0 && (
-              <ul className="divide-y">
+              <ul className="relative">
+                <span aria-hidden className={`absolute bottom-3 left-[13px] top-3 w-0.5 rounded-full ${HISTORY_RAIL}`} />
                 {entries.map((e) => (
                   <Entry
                     key={e.id}

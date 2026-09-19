@@ -26,6 +26,7 @@ import {
 } from '@lad/frontend-features/tenant-studio';
 import ReviewCard from './ReviewCard';
 import { useDictation } from './setup/speech';
+import { AI_GRADIENT, AI_TEXT, CARD, CTA_PRIMARY, ICON_TILE, INPUT_FOCUS, PANEL, SKELETON, STATUS } from './studio-theme';
 
 const CHANNEL_LABEL: Record<StudioChannel, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
 const SOURCE_LABEL: Record<AgentQuestion['source'], string> = { handover: 'from a real conversation', rehearsal: 'from a rehearsal', test_run: 'from your test run', manual: 'added by you' };
@@ -86,20 +87,20 @@ function QuestionCard({ q, canAnswer, result, onAnswered, onDone }: {
   const ctx = q.context ?? {};
 
   return (
-    <li className="rounded-lg border bg-card p-4" data-testid={`question-${q.id}`}>
+    <li className={`${CARD} p-4`} data-testid={`question-${q.id}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{CHANNEL_LABEL[q.channel] ?? q.channel} · {SOURCE_LABEL[q.source] ?? q.source}</p>
           <p className="mt-1 text-sm font-medium">{q.question}</p>
         </div>
         {!result && (
-          <button type="button" onClick={doDismiss} disabled={dismiss.isPending} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Dismiss this question">
+          <button type="button" onClick={doDismiss} disabled={dismiss.isPending} className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-slate-100 dark:hover:bg-white/10" aria-label="Dismiss this question">
             {dismiss.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
           </button>
         )}
       </div>
       {(ctx.prospectMessage || ctx.agentReply) && (
-        <div className="mt-2 space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs">
+        <div className={`${PANEL} mt-2 space-y-1 px-3 py-2 text-xs`}>
           {ctx.prospectMessage && <p><span className="font-medium">{ctx.leadName || 'Prospect'}:</span> {excerpt(ctx.prospectMessage)}</p>}
           {ctx.agentReply && <p><span className="font-medium">Your agent:</span> {excerpt(ctx.agentReply)}</p>}
         </div>
@@ -112,18 +113,18 @@ function QuestionCard({ q, canAnswer, result, onAnswered, onDone }: {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="What should it say?"
-              className="min-h-[56px] text-sm"
+              className={`min-h-[56px] text-sm ${INPUT_FOCUS}`}
               aria-label="Your answer"
               disabled={answer.isPending}
             />
             {mic.supported && (
-              <Button type="button" size="icon" variant={mic.listening ? 'default' : 'outline'} onClick={() => (mic.listening ? mic.stop() : mic.start(text))} aria-label={mic.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={mic.listening} className="shrink-0">
+              <Button type="button" size="icon" variant={mic.listening ? 'default' : 'outline'} onClick={() => (mic.listening ? mic.stop() : mic.start(text))} aria-label={mic.listening ? 'Stop dictating' : 'Dictate'} aria-pressed={mic.listening} className={`shrink-0 ${mic.listening ? CTA_PRIMARY : 'hover:border-[#7C5CFF]/50'}`}>
                 {mic.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
             )}
           </div>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <Button type="button" size="sm" onClick={send} disabled={!text.trim() || answer.isPending} data-testid="question-answer">
+            <Button type="button" size="sm" onClick={send} disabled={!text.trim() || answer.isPending} data-testid="question-answer" className={CTA_PRIMARY}>
               {answer.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {answer.isPending ? 'Turning that into a change…' : 'Answer'}
             </Button>
@@ -138,7 +139,7 @@ function QuestionCard({ q, canAnswer, result, onAnswered, onDone }: {
         </div>
       )}
       {result && !proposal && (
-        <div className="mt-2 rounded-md bg-muted/50 px-3 py-2 text-sm" data-testid="question-reply">
+        <div className={`${PANEL} mt-2 px-3 py-2 text-sm`} data-testid="question-reply">
           <p>{result.proposal.reply || 'Noted — nothing in how it talks needs to change for that.'}</p>
           <Button type="button" size="sm" variant="ghost" className="mt-1" onClick={onDone}>Close</Button>
         </div>
@@ -169,16 +170,21 @@ export default function QuestionsInbox({ state }: QuestionsInboxProps) {
   if (list.data && questions.length === 0) return null;
   const remove = (id: string) => setAnswered((all) => { const next = { ...all }; delete next[id]; return next; });
   return (
-    <section className="rounded-lg border bg-card p-4" data-testid="questions-inbox">
+    <section className={`${CARD} p-4`} data-testid="questions-inbox">
       <div className="flex items-center gap-2">
-        <HelpCircle className="h-4 w-4 text-primary" aria-hidden />
-        <h2 className="font-semibold">{count > 0 ? `Mr LAD has ${count} question${count === 1 ? '' : 's'} for you` : 'Your answers to Mr LAD'}</h2>
-        {count > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground" data-testid="questions-badge">{count}</span>}
+        <span className={`${ICON_TILE} h-7 w-7`}><HelpCircle className="h-4 w-4" aria-hidden /></span>
+        <h2 className="font-semibold tracking-tight">{count > 0 ? <><span className={AI_TEXT}>Mr LAD</span>{` has ${count} question${count === 1 ? '' : 's'} for you`}</> : <>Your answers to <span className={AI_TEXT}>Mr LAD</span></>}</h2>
+        {count > 0 && <span className={`rounded-full ${AI_GRADIENT} px-2 py-0.5 text-[11px] font-semibold text-white shadow-[0_2px_8px_-2px_rgba(124,92,255,.6)]`} data-testid="questions-badge">{count}</span>}
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">Things a prospect asked that it did not know how to answer. One line from you teaches it for next time.</p>
-      {list.isLoading && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</p>}
+      {list.isLoading && (
+        <div className="mt-3 space-y-2" aria-busy="true">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</p>
+          <div className={`${SKELETON} h-16`} />
+        </div>
+      )}
       {list.data === undefined && !list.isLoading && (
-        <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className={`mt-3 rounded-xl border px-3 py-2 text-sm ${STATUS.needed}`}>
           Could not load the questions right now.{' '}
           <button type="button" onClick={() => { void list.refetch(); }} className="font-medium underline-offset-2 hover:underline">Try again</button>
         </p>

@@ -38,6 +38,8 @@ import {
   BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, GoLiveStep,
   GO_LIVE_BUILDER_HREF, GO_LIVE_STEP, PlanReview, ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
 } from '@/components/studio/setup';
+import { AI_TEXT, SKELETON, STATUS, SURFACE, TAB_LIST, TAB_TRIGGER } from '@/components/studio/studio-theme';
+import '@/components/studio/studio.css';
 import {
   useSaveSetup,
   useStudioState,
@@ -151,15 +153,25 @@ export default function StudioPage() {
 
   if (state.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading your studio…</div>
+      <div className={`min-h-full ${SURFACE}`}>
+        <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6" aria-busy="true">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading your studio…</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className={`${SKELETON} h-28`} />
+            <div className={`${SKELETON} h-28`} />
+            <div className={`${SKELETON} h-28`} />
+          </div>
+          <div className={`${SKELETON} mt-3 h-24`} />
+        </div>
       </div>
     );
   }
   if (state.isError || !state.data) {
     return (
-      <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
-        <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">The studio could not load. Refresh, or try again in a moment.</p>
+      <div className={`min-h-full ${SURFACE}`}>
+        <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
+          <p className={`rounded-2xl border p-4 text-sm ${STATUS.needed}`}>The studio could not load. Refresh, or try again in a moment.</p>
+        </div>
       </div>
     );
   }
@@ -185,7 +197,7 @@ export default function StudioPage() {
             type="button"
             onClick={() => markStepOneDone(() => setPhase('studio'))}
             disabled={saveSetup.isPending}
-            className="underline-offset-2 hover:underline disabled:opacity-50"
+            className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline disabled:opacity-50 dark:hover:text-[#B69CFF]"
           >
             Skip to the studio
           </button>
@@ -244,7 +256,7 @@ export default function StudioPage() {
         step={step}
         title={STEP_TITLE[effectivePhase]}
         aside={(
-          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
+          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline dark:hover:text-[#B69CFF]">
             {BACK_LABEL[backTo]}
           </button>
         )}
@@ -282,7 +294,7 @@ export default function StudioPage() {
         progress={100}
         title={STEP_TITLE.golive}
         aside={(
-          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 hover:underline">
+          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline dark:hover:text-[#B69CFF]">
             {BACK_LABEL[backTo]}
           </button>
         )}
@@ -320,9 +332,10 @@ export default function StudioPage() {
   }
 
   return (
+    <div className={`min-h-full ${SURFACE}`}>
     <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
       <header className="mb-5">
-        <h1 className="text-2xl font-bold tracking-tight">Tenant Studio</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Tenant <span className={AI_TEXT}>Studio</span></h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Teach the platform your business: finish the interview, train it on real leads, rehearse against your own agent, and turn feedback into changes you review before they apply.
         </p>
@@ -357,15 +370,15 @@ export default function StudioPage() {
       </div>
       {hasHistory && <StudioHistory open={historyOpen} onOpenChange={setHistoryOpen} />}
       {draft && (
-        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className={`mt-3 rounded-xl border px-3 py-2 text-xs ${STATUS.warn}`}>
           You have an unapplied proposal. The next request in any room builds on it; apply or discard it from its review card.
         </p>
       )}
       <Tabs defaultValue={data.rehearsal.ready ? 'rehearse' : data.icpTraining.ready ? 'icp' : 'tailor'} className="mt-5">
-        <TabsList>
-          <TabsTrigger value="icp"><Target className="mr-1.5 h-4 w-4" />Train the ICP</TabsTrigger>
-          <TabsTrigger value="rehearse"><Theater className="mr-1.5 h-4 w-4" />Rehearse</TabsTrigger>
-          <TabsTrigger value="tailor"><MessagesSquare className="mr-1.5 h-4 w-4" />Ask the Tailor</TabsTrigger>
+        <TabsList className={TAB_LIST}>
+          <TabsTrigger value="icp" className={TAB_TRIGGER}><Target className="mr-1.5 h-4 w-4" />Train the ICP</TabsTrigger>
+          <TabsTrigger value="rehearse" className={TAB_TRIGGER}><Theater className="mr-1.5 h-4 w-4" />Rehearse</TabsTrigger>
+          <TabsTrigger value="tailor" className={TAB_TRIGGER}><MessagesSquare className="mr-1.5 h-4 w-4" />Ask the Tailor</TabsTrigger>
         </TabsList>
         <TabsContent value="icp" className="mt-4">
           <IcpRoom ready={data.icpTraining.ready} draft={draft} onDraft={setDraft} />
@@ -377,6 +390,7 @@ export default function StudioPage() {
           <TailorRoom draft={draft} onDraft={setDraft} />
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

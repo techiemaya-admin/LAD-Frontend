@@ -13,6 +13,7 @@
 import Link from 'next/link';
 import { ArrowRight, CircleAlert } from 'lucide-react';
 import { useStudioState } from '@lad/frontend-features/tenant-studio';
+import { BANNER, LINK, TINT } from './studio-theme';
 
 /** Plain names for the launch rows, by key, in the backend's order. */
 export const LAUNCH_ROW_TITLES: Record<string, string> = {
@@ -39,14 +40,14 @@ export default function StudioLaunchBanner({ className = '' }: { className?: str
   if (blocking.length === 0) return null;
   const titles = blocking.map(launchRowTitle);
   return (
-    <div className={`flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between ${className}`} role="status" data-testid="studio-launch-banner">
+    <div className={`flex flex-col gap-2 ${BANNER.base} ${BANNER.warn} sm:flex-row sm:items-center sm:justify-between ${className}`} role="status" data-testid="studio-launch-banner">
       <span className="flex items-start gap-2">
-        <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <CircleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.warn}`} aria-hidden />
         <span>
           {blocking.length} thing{blocking.length === 1 ? '' : 's'} before your first campaign can send: {titles.join(', ')} (about 1 min each).
         </span>
       </span>
-      <Link href="/studio" className="inline-flex shrink-0 items-center gap-1 font-medium underline-offset-2 hover:underline">
+      <Link href="/studio" className={`inline-flex shrink-0 items-center gap-1 ${LINK}`}>
         Finish setup<ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </div>

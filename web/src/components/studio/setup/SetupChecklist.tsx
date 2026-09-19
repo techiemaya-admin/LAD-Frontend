@@ -14,6 +14,7 @@ import { ArrowRight, CheckCircle2, Circle, CircleAlert, Loader2, Rocket, Users }
 import { Button } from '@/components/ui/button';
 import { useCreditsBalance } from '@lad/frontend-features/billing';
 import type { BriefFirstCampaign, StudioState } from '@lad/frontend-features/tenant-studio';
+import { CARD, CTA_PRIMARY, DIVIDE, H_STEP, LINK, ROW_NEEDED, TINT } from '../studio-theme';
 
 type Status = 'ready' | 'needed' | 'optional' | 'unknown';
 
@@ -39,14 +40,14 @@ const CHANNEL_LABELS: Record<string, string> = { email: 'Email', whatsapp: 'What
 
 function Row({ row }: { row: RowSpec }) {
   const icon = row.status === 'ready'
-    ? <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-label="ready" />
+    ? <CheckCircle2 className={`h-5 w-5 ${TINT.ready}`} aria-label="ready" />
     : row.status === 'needed'
-      ? <CircleAlert className="h-5 w-5 text-amber-600" aria-label="needed" />
+      ? <CircleAlert className={`h-5 w-5 ${TINT.warn}`} aria-label="needed" />
       : row.status === 'unknown'
         ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="checking" />
         : <Circle className="h-5 w-5 text-muted-foreground" aria-label="optional" />;
   return (
-    <li className={`flex gap-3 px-4 py-3 ${row.status === 'needed' ? 'bg-amber-50/60' : ''}`}>
+    <li className={`flex gap-3 px-4 py-3 first:rounded-t-[20px] last:rounded-b-[20px] ${row.status === 'needed' ? ROW_NEEDED : ''}`}>
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
@@ -55,12 +56,12 @@ function Row({ row }: { row: RowSpec }) {
         </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{row.detail}</p>
         {row.action && (
-          <button type="button" onClick={row.action.onClick} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline">
+          <button type="button" onClick={row.action.onClick} className={`mt-1 inline-flex items-center gap-1 text-sm ${LINK}`}>
             {row.action.label}<ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
         {row.link && (
-          <Link href={row.link.href} className={`${row.action ? 'ml-3 ' : ''}mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline`}>
+          <Link href={row.link.href} className={`${row.action ? 'ml-3 ' : ''}mt-1 inline-flex items-center gap-1 text-sm ${LINK}`}>
             {row.link.label}<ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}
@@ -259,7 +260,7 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold leading-snug sm:text-2xl">
+        <h2 className={H_STEP}>
           {blockers === 0 ? 'Everything a launch needs is in place.' : `${blockers} thing${blockers === 1 ? '' : 's'} to fix before the first send.`}
         </h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
@@ -268,21 +269,21 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
             : 'Each row links to where it is fixed. You can open the studio now and come back to these.'}
         </p>
       </div>
-      <ul className="divide-y rounded-lg border bg-card">
+      <ul className={`${CARD} divide-y ${DIVIDE} overflow-hidden`}>
         {rows.map((row) => <Row key={row.key} row={row} />)}
       </ul>
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         {onSetupChannels && (
-          <Button type="button" size="lg" variant="outline" onClick={onSetupChannels} disabled={opening} className="w-full sm:w-auto">
+          <Button type="button" size="lg" variant="outline" onClick={onSetupChannels} disabled={opening} className="w-full hover:border-[#7C5CFF]/50 sm:w-auto">
             <Users className="h-4 w-4" />Set up your channels
           </Button>
         )}
-        <Button type="button" size="lg" variant={onGoLive ? 'outline' : 'default'} onClick={onOpenStudio} disabled={opening} className="w-full sm:w-auto">
+        <Button type="button" size="lg" variant={onGoLive ? 'outline' : 'default'} onClick={onOpenStudio} disabled={opening} className={`w-full sm:w-auto ${onGoLive ? 'hover:border-[#7C5CFF]/50' : CTA_PRIMARY}`}>
           {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Open the studio<ArrowRight className="h-4 w-4" />
         </Button>
         {onGoLive && (
-          <Button type="button" size="lg" onClick={onGoLive} disabled={opening} className="w-full sm:w-auto" data-testid="checklist-go-live">
+          <Button type="button" size="lg" onClick={onGoLive} disabled={opening} className={`w-full sm:w-auto ${CTA_PRIMARY}`} data-testid="checklist-go-live">
             <Rocket className="h-4 w-4" />Try your agent and go live
           </Button>
         )}

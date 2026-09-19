@@ -15,12 +15,13 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApplyAndUpdate, useApplyOverlay, type Proposal, type ReviewChange, type ReviewRow } from '@lad/frontend-features/tenant-studio';
+import { BORDER, CARD, CTA_PRIMARY, DIVIDE, LINK, STATUS, TINT } from './studio-theme';
 
 const ICON: Record<ReviewChange, typeof Plus> = { added: Plus, removed: Minus, reworded: Pencil };
 const TONE: Record<ReviewChange, string> = {
-  added: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  removed: 'text-rose-700 bg-rose-50 border-rose-200',
-  reworded: 'text-amber-700 bg-amber-50 border-amber-200',
+  added: STATUS.ready,
+  removed: STATUS.needed,
+  reworded: STATUS.warn,
 };
 
 function text(v: unknown): string {
@@ -44,7 +45,7 @@ function Row({ row }: { row: ReviewRow }) {
           <span className={`font-medium ${row.change === 'removed' ? 'text-muted-foreground line-through decoration-rose-300' : ''}`}>{row.key}</span>
           {row.field && <span className="text-xs text-muted-foreground">{row.field}</span>}
           {long && (
-            <button type="button" onClick={() => setOpen(o => !o)} className="text-xs text-primary underline-offset-2 hover:underline">
+            <button type="button" onClick={() => setOpen(o => !o)} className={`text-xs ${LINK}`}>
               {open ? 'less' : 'more'}
             </button>
           )}
@@ -126,12 +127,12 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
   };
 
   return (
-    <div className="rounded-lg border bg-card">
-      {reply && <p className="border-b px-4 py-3 text-sm">{reply}</p>}
+    <div className={CARD}>
+      {reply && <p className={`border-b ${BORDER} px-4 py-3 text-sm`}>{reply}</p>}
 
       {!proposal.ok ? (
         <div className="px-4 py-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-700">
+          <div className={`mb-2 flex items-center gap-2 text-sm font-medium ${TINT.warnText}`}>
             <AlertTriangle className="h-4 w-4" /> The proposal does not fit the rules
           </div>
           <ul className="space-y-1 text-sm text-muted-foreground">
@@ -146,24 +147,24 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
           <div className="flex flex-wrap items-center gap-3 px-4 py-2 text-xs text-muted-foreground">
             {summary && (
               <>
-                <span className="text-emerald-700">+{summary.added} added</span>
-                <span className="text-amber-700">~{summary.reworded} reworded</span>
-                <span className="text-rose-700">−{summary.removed} removed</span>
+                <span className={`rounded-full border px-2 py-0.5 ${STATUS.ready}`}>+{summary.added} added</span>
+                <span className={`rounded-full border px-2 py-0.5 ${STATUS.warn}`}>~{summary.reworded} reworded</span>
+                <span className={`rounded-full border px-2 py-0.5 ${STATUS.needed}`}>−{summary.removed} removed</span>
               </>
             )}
             {groups.length === 0 && <span>No effective change — the proposal matches what you already run.</span>}
           </div>
           {groups.map(([surface, rows]) => (
-            <div key={surface} className="border-t px-4 py-2">
+            <div key={surface} className={`border-t ${BORDER} px-4 py-2`}>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{surface}</div>
-              <ul className="divide-y">{rows.map((r, i) => <Row key={`${r.key}-${r.field ?? ''}-${i}`} row={r} />)}</ul>
+              <ul className={`divide-y ${DIVIDE}`}>{rows.map((r, i) => <Row key={`${r.key}-${r.field ?? ''}-${i}`} row={r} />)}</ul>
             </div>
           ))}
-          <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
+          <div className={`flex flex-wrap items-center gap-2 border-t ${BORDER} px-4 py-3`}>
             {applied ? (
-              <span className="inline-flex items-center gap-1 text-sm text-emerald-700"><Check className="h-4 w-4" /> Applied</span>
+              <span className={`inline-flex items-center gap-1 text-sm ${TINT.readyText}`}><Check className="h-4 w-4" /> Applied</span>
             ) : canApply ? (
-              <Button size="sm" onClick={doApply} disabled={apply.isPending || groups.length === 0}>
+              <Button size="sm" onClick={doApply} disabled={apply.isPending || groups.length === 0} className={CTA_PRIMARY}>
                 {apply.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Apply this change
               </Button>
             ) : (
@@ -175,7 +176,7 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
             {appliesOnNextGenerate && (
               <span className="ml-auto text-xs text-muted-foreground">
                 Reaches the agent after you{' '}
-                <Link href="/settings?tab=chat" className="text-primary underline-offset-2 hover:underline">regenerate the LinkedIn prompt</Link>.
+                <Link href="/settings?tab=chat" className={LINK}>regenerate the LinkedIn prompt</Link>.
               </span>
             )}
           </div>
