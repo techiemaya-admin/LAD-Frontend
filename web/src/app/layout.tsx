@@ -97,8 +97,14 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
+        {/* Inter and Space Grotesk carry no Indic glyphs. The Noto Sans families
+            are the fallback for transcripts, prompts and names in the languages the
+            voice agents speak (te, hi/mr, ta, kn, ml, gu, bn, pa, od, ur). Google
+            Fonts serves each as unicode-range subsets, so a page only downloads the
+            scripts it actually shows. Without this, a client with no Telugu system
+            font renders a Telugu transcript as boxes. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Telugu:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500;600&family=Noto+Sans+Kannada:wght@400;500;600&family=Noto+Sans+Malayalam:wght@400;500;600&family=Noto+Sans+Gujarati:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500;600&family=Noto+Sans+Gurmukhi:wght@400;500;600&family=Noto+Sans+Oriya:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
       </head>
