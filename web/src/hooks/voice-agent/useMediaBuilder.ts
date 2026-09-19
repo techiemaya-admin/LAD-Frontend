@@ -59,24 +59,13 @@ export function useMediaBuilder() {
   const [loadingSessions, setLoadingSessions] = useState<boolean>(false);
 
   const holdAbortRef = useRef<AbortController | null>(null);
-  const mageHoldAbortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string>("");
-  const wasInBrandDnaExtractionRef = useRef<boolean>(false);
-  const isMageExtractionRef = useRef<boolean>(false);
 
-  const workerUrl =
-    MEDIA_GEN_URL;
-  // NEXT_PUBLIC_* is inlined at BUILD time, so a deployed bundle carries
-  // whatever was set when it was built. When that value is missing the old
-  // fallback pointed a hosted page at the user's own machine, which produced a
-  // stream of ERR_CONNECTION_REFUSED against localhost:8001. Only fall back to
-  // localhost when we are actually on localhost; otherwise treat MAGe as
-  // unconfigured and skip it, since these calls are best-effort anyway.
-  const onLocalhost =
-    typeof window !== "undefined" &&
-    /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
-  const mageUrl =
-    process.env.NEXT_PUBLIC_MAGE_API_URL || (onLocalhost ? "http://localhost:8001" : "");
+  // Media generation and Brand DNA extraction both run on the media-gen worker
+  // (MEDIA_GEN_URL). The separate "MAGe brand-profiler" hold that used to wake
+  // the legacy mage-business-dna-extractor service is gone: that service is
+  // retired, and the worker held below is the one doing the extraction.
+  const workerUrl = MEDIA_GEN_URL;
 
   const getAuthHeaders = () => {
     const token = safeStorage.getItem("token");
@@ -148,86 +137,6 @@ export function useMediaBuilder() {
     [workerUrl],
   );
 
-  const establishMageHold = useCallback(
-    async (id: string) => {
-      if (!mageUrl) return;
-      try {
-        console.warn(`[MediaBuilder] Establishing hold for MAGe ${id}...`);
-        
-        const startTime = Date.now();
-        const timeoutMs = 60000; // 1 minute
-        let connected = false;
-        
-        while (Date.now() - startTime < timeoutMs) {
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-            
-            const probe = await fetch(mageUrl, {
-              method: "GET",
-              signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            
-            if (probe.ok) {
-              connected = true;
-              break;
-            }
-          } catch {
-            console.warn("[MediaBuilder] MAGe status probe failed, retrying...");
-          }
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-        
-        if (!connected) {
-          throw new Error("Failed to wake up MAGe Brand DNA extractor service.");
-        }
-
-        if (mageHoldAbortRef.current) mageHoldAbortRef.current.abort();
-        const controller = new AbortController();
-        mageHoldAbortRef.current = controller;
-
-        fetch(`${mageUrl}/api/brand-profiler/hold`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ session_id: id }),
-          signal: controller.signal,
-        }).catch((e) => {
-          if (e.name !== "AbortError") {
-            console.error("MAGe hold request ended:", e);
-          }
-        });
-      } catch (e: unknown) {
-        console.error("Failed to hold MAGe worker:", e);
-      }
-    },
-    [mageUrl],
-  );
-
-  const releaseMageHold = useCallback(
-    async (id: string) => {
-      if (!id || !mageUrl) return;
-      if (mageHoldAbortRef.current) {
-        mageHoldAbortRef.current.abort();
-      }
-      try {
-        await fetch(`${mageUrl}/api/brand-profiler/release`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ session_id: id }),
-        });
-        console.warn(`[MediaBuilder] Released hold for MAGe ${id}`);
-      } catch (e) {
-        console.error("Failed to release MAGe worker:", e);
-      }
-    },
-    [mageUrl],
-  );
-
   const releaseHold = useCallback(
     async (id: string) => {
       if (!id) return;
@@ -252,15 +161,11 @@ export function useMediaBuilder() {
     if (holdAbortRef.current) {
       holdAbortRef.current.abort();
     }
-    if (mageHoldAbortRef.current) {
-      mageHoldAbortRef.current.abort();
-    }
     const currentSessionId = sessionIdRef.current;
     if (currentSessionId) {
       await releaseHold(currentSessionId);
-      await releaseMageHold(currentSessionId);
     }
-  }, [releaseHold, releaseMageHold]);
+  }, [releaseHold]);
 
   const startFlow = useCallback(() => {
     const newSessionId = `media-${Math.random().toString(36).substring(2, 9)}`;
@@ -434,22 +339,6 @@ export function useMediaBuilder() {
     };
   }, [step, sessionId, workerUrl, uiPayload?.status, uiPayload?.phase]);
 
-  // Set wasInBrandDnaExtractionRef when entering builder-video-progress step for MAGe
-  useEffect(() => {
-    if (step === "builder-video-progress" && isMageExtractionRef.current) {
-      wasInBrandDnaExtractionRef.current = true;
-    }
-  }, [step]);
-
-  // Auto-release MAGe hold if we transition away from the progress step
-  useEffect(() => {
-    if (step !== "builder-video-progress" && wasInBrandDnaExtractionRef.current) {
-      wasInBrandDnaExtractionRef.current = false;
-      isMageExtractionRef.current = false;
-      releaseMageHold(sessionIdRef.current);
-    }
-  }, [step, releaseMageHold]);
-
   const uploadReference = useCallback(async (file: File) => {
     if (references.length >= 5) {
       setError("Maximum of 5 reference images allowed.");
@@ -557,15 +446,6 @@ export function useMediaBuilder() {
       return;
     }
 
-    if (messageToSend === "Analyze a new website") {
-      try {
-        await establishMageHold(sessionId);
-        isMageExtractionRef.current = true;
-      } catch (e) {
-        console.error("Failed to establish MAGe hold:", e);
-      }
-    }
-
     if (references.length > 0) {
       if (!messageToSend || !messageToSend.trim()) {
         messageToSend = "Attached reference images:";
@@ -607,7 +487,7 @@ export function useMediaBuilder() {
     } finally {
       setGenerating(false);
     }
-  }, [sessionId, step, uiPayload, workerUrl, references, establishMageHold]);
+  }, [sessionId, step, uiPayload, workerUrl, references]);
 
   const fetchGallery = useCallback(async (loadAll: boolean = false) => {
     setStep("gallery");
