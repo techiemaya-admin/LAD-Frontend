@@ -1351,8 +1351,25 @@ export function CallLogModal({
           ) : (
             <>
               {hasAudio && (
-                <div className="w-full">
-                  <AgentAudioPlayer src={signedRecordingUrl} />
+                <div className="w-full flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <AgentAudioPlayer src={signedRecordingUrl} />
+                  </div>
+                  {/* Save the file. The handler and its state were kept when the modal was
+                      restyled (7e8f63ef) but the button that called them was dropped. */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadRecording}
+                    disabled={isDownloadingRecording}
+                    aria-label="Download recording"
+                    title="Download recording"
+                    className="shrink-0 rounded-xl"
+                  >
+                    <Download className={cn("h-4 w-4", isDownloadingRecording && "animate-pulse")} />
+                    <span className="hidden sm:inline ml-1 text-xs">{isDownloadingRecording ? "Saving…" : "Download"}</span>
+                  </Button>
                 </div>
               )}
               {!hasAudio && recordingNotice && (
