@@ -14,6 +14,14 @@ import { apiDelete, apiGet, apiPost, apiPut } from '../../shared/apiClient';
 import type {
   ApplyResult,
   ApprovalMode,
+  ChannelProfile,
+  ChannelProfileInput,
+  ChannelPromptResult,
+  MailboxSource,
+  StudioChannel,
+  StyleImportResult,
+  StyleProfile,
+  StyleSample,
   BriefPlan,
   BriefResult,
   ChatTurn,
@@ -46,6 +54,8 @@ export const studioKeys = {
   state: () => [...studioKeys.all, 'state'] as const,
   versions: () => [...studioKeys.all, 'versions'] as const,
   goals: () => [...studioKeys.all, 'goals'] as const,
+  channels: () => [...studioKeys.all, 'channels'] as const,
+  style: () => [...studioKeys.all, 'style'] as const,
 };
 
 export async function getStudioState(): Promise<StudioState> {
@@ -145,4 +155,51 @@ export async function applyBrief(input: {
 }): Promise<ApplyResult> {
   const res = await apiPost<Envelope<ApplyResult>>(`${BASE}/studio/brief/apply`, input);
   return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 6 — channel profiles + writing style                            */
+/* ------------------------------------------------------------------ */
+
+export interface ChannelsResponse {
+  channels: ChannelProfile[];
+  style: StyleProfile | null;
+}
+
+export async function getChannels(): Promise<ChannelsResponse> {
+  const res = await apiGet<Envelope<ChannelsResponse>>(`${BASE}/studio/channels`);
+  return res.data.data;
+}
+
+/** Partial update; the backend returns the whole profile with `ready`/`missing` recomputed. */
+export async function saveChannel(input: { channel: StudioChannel; patch: ChannelProfileInput }): Promise<ChannelProfile> {
+  const res = await apiPut<Envelope<ChannelProfile>>(`${BASE}/studio/channels/${encodeURIComponent(input.channel)}`, input.patch);
+  return res.data.data;
+}
+
+export async function getStyle(): Promise<StyleProfile | null> {
+  const res = await apiGet<Envelope<StyleProfile | null>>(`${BASE}/studio/style`);
+  return res.data.data;
+}
+
+/** LLM-backed: distils pasted / exported threads into a StyleProfile. Never fire on render. */
+export async function importStyle(input: { samples: StyleSample[] }): Promise<StyleImportResult> {
+  const res = await apiPost<Envelope<StyleImportResult>>(`${BASE}/studio/style/import`, input);
+  return res.data.data;
+}
+
+/** Same, from the tenant's connected mailbox. 409 `not_connected`, 501 `unsupported`. */
+export async function importStyleFromMailbox(input: { source: MailboxSource; days?: number }): Promise<StyleImportResult> {
+  const res = await apiPost<Envelope<StyleImportResult>>(`${BASE}/studio/style/import/mailbox`, input);
+  return res.data.data;
+}
+
+/**
+ * Generates and publishes one channel's agent prompt. Lives under
+ * ai-playground (the existing prompt generator), so it is not enveloped.
+ * LLM-backed: bills the caller.
+ */
+export async function generateChannelPrompt(input: { channel: StudioChannel; publish: true }): Promise<ChannelPromptResult> {
+  const res = await apiPost<ChannelPromptResult>('/api/ai-playground/generate-prompt', input);
+  return res.data;
 }
