@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from "@/components/ui/dialog";
 import ExcelJS from "exceljs";
 // LAD Architecture Compliance: Use SDK hooks instead of direct API calls
-import { useMakeCall, useTriggerBatchCall, useUpdateSummary } from '@lad/frontend-features/voice-agent';
+import { useMakeCall, useTriggerBatchCall, useUpdateSummary, getFullPhoneNumber, callErrorMessage } from '@lad/frontend-features/voice-agent';
 import { logger } from "@/lib/logger";
 import {
   saveBatchUpload,
@@ -232,20 +232,6 @@ const COUNTRIES = [
   { code: "GU", name: "Guam", dialCode: "+1-671", flag: "🇬🇺" },
 ];
 
-// Helper function to get full phone number with country code
-function getFullPhoneNumber(phoneNumber: string, countryDialCode: string): string {
-  const cleanPhone = phoneNumber.replace(/\s+/g, "").trim();
-  // If phone already starts with +, assume it has country code
-  if (cleanPhone.startsWith("+")) {
-    return cleanPhone;
-  }
-  // If phone starts with the dial code digits (without +), don't add it again
-  if (cleanPhone.startsWith(countryDialCode.replace("+", ""))) {
-    return `+${cleanPhone}`;
-  }
-  return `${countryDialCode}${cleanPhone}`;
-}
-
 type BulkEntry = BatchUploadEntry;
 
 interface CallOptionsProps {
@@ -421,7 +407,7 @@ export function CallOptions(props: CallOptionsProps) {
       router.push("/call-logs");
     } catch (e: any) {
       logger.error("Failed to initiate call", { error: e?.message || 'Unknown error' });
-      push({ variant: "error", title: "Error", description: e?.message || "Failed to initiate call. Please try again." });
+      push({ variant: "error", title: "Error", description: callErrorMessage(e) });
     } finally {
       onLoadingChange?.(false);
     }
