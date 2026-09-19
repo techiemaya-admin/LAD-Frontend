@@ -20,7 +20,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
-  Check, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ClipboardPaste, FileUp, Instagram, Linkedin, Loader2,
+  Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, ClipboardPaste, FileUp, Instagram, Linkedin, Loader2,
   Mail, MessageCircle, Phone, Plus, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -542,6 +542,17 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
             <span className="ml-auto flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground">{filled}/{FIELD_TOTAL}</span>
               <Switch checked={row.isOn} onCheckedChange={onToggle} aria-label={`${meta.label} on or off`} />
+              <button
+                type="button"
+                onClick={onOpen}
+                aria-expanded={open}
+                aria-controls={`agent-editor-${row.channel}`}
+                aria-label={open ? `Collapse ${meta.label} settings` : `Expand ${meta.label} settings`}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                data-testid={`toggle-editor-${row.channel}`}
+              >
+                {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
             </span>
           </div>
           <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
@@ -577,11 +588,12 @@ function AgentTile({ row, open, status, defaultName, onToggle, onOpen, onPatch, 
   );
 }
 
-function AgentEditor({ row, style, onPatch, onSave }: {
+function AgentEditor({ row, style, onPatch, onSave, onCollapse }: {
   row: ChannelProfile;
   style: StyleProfile | null;
   onPatch: (patch: ChannelProfileInput) => void;
   onSave: (patch: ChannelProfileInput) => void;
+  onCollapse: () => void;
 }) {
   const meta = CHANNEL_META[row.channel];
   const [card, setCard] = useState(0);
@@ -610,7 +622,7 @@ function AgentEditor({ row, style, onPatch, onSave }: {
   const visible = (i: number) => (i === card ? '' : 'hidden md:block');
 
   return (
-    <div className={`${PANEL} p-3 sm:p-4`} data-testid={`agent-editor-${row.channel}`}>
+    <div id={`agent-editor-${row.channel}`} className={`${PANEL} p-3 sm:p-4`} data-testid={`agent-editor-${row.channel}`}>
       <div className="mb-3 flex items-center justify-between md:hidden">
         <Button type="button" size="sm" variant="ghost" onClick={() => setCard((c) => Math.max(0, c - 1))} disabled={card === 0} aria-label="Previous card">
           <ChevronLeft className="h-4 w-4" />Prev
@@ -725,6 +737,11 @@ function AgentEditor({ row, style, onPatch, onSave }: {
             />
           </div>
         </Card>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <Button type="button" variant="ghost" size="sm" onClick={onCollapse} aria-label={`Collapse ${meta.label} settings`} data-testid={`collapse-editor-${row.channel}`}>
+          <ChevronUp className="mr-1 h-4 w-4" /> Collapse
+        </Button>
       </div>
     </div>
   );
@@ -889,6 +906,7 @@ export default function ChannelsStep({ defaultAgentName, onContinue, continuing 
                   style={style ?? null}
                   onPatch={(p) => patch(row.channel, p)}
                   onSave={(p) => persist(row.channel, p)}
+                  onCollapse={() => setOpen(null)}
                 />
               )}
             </div>
