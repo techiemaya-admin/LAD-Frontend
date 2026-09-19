@@ -9,8 +9,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  applyBrief,
   applyOverlay,
+  deleteGoal,
   getStudioState,
+  listGoals,
+  proposeBrief,
+  saveSetup,
+  upsertGoal,
   icpScore,
   icpTrain,
   listOverlayVersions,
@@ -62,6 +68,49 @@ export function useApplyOverlay() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: applyOverlay,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Setup flow                                                           */
+/* ------------------------------------------------------------------ */
+
+export function useSaveSetup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveSetup,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: studioKeys.all });
+    },
+  });
+}
+
+export function useGoals(enabled = true) {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: studioKeys.goals(),
+    queryFn: listGoals,
+    staleTime: 15_000,
+    retry: 1,
+    enabled,
+  });
+  const invalidate = () => qc.invalidateQueries({ queryKey: studioKeys.all });
+  const upsert = useMutation({ mutationFn: upsertGoal, onSuccess: invalidate });
+  const remove = useMutation({ mutationFn: deleteGoal, onSuccess: invalidate });
+  return { ...query, upsert, remove };
+}
+
+export function useProposeBrief() {
+  return useMutation({ mutationFn: proposeBrief });
+}
+
+export function useApplyBrief() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: applyBrief,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: studioKeys.all });
     },
