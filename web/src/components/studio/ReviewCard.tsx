@@ -4,7 +4,10 @@
  * ReviewCard — what a Tailor proposal would change, as the tenant reads it.
  *
  * Rows come from the backend's effective-pack diff (packReview): added /
- * removed / reworded, grouped by surface. The card never shows overlay JSON.
+ * removed / reworded, grouped by surface. The surface label is the backend's
+ * ("LinkedIn agent", "Support agent (WhatsApp)", …) and is shown verbatim —
+ * there is no surface list on this side, so a new surface needs no FE
+ * change. The card never shows overlay JSON.
  * Applying is admin-only on the backend, so the button is hidden for other
  * roles rather than shown and refused.
  */
@@ -15,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApplyAndUpdate, useApplyOverlay, type Proposal, type ReviewChange, type ReviewRow } from '@lad/frontend-features/tenant-studio';
+import { publishSummary } from './publish-copy';
 import { BORDER, CARD, CTA_PRIMARY, DIVIDE, LINK, STATUS, TINT } from './studio-theme';
 
 const ICON: Record<ReviewChange, typeof Plus> = { added: Plus, removed: Minus, reworded: Pencil };
@@ -70,6 +74,8 @@ export interface ReviewCardProps {
   reply?: string;
   /** Shown under the card when the change only reaches the agent on the next prompt generation. */
   appliesOnNextGenerate?: boolean;
+  /** Curated: the WhatsApp support agent reads the applied pack on its own — say so instead of asking for a regenerate. */
+  appliesOnNextConversation?: boolean;
   /**
    * Apply through POST /studio/apply-and-update instead of the plain overlay
    * PUT: one press applies the change AND regenerates every ready channel's
@@ -81,9 +87,7 @@ export interface ReviewCardProps {
   noteDefault?: string;
 }
 
-const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
-
-export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, applyAndUpdate, onApplied, onDiscard, noteDefault }: ReviewCardProps) {
+export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, appliesOnNextConversation, applyAndUpdate, onApplied, onDiscard, noteDefault }: ReviewCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const applyPlain = useApplyOverlay();
@@ -108,17 +112,21 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
       if (applyAndUpdate) {
         const r = await applyFull.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
         setApplied(true);
-        const ok = r.published.filter((p) => p.ok).map((p) => CHANNEL_LABEL[p.channel] ?? p.channel);
-        const failed = r.published.filter((p) => !p.ok).map((p) => `${CHANNEL_LABEL[p.channel] ?? p.channel}${p.error ? ` (${p.error})` : ''}`);
+        const failed = r.published.some((p) => !p.ok);
         toast({
-          title: failed.length ? `Applied as version ${r.overlayVersion}, with one thing to check` : `Applied as version ${r.overlayVersion}`,
-          description: [ok.length ? `${ok.join(', ')} agent${ok.length === 1 ? '' : 's'} updated.` : '', failed.length ? `Could not update ${failed.join(', ')} — try again from the Tailor.` : ''].filter(Boolean).join(' ') || undefined,
-          variant: failed.length ? 'destructive' : undefined,
+          title: failed ? `Applied as version ${r.overlayVersion}, with one thing to check` : `Applied as version ${r.overlayVersion}`,
+          description: publishSummary(r.published) || undefined,
+          variant: failed ? 'destructive' : undefined,
         });
       } else {
         const v = await applyPlain.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
         setApplied(true);
-        toast({ title: `Applied as version ${v.version}`, description: appliesOnNextGenerate ? 'Regenerate your agent prompt for the change to reach conversations.' : undefined });
+        toast({
+          title: `Applied as version ${v.version}`,
+          description: appliesOnNextConversation
+            ? 'Your WhatsApp support agent picks this up on its next conversation.'
+            : appliesOnNextGenerate ? 'Regenerate your agent prompt for the change to reach conversations.' : undefined,
+        });
       }
       onApplied?.();
     } catch (e: unknown) {
@@ -173,7 +181,11 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
             {!applied && onDiscard && (
               <Button size="sm" variant="ghost" onClick={onDiscard} disabled={apply.isPending}>Discard</Button>
             )}
-            {appliesOnNextGenerate && (
+            {appliesOnNextConversation ? (
+              <span className="ml-auto text-xs text-muted-foreground" data-testid="applies-next-conversation">
+                Reaches your WhatsApp support agent on its next conversation.
+              </span>
+            ) : appliesOnNextGenerate && (
               <span className="ml-auto text-xs text-muted-foreground">
                 Reaches the agent after you{' '}
                 <Link href="/settings?tab=chat" className={LINK}>regenerate the LinkedIn prompt</Link>.

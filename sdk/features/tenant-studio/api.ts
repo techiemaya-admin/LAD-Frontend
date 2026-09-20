@@ -62,6 +62,7 @@ import type {
   OverlayVersion,
   Persona,
   RefineResult,
+  RefineTarget,
   RehearsalResult,
   SampleLead,
   StudioSetup,
@@ -123,11 +124,17 @@ export async function rehearse(input: {
   return res.data.data;
 }
 
+/**
+ * Feedback on a rehearsal → one Tailor proposal. `target` names whose
+ * sections change: the LinkedIn agent's (default) or, for a curated
+ * workspace, the WhatsApp support agent's (`'customer_support'`).
+ */
 export async function refine(input: {
   transcript: TranscriptTurn[];
   feedback: string;
   persona?: Persona;
   draft?: Overlay;
+  target?: RefineTarget;
 }): Promise<RefineResult> {
   const res = await apiPost<Envelope<RefineResult>>(`${BASE}/studio/refine`, input);
   return res.data.data;

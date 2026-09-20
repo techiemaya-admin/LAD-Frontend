@@ -18,21 +18,11 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { isApiError } from '@lad/shared/apiError';
-import { useStudioHistory, useUndoHistory, type HistoryEntry, type HistoryKind, type UndoResult } from '@lad/frontend-features/tenant-studio';
+import { useStudioHistory, useUndoHistory, type HistoryEntry, type HistoryKind } from '@lad/frontend-features/tenant-studio';
+import { publishSummary } from './publish-copy';
 import { CTA_PRIMARY, HISTORY_DOT, HISTORY_RAIL, ICON_TILE, SKELETON, STATUS, SURFACE } from './studio-theme';
 
 const ICON: Record<HistoryKind, typeof Wand2> = { overlay: Wand2, prompt: MessagesSquare, first_campaign: Send, brief: FileText, go_live: Rocket };
-const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
-
-/** "LinkedIn agent updated. Could not update Email (…)." from an undo's per-channel results. */
-function publishSummary(r: UndoResult): string {
-  const ok = (r.published ?? []).filter((p) => p.ok).map((p) => CHANNEL_LABEL[p.channel] ?? p.channel);
-  const failed = (r.published ?? []).filter((p) => !p.ok).map((p) => `${CHANNEL_LABEL[p.channel] ?? p.channel}${p.error ? ` (${p.error})` : ''}`);
-  const parts: string[] = [];
-  if (ok.length) parts.push(`${ok.join(', ')} agent${ok.length === 1 ? '' : 's'} updated.`);
-  if (failed.length) parts.push(`Could not update ${failed.join(', ')} — try again from the Tailor.`);
-  return parts.join(' ');
-}
 
 /** "2 hours ago" for a timeline; falls back to the date when it is older than a week. */
 export function timeAgo(iso: string | null | undefined, now: number = Date.now()): string {
@@ -121,7 +111,7 @@ export default function StudioHistory({ open, onOpenChange }: StudioHistoryProps
     try {
       const r = await undo.mutateAsync(entry.undo);
       setConfirmId(null);
-      const channels = publishSummary(r);
+      const channels = publishSummary(r.published);
       const failed = (r.published ?? []).some((p) => !p.ok);
       toast({
         title: failed ? 'Put back, with one thing to check' : 'Put back',
