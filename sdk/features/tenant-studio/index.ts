@@ -18,7 +18,7 @@ export {
   getStudioHistory, undoHistory, listQuestions, answerQuestion, dismissQuestion, createQuestion,
   getStudioChat, sendStudioChat, resetStudioChat,
 } from './api';
-export { isPipelineDraft } from './types';
+export { isPipelineDraft, SNAPSHOT_PROMPT_READ_BY } from './types';
 export type { ChannelsResponse } from './api';
 export {
   useStudioState, useOverlayVersions, useRehearse, useRefine, useIcpScore, useIcpTrain, useTailorChat, useApplyOverlay,
@@ -44,7 +44,8 @@ export type {
   FirstCampaignStatus, FirstCampaignChannel, FirstCampaignMessage, FirstCampaignAudience, FirstCampaignTemplate,
   FirstCampaignKind, FirstCampaignSequenceDraft, FirstCampaignPipeline, FirstCampaignPipelineDraft,
   FirstCampaignDraft, FirstCampaignSummary, FirstCampaignInput, FirstCampaignResult, FirstCampaignErrorReason,
-  PipelineSummary, StudioWorkspace, LaunchRowRoom, GoLiveErrorReason,
+  PipelineSummary, StudioWorkspace, PromptSource, LaunchRowRoom, GoLiveErrorReason,
+  ChannelPromptKey, PipelinePromptKey, PromptKey, OverlayPromptSection, OverlayPromptPatch, OverlayPrompts, RefineTarget,
   ReferenceKind, ReferencePurpose, ExtractionStatus, ReferenceExtracted, ReferenceItem, PaletteRole, PaletteSwatch,
   LogoVariant, BrandLogo, FontRole, BrandFont, ToneRule, BrandProfile, BrandInput, BrandStoryAnswers, ReferencesSummary,
   ReferencesResponse, PostsSource, PostsPullReason, PostsPullSourceResult, PostsPullResult,

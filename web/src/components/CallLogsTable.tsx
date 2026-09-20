@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
 import { cn } from "@/lib/utils";
+import { LiveDuration, isLiveCallStatus } from "@/components/call-logs/LiveDuration";
 import {
   PhoneIncoming,
   PhoneOutgoing,
@@ -575,7 +576,15 @@ export function CallLogsTable({
       id: 'duration',
       accessorKey: 'duration',
       header: 'Duration',
-      cell: ({ getValue }) => <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>,
+      // A call still on the line has no stored duration yet; count up live from
+      // when it started instead of showing "-" until it ends.
+      cell: ({ getValue, row }) => {
+        const item = row.original;
+        if (isLiveCallStatus(item.status) && item.startedAt) {
+          return <LiveDuration since={item.startedAt} />;
+        }
+        return <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>;
+      },
     },
     {
       id: 'tag',

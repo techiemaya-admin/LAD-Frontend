@@ -7,8 +7,35 @@
  * the PUT that applies it.
  */
 
-/** Opaque to the UI: sections/patches the backend validates. */
-export type Overlay = Record<string, unknown>;
+/** The five channel agents whose prompt sections a pack carries. */
+export type ChannelPromptKey = 'linkedin' | 'email' | 'whatsapp' | 'instagram' | 'voice';
+/** The pipeline prompts of a curated workspace (wellness): the support agent and the admin agent, both on WhatsApp. */
+export type PipelinePromptKey = 'customer_support' | 'admin_support';
+/** Every `overlay.prompts.<key>` the backend's overlay schema accepts. */
+export type PromptKey = ChannelPromptKey | PipelinePromptKey;
+
+/** One prompt section as an overlay adds it. `stage` is BASE or a stage token the pipeline declares (pipeline prompts only). */
+export interface OverlayPromptSection {
+  key: string;
+  body: string;
+  stage?: string;
+  [extra: string]: unknown;
+}
+
+/** The per-prompt patch: sections added (upsert by key) and removed (by key). Locked keys are refused server-side. */
+export interface OverlayPromptPatch {
+  sections?: { add?: OverlayPromptSection[]; remove?: string[] };
+  [extra: string]: unknown;
+}
+
+export type OverlayPrompts = Partial<Record<PromptKey, OverlayPromptPatch>>;
+
+/**
+ * Opaque to the UI: sections/patches the backend validates. Only `prompts`
+ * is typed here, so a curated proposal that touches the pipeline prompts
+ * type-checks the same way a channel one does.
+ */
+export type Overlay = Record<string, unknown> & { prompts?: OverlayPrompts };
 
 export interface StudioState {
   vertical: string | null;
@@ -74,11 +101,20 @@ export interface PipelineSummary {
   knobsMissing: string[];
 }
 
+/**
+ * Where a curated workspace's WhatsApp agent reads its instructions from:
+ * `'template'` = the rendered pack (Studio changes reach it), `'stored'` =
+ * its original stored prompt (Studio changes wait until support switches it).
+ */
+export type PromptSource = 'template' | 'stored';
+
 export interface StudioWorkspace {
   vertical: string | null;
   /** True iff the tenant's edition declares at least one pipeline. A vertical with pack sections only (staffing) is NOT curated. */
   curated: boolean;
   pipelines: PipelineSummary[];
+  /** Curated only; absent on backends that predate it (read as unknown, not as `'stored'`). Builder workspaces report `'stored'`. */
+  promptSource?: PromptSource;
 }
 
 /* ------------------------------------------------------------------ */
@@ -182,6 +218,7 @@ export interface ApplyResult {
 export type ReviewChange = 'added' | 'removed' | 'reworded';
 
 export interface ReviewRow {
+  /** The backend's label for where the change lands ("LinkedIn agent", "Support agent (WhatsApp)", …) — shown verbatim, never mapped here. */
   surface: string;
   change: ReviewChange;
   key: string;
@@ -244,9 +281,15 @@ export interface RehearsalResult {
   transcript: TranscriptTurn[];
 }
 
+/** What `refine` may change: the LinkedIn agent's sections (builder, the default) or the support agent's (curated). */
+export type RefineTarget = 'linkedin' | 'customer_support';
+
 export interface RefineResult extends TailorTurn {
   ok: true;
-  appliesOn: 'next_generate';
+  /** Echoed by backends that accept a target; absent = `'linkedin'`. */
+  target?: RefineTarget;
+  /** `'next_conversation'`: a curated change reaches the WhatsApp agent on its own (no regenerate). */
+  appliesOn: 'next_generate' | 'next_conversation';
 }
 
 export interface SampleLead {
@@ -656,8 +699,10 @@ export type TestRunChannel = 'linkedin' | 'email' | 'whatsapp';
 /** The invented prospect a test run plays — generated once per run from the profile's ideal customer. */
 export interface TestRunPersona {
   name: string;
+  /** Curated WhatsApp runs: "prospective member" | "current member". */
   role: string;
-  company: string;
+  /** Empty/null for a curated workspace's member persona (a member has no company). */
+  company: string | null;
   situation: string;
 }
 
@@ -699,6 +744,8 @@ export interface TestRunFeedbackInput {
   persona: TestRunPersona;
   transcript: TranscriptTurn[];
   verdicts: TestRunVerdict[];
+  /** Which agent's sections the feedback changes; the backend derives it from the channel (a curated WhatsApp run = the support agent) when absent. */
+  target?: RefineTarget;
 }
 
 /** A Tailor proposal without the validation errors list (the feedback and question routes return this slimmer shape). */
@@ -719,14 +766,22 @@ export interface TestRunFeedback {
   reply?: string;
   /** Thumbs-downs without an "it should have said" became questions in the inbox. */
   questionsQueued?: number;
+  /** Which agent's sections the proposal changes; absent on backends that do not report it. */
+  target?: RefineTarget;
 }
+
+/** `readBy` of the entry a curated workspace's WhatsApp agent gets: it reads the pack itself, nothing was generated. */
+export const SNAPSHOT_PROMPT_READ_BY = 'snapshot-prompt';
 
 export interface PublishOutcome {
   channel: StudioChannel;
   ok: boolean;
+  /** Who reads the published prompt; `'snapshot-prompt'` (curated WhatsApp) comes with a `note` to show instead of "updated". */
   readBy?: string;
   promptId?: string;
   error?: string;
+  /** Plain-English timing note, e.g. when the change reaches the next conversation. Show it verbatim. */
+  note?: string;
 }
 
 /** `POST /studio/apply-and-update` — the overlay applied, then every ON + ready channel's agent regenerated and published. */

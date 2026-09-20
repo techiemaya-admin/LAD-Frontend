@@ -26,7 +26,11 @@
  * reachable directly at `/studio?room=pipelines` (the sidebar item and the
  * old `/pipelines` routes point there). Step 7 picks a pipeline instead of
  * drafting messages, and Go live switches it on server-side — no builder
- * hand-off. A tenant outside an edition sees none of this.
+ * hand-off. The Rehearse and Tailor rooms speak of the WhatsApp support
+ * agent (member presets, `refine` targets `customer_support`), and while
+ * that agent still runs its stored prompt (`workspace.promptSource`) the
+ * Pipelines room and Step 9 say so. A tenant outside an edition sees none
+ * of this.
  *
  * CHAT (`state.chat` reported): the Studio's front door is one persistent
  * "Mr LAD" thread. It is the home once setup is complete or for a brand-new
@@ -490,7 +494,7 @@ function StudioPageInner() {
           </button>
         )}
       >
-        <PipelinesRoom focusKey={pipelinesFocus} />
+        <PipelinesRoom focusKey={pipelinesFocus} workspace={data.workspace} />
       </SetupShell>
     );
   }
@@ -635,17 +639,17 @@ function StudioPageInner() {
         </TabsList>
         {curated && (
           <TabsContent value="pipelines" className="mt-4">
-            <PipelinesRoom focusKey={roomsReturn === 'chat' ? pipelinesFocus : null} />
+            <PipelinesRoom workspace={data.workspace} focusKey={roomsReturn === 'chat' ? pipelinesFocus : null} />
           </TabsContent>
         )}
         <TabsContent value="icp" className="mt-4">
           <IcpRoom ready={data.icpTraining.ready} draft={draft} onDraft={setDraft} />
         </TabsContent>
         <TabsContent value="rehearse" className="mt-4">
-          <RehearsalRoom ready={data.rehearsal.ready} draft={draft} onDraft={setDraft} />
+          <RehearsalRoom ready={data.rehearsal.ready} draft={draft} onDraft={setDraft} curated={curated} />
         </TabsContent>
         <TabsContent value="tailor" className="mt-4">
-          <TailorRoom draft={draft} onDraft={setDraft} />
+          <TailorRoom draft={draft} onDraft={setDraft} curated={curated} />
         </TabsContent>
       </Tabs>
     </div>
