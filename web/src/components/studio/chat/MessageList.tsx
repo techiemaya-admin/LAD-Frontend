@@ -9,8 +9,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '@lad/frontend-features/tenant-studio';
-import Bubble, { LadAvatar } from './Bubble';
-import { AI_GRADIENT, BUBBLE_AGENT } from '../studio-theme';
+import Bubble, { LadAvatar, LadName } from './Bubble';
+import { CHAT_COLUMN, THINKING_WORD, THINKING_WORDS } from './chat-theme';
+import { AI_GRADIENT } from '../studio-theme';
 
 function dayKey(iso: string): string {
   const d = new Date(iso);
@@ -28,14 +29,19 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
+/** The assistant's "Thinking…" line: the logo in its thinking state and a word that rotates every 1.4 s. */
 function TypingIndicator() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % THINKING_WORDS.length), 1400);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div className="flex items-end gap-2" data-testid="chat-typing" role="status" aria-label="Mr LAD is typing">
-      <div className="w-8 shrink-0"><LadAvatar /></div>
-      <div className={`inline-flex items-center gap-1 rounded-2xl rounded-bl-md px-3.5 py-2.5 ${BUBBLE_AGENT}`}>
-        <span className="studio-typing-dot h-1.5 w-1.5 rounded-full bg-current opacity-60" />
-        <span className="studio-typing-dot h-1.5 w-1.5 rounded-full bg-current opacity-60 [animation-delay:150ms]" />
-        <span className="studio-typing-dot h-1.5 w-1.5 rounded-full bg-current opacity-60 [animation-delay:300ms]" />
+    <div className="flex items-start gap-3 py-1.5" data-testid="chat-typing" role="status" aria-label="Mr LAD is thinking">
+      <div className="w-9 shrink-0"><LadAvatar state="thinking" /></div>
+      <div>
+        <LadName />
+        <div className="flex h-[22px] items-center"><span className={THINKING_WORD}>{THINKING_WORDS[idx]}…</span></div>
       </div>
     </div>
   );
@@ -122,7 +128,7 @@ export default function MessageList({ messages, typing, hasMore, loadingOlder, o
   return (
     <div className="relative min-h-0 flex-1">
       <div ref={scrollerRef} onScroll={onScroll} className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-5" data-testid="chat-scroller" aria-live="polite">
-        <div className="mx-auto w-full max-w-[820px] space-y-3">
+        <div className={`${CHAT_COLUMN} space-y-1`}>
           {pinned}
           {hasMore && (
             <div className="flex justify-center">

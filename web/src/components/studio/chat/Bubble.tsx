@@ -6,7 +6,8 @@
  * reviews, chips) stacked beneath at card width. A pending owner turn is
  * dimmed until the server has it.
  */
-import { Sparkles } from 'lucide-react';
+import AgentVisualizer from '@/components/ui/AgentVisualizer';
+import { useAuth } from '@/contexts/AuthContext';
 import type { ChatBlock, ChatMessage } from '@lad/frontend-features/tenant-studio';
 import ActionsBlock from './blocks/ActionsBlock';
 import CardBlock from './blocks/CardBlock';
@@ -14,15 +15,27 @@ import PickerBlock from './blocks/PickerBlock';
 import ResultBlock from './blocks/ResultBlock';
 import ReviewBlock from './blocks/ReviewBlock';
 import TextBlock from './blocks/TextBlock';
-import { AI_GRADIENT, BUBBLE_AGENT, BUBBLE_ME } from '../studio-theme';
+import { LAD_BODY, LAD_NAME, LAD_NAME_DOT, LAD_TEXT, OWNER_AVATAR, OWNER_BUBBLE } from './chat-theme';
 
-/** The Mr LAD avatar: a gradient tile, the same accent as the rest of the Studio. */
-export function LadAvatar({ className = 'h-8 w-8' }: { className?: string }) {
+/** The LAD avatar — the same animated logo the AI Assistant's "LAD in Action" rows use. */
+export function LadAvatar({ size = 36, state = 'idle' }: { size?: number; state?: 'idle' | 'thinking' }) {
   return (
-    <span className={`${AI_GRADIENT} inline-flex shrink-0 items-center justify-center rounded-xl text-white shadow-[0_4px_12px_-4px_rgba(124,92,255,.6)] ${className}`} aria-hidden>
-      <Sparkles className="h-[55%] w-[55%]" />
+    <span className="inline-flex shrink-0 items-center justify-center overflow-visible" style={{ width: size, height: size }} aria-hidden>
+      <AgentVisualizer state={state} size={size} />
     </span>
   );
+}
+
+/** The assistant's row label. */
+export function LadName() {
+  return <div className={LAD_NAME}>LAD in Action <span className={LAD_NAME_DOT} /></div>;
+}
+
+/** The owner's initial, as the AI Assistant shows it beside their bubble. */
+function OwnerAvatar() {
+  const { user } = useAuth();
+  const name = (user as { name?: string } | null)?.name || 'You';
+  return <span className={OWNER_AVATAR} aria-hidden>{name.charAt(0).toUpperCase()}</span>;
 }
 
 /** Words for an owner turn the server stored without any (an intent chip, a pick). */
@@ -67,14 +80,15 @@ export default function Bubble({ message, showAvatar = true }: { message: ChatMe
   if (message.role === 'owner') {
     const pending = message.status === 'pending' && message.id.startsWith('optimistic-');
     return (
-      <div className="flex justify-end" data-testid="chat-owner-turn" data-status={message.status}>
-        <div className={`max-w-[85%] sm:max-w-[70%] ${pending ? 'opacity-70' : ''}`}>
+      <div className="flex items-end justify-end gap-2 py-1.5" data-testid="chat-owner-turn" data-status={message.status}>
+        <div className={`flex min-w-0 max-w-[72%] flex-col items-end ${pending ? 'opacity-70' : ''}`}>
           {ownerWords(message) && (
-            <div className={`whitespace-pre-wrap rounded-2xl rounded-br-md px-3.5 py-2 text-sm ${BUBBLE_ME}`}>{ownerWords(message)}</div>
+            <div className={`whitespace-pre-wrap ${OWNER_BUBBLE}`}>{ownerWords(message)}</div>
           )}
           {blocks.length > 0 && <div className="mt-1.5 space-y-1.5">{blocks.map((b, i) => <Block key={i} block={b} message={message} />)}</div>}
-          <p className="mt-0.5 text-right text-[10px] text-muted-foreground" aria-hidden>{pending ? 'Sending…' : timeLabel(message.createdAt)}</p>
+          <p className="mt-0.5 text-right text-[10px] text-gray-400 dark:text-slate-500" aria-hidden>{pending ? 'Sending…' : timeLabel(message.createdAt)}</p>
         </div>
+        <OwnerAvatar />
       </div>
     );
   }
@@ -82,18 +96,22 @@ export default function Bubble({ message, showAvatar = true }: { message: ChatMe
   // chips — at card width so a launch checklist is not squeezed into a bubble.
   const textBlocks = blocks.filter((b) => b.type === 'text');
   const richBlocks = blocks.filter((b) => b.type !== 'text');
-  const prose = [message.text, ...textBlocks.map((b) => (b.type === 'text' ? b.text : ''))].filter((t) => t && t.trim());
+  // The backend mirrors a turn's prose into its text block(s); render those and
+  // fall back to `text` only when there is none — never both (it read doubled).
+  const fromBlocks = textBlocks.map((b) => (b.type === 'text' ? b.text : '')).filter((t) => t && t.trim());
+  const prose = (fromBlocks.length ? fromBlocks : [message.text ?? '']).filter((t, i, arr) => t.trim() && arr.indexOf(t) === i);
   return (
-    <div className="flex items-end gap-2" data-testid="chat-lad-turn" data-status={message.status}>
-      <div className="w-8 shrink-0 self-start">{showAvatar && <LadAvatar />}</div>
-      <div className="min-w-0 max-w-[92%] flex-1 sm:max-w-[80%]">
+    <div className="flex items-start gap-3 py-1.5" data-testid="chat-lad-turn" data-status={message.status}>
+      <div className="w-9 shrink-0">{showAvatar && <LadAvatar />}</div>
+      <div className={LAD_BODY}>
+        {showAvatar && <LadName />}
         {prose.length > 0 && (
-          <div className={`inline-block max-w-full whitespace-pre-wrap rounded-2xl rounded-bl-md px-3.5 py-2 text-sm leading-relaxed ${BUBBLE_AGENT}`}>
-            {prose.map((t, i) => <p key={i} className={i > 0 ? 'mt-2' : ''}>{t}</p>)}
+          <div className={`whitespace-pre-wrap ${LAD_TEXT}`}>
+            {prose.map((t, i) => <p key={i} className={i > 0 ? 'mt-1' : ''}>{t}</p>)}
           </div>
         )}
-        {richBlocks.length > 0 && <div className={`${prose.length > 0 ? 'mt-2' : ''} space-y-2`}>{richBlocks.map((b, i) => <Block key={i} block={b} message={message} />)}</div>}
-        <p className="mt-0.5 text-[10px] text-muted-foreground" aria-hidden>{timeLabel(message.createdAt)}</p>
+        {richBlocks.length > 0 && <div className={`${prose.length > 0 ? 'mt-3' : ''} space-y-3`}>{richBlocks.map((b, i) => <Block key={i} block={b} message={message} />)}</div>}
+        <p className="mt-1 text-[10px] text-gray-400 dark:text-slate-500" aria-hidden>{timeLabel(message.createdAt)}</p>
       </div>
     </div>
   );

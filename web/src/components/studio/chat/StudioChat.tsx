@@ -34,7 +34,8 @@ import { launchRowTitle } from '../StudioLaunchBanner';
 
 /** Mirrors `CHAT_PREFERRED_KEY` on the Studio page (kept here so the component has no page import). */
 const CHAT_PREFERRED_KEY = 'studio.chat.preferred';
-import { AI_TEXT, BANNER, LINK, SKELETON, STATUS, SURFACE, TINT } from '../studio-theme';
+import { BANNER, LINK, SKELETON, STATUS, TINT } from '../studio-theme';
+import { CHAT_SURFACE } from './chat-theme';
 import { StudioChatContext, type StudioChatContextValue } from './chat-context';
 import Composer, { type QuickIntent } from './Composer';
 import MessageList from './MessageList';
@@ -142,7 +143,7 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
   const launch = state.launch;
   const blocking = launch && !setupDone && !launch.completedAt ? launch.blocking : [];
   const pinned = blocking.length > 0 ? (
-    <div className={`sticky top-0 z-[1] flex flex-col gap-1.5 ${BANNER.base} ${BANNER.warn} sm:flex-row sm:items-center sm:justify-between`} role="status" data-testid="chat-pinned-launch">
+    <div className={`flex flex-col gap-1.5 ${BANNER.base} ${BANNER.warn} sm:flex-row sm:items-center sm:justify-between`} role="status" data-testid="chat-pinned-launch">
       <span className="flex items-start gap-2 text-sm">
         <Rocket className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.warn}`} aria-hidden />
         <span>{blocking.length} thing{blocking.length === 1 ? '' : 's'} before go-live: {blocking.map(launchRowTitle).join(', ')}.</span>
@@ -155,12 +156,12 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
 
   return (
     <StudioChatContext.Provider value={ctx}>
-      <div className={`flex h-full min-h-[60vh] flex-col ${SURFACE}`} data-testid="studio-chat">
-        <header className="flex items-center gap-3 border-b border-slate-200/80 px-3 py-2.5 dark:border-white/10 sm:px-5">
-          <LadAvatar className="h-9 w-9" />
+      <div className={`flex h-full min-h-[60vh] flex-col ${CHAT_SURFACE}`} data-testid="studio-chat">
+        <header className="flex items-center gap-3 border-b border-gray-100 px-3 py-2.5 dark:border-gray-800 sm:px-5">
+          <LadAvatar size={36} />
           <div className="min-w-0 flex-1">
-            <h1 className="text-base font-bold leading-tight tracking-tight sm:text-lg">Mr <span className={AI_TEXT}>LAD</span></h1>
-            <p className="truncate text-xs text-muted-foreground">
+            <h1 className="text-base font-bold leading-tight tracking-tight text-[#0b1957] dark:text-white sm:text-lg">Mr LAD</h1>
+            <p className="truncate text-xs text-gray-500 dark:text-slate-400">
               {setupDone ? 'Your studio, one conversation. Ask, change, switch things on.' : 'Set up your workspace by talking. Nothing applies until you say so.'}
             </p>
           </div>

@@ -9,14 +9,14 @@
 import { ArrowUpRight } from 'lucide-react';
 import type { ChatActionsBlock } from '@lad/frontend-features/tenant-studio';
 import { useStudioChatContext } from '../chat-context';
-import { CHIP_BASE, CHIP_IDLE } from '../../studio-theme';
+import { OPT_BTN, OPT_IDLE, OPT_PRIMARY } from '../chat-theme';
 
 export default function ActionsBlock({ block, disabled = false }: { block: ChatActionsBlock; disabled?: boolean }) {
   const { send, sending, navigate } = useStudioChatContext();
   const items = Array.isArray(block.items) ? block.items.filter((i) => i && i.label) : [];
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5" data-testid="chat-actions">
+    <div className="flex flex-wrap gap-2" data-testid="chat-actions">
       {items.map((item, i) => {
         const isRoute = Boolean(item.route) && !item.intent;
         const onClick = () => {
@@ -29,11 +29,11 @@ export default function ActionsBlock({ block, disabled = false }: { block: ChatA
             type="button"
             onClick={onClick}
             disabled={disabled || (sending && !isRoute) || (!item.intent && !item.route)}
-            className={`${CHIP_BASE} ${CHIP_IDLE} gap-1 px-3 py-1.5 text-xs`}
+            className={`inline-flex items-center gap-1 ${OPT_BTN} ${i === 0 && !isRoute ? OPT_PRIMARY : OPT_IDLE} disabled:opacity-60`}
             data-testid={item.intent ? `chat-action-${item.intent}` : 'chat-action-route'}
           >
             {item.label}
-            {isRoute && <ArrowUpRight className="h-3 w-3 text-muted-foreground" aria-hidden />}
+            {isRoute && <ArrowUpRight className="h-3.5 w-3.5 opacity-60" aria-hidden />}
           </button>
         );
       })}

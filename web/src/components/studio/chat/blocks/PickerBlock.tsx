@@ -12,7 +12,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ChatPickerBlock } from '@lad/frontend-features/tenant-studio';
 import { useStudioChatContext } from '../chat-context';
-import { BORDER, CTA_PRIMARY, DIVIDE } from '../../studio-theme';
+import { LAD_TEXT, OPT_BTN, OPT_IDLE, OPT_MUTED, OPT_PRIMARY } from '../chat-theme';
 
 export interface PickerBlockProps {
   block: ChatPickerBlock;
@@ -47,42 +47,36 @@ export default function PickerBlock({ block, messageId, answered }: PickerBlockP
   };
 
   return (
-    <div className={`overflow-hidden rounded-2xl border ${BORDER} bg-white/80 dark:bg-white/[.04]`} role="group" aria-label={block.prompt} data-testid={`chat-picker-${block.id}`}>
-      {block.prompt && <p className={`border-b ${BORDER} px-3.5 py-2 text-sm font-medium`}>{block.prompt}</p>}
-      <ul className={`divide-y ${DIVIDE}`}>
+    <div role="group" aria-label={block.prompt} data-testid={`chat-picker-${block.id}`}>
+      {block.prompt && <p className={`mb-2 font-medium ${LAD_TEXT}`}>{block.prompt}</p>}
+      <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const isChosen = chosen.has(o.key) || (block.multi ? picked.has(o.key) : false);
           const busy = inFlight === o.key && sending;
           return (
-            <li key={o.key}>
-              <button
-                type="button"
-                onClick={() => (block.multi ? toggle(o.key) : pickOne(o.key, o.label))}
-                disabled={done || sending}
-                aria-pressed={isChosen}
-                className={`flex w-full items-start gap-3 px-3.5 py-2.5 text-left text-sm transition-colors duration-150 ${done ? 'cursor-default' : 'hover:bg-[#7C5CFF]/[.06] dark:hover:bg-[#7C5CFF]/[.12]'} ${isChosen && done ? 'bg-[#7C5CFF]/[.06] dark:bg-[#7C5CFF]/[.12]' : ''} disabled:opacity-100 ${done && !isChosen ? 'text-muted-foreground' : ''}`}
-                data-testid={`chat-pick-${o.key}`}
-              >
-                <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isChosen ? 'border-transparent bg-gradient-to-r from-[#2B7CFF] to-[#C049FF] text-white' : 'border-slate-300 dark:border-white/20'}`} aria-hidden>
-                  {busy ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /> : isChosen ? <Check className="h-3 w-3" /> : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block ${isChosen ? 'font-medium' : ''}`}>{o.label}</span>
-                  {o.detail && <span className="block text-xs text-muted-foreground">{o.detail}</span>}
-                </span>
-              </button>
-            </li>
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => (block.multi ? toggle(o.key) : pickOne(o.key, o.label))}
+              disabled={done || sending}
+              aria-pressed={isChosen}
+              title={o.detail || undefined}
+              className={`inline-flex items-center gap-1.5 text-left ${OPT_BTN} ${isChosen ? OPT_PRIMARY : done ? OPT_MUTED : OPT_IDLE}`}
+              data-testid={`chat-pick-${o.key}`}
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : isChosen ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
+              <span>{o.label}</span>
+              {o.detail && !done && <span className="hidden text-[12px] font-normal opacity-70 sm:inline">· {o.detail}</span>}
+            </button>
           );
         })}
-      </ul>
-      {block.multi && !done && (
-        <div className={`border-t ${BORDER} px-3.5 py-2`}>
-          <Button type="button" size="sm" onClick={submitMulti} disabled={sending || picked.size === 0} className={CTA_PRIMARY}>
+        {block.multi && !done && (
+          <Button type="button" size="sm" onClick={submitMulti} disabled={sending || picked.size === 0} className={`${OPT_BTN} ${OPT_PRIMARY} h-auto`}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             {picked.size === 0 ? 'Pick one or more' : `Done (${picked.size})`}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
