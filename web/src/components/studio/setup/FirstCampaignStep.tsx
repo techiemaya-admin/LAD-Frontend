@@ -13,12 +13,18 @@
  *
  * Edits to a message body save on blur (PUT, no LLM); a rewrite is one LLM
  * call for that message only.
+ *
+ * CURATED WORKSPACES (`workspace.curated`): there are no messages to draft.
+ * The tenant picks one of the edition's prebuilt pipelines instead
+ * (POST draft with `pipelineKey`, no LLM call); the confirmation shows the
+ * server's summary and, when settings are still missing, the way into the
+ * Pipelines room to fill them in. Go live (Step 9) switches the pipeline on.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Check, CheckCircle2, ChevronLeft, ChevronRight, LayoutTemplate, Linkedin, Loader2, Mail, MessageCircle, Mic, MicOff,
-  Pencil, RefreshCw, Send, Sparkles, Wrench,
+  Check, CheckCircle2, ChevronLeft, ChevronRight, LayoutTemplate, Linkedin, Loader2, Lock, Mail, MessageCircle, Mic, MicOff,
+  Pencil, RefreshCw, Send, Settings2, SlidersHorizontal, Sparkles, Target, Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +35,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { isApiError } from '@lad/shared/apiError';
 import { useBusinessProfile } from '@lad/frontend-features/ai-icp-assistant';
 import {
+  isPipelineDraft,
   useDraftFirstCampaign,
   useFirstCampaign,
   useRewriteFirstCampaign,
@@ -37,11 +44,14 @@ import {
   type FirstCampaignDraft,
   type FirstCampaignErrorReason,
   type FirstCampaignMessage,
+  type FirstCampaignPipelineDraft,
   type FirstCampaignResult,
+  type PipelineSummary,
   type StudioChannelSummary,
+  type StudioWorkspace,
 } from '@lad/frontend-features/tenant-studio';
 import { useDictation } from './speech';
-import { BORDER, CARD, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, H_STEP, INPUT_FOCUS, LINK, PANEL, READY_PULSE, SKELETON, STATUS, TINT } from '../studio-theme';
+import { BORDER, CARD, CARD_ACTIVE, CARD_HOVER, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, H_STEP, INPUT_FOCUS, LINK, PANEL, READY_PULSE, SKELETON, STATUS, TILE_OFF, TINT } from '../studio-theme';
 
 /** Where this step sits in the 9-step setup. */
 export const FIRST_CAMPAIGN_STEP = 7;
@@ -68,13 +78,16 @@ const REASON_COPY: Record<FirstCampaignErrorReason, string> = {
   no_ready_channel: 'No channel is ready yet. Switch one on and give it a first line in step 6, then come back.',
   no_draft: 'There is no draft to work on yet — draft one first.',
   no_rewrite: 'It could not come up with a better version this time. Try again, or say what should change.',
+  pipeline_not_available: 'That pipeline cannot be your first one yet — it is not in your plan or not running yet. Pick another.',
+  no_pipeline_available: 'None of your pipelines can be switched on right now. Ask us to add one to your plan, or turn one off first.',
+  not_applicable: 'A pipeline has no messages to edit — its settings live in the Pipelines room.',
 };
 
 function describeError(err: unknown): string {
   if (isApiError(err)) {
-    const body = err.body as { error?: string; message?: string; details?: unknown } | undefined;
+    const body = err.body as { error?: string; message?: string; details?: unknown; reason?: string } | undefined;
     const reason = body?.error as FirstCampaignErrorReason | undefined;
-    if (reason && REASON_COPY[reason]) return REASON_COPY[reason];
+    if (reason && REASON_COPY[reason]) return body?.reason ? `${REASON_COPY[reason]} (${body.reason})` : REASON_COPY[reason];
     if (err.status === 401) return 'Your session has expired — sign in again.';
     if (err.status === 403) return 'Only an owner or admin can change the first campaign.';
     if (body?.message) return body.message;
@@ -256,6 +269,164 @@ function MessageCard({ index, message, channel, from, kept, rewriting, saving, o
 }
 
 /* ------------------------------------------------------------------ */
+/* Curated: pick a pipeline                                             */
+/* ------------------------------------------------------------------ */
+
+/** The manifest's goal event ('trial-booked') in plain words. */
+function goalWords(goal: string | null | undefined): string | null {
+  return goal ? goal.replace(/[-_]/g, ' ') : null;
+}
+
+function settingsWords(n: number): string {
+  return n === 0 ? 'Ready to run' : `${n} setting${n === 1 ? '' : 's'} to fill in`;
+}
+
+/** Why a pipeline cannot be picked, or null when it can. */
+function lockedReason(p: PipelineSummary): string | null {
+  if (!p.entitled) return 'Not in your plan';
+  if (p.state !== 'live') return 'Coming soon';
+  return null;
+}
+
+function PipelinePickCard({ pipeline, choosing, disabled, onChoose }: { pipeline: PipelineSummary; choosing: boolean; disabled: boolean; onChoose: () => void }) {
+  const locked = lockedReason(pipeline);
+  const goal = goalWords(pipeline.goal);
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="font-semibold tracking-tight">{pipeline.name}</span>
+          {locked && <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${pipeline.entitled ? STATUS.warn : STATUS.optional}`}><Lock className="h-3 w-3" aria-hidden />{locked}</span>}
+          {!locked && pipeline.active && <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS.ready}`}>Already on</span>}
+        </span>
+        {choosing ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden /> : !locked && <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
+      </div>
+      <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{pipeline.blurb}</span>
+      <span className={`mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t ${BORDER} pt-2 text-xs text-muted-foreground`}>
+        {goal && <span className="inline-flex items-center gap-1"><Target className="h-3.5 w-3.5 text-[#7C5CFF] dark:text-[#B69CFF]" aria-hidden />Aims for: <span className="font-medium text-foreground">{goal}</span></span>}
+        {!locked && (
+          <span className={`inline-flex items-center gap-1 ${pipeline.knobsMissing.length ? TINT.warnText : TINT.readyText}`} data-testid={`pipeline-pick-settings-${pipeline.key}`}>
+            <Settings2 className="h-3.5 w-3.5" aria-hidden />{settingsWords(pipeline.knobsMissing.length)}
+          </span>
+        )}
+      </span>
+    </>
+  );
+  if (locked) {
+    return (
+      <div className={`${CARD} ${TILE_OFF} p-4`} aria-disabled="true" data-testid={`pipeline-pick-${pipeline.key}`}>{body}</div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onChoose}
+      disabled={disabled}
+      className={`w-full text-left ${choosing ? CARD_ACTIVE : CARD} ${CARD_HOVER} p-4 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
+      data-testid={`pipeline-pick-${pipeline.key}`}
+    >
+      {body}
+    </button>
+  );
+}
+
+function PipelinePicker({ pipelines, choosingKey, onChoose, onOpenPipelines }: {
+  pipelines: PipelineSummary[];
+  choosingKey: string | null;
+  onChoose: (key: string) => void;
+  onOpenPipelines?: (focusKey: string | null) => void;
+}) {
+  const pickable = pipelines.filter((p) => !lockedReason(p));
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className={H_STEP}>Pick your first pipeline.</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Your edition comes with pipelines built for your industry. Pick the one to switch on first — it runs on WhatsApp and hands over to you the moment someone is interested. You can switch on more later.
+        </p>
+      </div>
+      {pipelines.length === 0 ? (
+        <p className={`rounded-2xl border p-4 text-sm ${STATUS.warn}`}>Your edition has no pipelines yet. Ask us to add one to your plan.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="pipeline-picker">
+          {pipelines.map((p) => (
+            <PipelinePickCard key={p.key} pipeline={p} choosing={choosingKey === p.key} disabled={choosingKey !== null} onChoose={() => onChoose(p.key)} />
+          ))}
+        </div>
+      )}
+      {pickable.length === 0 && pipelines.length > 0 && (
+        <p className={`rounded-2xl border p-4 text-sm ${STATUS.warn}`}>None of these can be switched on yet — the ones in your plan are still being built.</p>
+      )}
+      {onOpenPipelines && (
+        <p className="text-sm text-muted-foreground">
+          Want to see the settings first?{' '}
+          <button type="button" onClick={() => onOpenPipelines(null)} className={`inline-flex items-center gap-1 ${LINK}`}>
+            Open pipelines<SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PipelineConfirmation({ draft, continuing, onChange, onContinue, onOpenPipelines }: {
+  draft: FirstCampaignPipelineDraft;
+  continuing?: boolean;
+  onChange: () => void;
+  onContinue: () => void;
+  onOpenPipelines?: (focusKey: string | null) => void;
+}) {
+  const launched = draft.status === 'launched' || Boolean(draft.launchedPipelineKey);
+  const missing = draft.knobsMissing.length;
+  const goal = goalWords(draft.pipeline.goal);
+  return (
+    <div className="space-y-5">
+      <section className={`${CARD} p-4`} data-testid="first-campaign-summary">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold leading-snug tracking-tight sm:text-xl">Here&rsquo;s your first pipeline.</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {launched ? 'It is switched on — you can watch it in the Pipelines room.' : 'It won’t run until you press Go live on the last step.'}
+            </p>
+          </div>
+          <CheckCircle2 className={`h-5 w-5 shrink-0 ${TINT.ready} ${READY_PULSE}`} aria-label="picked" />
+        </div>
+        <p className="mt-3 text-sm leading-relaxed" data-testid="pipeline-summary">{draft.summary}</p>
+        <dl className={`mt-3 grid gap-x-4 gap-y-1.5 border-t ${BORDER} pt-3 text-xs text-muted-foreground sm:grid-cols-2`}>
+          <div className="flex gap-2"><dt className="w-16 shrink-0 font-medium text-foreground">Pipeline</dt><dd>{draft.pipeline.name}</dd></div>
+          <div className="flex gap-2"><dt className="w-16 shrink-0 font-medium text-foreground">Channel</dt><dd>WhatsApp{draft.from.agentName ? ` · from ${draft.from.agentName}` : ''}</dd></div>
+          {goal && <div className="flex gap-2"><dt className="w-16 shrink-0 font-medium text-foreground">Aims for</dt><dd>{goal}</dd></div>}
+          <div className="flex gap-2"><dt className="w-16 shrink-0 font-medium text-foreground">Settings</dt><dd className={missing ? TINT.warnText : TINT.readyText}>{settingsWords(missing)}</dd></div>
+        </dl>
+        {missing > 0 && !launched && (
+          <p className={`mt-3 rounded-xl border px-3 py-2 text-sm ${STATUS.warn}`} data-testid="pipeline-knobs-missing">
+            {draft.pipeline.name} needs {missing} setting{missing === 1 ? '' : 's'} before it can run.{' '}
+            {onOpenPipelines && (
+              <button type="button" onClick={() => onOpenPipelines(draft.pipeline.key)} className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline" data-testid="pipeline-set-settings">
+                Set {missing} setting{missing === 1 ? '' : 's'} in Pipelines<ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )}
+          </p>
+        )}
+        {!launched && (
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button type="button" size="sm" variant="outline" onClick={onChange} disabled={continuing} className="hover:border-[#7C5CFF]/50" data-testid="pipeline-change">
+              <Pencil className="h-4 w-4" />Pick a different one
+            </Button>
+          </div>
+        )}
+      </section>
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button type="button" size="lg" onClick={onContinue} disabled={continuing} className={`w-full sm:w-auto ${CTA_PRIMARY}`}>
+          {continuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          Looks right, continue
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Step                                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -264,13 +435,18 @@ type Stage = 'setup' | 'messages' | 'confirm';
 export interface FirstCampaignStepProps {
   /** `state.channels` — only channels that are on and ready are offered; undefined = not reported, offer all three. */
   channels: StudioChannelSummary[] | undefined;
+  /** `state.workspace` — when `curated`, the step picks a pipeline instead of drafting messages; undefined = not reported. */
+  workspace?: StudioWorkspace;
   onContinue: () => void;
   continuing?: boolean;
   /** Opens Step 6 when no channel is ready. */
   onSetupChannels?: () => void;
+  /** Curated: opens the Pipelines room (optionally on one pipeline's settings) and comes back here. */
+  onOpenPipelines?: (focusKey: string | null) => void;
 }
 
-export default function FirstCampaignStep({ channels, onContinue, continuing, onSetupChannels }: FirstCampaignStepProps) {
+export default function FirstCampaignStep({ channels, workspace, onContinue, continuing, onSetupChannels, onOpenPipelines }: FirstCampaignStepProps) {
+  const curated = workspace?.curated === true;
   const { toast } = useToast();
   const router = useRouter();
   const existing = useFirstCampaign();
@@ -288,6 +464,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
   const [kept, setKept] = useState<boolean[]>([false, false, false]);
   const [current, setCurrent] = useState(0);
   const [rewritingIndex, setRewritingIndex] = useState<number | null>(null);
+  const [choosingKey, setChoosingKey] = useState<string | null>(null);
 
   const readyChannels = useMemo(() => {
     if (!Array.isArray(channels)) return DRAFTABLE;
@@ -301,10 +478,12 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
     if (existing.data === undefined || stage !== null) return;
     if (existing.data) {
       setDraft(existing.data);
-      setMessages(existing.data.messages);
-      setOffering(existing.data.offering);
-      setChannel(existing.data.channel);
-      setCount(existing.data.count);
+      if (!isPipelineDraft(existing.data)) {
+        setMessages(existing.data.messages);
+        setOffering(existing.data.offering);
+        setChannel(existing.data.channel);
+        setCount(existing.data.count);
+      }
       setStage('confirm');
     } else {
       setStage('setup');
@@ -315,8 +494,15 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
     if (channel === null && readyChannels.length) setChannel(readyChannels[0]);
   }, [channel, readyChannels]);
 
+  // A pipeline draft is never edited here, so the server copy is always the
+  // truth: after a trip to the Pipelines room its `knobsMissing` has changed.
+  useEffect(() => {
+    if (isPipelineDraft(existing.data)) setDraft(existing.data);
+  }, [existing.data]);
+
   const applyDraft = (d: FirstCampaignDraft) => {
     setDraft(d);
+    if (isPipelineDraft(d)) return; // nothing to edit: the pipeline's settings live in the Pipelines room
     setMessages(d.messages);
     setOffering(d.offering);
     setChannel(d.channel);
@@ -345,8 +531,21 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
     );
   };
 
+  /** Curated: pick a pipeline. No LLM call — the server records the choice and returns the summary. */
+  const choosePipeline = (pipelineKey: string) => {
+    setChoosingKey(pipelineKey);
+    draftMutation.mutate(
+      { pipelineKey },
+      {
+        onSuccess: (r) => { applyResult(r); setStage('confirm'); },
+        onError: (err) => toast({ title: 'Could not pick that pipeline', description: describeError(err), variant: 'destructive' }),
+        onSettled: () => setChoosingKey(null),
+      },
+    );
+  };
+
   const saveMessages = () => {
-    if (!draft || messagesEqual(messages, draft.messages)) return;
+    if (!draft || isPipelineDraft(draft) || messagesEqual(messages, draft.messages)) return;
     update.mutate({ messages }, {
       onSuccess: (r) => applyResult(r),
       onError: (err) => toast({ title: 'Could not save your edit', description: describeError(err), variant: 'destructive' }),
@@ -388,6 +587,9 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
   const drafting = draftMutation.isPending;
 
   /* ---------------- Setup ---------------- */
+  if (stage === 'setup' && curated && workspace) {
+    return <PipelinePicker pipelines={workspace.pipelines} choosingKey={choosingKey} onChoose={choosePipeline} onOpenPipelines={onOpenPipelines} />;
+  }
   if (stage === 'setup') {
     return (
       <div className="space-y-6">
@@ -478,7 +680,7 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
   }
 
   /* ---------------- Messages ---------------- */
-  if (stage === 'messages' && draft) {
+  if (stage === 'messages' && draft && !isPipelineDraft(draft)) {
     const total = messages.length;
     return (
       <div className="space-y-5">
@@ -533,6 +735,17 @@ export default function FirstCampaignStep({ channels, onContinue, continuing, on
 
   /* ---------------- Confirmation ---------------- */
   if (!draft) return null; // 'confirm' is only ever entered with a draft in hand
+  if (isPipelineDraft(draft)) {
+    return (
+      <PipelineConfirmation
+        draft={draft}
+        continuing={continuing}
+        onChange={() => setStage('setup')}
+        onContinue={onContinue}
+        onOpenPipelines={onOpenPipelines}
+      />
+    );
+  }
   const launched = draft.status === 'launched';
   return (
     <div className="space-y-5">

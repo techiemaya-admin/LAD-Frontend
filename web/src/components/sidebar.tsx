@@ -226,9 +226,10 @@ export function Sidebar() {
     },
     // Curated workspaces only. Sits high because for a snapshot tenant this IS
     // the home screen - it replaces the workflow builder as the place they go
-    // to decide what Mr LAD is doing.
+    // to decide what Mr LAD is doing. Lives in the Tenant Studio's Pipelines
+    // room; `/pipelines` itself now redirects there.
     {
-      href: "/pipelines",
+      href: "/studio?room=pipelines",
       label: "Pipelines",
       icon: SlidersHorizontal,
       details: "Switch the pipelines built for your industry on and off.",

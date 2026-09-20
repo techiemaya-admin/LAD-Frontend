@@ -17,6 +17,11 @@
  *     editable; what the tenant edits is what POST /studio/go-live stores.
  *     Go live does NOT send from here: it marks setup complete and hands off
  *     to the campaign builder with `autoLaunch=1`, the one proven launch path.
+ *     CURATED workspaces are the exception: their first campaign is a
+ *     pipeline, and POST /studio/go-live switches it on server-side (409
+ *     `activation_failed` with `reason` if it cannot) — no builder hand-off.
+ *     A launch row may then point at a Studio ROOM (`fix.room: 'pipelines'`)
+ *     rather than a step; the page opens it and comes back here.
  *
  * Mobile first: everything stacks at 390px; the turns reveal one at a time.
  */
@@ -32,13 +37,16 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { isApiError } from '@lad/shared/apiError';
 import {
+  isPipelineDraft,
   useApplyAndUpdate,
+  useFirstCampaign,
   useGoLive,
   useLaunchStatus,
   useTestRun,
   useTestRunFeedback,
   type ApplyAndUpdateResult,
   type LaunchRow,
+  type LaunchRowRoom,
   type LaunchStatus,
   type ReasonKey,
   type StudioChannel,
@@ -94,6 +102,20 @@ function describeError(err: unknown, copy: Partial<Record<string, string>> = {})
     if (code) return code;
   }
   return err instanceof Error ? err.message : 'Try again in a moment.';
+}
+
+/** The server's `reason` for a failed pipeline activation, in plain English. */
+function activationReason(reason: string | undefined): string {
+  switch (reason) {
+    case 'not_entitled': return 'That pipeline is not in your plan.';
+    case 'pipeline_not_built_yet':
+    case 'not_live': return 'That pipeline is not running yet — it is still being built.';
+    case 'no_snapshot':
+    case 'not_curated': return 'This workspace has no pipelines to switch on.';
+    case 'unknown_pipeline': return 'That pipeline no longer exists in your edition.';
+    case 'knobs_missing': return 'The pipeline still has settings to fill in.';
+    default: return reason ? `It said: ${reason.replace(/[_-]/g, ' ')}.` : 'The pipeline could not be switched on.';
+  }
 }
 
 function firstName(name: string | null | undefined): string {
@@ -474,6 +496,8 @@ function CreditsDetail({ launch }: { launch: LaunchStatus }) {
       <p className={balance === null ? TINT.warnText : undefined}>
         {balance === null ? 'We couldn’t read your wallet, so it cannot tell whether the first week is covered. Open your wallet to check.' : `${balance.toLocaleString()} credits available.`}
         {c.firstWeek && ` About ${Math.ceil(c.firstWeek.credits).toLocaleString()} credits for the first week (≈ ${money(c.firstWeek.usd)}).`}
+        {/* Curated: pipelines bill per conversation, so there is no first-week estimate — the server says why. */}
+        {!c.firstWeek && c.note && <span data-testid="credits-note"> {c.note}</span>}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {c.firstWeek && c.firstWeek.breakdown.length > 0 && (
@@ -503,7 +527,7 @@ function CreditsDetail({ launch }: { launch: LaunchStatus }) {
   );
 }
 
-function LaunchRowItem({ row, launch, onJumpToStep }: { row: LaunchRow; launch: LaunchStatus; onJumpToStep: (step: number) => void }) {
+function LaunchRowItem({ row, launch, onJumpToStep, onJumpToRoom }: { row: LaunchRow; launch: LaunchStatus; onJumpToStep: (step: number) => void; onJumpToRoom?: (room: LaunchRowRoom) => void }) {
   const icon = row.status === 'ready'
     ? <CheckCircle2 className={`h-5 w-5 ${TINT.ready}`} aria-label="ready" />
     : row.status === 'needed'
@@ -524,7 +548,11 @@ function LaunchRowItem({ row, launch, onJumpToStep }: { row: LaunchRow; launch: 
         <p className={`mt-0.5 text-sm ${amberDetail ? TINT.warnText : 'text-muted-foreground'}`} data-testid={amberDetail ? 'credits-amber' : undefined}>{row.detail}</p>
         {isCredits && <CreditsDetail launch={launch} />}
         {fix && !(isCredits && fix.href === CREDITS_HREF) && (
-          fix.step !== undefined && fix.step !== null ? (
+          fix.room && onJumpToRoom ? (
+            <button type="button" onClick={() => onJumpToRoom(fix.room as LaunchRowRoom)} className={`mt-1 inline-flex items-center gap-1 text-sm ${LINK}`} data-testid={`launch-fix-room-${row.key}`}>
+              {fix.label}<ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          ) : fix.step !== undefined && fix.step !== null ? (
             <button type="button" onClick={() => onJumpToStep(fix.step as number)} className={`mt-1 inline-flex items-center gap-1 text-sm ${LINK}`}>
               {fix.label}<ArrowRight className="h-3.5 w-3.5" />
             </button>
@@ -539,11 +567,12 @@ function LaunchRowItem({ row, launch, onJumpToStep }: { row: LaunchRow; launch: 
   );
 }
 
-function LaunchChecklist({ launch, loading, failed, onJumpToStep, onRetry }: {
+function LaunchChecklist({ launch, loading, failed, onJumpToStep, onJumpToRoom, onRetry }: {
   launch: LaunchStatus | undefined;
   loading: boolean;
   failed: boolean;
   onJumpToStep: (step: number) => void;
+  onJumpToRoom?: (room: LaunchRowRoom) => void;
   onRetry: () => void;
 }) {
   const blockers = launch?.blocking.length ?? 0;
@@ -569,7 +598,7 @@ function LaunchChecklist({ launch, loading, failed, onJumpToStep, onRetry }: {
       )}
       {launch && (
         <ul className={`divide-y ${DIVIDE} overflow-hidden rounded-2xl border ${BORDER}`}>
-          {launch.rows.map((row) => <LaunchRowItem key={row.key} row={row} launch={launch} onJumpToStep={onJumpToStep} />)}
+          {launch.rows.map((row) => <LaunchRowItem key={row.key} row={row} launch={launch} onJumpToStep={onJumpToStep} onJumpToRoom={onJumpToRoom} />)}
         </ul>
       )}
     </Card>
@@ -580,8 +609,10 @@ function LaunchChecklist({ launch, loading, failed, onJumpToStep, onRetry }: {
 /* 3. Confirmation                                                      */
 /* ------------------------------------------------------------------ */
 
-function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
+function Confirmation({ launch, pipeline, onWentLive, onSaveForLater, saving }: {
   launch: LaunchStatus | undefined;
+  /** Curated: the first campaign is a pipeline the server switches on at go-live. */
+  pipeline: boolean;
   onWentLive: () => void;
   onSaveForLater: () => void;
   saving?: boolean;
@@ -604,10 +635,16 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
       await goLive.mutateAsync({ summary: summary.trim() || undefined });
       onWentLive();
     } catch (e: unknown) {
-      const body = isApiError(e) ? (e.body as { error?: string; blocking?: string[] } | undefined) : undefined;
+      const body = isApiError(e) ? (e.body as { error?: string; message?: string; blocking?: string[]; reason?: string } | undefined) : undefined;
+      const activationFailed = body?.error === 'activation_failed';
       toast({
-        title: body?.error === 'not_ready' ? 'Not quite ready' : 'Could not go live',
-        description: body?.error === 'not_ready' ? 'Something on the checklist changed. Look at the amber rows and try again.' : describeError(e),
+        title: body?.error === 'not_ready' ? 'Not quite ready' : activationFailed ? 'Could not switch the pipeline on' : 'Could not go live',
+        description: body?.error === 'not_ready'
+          ? 'Something on the checklist changed. Look at the amber rows and try again.'
+          : activationFailed
+            // The server's own sentence first; its `reason` code in plain words when it gave none.
+            ? `${body?.message || activationReason(body?.reason)} Nothing was switched on; fix that and press Go live again.`
+            : describeError(e),
         variant: 'destructive',
       });
     }
@@ -616,7 +653,7 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
   return (
     <Card
       title={ready ? 'You’re ready. Here’s what happens when you press Go live.' : 'Almost there.'}
-      hint={ready ? 'Edit the plan in your own words if anything is off — what you see here is what it does.' : undefined}
+      hint={ready ? (pipeline ? 'Go live switches the pipeline on. Edit the plan in your own words if anything is off — what you see here is what it does.' : 'Edit the plan in your own words if anything is off — what you see here is what it does.') : undefined}
       data-testid="go-live-card"
     >
       {!launch && <p className="text-sm text-muted-foreground">Waiting for the checklist…</p>}
@@ -637,7 +674,7 @@ function Confirmation({ launch, onWentLive, onSaveForLater, saving }: {
             data-testid="go-live-summary"
           />
           <p className="text-xs text-muted-foreground">
-            Starts {whenLabel(launch.schedule.startsAt, launch.schedule.timezone)} ({launch.schedule.timezone}), {launch.schedule.perDay} people a day
+            Starts {whenLabel(launch.schedule.startsAt, launch.schedule.timezone)} ({launch.schedule.timezone}){pipeline ? '' : `, ${launch.schedule.perDay} people a day`}
             {launch.schedule.businessHours ? `, during ${launch.schedule.businessHours}` : ''}. It pauses on its own if credits run out.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -665,15 +702,24 @@ export interface GoLiveStepProps {
   state: StudioState;
   /** Jump to the setup step (1–8) that fixes a row; the page returns here afterwards. */
   onJumpToStep: (step: number) => void;
-  /** The go-live POST succeeded: the page hands off to the builder (`GO_LIVE_BUILDER_HREF`). */
+  /** Curated: open the Studio room a row's `fix.room` names (with the drafted pipeline's key, so its settings open); the page returns here afterwards. */
+  onJumpToRoom?: (room: LaunchRowRoom, focusKey: string | null) => void;
+  /** The go-live POST succeeded: the page hands off to the builder (`GO_LIVE_BUILDER_HREF`), or, for a pipeline, shows the rooms with the live banner. */
   onWentLive: () => void;
   /** "Save and decide later": the page records step 9 and goes back to the rooms. */
   onSaveForLater: () => void;
   saving?: boolean;
 }
 
-export default function GoLiveStep({ state, onJumpToStep, onWentLive, onSaveForLater, saving }: GoLiveStepProps) {
+export default function GoLiveStep({ state, onJumpToStep, onJumpToRoom, onWentLive, onSaveForLater, saving }: GoLiveStepProps) {
   const launch = useLaunchStatus();
+  const curated = state.workspace?.curated === true;
+  const pipeline = curated && state.firstCampaign?.kind === 'pipeline';
+  // The drafted pipeline's key, for a `fix.room` jump that should land on its
+  // settings. The state slice does not carry it, so read the draft itself.
+  const draft = useFirstCampaign(pipeline);
+  const focusKey = isPipelineDraft(draft.data) ? draft.data.pipeline.key : null;
+  const jumpToRoom = onJumpToRoom ? (room: LaunchRowRoom) => onJumpToRoom(room, focusKey) : undefined;
   return (
     <div className="space-y-5">
       <div>
@@ -688,9 +734,10 @@ export default function GoLiveStep({ state, onJumpToStep, onWentLive, onSaveForL
         loading={launch.isLoading}
         failed={launch.data === undefined && !launch.isLoading}
         onJumpToStep={onJumpToStep}
+        onJumpToRoom={jumpToRoom}
         onRetry={() => { void launch.refetch(); }}
       />
-      <Confirmation launch={launch.data} onWentLive={onWentLive} onSaveForLater={onSaveForLater} saving={saving} />
+      <Confirmation launch={launch.data} pipeline={pipeline} onWentLive={onWentLive} onSaveForLater={onSaveForLater} saving={saving} />
     </div>
   );
 }

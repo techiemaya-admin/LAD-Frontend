@@ -39,6 +39,40 @@ export interface StudioState {
   questions?: { open: number };
   /** The change timeline's headline; absent on backends that predate it. */
   history?: { lastChangeAt: string | null; undoable: boolean };
+  /**
+   * Whether this tenant runs a curated workspace (an industry edition that
+   * ships pipelines) and the pipelines it can switch on; absent on backends
+   * that predate it. `curated: false` carries `pipelines: []`.
+   */
+  workspace?: StudioWorkspace;
+}
+
+/* ------------------------------------------------------------------ */
+/* Curated workspaces (industry editions with pipelines)                */
+/* ------------------------------------------------------------------ */
+
+/** One pipeline as the studio state carries it — enough for a picker, not the knob form (`@lad/frontend-features/snapshots` has that). */
+export interface PipelineSummary {
+  key: string;
+  name: string;
+  blurb: string;
+  /** The goal event in the manifest's words, e.g. 'trial-booked'. */
+  goal: string | null;
+  engine: 'stage' | 'sequence' | string | null;
+  /** Build state: only `'live'` has an engine behind it; `'planned'` is coming. */
+  state: string | null;
+  entitled: boolean;
+  active: boolean;
+  campaignCount: number;
+  /** Knob keys with neither a value nor a default — the pipeline cannot run until these are set. */
+  knobsMissing: string[];
+}
+
+export interface StudioWorkspace {
+  vertical: string | null;
+  /** True iff the tenant's edition declares at least one pipeline. A vertical with pack sections only (staffing) is NOT curated. */
+  curated: boolean;
+  pipelines: PipelineSummary[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -381,30 +415,74 @@ export interface FirstCampaignTemplate {
   [key: string]: unknown;
 }
 
-export interface FirstCampaignDraft {
+/**
+ * What a first campaign IS: a three-message sequence the builder launches, or
+ * (curated workspaces) a prebuilt pipeline the server switches on at go-live.
+ * Backends that predate the pipeline shape omit `kind`; read that as `'sequence'`.
+ */
+export type FirstCampaignKind = 'sequence' | 'pipeline';
+
+interface FirstCampaignDraftBase {
   status: FirstCampaignStatus;
-  offering: string;
   channel: FirstCampaignChannel;
-  count: number;
-  audience: FirstCampaignAudience;
   from: { agentName: string | null; agentTitle: string | null };
-  messages: FirstCampaignMessage[];
-  template: FirstCampaignTemplate | null;
-  /** One plain sentence: "50 … leads at …, on LinkedIn, leading with …, three messages over ten days, from Rachana." */
+  /** One plain sentence describing the campaign — the confirmation card and the checklist row show it verbatim. */
   summary: string;
   draftedAt: string | null;
-  launchedCampaignId: string | null;
   updatedAt: string | null;
+}
+
+/** The builder-shaped draft: three messages over ten days plus a template. */
+export interface FirstCampaignSequenceDraft extends FirstCampaignDraftBase {
+  kind?: 'sequence';
+  offering: string;
+  count: number;
+  audience: FirstCampaignAudience;
+  messages: FirstCampaignMessage[];
+  template: FirstCampaignTemplate | null;
+  launchedCampaignId: string | null;
+}
+
+/** The pipeline the draft picked — a slice of the edition's manifest entry. */
+export interface FirstCampaignPipeline {
+  key: string;
+  name: string;
+  blurb: string;
+  goal: string | null;
+  engine: string | null;
+  state: string | null;
+}
+
+/** The pipeline-shaped draft (curated workspaces): no messages, no template — go-live switches the pipeline on. */
+export interface FirstCampaignPipelineDraft extends FirstCampaignDraftBase {
+  kind: 'pipeline';
+  pipeline: FirstCampaignPipeline;
+  /** Knob keys still unset — the launch checklist blocks until this is empty. */
+  knobsMissing: string[];
+  /** Set once go-live activated the pipeline. */
+  launchedPipelineKey: string | null;
+  launchedCampaignId?: null;
+}
+
+export type FirstCampaignDraft = FirstCampaignSequenceDraft | FirstCampaignPipelineDraft;
+
+export function isPipelineDraft(draft: FirstCampaignDraft | null | undefined): draft is FirstCampaignPipelineDraft {
+  return Boolean(draft) && (draft as FirstCampaignPipelineDraft).kind === 'pipeline';
 }
 
 /** The slice `studioService.state()` carries for the checklist and the rooms view. */
 export interface FirstCampaignSummary {
   drafted: boolean;
   status: FirstCampaignStatus | null;
+  /** Absent on backends that predate pipeline drafts — read as `'sequence'`. */
+  kind?: FirstCampaignKind;
   channel: string | null;
+  /** For a pipeline draft this is the pipeline's name. */
   offering: string | null;
   count: number | null;
   launchedCampaignId: string | null;
+  /** Pipeline drafts: set once go-live switched it on. */
+  launchedPipelineKey?: string | null;
   /** The same one-sentence summary as the draft's, for the checklist row. */
   summary: string | null;
 }
@@ -426,6 +504,8 @@ export interface FirstCampaignInput {
   count?: number;
   messages?: FirstCampaignMessage[];
   launchedCampaignId?: string | null;
+  /** Pipeline drafts only: re-pick the pipeline. Message edits on a pipeline draft are refused (400 `not_applicable`). */
+  pipelineKey?: string;
 }
 
 /**
@@ -433,7 +513,14 @@ export interface FirstCampaignInput {
  * 400 `channel_not_draftable | no_offering | validation`, 409 `no_ready_channel`,
  * 404 `no_draft` (edit/rewrite with nothing drafted), 502 `no_draft | no_rewrite` (model gave nothing usable).
  */
-export type FirstCampaignErrorReason = 'channel_not_draftable' | 'no_offering' | 'validation' | 'no_ready_channel' | 'no_draft' | 'no_rewrite';
+export type FirstCampaignErrorReason =
+  | 'channel_not_draftable' | 'no_offering' | 'validation' | 'no_ready_channel' | 'no_draft' | 'no_rewrite'
+  /** Curated: the pipeline asked for is not entitled or not live (400, with `reason`). */
+  | 'pipeline_not_available'
+  /** Curated: nothing entitled, live and still off (409). */
+  | 'no_pipeline_available'
+  /** Curated: rewrite / message edits do not apply to a pipeline draft (400). */
+  | 'not_applicable';
 
 /* ------------------------------------------------------------------ */
 /* Step 8 — brand and references                                        */
@@ -649,11 +736,16 @@ export type LaunchRowStatus = 'ready' | 'needed' | 'optional';
 /** Row keys in the order the backend emits them. */
 export type LaunchRowKey = 'company' | 'offering' | 'audience' | 'channel' | 'campaign' | 'credits' | 'goals' | 'references';
 
+/** A Studio room a launch row can send the tenant to instead of a step. */
+export type LaunchRowRoom = 'pipelines';
+
 export interface LaunchRowFix {
   /** The setup step (1–8) that fixes this row. */
   step?: number;
   /** A page outside the flow (e.g. `/settings?tab=credits`). */
   href?: string;
+  /** A Studio room (curated workspaces: the pipeline's missing settings live in the Pipelines room). */
+  room?: LaunchRowRoom;
   label: string;
 }
 
@@ -679,6 +771,8 @@ export interface LaunchCredits {
   firstWeek: { credits: number; usd: number; model?: string | null; breakdown: LaunchCostLine[] } | null;
   /** null when there is no estimate or no balance to compare; false = ready but the balance runs out mid-week. */
   enough: boolean | null;
+  /** Why there is no `firstWeek` (curated: pipelines bill per conversation). Shown in place of the estimate. */
+  note?: string | null;
 }
 
 export interface LaunchSchedule {
@@ -711,6 +805,13 @@ export interface StudioLaunchSummary {
 export interface GoLiveResult {
   state: StudioState;
 }
+
+/**
+ * Codes `POST /studio/go-live` returns as `{ success:false, error, ... }`:
+ * 409 `not_ready` with `blocking`; 409 `activation_failed` with `reason` when
+ * a curated workspace's pipeline could not be switched on.
+ */
+export type GoLiveErrorReason = 'not_ready' | 'activation_failed';
 
 /* ------------------------------------------------------------------ */
 /* History + undo                                                       */

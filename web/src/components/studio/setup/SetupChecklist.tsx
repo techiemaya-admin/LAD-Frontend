@@ -156,7 +156,26 @@ export default function SetupChecklist({ state, firstCampaign, blockingMissing =
     },
     // Once the backend reports `firstCampaign` (Step 7), the saved draft is the
     // truth; the brief's proposal only stands in on backends that predate it.
-    state.firstCampaign !== undefined
+    // A curated workspace's first campaign is a pipeline: "Pipeline: <name>",
+    // switched on at go-live rather than sent.
+    state.firstCampaign !== undefined && state.firstCampaign?.kind === 'pipeline'
+      ? {
+        key: 'campaign',
+        title: 'First campaign',
+        status: state.firstCampaign.status === 'launched' || state.firstCampaign.launchedPipelineKey ? 'ready' : state.firstCampaign.drafted ? 'ready' : 'needed',
+        detail: state.firstCampaign.status === 'launched' || state.firstCampaign.launchedPipelineKey
+          ? `Live — Pipeline: ${state.firstCampaign.offering ?? state.firstCampaign.launchedPipelineKey} is switched on and running on WhatsApp.`
+          : state.firstCampaign.drafted
+            ? `Pipeline: ${state.firstCampaign.offering ?? 'picked'}.${state.firstCampaign.summary ? ` ${state.firstCampaign.summary}` : ''} It switches on when you press Go live.`
+            : 'No first pipeline picked yet — choose one from your edition in a minute.',
+        action: onFirstCampaign && state.firstCampaign.status !== 'launched' && !state.firstCampaign.launchedPipelineKey
+          ? { onClick: onFirstCampaign, label: state.firstCampaign.drafted ? 'Review your first pipeline' : 'Pick your first pipeline' }
+          : undefined,
+        link: state.firstCampaign.status === 'launched' || state.firstCampaign.launchedPipelineKey
+          ? { href: '/studio?room=pipelines', label: 'Open pipelines' }
+          : undefined,
+      }
+      : state.firstCampaign !== undefined
       ? {
         key: 'campaign',
         title: 'First campaign',

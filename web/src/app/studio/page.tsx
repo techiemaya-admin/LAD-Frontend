@@ -20,10 +20,17 @@
  * Tailor proposal with a review card, applied through the same customisation
  * PUT a hand-made change takes. The unapplied proposal is a DRAFT the next
  * request builds on, across rooms, until it is applied or discarded.
+ *
+ * CURATED WORKSPACES (`state.workspace.curated`): an industry edition that
+ * ships pipelines gets a fourth room, Pipelines, first in the tab rail and
+ * reachable directly at `/studio?room=pipelines` (the sidebar item and the
+ * old `/pipelines` routes point there). Step 7 picks a pipeline instead of
+ * drafting messages, and Go live switches it on server-side — no builder
+ * hand-off. A tenant outside an edition sees none of this.
  */
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, MessagesSquare, Target, Theater } from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, MessagesSquare, SlidersHorizontal, Target, Theater } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import StudioStatus from '@/components/studio/StudioStatus';
@@ -34,6 +41,7 @@ import QuestionsInbox from '@/components/studio/QuestionsInbox';
 import RehearsalRoom from '@/components/studio/RehearsalRoom';
 import IcpRoom from '@/components/studio/IcpRoom';
 import TailorRoom from '@/components/studio/TailorRoom';
+import PipelinesRoom from '@/components/studio/PipelinesRoom';
 import {
   BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, GoLiveStep,
   GO_LIVE_BUILDER_HREF, GO_LIVE_STEP, PlanReview, ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
@@ -45,12 +53,22 @@ import {
   useStudioState,
   type ApplyResult,
   type BriefResult,
+  type LaunchRowRoom,
   type Overlay,
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
 
-type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'golive' | 'studio';
+/** 'pipelines' = the Pipelines room opened inside the setup frame from Step 7 or 9, returning there afterwards. */
+type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'golive' | 'pipelines' | 'studio';
 type StepPhase = Extract<SetupPhase, 'channels' | 'campaign' | 'references' | 'golive'>;
+type RoomTab = 'pipelines' | 'icp' | 'rehearse' | 'tailor';
+const ROOM_TABS: RoomTab[] = ['pipelines', 'icp', 'rehearse', 'tailor'];
+function isRoomTab(v: string | null): v is RoomTab {
+  return v !== null && (ROOM_TABS as string[]).includes(v);
+}
+function isCurated(state: StudioState): boolean {
+  return state.workspace?.curated === true;
+}
 /** Where the profile answers (setup steps 1–5) are fixed when a launch row points at one of them. */
 const PROFILE_HREF = '/settings?tab=businessprofile';
 
@@ -91,13 +109,23 @@ function resumesStep(state: StudioState): StepPhase | null {
 }
 
 const BACK_LABEL: Record<SetupPhase, string> = {
-  studio: 'Back to the studio', checklist: 'Back to the checklist', golive: 'Back to go live',
-  brief: 'Back', review: 'Back', channels: 'Back', campaign: 'Back', references: 'Back',
+  studio: 'Back to the studio', checklist: 'Back to the checklist', golive: 'Back to go live', campaign: 'Back to your first campaign',
+  brief: 'Back', review: 'Back', channels: 'Back', references: 'Back', pipelines: 'Back',
 };
 
+/** `useSearchParams` needs a Suspense boundary above it for the static shell; the page itself is unchanged. */
 export default function StudioPage() {
+  return (
+    <Suspense fallback={null}>
+      <StudioPageInner />
+    </Suspense>
+  );
+}
+
+function StudioPageInner() {
   const state = useStudioState();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const saveSetup = useSaveSetup();
   const [draft, setDraft] = useState<Overlay | undefined>(undefined);
@@ -111,20 +139,32 @@ export default function StudioPage() {
   const [stepReturn, setStepReturn] = useState<SetupPhase>('checklist');
   // Step 9 keeps its own way back: its fix links open Steps 6–8 with `stepReturn = 'golive'`.
   const [goLiveReturn, setGoLiveReturn] = useState<SetupPhase>('studio');
+  // The Pipelines room opened from Step 7 or 9 (curated): where it returns to, and which pipeline's settings to open.
+  const [pipelinesReturn, setPipelinesReturn] = useState<SetupPhase>('golive');
+  const [pipelinesFocus, setPipelinesFocus] = useState<string | null>(null);
   const [stepVisited, setStepVisited] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // `?live=1` — the builder just launched the first campaign after Go live.
-  // Read once and cleared from the address bar so a refresh does not repeat it.
+  // Which room the tab rail shows. `?room=` (sidebar, redirects, bookmarks)
+  // wins whenever it changes; a tab press only changes local state.
+  const roomParam = searchParams.get('room');
+  const [tab, setTab] = useState<RoomTab | null>(isRoomTab(roomParam) ? roomParam : null);
+  useEffect(() => {
+    if (isRoomTab(roomParam)) setTab(roomParam);
+  }, [roomParam]);
+  // `?live=1` — the first campaign just went live (the builder launched it, or
+  // a curated workspace's pipeline was switched on). Read once and cleared
+  // from the address bar so a refresh does not repeat it.
+  const liveParam = searchParams.get('live');
   const [justLive, setJustLive] = useState(false);
   useEffect(() => {
+    if (liveParam !== '1') return;
+    setJustLive(true);
     try {
       const url = new URL(window.location.href);
-      if (url.searchParams.get('live') !== '1') return;
-      setJustLive(true);
       url.searchParams.delete('live');
       window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
-    } catch { /* no window: nothing to read */ }
-  }, []);
+    } catch { /* no window: nothing to clear */ }
+  }, [liveParam]);
 
   const markStepDone = (step: number, nextStep: number, then: () => void) => {
     const done = state.data?.setup?.completedSteps ?? [];
@@ -149,6 +189,17 @@ export default function StudioPage() {
     const target = PHASE_OF_STEP[step];
     if (target && target !== 'golive' && state.data && reports(state.data, target)) openStep(target, 'golive');
     else router.push(PROFILE_HREF);
+  };
+  /** Open the Pipelines room inside the setup frame (from Step 7 or 9) and come back to that step afterwards. */
+  const openPipelinesRoom = (from: SetupPhase, focusKey: string | null = null) => {
+    setPipelinesReturn(from);
+    setPipelinesFocus(focusKey);
+    setStepVisited(true);
+    setPhase('pipelines');
+  };
+  /** A launch row's `fix.room`. Only 'pipelines' exists today; an unknown room is a no-op rather than a wrong page. */
+  const jumpToRoom = (room: LaunchRowRoom, focusKey: string | null) => {
+    if (room === 'pipelines') openPipelinesRoom('golive', focusKey);
   };
 
   if (state.isLoading) {
@@ -177,7 +228,11 @@ export default function StudioPage() {
   }
 
   const data = state.data;
-  const effectivePhase: SetupPhase = phase ?? (needsSetup(data) ? 'brief' : resumesStep(data) ?? 'studio');
+  const curated = isCurated(data);
+  // A curated tenant sent straight to the Pipelines room (sidebar, redirect,
+  // bookmark) gets the room, not a brief or a resumed step.
+  const roomRequested = curated && tab === 'pipelines' && isRoomTab(roomParam);
+  const effectivePhase: SetupPhase = phase ?? (roomRequested ? 'studio' : needsSetup(data) ? 'brief' : resumesStep(data) ?? 'studio');
   const hasChannels = reports(data, 'channels');
   const hasFirstCampaign = reports(data, 'campaign');
   const hasReferences = reports(data, 'references');
@@ -267,9 +322,11 @@ export default function StudioPage() {
         {effectivePhase === 'campaign' && (
           <FirstCampaignStep
             channels={data.channels}
+            workspace={data.workspace}
             continuing={saveSetup.isPending}
             onContinue={onContinue}
             onSetupChannels={hasChannels ? () => openStep('channels', backTo) : undefined}
+            onOpenPipelines={curated ? (focusKey) => openPipelinesRoom('campaign', focusKey) : undefined}
           />
         )}
         {effectivePhase === 'references' && (
@@ -279,8 +336,36 @@ export default function StudioPage() {
     );
   }
 
+  if (effectivePhase === 'pipelines') {
+    // Curated only: the room inside the frame, returning to the step that sent us.
+    const backTo: SetupPhase = pipelinesReturn;
+    const step = backTo === 'campaign' ? FIRST_CAMPAIGN_STEP : GO_LIVE_STEP;
+    return (
+      <SetupShell
+        step={step}
+        progress={backTo === 'golive' ? 100 : undefined}
+        title="Pipelines"
+        aside={(
+          <button type="button" onClick={() => setPhase(backTo)} className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline dark:hover:text-[#B69CFF]" data-testid="pipelines-back">
+            {BACK_LABEL[backTo]}
+          </button>
+        )}
+      >
+        <PipelinesRoom focusKey={pipelinesFocus} />
+      </SetupShell>
+    );
+  }
+
   if (effectivePhase === 'golive') {
     const backTo: SetupPhase = phase === null ? 'studio' : goLiveReturn;
+    // Curated + pipeline draft: the server switched the pipeline on; there is no builder to hand off to.
+    const pipelineLive = curated && data.firstCampaign?.kind === 'pipeline';
+    const wentLive = () => {
+      if (!pipelineLive) { router.push(GO_LIVE_BUILDER_HREF); return; }
+      setGoLiveReturn('studio');
+      setPhase('studio');
+      router.replace('/studio?live=1');
+    };
     const saveForLater = () => saveSetup.mutate(
       { currentStep: GO_LIVE_STEP },
       {
@@ -302,7 +387,8 @@ export default function StudioPage() {
         <GoLiveStep
           state={data}
           onJumpToStep={jumpToStep}
-          onWentLive={() => router.push(GO_LIVE_BUILDER_HREF)}
+          onJumpToRoom={curated ? jumpToRoom : undefined}
+          onWentLive={wentLive}
           onSaveForLater={saveForLater}
           saving={saveSetup.isPending}
         />
@@ -341,8 +427,15 @@ export default function StudioPage() {
         </p>
       </header>
       <div className="mb-3 space-y-3 empty:hidden">
-        {justLive && <LiveBanner onDismiss={() => setJustLive(false)} />}
-        {!justLive && <FirstCampaignBanner state={data} href={FIRST_CAMPAIGN_BUILDER_HREF} />}
+        {justLive && <LiveBanner onDismiss={() => setJustLive(false)} pipelineName={curated && data.firstCampaign?.kind === 'pipeline' ? data.firstCampaign.offering : null} />}
+        {!justLive && (
+          <FirstCampaignBanner
+            state={data}
+            href={FIRST_CAMPAIGN_BUILDER_HREF}
+            // A pipeline draft has nothing to review in the builder; Go live (Step 9) switches it on.
+            onReview={data.firstCampaign?.kind === 'pipeline' && hasLaunch ? () => openStep('golive', 'studio') : undefined}
+          />
+        )}
         <NeutralVoiceBanner state={data} onAdd={() => openStep('references', 'studio')} />
       </div>
       <StudioStatus state={data} onHistory={hasHistory ? () => setHistoryOpen(true) : undefined} />
@@ -351,14 +444,16 @@ export default function StudioPage() {
           <TeamStrip channels={data.channels} onEdit={() => openStep('channels', 'studio')} />
         </div>
       )}
-      {/* The setup entry points go away once the tenant is live; the history link is what remains. */}
-      {!setupDone && (hasFirstCampaign || hasReferences || hasLaunch) && (
+      {/* The setup entry points go away once the tenant is live; the history link is what remains.
+          The Pipelines tile (curated) stays: it is the workspace's home. */}
+      {(curated || (!setupDone && (hasFirstCampaign || hasReferences || hasLaunch))) && (
         <div className="mt-3">
           <StudioEntries
             state={data}
-            onFirstCampaign={() => openStep('campaign', 'studio')}
-            onReferences={() => openStep('references', 'studio')}
-            onGoLive={hasLaunch ? () => openStep('golive', 'studio') : undefined}
+            onFirstCampaign={!setupDone && hasFirstCampaign ? () => openStep('campaign', 'studio') : undefined}
+            onReferences={!setupDone && hasReferences ? () => openStep('references', 'studio') : undefined}
+            onGoLive={!setupDone && hasLaunch ? () => openStep('golive', 'studio') : undefined}
+            onPipelines={curated ? () => setTab('pipelines') : undefined}
           />
         </div>
       )}
@@ -374,12 +469,24 @@ export default function StudioPage() {
           You have an unapplied proposal. The next request in any room builds on it; apply or discard it from its review card.
         </p>
       )}
-      <Tabs defaultValue={data.rehearsal.ready ? 'rehearse' : data.icpTraining.ready ? 'icp' : 'tailor'} className="mt-5">
+      <Tabs
+        value={tab && (tab !== 'pipelines' || curated) ? tab : (data.rehearsal.ready ? 'rehearse' : data.icpTraining.ready ? 'icp' : 'tailor')}
+        onValueChange={(v) => { if (isRoomTab(v)) setTab(v); }}
+        className="mt-5"
+      >
         <TabsList className={TAB_LIST}>
+          {curated && (
+            <TabsTrigger value="pipelines" className={TAB_TRIGGER} data-testid="tab-pipelines"><SlidersHorizontal className="mr-1.5 h-4 w-4" />Pipelines</TabsTrigger>
+          )}
           <TabsTrigger value="icp" className={TAB_TRIGGER}><Target className="mr-1.5 h-4 w-4" />Train the ICP</TabsTrigger>
           <TabsTrigger value="rehearse" className={TAB_TRIGGER}><Theater className="mr-1.5 h-4 w-4" />Rehearse</TabsTrigger>
           <TabsTrigger value="tailor" className={TAB_TRIGGER}><MessagesSquare className="mr-1.5 h-4 w-4" />Ask the Tailor</TabsTrigger>
         </TabsList>
+        {curated && (
+          <TabsContent value="pipelines" className="mt-4">
+            <PipelinesRoom />
+          </TabsContent>
+        )}
         <TabsContent value="icp" className="mt-4">
           <IcpRoom ready={data.icpTraining.ready} draft={draft} onDraft={setDraft} />
         </TabsContent>
