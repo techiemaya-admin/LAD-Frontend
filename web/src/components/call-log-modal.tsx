@@ -1353,7 +1353,13 @@ export function CallLogModal({
               {hasAudio && (
                 <div className="w-full flex items-center gap-2">
                   <div className="flex-1 min-w-0">
-                    <AgentAudioPlayer src={signedRecordingUrl} />
+                    <AgentAudioPlayer
+                      src={signedRecordingUrl}
+                      downloadBaseName={generateRecordingFilename(
+                        [log?.lead_first_name, log?.lead_last_name].filter(Boolean).join(' '),
+                        log?.started_at,
+                      )}
+                    />
                   </div>
                   {/* Save the file. The handler and its state were kept when the modal was
                       restyled (7e8f63ef) but the button that called them was dropped. */}
