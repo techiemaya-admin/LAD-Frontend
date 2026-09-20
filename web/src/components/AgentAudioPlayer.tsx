@@ -1,5 +1,5 @@
 "use client";
-import { Play, Pause, Volume2 } from "lucide-react";
+import { Play, Pause, Volume2, Scissors, Download, X } from "lucide-react";
 import {
   useState,
   useRef,
@@ -7,6 +7,14 @@ import {
   useCallback,
   useMemo,
 } from "react";
+import {
+  sliceAudioBuffer,
+  audioBufferToWav,
+  saveBlob,
+  clockToSeconds,
+  secondsToClock,
+  clipFilename,
+} from "@/utils/audioTrim";
 interface AgentAudioPlayerProps {
   src?: string;
   height?: number;
@@ -15,6 +23,8 @@ interface AgentAudioPlayerProps {
    * By default the component uses its container width.
    */
   width?: number;
+  /** Base name for a trimmed clip download (the full recording's filename works). */
+  downloadBaseName?: string;
 }
 type Peaks = number[];
 interface WaveformProps {
@@ -151,8 +161,21 @@ export const AgentAudioPlayer = ({
   src,
   height = 50,
   width = 0,
+  downloadBaseName = "call-recording",
 }: AgentAudioPlayerProps) => {
   const [playing, setPlaying] = useState(false);
+  // Trim: a [start, end] window on the recording, dragged on the waveform or
+  // typed as m:ss, played on its own, and saved as a WAV cut client-side from
+  // the AudioBuffer already decoded for the waveform.
+  const [trimOn, setTrimOn] = useState(false);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [trimStartText, setTrimStartText] = useState("0:00");
+  const [trimEndText, setTrimEndText] = useState("0:00");
+  const [dragging, setDragging] = useState<"start" | "end" | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const playingSelectionRef = useRef(false);
+  const waveWrapRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -279,6 +302,14 @@ export const AgentAudioPlayer = ({
     const audio = audioRef.current;
     if (!audio) return;
     setCurrentTime(audio.currentTime);
+    if (playingSelectionRef.current && trimOn && audio.currentTime >= trimEnd) {
+      audio.pause();
+      audio.currentTime = trimStart;
+      setCurrentTime(trimStart);
+      playingSelectionRef.current = false;
+      setPlaying(false);
+      return;
+    }
     if (!audio.paused && !audio.ended) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
@@ -286,7 +317,7 @@ export const AgentAudioPlayer = ({
       rafRef.current = null;
       if (audio.ended) setPlaying(false);
     }
-  }, []);
+  }, [trimOn, trimEnd, trimStart]);
   useEffect(() => {
     if (playing) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -325,6 +356,84 @@ export const AgentAudioPlayer = ({
     },
     [duration, playing, tick]
   );
+  // --- trim -----------------------------------------------------------------
+  const clampT = useCallback((t: number) => Math.min(duration, Math.max(0, t)), [duration]);
+  const setStart = useCallback((t: number) => {
+    const v = clampT(t);
+    setTrimStart(v);
+    setTrimStartText(secondsToClock(v, true));
+    if (v > trimEnd) { setTrimEnd(v); setTrimEndText(secondsToClock(v, true)); }
+  }, [clampT, trimEnd]);
+  const setEnd = useCallback((t: number) => {
+    const v = clampT(t);
+    setTrimEnd(v);
+    setTrimEndText(secondsToClock(v, true));
+    if (v < trimStart) { setTrimStart(v); setTrimStartText(secondsToClock(v, true)); }
+  }, [clampT, trimStart]);
+  const openTrim = useCallback(() => {
+    // Default window: the whole recording, so the first drag is "shorten this".
+    setTrimStart(0); setTrimStartText("0:00.0");
+    setTrimEnd(duration); setTrimEndText(secondsToClock(duration, true));
+    setTrimOn(true);
+  }, [duration]);
+  const closeTrim = useCallback(() => {
+    setTrimOn(false);
+    setDragging(null);
+    playingSelectionRef.current = false;
+  }, []);
+  const commitClock = useCallback((which: "start" | "end", text: string) => {
+    const t = clockToSeconds(text);
+    if (t === null) {
+      if (which === "start") setTrimStartText(secondsToClock(trimStart, true));
+      else setTrimEndText(secondsToClock(trimEnd, true));
+      return;
+    }
+    if (which === "start") setStart(t); else setEnd(t);
+  }, [setStart, setEnd, trimStart, trimEnd]);
+  const playSelection = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || trimEnd <= trimStart) return;
+    audio.currentTime = trimStart;
+    setCurrentTime(trimStart);
+    playingSelectionRef.current = true;
+    setPlaying(true);
+  }, [trimStart, trimEnd]);
+  const downloadClip = useCallback(() => {
+    if (!audioBuffer || trimEnd <= trimStart) return;
+    setExporting(true);
+    try {
+      const clip = sliceAudioBuffer(audioBuffer, trimStart, trimEnd);
+      saveBlob(audioBufferToWav(clip), clipFilename(downloadBaseName, trimStart, trimEnd));
+    } finally {
+      setExporting(false);
+    }
+  }, [audioBuffer, trimStart, trimEnd, downloadBaseName]);
+  const timeAtClientX = useCallback((clientX: number) => {
+    const rect = waveWrapRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || duration <= 0) return null;
+    return clampT(((clientX - rect.left) / rect.width) * duration);
+  }, [duration, clampT]);
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: PointerEvent) => {
+      const t = timeAtClientX(e.clientX);
+      if (t === null) return;
+      if (dragging === "start") setStart(Math.min(t, trimEnd)); else setEnd(Math.max(t, trimStart));
+    };
+    const onUp = () => setDragging(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [dragging, timeAtClientX, setStart, setEnd, trimStart, trimEnd]);
+  const selLeftPct = duration > 0 ? (trimStart / duration) * 100 : 0;
+  const selRightPct = duration > 0 ? (trimEnd / duration) * 100 : 100;
+  const clipLen = Math.max(0, trimEnd - trimStart);
+
   const timeFmt = (t: number) => {
     if (!Number.isFinite(t)) return "0:00";
     const m = Math.floor(t / 60);
@@ -403,26 +512,114 @@ export const AgentAudioPlayer = ({
       >
         <div className="flex items-center justify-between text-sm font-medium text-foreground mb-2">
           <span>Call Recording</span>
-          <span className="tabular-nums text-muted-foreground">
-            {timeFmt(currentTime)} / {timeFmt(duration)}
+          <span className="flex items-center gap-3">
+            <span className="tabular-nums text-muted-foreground">
+              {timeFmt(currentTime)} / {timeFmt(duration)}
+            </span>
+            {audioBuffer && duration > 0 && (
+              <button
+                type="button"
+                onClick={trimOn ? closeTrim : openTrim}
+                aria-pressed={trimOn}
+                title={trimOn ? "Close trim" : "Trim a clip"}
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors ${trimOn ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
+              >
+                {trimOn ? <X className="h-3.5 w-3.5" /> : <Scissors className="h-3.5 w-3.5" />}
+                {trimOn ? "Done" : "Trim"}
+              </button>
+            )}
           </span>
         </div>
-        {peaks.length > 0 && effectiveWidth > 0 ? (
-          <Waveform
-            peaks={peaks}
-            height={height}
-            width={effectiveWidth}
-            barWidth={barWidth}
-            gap={gap}
-            playedColor="#1E40AF" // dark blue
-            unplayedColor="#93C5FD" // light blue
-            playheadColor="#EF4444" // red
-            currentTime={currentTime}
-            duration={duration}
-            onSeek={handleSeek}
-          />
-        ) : (
-          <div className="h-[50px] rounded bg-muted/60" />
+        <div ref={waveWrapRef} className="relative select-none">
+          {peaks.length > 0 && effectiveWidth > 0 ? (
+            <Waveform
+              peaks={peaks}
+              height={height}
+              width={effectiveWidth}
+              barWidth={barWidth}
+              gap={gap}
+              playedColor="#1E40AF" // dark blue
+              unplayedColor="#93C5FD" // light blue
+              playheadColor="#EF4444" // red
+              currentTime={currentTime}
+              duration={duration}
+              onSeek={handleSeek}
+            />
+          ) : (
+            <div className="h-[50px] rounded bg-muted/60" />
+          )}
+          {trimOn && duration > 0 && (
+            <>
+              {/* dimmed outside the window; pointer-events off so seeking still works there */}
+              <div className="absolute inset-y-0 left-0 bg-background/60 pointer-events-none" style={{ width: `${selLeftPct}%` }} />
+              <div className="absolute inset-y-0 right-0 bg-background/60 pointer-events-none" style={{ width: `${100 - selRightPct}%` }} />
+              <div className="absolute inset-y-0 border-y-2 border-amber-400/70 pointer-events-none" style={{ left: `${selLeftPct}%`, width: `${Math.max(0, selRightPct - selLeftPct)}%` }} />
+              {(["start", "end"] as const).map((which) => (
+                <div
+                  key={which}
+                  role="slider"
+                  aria-label={which === "start" ? "Clip start" : "Clip end"}
+                  aria-valuemin={0}
+                  aria-valuemax={duration}
+                  aria-valuenow={which === "start" ? trimStart : trimEnd}
+                  tabIndex={0}
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(which); }}
+                  onKeyDown={(e) => {
+                    const step = e.shiftKey ? 1 : 0.1;
+                    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                      e.preventDefault();
+                      const d = e.key === "ArrowLeft" ? -step : step;
+                      if (which === "start") setStart(trimStart + d); else setEnd(trimEnd + d);
+                    }
+                  }}
+                  className="absolute top-0 bottom-0 w-3 -ml-1.5 cursor-ew-resize touch-none flex items-center justify-center"
+                  style={{ left: `${which === "start" ? selLeftPct : selRightPct}%` }}
+                >
+                  <div className="h-full w-1 rounded bg-amber-500 shadow" />
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+        {trimOn && duration > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <label className="flex items-center gap-1 text-muted-foreground">
+              From
+              <input
+                value={trimStartText}
+                onChange={(e) => setTrimStartText(e.target.value)}
+                onBlur={(e) => commitClock("start", e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") commitClock("start", (e.target as HTMLInputElement).value); }}
+                className="w-16 rounded border border-border bg-background px-1.5 py-0.5 font-mono tabular-nums text-foreground"
+                aria-label="Clip start (m:ss)"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-muted-foreground">
+              to
+              <input
+                value={trimEndText}
+                onChange={(e) => setTrimEndText(e.target.value)}
+                onBlur={(e) => commitClock("end", e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") commitClock("end", (e.target as HTMLInputElement).value); }}
+                className="w-16 rounded border border-border bg-background px-1.5 py-0.5 font-mono tabular-nums text-foreground"
+                aria-label="Clip end (m:ss)"
+              />
+            </label>
+            <button type="button" onClick={() => setStart(currentTime)} className="rounded border border-border px-2 py-0.5 hover:bg-muted" title="Use the playhead as the start">Start here</button>
+            <button type="button" onClick={() => setEnd(currentTime)} className="rounded border border-border px-2 py-0.5 hover:bg-muted" title="Use the playhead as the end">End here</button>
+            <button type="button" onClick={playSelection} disabled={clipLen <= 0} className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-50">
+              <Play className="h-3 w-3" /> Play selection
+            </button>
+            <button
+              type="button"
+              onClick={downloadClip}
+              disabled={exporting || clipLen <= 0}
+              className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-0.5 text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              title="Save the selected part as a WAV file"
+            >
+              <Download className="h-3 w-3" /> {exporting ? "Saving…" : `Download clip (${secondsToClock(clipLen)})`}
+            </button>
+          </div>
         )}
       </div>
       {/* Hidden audio element */}
