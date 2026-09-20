@@ -12,7 +12,7 @@ import { Flag, HelpCircle, ListChecks, Loader2, MessageCircleQuestion, Mic, MicO
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useDictation } from '../setup/speech';
-import { CTA_PRIMARY, INPUT_FOCUS } from '../studio-theme';
+import { CHAT_COLUMN, COMPOSER_BOX, SEND_CIRCLE } from './chat-theme';
 
 export interface QuickIntent {
   intent: string;
@@ -73,13 +73,13 @@ export default function Composer({ onSend, onQuick, sending, canAct, placeholder
   };
 
   return (
-    <div className="sticky bottom-0 z-10 border-t border-slate-200/80 bg-white/85 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur dark:border-white/10 dark:bg-[#000724]/85 sm:px-5" data-testid="chat-composer">
-      <div className="mx-auto w-full max-w-[820px]">
+    <div className="sticky bottom-0 z-10 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 dark:bg-[#000724] sm:px-5" data-testid="chat-composer">
+      <div className={CHAT_COLUMN}>
         {above}
         <div className="flex items-end gap-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-full border-slate-200/80 bg-white/70 hover:border-[#7C5CFF]/50 dark:border-white/10 dark:bg-white/5" aria-label="Quick actions" disabled={sending} data-testid="chat-quick-menu">
+              <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-full border-[#e5e7eb] bg-white text-[#374151] hover:border-[#0b1957] hover:bg-[#f2f6fa] hover:text-[#0b1957] dark:border-[#1e293b] dark:bg-[#1A2A43] dark:text-white dark:hover:bg-[#253456]" aria-label="Quick actions" disabled={sending} data-testid="chat-quick-menu">
                 <Plus className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -108,7 +108,7 @@ export default function Composer({ onSend, onQuick, sending, canAct, placeholder
               placeholder={dictation.listening ? 'Listening… tap the mic again when you are done.' : placeholder}
               rows={1}
               enterKeyHint="send"
-              className={`block w-full resize-none rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2.5 text-sm leading-5 shadow-sm outline-none placeholder:text-muted-foreground dark:border-white/10 dark:bg-[#071131]/90 ${INPUT_FOCUS} focus-visible:ring-2 ${dictation.supported ? 'pr-11' : ''}`}
+              className={`block w-full resize-none px-[18px] py-3 text-[14.5px] leading-[1.55] text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 dark:text-white dark:placeholder:text-slate-500 ${COMPOSER_BOX} ${dictation.supported ? 'pr-12' : ''}`}
               data-testid="chat-input"
             />
             {dictation.supported && (
@@ -118,14 +118,14 @@ export default function Composer({ onSend, onQuick, sending, canAct, placeholder
                 aria-pressed={dictation.listening}
                 aria-label={dictation.listening ? 'Stop dictating' : 'Dictate with your microphone'}
                 title={dictation.listening ? 'Stop dictating' : 'Dictate with your microphone'}
-                className={`absolute bottom-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dictation.listening ? 'bg-rose-500 text-white animate-pulse motion-reduce:animate-none' : 'text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-white/10'}`}
+                className={`absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dictation.listening ? 'bg-rose-500 text-white animate-pulse motion-reduce:animate-none' : 'text-gray-400 hover:bg-slate-100 hover:text-foreground dark:hover:bg-white/10'}`}
                 data-testid="chat-mic"
               >
                 {dictation.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
             )}
           </div>
-          <Button type="button" size="icon" onClick={submit} disabled={sending || !value.trim()} aria-label="Send" className={`h-10 w-10 shrink-0 rounded-full ${CTA_PRIMARY}`} data-testid="chat-send">
+          <Button type="button" size="icon" onClick={submit} disabled={sending || !value.trim()} aria-label="Send" className={`${SEND_CIRCLE} disabled:opacity-100`} data-testid="chat-send">
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

@@ -24,7 +24,8 @@ import {
 import { buildStateLabel, goalLabel, isLivePipeline } from '@/components/pipelines/PipelineCard';
 import { launchRowTitle } from '../../StudioLaunchBanner';
 import { useStudioChatContext } from '../chat-context';
-import { BORDER, CARD, DIVIDE, ICON_TILE, LINK, ROW_NEEDED, STATUS, TINT } from '../../studio-theme';
+import { LINK, ROW_NEEDED, STATUS, TINT } from '../../studio-theme';
+import { CHAT_CARD, CHAT_CARD_DIVIDE as DIVIDE, CHAT_CARD_TITLE } from '../chat-theme';
 
 const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
 const ROUTINE_LABEL: Record<string, string> = {
@@ -36,15 +37,13 @@ const ROUTINE_LABEL: Record<string, string> = {
 
 function Shell({ icon: Icon, title, hint, children, testId }: { icon: typeof Flag; title: string; hint?: string; children: React.ReactNode; testId: string }) {
   return (
-    <section className={`${CARD} overflow-hidden`} data-testid={testId}>
-      <header className={`flex items-start gap-2.5 border-b ${BORDER} px-3.5 py-2.5`}>
-        <span className={`${ICON_TILE} mt-0.5 h-7 w-7 shrink-0`}><Icon className="h-4 w-4" aria-hidden /></span>
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        </div>
+    <section className={`${CHAT_CARD} overflow-hidden`} data-testid={testId}>
+      <header className={`flex items-center gap-1.5 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700 ${CHAT_CARD_TITLE}`}>
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        <h3 className="min-w-0">{title}</h3>
+        {hint && <span className="ml-auto text-[11px] font-normal text-gray-400 dark:text-slate-400">{hint}</span>}
       </header>
-      <div className="px-3.5 py-2.5 text-sm">{children}</div>
+      <div className="px-4 py-3 text-[13.5px] text-gray-700 dark:text-gray-200">{children}</div>
     </section>
   );
 }
@@ -152,7 +151,7 @@ function FirstCampaignCard({ draft }: { draft: FirstCampaignDraft }) {
       {open && (
         <ol className="mt-2 space-y-2">
           {msgs.map((m, i) => (
-            <li key={i} className={`rounded-xl border ${BORDER} bg-slate-50/70 px-3 py-2 dark:bg-white/[.04]`} data-testid={`chat-fc-message-${i}`}>
+            <li key={i} className={`rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-[#071131]`} data-testid={`chat-fc-message-${i}`}>
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{dayLabel(m.day)}{m.subject ? ` · ${m.subject}` : ''}</p>
               <p className="mt-1 whitespace-pre-wrap text-sm">{m.body}</p>
             </li>
@@ -177,7 +176,7 @@ function LaunchCard({ launch }: { launch: LaunchStatus }) {
     >
       {launch.summary && <p className="leading-relaxed">{launch.summary}</p>}
       {rows.length > 0 && (
-        <ul className={`mt-2 divide-y ${DIVIDE} overflow-hidden rounded-xl border ${BORDER}`}>
+        <ul className={`mt-2 divide-y ${DIVIDE} overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700`}>
           {rows.map((row) => (
             <li key={row.key} className={`flex gap-2.5 px-3 py-2 ${row.status === 'needed' ? ROW_NEEDED : ''}`} data-testid={`chat-launch-row-${row.key}`}>
               <span className="mt-0.5 shrink-0">
