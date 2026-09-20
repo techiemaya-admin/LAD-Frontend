@@ -142,7 +142,7 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
   const launch = state.launch;
   const blocking = launch && !setupDone && !launch.completedAt ? launch.blocking : [];
   const pinned = blocking.length > 0 ? (
-    <div className={`sticky top-0 z-[1] flex flex-col gap-1.5 ${BANNER.base} ${BANNER.warn} sm:flex-row sm:items-center sm:justify-between`} role="status" data-testid="chat-pinned-launch">
+    <div className={`flex flex-col gap-1.5 ${BANNER.base} ${BANNER.warn} sm:flex-row sm:items-center sm:justify-between`} role="status" data-testid="chat-pinned-launch">
       <span className="flex items-start gap-2 text-sm">
         <Rocket className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.warn}`} aria-hidden />
         <span>{blocking.length} thing{blocking.length === 1 ? '' : 's'} before go-live: {blocking.map(launchRowTitle).join(', ')}.</span>

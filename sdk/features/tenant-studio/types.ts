@@ -197,6 +197,10 @@ export interface BriefPlan {
   questions: BriefQuestion[];
   /** Profile keys the backend cannot launch without; a subset of questions[].field. */
   blockingMissing: string[];
+  /** In the chat, `questions` holds only what the thread asks (required, ≤ 6); these wait for the profile page. */
+  optionalQuestions?: BriefQuestion[];
+  /** Pack field labels keyed by profile key, so cards never humanise a key. */
+  fieldLabels?: Record<string, string>;
 }
 
 export interface BriefResult {

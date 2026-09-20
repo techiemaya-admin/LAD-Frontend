@@ -68,11 +68,20 @@ function More({ open, onToggle, label }: { open: boolean; onToggle: () => void; 
 
 /* ------------------------------------------------------------------ */
 
+/** The profile facts a plan card leads with, in reading order; everything else sits behind "All N details". */
+const PLAN_HEADLINE = ['companyName', 'industry', 'productsServices', 'valueProposition', 'targetCustomers', 'icpJobTitles', 'icpLocations', 'geographicFocus', 'website'];
+const PLAN_SHOWN = 5;
+
 function PlanCard({ plan }: { plan: BriefPlan }) {
   const { openPlanReview } = useStudioChatContext();
   const [open, setOpen] = useState(false);
-  const profile = Object.entries(plan.profile ?? {}).filter(([, v]) => typeof v === 'string' && v.trim());
-  const shown = open ? profile : profile.slice(0, 4);
+  // Headline facts first (what a manager would read back), the rest behind "All N details";
+  // labels come from the pack's field contract, never from humanising a key.
+  const entries = Object.entries(plan.profile ?? {}).filter(([, v]) => typeof v === 'string' && v.trim());
+  const rank = (k: string) => { const i = PLAN_HEADLINE.indexOf(k); return i === -1 ? PLAN_HEADLINE.length : i; };
+  const profile = [...entries].sort((a, b) => rank(a[0]) - rank(b[0]));
+  const labelOf = (k: string) => plan.fieldLabels?.[k] ?? humaniseFieldKey(k);
+  const shown = open ? profile : profile.slice(0, PLAN_SHOWN);
   const channelsOn = (plan.channels ?? []).filter((c) => c.on).map((c) => CHANNEL_LABEL[c.key] ?? c.key);
   const routinesOn = (plan.routines ?? []).filter((r) => r.on).map((r) => ROUTINE_LABEL[r.key] ?? humaniseFieldKey(r.key));
   const needed = (plan.questions ?? []).filter((q) => q.required || (plan.blockingMissing ?? []).includes(q.field)).length;
@@ -80,7 +89,7 @@ function PlanCard({ plan }: { plan: BriefPlan }) {
     <Shell icon={ListChecks} title="Your plan" hint={plan.summary ? undefined : 'What it understood from your brief.'} testId="chat-card-plan">
       {plan.summary && <p className="leading-relaxed">{plan.summary}</p>}
       <dl className={`mt-2 divide-y ${DIVIDE}`}>
-        {shown.map(([k, v]) => <Row key={k} label={humaniseFieldKey(k)}>{v}</Row>)}
+        {shown.map(([k, v]) => <Row key={k} label={labelOf(k)}>{v}</Row>)}
         {(plan.goals ?? []).length > 0 && (
           <Row label="Goals">
             {plan.goals.map((g, i) => (
@@ -94,7 +103,7 @@ function PlanCard({ plan }: { plan: BriefPlan }) {
           <Row label="First campaign">{plan.firstCampaign.offering}{plan.firstCampaign.channel ? ` on ${CHANNEL_LABEL[plan.firstCampaign.channel] ?? plan.firstCampaign.channel}` : ''}{plan.firstCampaign.audience ? ` to ${plan.firstCampaign.audience}` : ''}</Row>
         )}
       </dl>
-      {profile.length > 4 && <More open={open} onToggle={() => setOpen((o) => !o)} label={open ? 'Fewer details' : `All ${profile.length} details`} />}
+      {profile.length > PLAN_SHOWN && <More open={open} onToggle={() => setOpen((o) => !o)} label={open ? 'Fewer details' : `All ${profile.length} details`} />}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {needed > 0 && <span className={TINT.warnText}>{needed} answer{needed === 1 ? '' : 's'} still needed before launch — it asks below.</span>}
         {openPlanReview && (

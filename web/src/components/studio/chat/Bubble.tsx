@@ -82,7 +82,10 @@ export default function Bubble({ message, showAvatar = true }: { message: ChatMe
   // chips — at card width so a launch checklist is not squeezed into a bubble.
   const textBlocks = blocks.filter((b) => b.type === 'text');
   const richBlocks = blocks.filter((b) => b.type !== 'text');
-  const prose = [message.text, ...textBlocks.map((b) => (b.type === 'text' ? b.text : ''))].filter((t) => t && t.trim());
+  // The backend mirrors a turn's prose into its text block(s); render those and
+  // fall back to `text` only when there is none — never both (it read doubled).
+  const fromBlocks = textBlocks.map((b) => (b.type === 'text' ? b.text : '')).filter((t) => t && t.trim());
+  const prose = (fromBlocks.length ? fromBlocks : [message.text ?? '']).filter((t, i, arr) => t.trim() && arr.indexOf(t) === i);
   return (
     <div className="flex items-end gap-2" data-testid="chat-lad-turn" data-status={message.status}>
       <div className="w-8 shrink-0 self-start">{showAvatar && <LadAvatar />}</div>
