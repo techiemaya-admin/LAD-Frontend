@@ -72,6 +72,12 @@ export interface StudioState {
    * that predate it. `curated: false` carries `pipelines: []`.
    */
   workspace?: StudioWorkspace;
+  /**
+   * The Studio chat thread's headline: how many pickers/reviews still wait
+   * on the owner and when the last message was; absent on backends that
+   * predate the thread (absence = not reported, so the classic view stays).
+   */
+  chat?: StudioChatSummary;
 }
 
 /* ------------------------------------------------------------------ */
@@ -954,4 +960,140 @@ export interface QuestionsResponse {
 export interface AnswerQuestionResult {
   question: AgentQuestion;
   proposal: { ok: boolean; overlay: Overlay | null; review: Review | null; reply: string; errors?: OverlayError[] };
+}
+
+/* ------------------------------------------------------------------ */
+/* Studio chat — one persistent "Mr LAD" thread per tenant              */
+/* ------------------------------------------------------------------ */
+
+export interface StudioChatSummary {
+  /** Pickers and reviews still waiting on the owner. */
+  pending: number;
+  lastAt: string | null;
+}
+
+export type ChatRole = 'owner' | 'lad';
+
+/** Pickers/reviews stay `pending` until answered/applied; `dismissed` = archived by a reset. */
+export type ChatMessageStatus = 'sent' | 'pending' | 'done' | 'dismissed';
+
+export type ChatArgs = Record<string, unknown>;
+
+/** One tappable row in a picker: tapping it posts `{ pick: { messageId, key } }` and the server runs `intent` + `args`. */
+export interface ChatPickerOption {
+  key: string;
+  label: string;
+  detail?: string;
+  intent: string;
+  args?: ChatArgs;
+}
+
+export interface ChatTextBlock { type: 'text'; text: string }
+
+export interface ChatPickerBlock {
+  type: 'picker';
+  id: string;
+  prompt: string;
+  multi?: boolean;
+  options: ChatPickerOption[];
+  /** Set once answered — the tick goes on this row and the rows disable. */
+  chosen?: string | string[];
+}
+
+export interface ChatReviewBlock {
+  type: 'review';
+  proposal: ProposalLite;
+  /** Curated workspaces apply-and-update (the WhatsApp agent re-reads its prompt); builders apply the overlay. */
+  apply: 'overlay' | 'apply-and-update';
+  note?: string;
+  /** Set once applied (through the `apply_review` intent). */
+  applied?: { version: number | null };
+}
+
+export type ChatCardKind = 'plan' | 'first_campaign' | 'launch' | 'pipeline' | 'state';
+
+/** `data` is the existing shape for that kind: BriefPlan / FirstCampaignDraft / LaunchStatus / PipelineSummary / StudioState. */
+export type ChatCardBlock =
+  | { type: 'card'; kind: 'plan'; data: BriefPlan }
+  | { type: 'card'; kind: 'first_campaign'; data: FirstCampaignDraft }
+  | { type: 'card'; kind: 'launch'; data: LaunchStatus }
+  | { type: 'card'; kind: 'pipeline'; data: PipelineSummary }
+  | { type: 'card'; kind: 'state'; data: StudioState };
+
+/** A chip: `intent` posts an owner turn with it; `route` navigates (e.g. `/studio?room=rehearse`, `/studio?step=6`, `/settings?tab=credits`). */
+export interface ChatActionItem {
+  label: string;
+  intent?: string;
+  args?: ChatArgs;
+  route?: string;
+}
+
+export interface ChatActionsBlock { type: 'actions'; items: ChatActionItem[] }
+
+export interface ChatResultBlock {
+  type: 'result';
+  title: string;
+  lines: string[];
+  tone?: 'ok' | 'warn' | 'error';
+}
+
+export type ChatBlock = ChatTextBlock | ChatPickerBlock | ChatReviewBlock | ChatCardBlock | ChatActionsBlock | ChatResultBlock;
+
+/**
+ * A lad turn that waits for the owner's next line: the router answers
+ * `intent` with `args` plus `{ [argKey]: <the line> }`, no model call. The
+ * composer says "Reply to Mr LAD…" and sends `replyTo` = that turn's id.
+ */
+export interface ChatAwaiting {
+  intent: string;
+  argKey: string;
+  args?: ChatArgs;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  /** What the owner said, or the bot's prose. */
+  text: string | null;
+  blocks: ChatBlock[];
+  /** The intent the router resolved (lad turns) or the picker answered (owner turns). */
+  intent: string | null;
+  /** Router args; a lad turn waiting on a free-text answer carries `awaiting`. */
+  args: ChatArgs & { awaiting?: ChatAwaiting };
+  /** Owner turn → the lad message whose picker/question it answers. */
+  replyTo: string | null;
+  status: ChatMessageStatus;
+  createdAt: string;
+}
+
+/** Message ids still waiting on the owner: pickers to tap, reviews to apply, prompts to answer with a line. */
+export interface ChatPending {
+  pickers: string[];
+  reviews: string[];
+  prompts: string[];
+}
+
+/** `GET /studio/chat` — one page of the thread (oldest → newest) plus what still waits on the owner. */
+export interface ChatThreadPage {
+  messages: ChatMessage[];
+  pending: ChatPending;
+  hasMore: boolean;
+}
+
+/** Codes `POST /studio/chat` returns as `{ success:false, error, message }` — `message` is shown inline as it is. */
+export type ChatErrorCode = 'forbidden' | 'unauthenticated' | 'validation' | 'not_found' | 'picker_answered' | 'server_error';
+
+/** `POST /studio/chat` body — exactly one of `text`, `intent` or `pick`. */
+export interface ChatSendInput {
+  text?: string;
+  intent?: string;
+  args?: ChatArgs;
+  pick?: { messageId: string; key?: string; keys?: string[] };
+  replyTo?: string;
+}
+
+/** `POST /studio/chat` — the owner turn as stored, then one or more lad turns. */
+export interface ChatSendResult {
+  owner: ChatMessage;
+  lad: ChatMessage[];
 }

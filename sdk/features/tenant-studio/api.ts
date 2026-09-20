@@ -14,6 +14,9 @@ import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../shared/apiCl
 import { apiErrorFromResponse } from '../../shared/apiError';
 import { safeStorage } from '../../shared/storage';
 import type {
+  ChatSendInput,
+  ChatSendResult,
+  ChatThreadPage,
   AgentQuestion,
   AgentQuestionContext,
   AnswerQuestionResult,
@@ -91,6 +94,7 @@ export const studioKeys = {
   launch: () => [...studioKeys.all, 'launch'] as const,
   history: (limit?: number) => [...studioKeys.all, 'history', limit ?? 50] as const,
   questions: (status?: QuestionStatus) => [...studioKeys.all, 'questions', status ?? 'open'] as const,
+  chat: () => [...studioKeys.all, 'chat'] as const,
 };
 
 /**
@@ -458,4 +462,44 @@ export async function dismissQuestion(id: string): Promise<AgentQuestion> {
 export async function createQuestion(input: { channel: StudioChannel; question: string; context?: AgentQuestionContext }): Promise<AgentQuestion> {
   const res = await apiPost<Envelope<{ question: AgentQuestion }>>(`${BASE}/studio/questions`, input);
   return res.data.data.question;
+}
+
+/* ------------------------------------------------------------------ */
+/* Studio chat — one persistent "Mr LAD" thread per tenant              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One page of the thread, newest page first: `before` is the oldest message
+ * id already on screen. An empty thread comes back seeded with the bot's
+ * first message (greeting + state card + a picker), never as `[]`.
+ */
+export async function getStudioChat(input: { before?: string; limit?: number } = {}): Promise<ChatThreadPage> {
+  const res = await apiGet<Envelope<ChatThreadPage>>(`${BASE}/studio/chat`, { params: { before: input.before, limit: input.limit ?? 50 } });
+  const d = res.data.data;
+  return normaliseThreadPage(d);
+}
+
+function normaliseThreadPage(d: ChatThreadPage | undefined): ChatThreadPage {
+  return {
+    messages: Array.isArray(d?.messages) ? d.messages : [],
+    pending: { pickers: d?.pending?.pickers ?? [], reviews: d?.pending?.reviews ?? [], prompts: d?.pending?.prompts ?? [] },
+    hasMore: Boolean(d?.hasMore),
+  };
+}
+
+/**
+ * One owner turn: free text (the router classifies it), an explicit intent
+ * (the quick actions), or a pick on a pending picker (no model call). Owner-
+ * only intents come back 403 for members, with a lad turn explaining who can.
+ */
+export async function sendStudioChat(input: ChatSendInput): Promise<ChatSendResult> {
+  const res = await apiPost<Envelope<ChatSendResult>>(`${BASE}/studio/chat`, input);
+  const d = res.data.data;
+  return { owner: d.owner, lad: Array.isArray(d?.lad) ? d.lad : [] };
+}
+
+/** Owner only: archives the thread and re-seeds it. */
+export async function resetStudioChat(): Promise<ChatThreadPage> {
+  const res = await apiPost<Envelope<ChatThreadPage | undefined>>(`${BASE}/studio/chat/reset`, {});
+  return normaliseThreadPage(res.data.data);
 }
