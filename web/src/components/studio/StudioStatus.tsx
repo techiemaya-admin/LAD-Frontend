@@ -46,6 +46,8 @@ function Room({ icon: Icon, title, ready, detail, action }: {
 export default function StudioStatus({ state, onHistory }: { state: StudioState; onHistory?: () => void }) {
   const { interview, agentPrompt, rehearsal, icpTraining, history } = state;
   const missing = interview.missing.map(k => FIELD_LABELS[k] ?? k);
+  // A curated workspace rehearses its WhatsApp support agent (the pipeline prompt), not a LinkedIn prompt.
+  const curated = state.workspace?.curated === true;
   return (
     <div className="space-y-2">
     {history !== undefined && onHistory && (
@@ -80,12 +82,18 @@ export default function StudioStatus({ state, onHistory }: { state: StudioState;
         icon={Theater}
         title="3. Rehearse"
         ready={rehearsal.ready}
-        detail={rehearsal.ready
-          ? `Your LinkedIn agent prompt is live (${agentPrompt.chars.toLocaleString()} characters). Play a prospect against it.`
-          : rehearsal.reason === 'no_agent_prompt'
-            ? 'Generate your LinkedIn agent prompt first — the rehearsal runs the prompt that actually runs.'
-            : 'Finish the interview, then generate the agent prompt.'}
-        action={rehearsal.ready ? undefined : { href: '/settings?tab=chat', label: 'Generate the agent prompt' }}
+        detail={curated
+          ? (rehearsal.ready
+            ? `Your support agent's instructions are ready (${agentPrompt.chars.toLocaleString()} characters). Play a member against it on WhatsApp.`
+            : rehearsal.reason === 'no_agent_prompt'
+              ? 'Switch the customer support pipeline on and fill in its settings first — the rehearsal runs the instructions that actually run.'
+              : 'Finish the interview, then set up the customer support pipeline.')
+          : (rehearsal.ready
+            ? `Your LinkedIn agent prompt is live (${agentPrompt.chars.toLocaleString()} characters). Play a prospect against it.`
+            : rehearsal.reason === 'no_agent_prompt'
+              ? 'Generate your LinkedIn agent prompt first — the rehearsal runs the prompt that actually runs.'
+              : 'Finish the interview, then generate the agent prompt.')}
+        action={rehearsal.ready ? undefined : curated ? { href: '/studio?room=pipelines', label: 'Open pipelines' } : { href: '/settings?tab=chat', label: 'Generate the agent prompt' }}
       />
     </div>
     </div>

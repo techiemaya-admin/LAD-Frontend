@@ -13,14 +13,19 @@
  * `/pipelines` and `/settings/pipelines` redirects (`/studio?room=pipelines`),
  * and from a Step 9 launch row whose `fix.room` is `'pipelines'` — in that
  * case `focusKey` opens that pipeline's settings straight away.
+ *
+ * `workspace` (the studio state's slice) is only read for `promptSource`:
+ * an agent still on its stored prompt gets an amber note, nothing else here
+ * depends on it.
  */
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Loader2, SlidersHorizontal } from 'lucide-react';
 import { usePipelines } from '@lad/frontend-features/snapshots';
 import type { KnobValues, PipelineKey } from '@lad/frontend-features/snapshots';
-import { studioKeys } from '@lad/frontend-features/tenant-studio';
+import { studioKeys, type StudioWorkspace } from '@lad/frontend-features/tenant-studio';
 import { PipelineCard } from '@/components/pipelines/PipelineCard';
+import PromptSourceNote from './PromptSourceNote';
 import { CARD, H_CARD, ICON_TILE, SKELETON, STATUS } from './studio-theme';
 
 /** The one address for this room; the sidebar item and the old routes point here. */
@@ -29,9 +34,11 @@ export const PIPELINES_ROOM_HREF = '/studio?room=pipelines';
 export interface PipelinesRoomProps {
   /** A pipeline whose settings should open on arrival (a launch row sent the tenant to fill them in). */
   focusKey?: string | null;
+  /** `state.workspace` — for the stored-prompt note; absent on backends that predate it. */
+  workspace?: StudioWorkspace;
 }
 
-export default function PipelinesRoom({ focusKey = null }: PipelinesRoomProps) {
+export default function PipelinesRoom({ focusKey = null, workspace }: PipelinesRoomProps) {
   const { overview, isLoading, error, pendingKey, savingKey, toggle, saveKnobs } = usePipelines();
   const focusRef = useRef<HTMLDivElement | null>(null);
   // The studio state (`workspace.pipelines`, the launch rows' knobsMissing) is
@@ -98,6 +105,8 @@ export default function PipelinesRoom({ focusKey = null }: PipelinesRoomProps) {
           {on} on, {available} available{overview.version ? ` · ${overview.vertical} edition v${overview.version}` : ` · ${overview.vertical} edition`}
         </p>
       </div>
+
+      <PromptSourceNote workspace={workspace} />
 
       {error && (
         <p role="alert" className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-sm ${STATUS.warn}`}>

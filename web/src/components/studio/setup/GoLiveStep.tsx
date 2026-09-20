@@ -58,6 +58,8 @@ import {
   type TestRunVerdict,
 } from '@lad/frontend-features/tenant-studio';
 import { useDictation } from './speech';
+import PromptSourceNote from '../PromptSourceNote';
+import { publishLine, readsSnapshotPrompt } from '../publish-copy';
 import { BORDER, BUBBLE_AGENT, BUBBLE_ME, CARD, CHIP_BASE, CHIP_IDLE, CHIP_SELECTED, CTA_PRIMARY, DIVIDE, H_STEP, INPUT_FOCUS, LINK, PANEL, ROW_NEEDED, SKELETON, STATUS, TINT } from '../studio-theme';
 
 /** Where this step sits in the 9-step setup. */
@@ -280,15 +282,11 @@ function PublishResults({ result }: { result: ApplyAndUpdateResult }) {
   return (
     <ul className="mt-2 space-y-1 text-sm" data-testid="apply-results">
       {result.published.map((p) => (
-        <li key={p.channel} className="flex items-start gap-2">
+        <li key={`${p.channel}-${p.readBy ?? ''}`} className="flex items-start gap-2" data-testid={readsSnapshotPrompt(p) ? 'apply-result-snapshot-prompt' : undefined}>
           {p.ok
             ? <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.ready}`} aria-hidden />
             : <XCircle className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.needed}`} aria-hidden />}
-          <span>
-            {p.ok
-              ? `${CHANNEL_LABEL[p.channel] ?? p.channel} agent updated${p.readBy && p.readBy !== 'stored-only' ? '' : p.readBy === 'stored-only' ? ' — it reads this once the channel is connected' : ''}.`
-              : `${CHANNEL_LABEL[p.channel] ?? p.channel} agent could not be updated${p.error ? ` — ${p.error}` : ''}. The change is saved; try again from the Tailor.`}
-          </span>
+          <span>{publishLine(p)}</span>
         </li>
       ))}
       {result.skipped.length > 0 && (
@@ -326,11 +324,13 @@ function TryYourAgent({ state }: { state: StudioState }) {
   const [applied, setApplied] = useState<ApplyAndUpdateResult | null>(null);
   const [declined, setDeclined] = useState(false);
 
+  const curated = state.workspace?.curated === true;
   const agentName = useMemo(() => {
     const ch = run?.channel ?? channel;
     const row = state.channels?.find((c) => c.channel === ch);
-    return row?.agentName?.trim() || 'Your agent';
-  }, [state.channels, run, channel]);
+    // A curated workspace's WhatsApp test is the support agent (the pipeline prompt), which has no channel profile name.
+    return row?.agentName?.trim() || (curated && ch === 'whatsapp' ? 'Your support agent' : 'Your agent');
+  }, [state.channels, run, channel, curated]);
 
   const reset = () => {
     setRun(null); setRevealed(1); setVerdicts({}); setResult(null); setApplied(null); setDeclined(false);
@@ -408,7 +408,7 @@ function TryYourAgent({ state }: { state: StudioState }) {
       {run && (
         <div className="space-y-4">
           <p className={`${PANEL} px-3 py-2 text-sm`} data-testid="test-persona">
-            Meet <span className="font-medium">{run.persona.name}</span>, {run.persona.role} at {run.persona.company}. {run.persona.situation}
+            Meet <span className="font-medium">{run.persona.name}</span>, {run.persona.role}{run.persona.company ? ` at ${run.persona.company}` : ''}. {run.persona.situation}
           </p>
           <div className="space-y-4" aria-live="polite">
             {run.turns.slice(0, revealed).map((t) => (
@@ -728,6 +728,7 @@ export default function GoLiveStep({ state, onJumpToStep, onJumpToRoom, onWentLi
           Try your agent on a made-up prospect first. Then check the list, read what will happen, and press Go live when it looks right.
         </p>
       </div>
+      <PromptSourceNote workspace={state.workspace} />
       <TryYourAgent state={state} />
       <LaunchChecklist
         launch={launch.data}

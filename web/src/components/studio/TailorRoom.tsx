@@ -6,6 +6,14 @@
  *
  * A proposal that is not applied stays as a DRAFT the next message builds
  * on, so "also add…" refines rather than restarts. Apply or discard clears it.
+ *
+ * CURATED workspaces (`curated`): the examples and the placeholder speak of
+ * the WhatsApp support agent, whose instructions the Tailor can change
+ * section by section. The chat call is the same — the backend already knows
+ * the workspace is curated — but applying goes through apply-and-update,
+ * the one route that reports when the support agent picks the change up
+ * (`readBy: 'snapshot-prompt'` + `note`). Builder workspaces keep the plain
+ * overlay PUT.
  */
 import { useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
@@ -16,15 +24,32 @@ import { useTailorChat, type ChatTurn, type Overlay, type TailorTurn } from '@la
 import ReviewCard from './ReviewCard';
 import { BORDER, BUBBLE_AGENT, BUBBLE_ME, CARD, CTA_PRIMARY, INPUT_FOCUS, PANEL } from './studio-theme';
 
-const EXAMPLES = [
+/** Builder workspaces (staffing-flavoured). */
+const BUILDER_EXAMPLES = [
   'Treat "bill rate" and "markup" as pricing questions worth handing to a human.',
   'When a prospect says they already use two agencies, offer to take one hard-to-fill role rather than backing off.',
   'Add a pipeline stage called "Intake scheduled" after "Req received".',
   'Boost hiring signals to the maximum and add a signal for companies opening a new site.',
 ];
 
-export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraft: (o?: Overlay) => void }) {
+/** Curated workspaces (wellness): the WhatsApp support agent's instructions. */
+const CURATED_EXAMPLES = [
+  'When someone asks about pricing for a class pack, say the range and offer a trial instead of handing over.',
+  'In the greeting, ask which class they have in mind before anything else.',
+  'After a booking, remind them what to bring in one line.',
+  'If they cancel, offer the next two available slots once, then stop.',
+];
+
+export interface TailorRoomProps {
+  draft?: Overlay;
+  onDraft: (o?: Overlay) => void;
+  /** Curated workspace: the examples and copy name the WhatsApp support agent. */
+  curated?: boolean;
+}
+
+export default function TailorRoom({ draft, onDraft, curated = false }: TailorRoomProps) {
   const { toast } = useToast();
+  const EXAMPLES = curated ? CURATED_EXAMPLES : BUILDER_EXAMPLES;
   const [history, setHistory] = useState<ChatTurn[]>([]);
   const [message, setMessage] = useState('');
   const [last, setLast] = useState<TailorTurn | null>(null);
@@ -51,7 +76,11 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
       <section className={CARD}>
         <div className={`border-b ${BORDER} px-4 py-2`}>
           <h3 className="text-sm font-semibold tracking-tight">Tell the Tailor what to change</h3>
-          <p className="text-xs text-muted-foreground">Handoff phrases, pipeline stages, signals, research, the agent&apos;s instructions, the profile questions — in your words.</p>
+          <p className="text-xs text-muted-foreground" data-testid="tailor-hint">
+            {curated
+              ? 'How your support agent greets, answers, books, reschedules and cancels on WhatsApp — in your words.'
+              : 'Handoff phrases, pipeline stages, signals, research, the agent\'s instructions, the profile questions — in your words.'}
+          </p>
         </div>
         <div className="max-h-[420px] min-h-[160px] space-y-2 overflow-y-auto px-4 py-3" aria-live="polite">
           {history.length === 0 && (
@@ -71,7 +100,7 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
         <div className={`flex gap-2 border-t ${BORDER} p-3`}>
           <Textarea rows={2} value={message} onChange={e => setMessage(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }}
-            placeholder={draft ? 'Refine the proposal on the right, or ask for something else…' : 'What should change?'} disabled={chat.isPending} className={INPUT_FOCUS} />
+            placeholder={draft ? 'Refine the proposal on the right, or ask for something else…' : curated ? 'What should your support agent do differently?' : 'What should change?'} disabled={chat.isPending} className={INPUT_FOCUS} />
           <Button onClick={() => void send()} disabled={chat.isPending || !message.trim()} aria-label="Send" className={CTA_PRIMARY}>
             {chat.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
@@ -81,13 +110,13 @@ export default function TailorRoom({ draft, onDraft }: { draft?: Overlay; onDraf
       <section className="space-y-3">
         {last?.proposal ? (
           <>
-            <ReviewCard proposal={last.proposal} noteDefault="Tailor chat"
+            <ReviewCard proposal={last.proposal} noteDefault="Tailor chat" applyAndUpdate={curated}
               onApplied={() => { onDraft(undefined); setLast(null); setLastValid(null); }}
               onDiscard={() => { onDraft(undefined); setLast(null); setLastValid(null); }} />
             {!last.proposal.ok && lastValid?.proposal && (
               <>
                 <p className="text-xs text-muted-foreground">Your earlier proposal is still here:</p>
-                <ReviewCard proposal={lastValid.proposal} noteDefault="Tailor chat"
+                <ReviewCard proposal={lastValid.proposal} noteDefault="Tailor chat" applyAndUpdate={curated}
                   onApplied={() => { onDraft(undefined); setLast(null); setLastValid(null); }}
                   onDiscard={() => { onDraft(undefined); setLast(null); setLastValid(null); }} />
               </>
