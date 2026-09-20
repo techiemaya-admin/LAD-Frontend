@@ -80,15 +80,17 @@ export default function Bubble({ message, showAvatar = true }: { message: ChatMe
   if (message.role === 'owner') {
     const pending = message.status === 'pending' && message.id.startsWith('optimistic-');
     return (
-      <div className="flex items-end justify-end gap-2 py-1.5" data-testid="chat-owner-turn" data-status={message.status}>
-        <div className={`flex min-w-0 max-w-[72%] flex-col items-end ${pending ? 'opacity-70' : ''}`}>
-          {ownerWords(message) && (
-            <div className={`whitespace-pre-wrap ${OWNER_BUBBLE}`}>{ownerWords(message)}</div>
-          )}
-          {blocks.length > 0 && <div className="mt-1.5 space-y-1.5">{blocks.map((b, i) => <Block key={i} block={b} message={message} />)}</div>}
-          <p className="mt-0.5 text-right text-[10px] text-gray-400 dark:text-slate-500" aria-hidden>{pending ? 'Sending…' : timeLabel(message.createdAt)}</p>
+      <div className={`flex flex-col items-end py-1.5 ${pending ? 'opacity-70' : ''}`} data-testid="chat-owner-turn" data-status={message.status}>
+        <div className="flex max-w-[72%] items-end justify-end gap-2">
+          <div className="flex min-w-0 flex-col items-end">
+            {ownerWords(message) && (
+              <div className={`whitespace-pre-wrap ${OWNER_BUBBLE}`}>{ownerWords(message)}</div>
+            )}
+            {blocks.length > 0 && <div className="mt-1.5 space-y-1.5">{blocks.map((b, i) => <Block key={i} block={b} message={message} />)}</div>}
+          </div>
+          <OwnerAvatar />
         </div>
-        <OwnerAvatar />
+        <p className="mr-[38px] mt-0.5 text-right text-[10px] text-gray-400 dark:text-slate-500" aria-hidden>{pending ? 'Sending…' : timeLabel(message.createdAt)}</p>
       </div>
     );
   }
