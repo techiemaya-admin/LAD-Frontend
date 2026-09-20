@@ -13,7 +13,7 @@
 export const CHAT_SURFACE = 'bg-white text-gray-900 dark:bg-[#000724] dark:text-white';
 
 /** The messages column — `.adv-msgs-inner` (80%, centred). */
-export const CHAT_COLUMN = 'mx-auto w-full max-w-[80%] px-2.5';
+export const CHAT_COLUMN = 'mx-auto w-full max-w-[80%] px-2.5 lg:max-w-[1040px]';
 
 /** Owner bubble — `.adv-user-msg` (+ `.dark`). */
 export const OWNER_BUBBLE = 'max-w-full rounded-[20px_20px_4px_20px] bg-[#0b1957] px-[18px] py-3 text-[14.5px] font-[450] leading-[1.65] text-white shadow-[0_2px_14px_rgba(11,25,87,.2)] dark:bg-[#2563eb] dark:shadow-[0_2px_14px_rgba(37,99,235,.3)]';
