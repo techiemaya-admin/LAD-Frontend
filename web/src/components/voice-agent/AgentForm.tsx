@@ -553,6 +553,24 @@ export function AgentForm({
                 <p className="text-xs text-muted-foreground">Standardized control for enabling background ambient masking audio.</p>
               </div>
 
+              {/* Spoken fillers — saved with the agent (voice_agents.configs.fillers) */}
+              <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-muted/40">
+                <div className="space-y-0.5">
+                  <Label htmlFor="spoken-fillers" className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    Spoken fillers
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    A short natural lead before each reply (&ldquo;ఆ…&rdquo;, &ldquo;సరే,&rdquo;, &ldquo;okay so…&rdquo;), spoken while the agent is still thinking. Off = the agent waits in silence and starts with the answer.
+                  </p>
+                </div>
+                <Switch
+                  id="spoken-fillers"
+                  checked={formData.spoken_fillers}
+                  onCheckedChange={(v) => onUpdateField('spoken_fillers', v)}
+                />
+              </div>
+
               {/* Background Sound On/Off */}
               <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-muted/40">
                 <div className="space-y-0.5">

@@ -195,6 +195,8 @@ export function VoiceAgentSettings() {
             agent_instructions: agent.agent_instructions || '',
             system_instructions: agent.system_instructions || '',
             outbound_starter_prompt: agent.outbound_starter_prompt || '',
+            // configs.fillers === false is the only "off"; absent means the worker default (on)
+            spoken_fillers: (agent.configs as Record<string, unknown> | null | undefined)?.fillers !== false,
           };
           resetForm(formData);
           setSelectedAgentVoiceSampleUrl(agent.voice_sample_url);
@@ -263,6 +265,8 @@ export function VoiceAgentSettings() {
             agent_instructions: formData.agent_instructions,
             system_instructions: formData.system_instructions,
             outbound_starter_prompt: formData.outbound_starter_prompt,
+            // Merged server-side into voice_agents.configs; only this key is touched.
+            configs: { fillers: formData.spoken_fillers },
           }),
         });
 
@@ -277,6 +281,7 @@ export function VoiceAgentSettings() {
             ? { 
                 ...agent, 
                 ...formData, 
+                configs: { ...((agent.configs as Record<string, unknown>) || {}), fillers: formData.spoken_fillers },
                 voice_id: formData.voice_id,
                 voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url || agent.voice_sample_url,
                 updated_at: new Date().toISOString() 
@@ -366,6 +371,7 @@ export function VoiceAgentSettings() {
           agent_instructions: agent.agent_instructions || '',
           system_instructions: agent.system_instructions || '',
           outbound_starter_prompt: agent.outbound_starter_prompt || '',
+          spoken_fillers: (agent.configs as Record<string, unknown> | null | undefined)?.fillers !== false,
         });
       }
     } else {

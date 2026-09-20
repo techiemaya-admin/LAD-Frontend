@@ -22,6 +22,8 @@ export interface Agent {
   accent?: string;
   provider?: string;
   provider_voice_id?: string;
+  /** Per-agent behaviour flags VOAG reads at call time (voice_agents.configs). */
+  configs?: Record<string, unknown> | null;
 }
 
 export interface AgentFormData {
@@ -32,6 +34,12 @@ export interface AgentFormData {
   agent_instructions: string;
   system_instructions: string;
   outbound_starter_prompt: string;
+  /**
+   * Spoken fillers — the worker's "ఆ…", "సరే," lead in front of each reply,
+   * spoken while the model is still thinking. Stored as configs.fillers; false
+   * turns them off, anything else leaves the worker's default (on).
+   */
+  spoken_fillers: boolean;
 }
 
 /**
@@ -86,6 +94,7 @@ export const DEFAULT_AGENT_FORM: AgentFormData = {
   agent_instructions: '',
   system_instructions: '',
   outbound_starter_prompt: '',
+  spoken_fillers: true,
 };
 
 export const LANGUAGES = [
