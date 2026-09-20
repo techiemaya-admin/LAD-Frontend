@@ -264,8 +264,12 @@ export async function getFirstCampaign(): Promise<FirstCampaignDraft | null> {
   return res.data.data?.draft ?? null;
 }
 
-/** LLM-backed: writes three messages and a builder template. Never fire on render. */
-export async function draftFirstCampaign(input: { offering?: string; channel?: FirstCampaignChannel; count?: number }): Promise<FirstCampaignResult> {
+/**
+ * LLM-backed: writes three messages and a builder template. Never fire on render.
+ * Curated workspaces: pass `pipelineKey` (or nothing — the server picks) and
+ * get a `kind:'pipeline'` draft back with no LLM call.
+ */
+export async function draftFirstCampaign(input: { offering?: string; channel?: FirstCampaignChannel; count?: number; pipelineKey?: string }): Promise<FirstCampaignResult> {
   const res = await apiPost<Envelope<FirstCampaignResult>>(`${BASE}/studio/first-campaign/draft`, input);
   return res.data.data;
 }
@@ -398,7 +402,9 @@ export async function getLaunchStatus(): Promise<LaunchStatus> {
 
 /**
  * Marks setup complete and stores the (possibly edited) summary. Does NOT
- * launch the campaign — the builder does that through its one proven path.
+ * launch a sequence campaign — the builder does that through its one proven
+ * path. For a curated workspace with a pipeline draft the server switches
+ * that pipeline on here (409 `activation_failed` with `reason` if it cannot).
  * 409 `not_ready` with `blocking` when the checklist is not green.
  */
 export async function goLive(input: { summary?: string } = {}): Promise<GoLiveResult> {

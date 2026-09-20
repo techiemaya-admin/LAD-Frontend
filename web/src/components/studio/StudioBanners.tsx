@@ -10,21 +10,27 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, History, MessagesSquare, Rocket, Send, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, History, MessagesSquare, Rocket, Send, SlidersHorizontal, X } from 'lucide-react';
 import type { StudioState } from '@lad/frontend-features/tenant-studio';
 import { launchRowTitle } from './StudioLaunchBanner';
 import { AI_TEXT, BANNER, BANNER_AI_RAIL, CARD, CARD_HOVER, LINK, TINT } from './studio-theme';
 
 const VOICE_DISMISS_KEY = 'studio.neutralVoiceBanner.dismissed';
 
-/** Green, once: the tenant just came back from the builder after Go live. */
-export function LiveBanner({ onDismiss }: { onDismiss: () => void }) {
+/**
+ * Green, once: the tenant just went live — back from the builder, or (curated)
+ * the server switched their first pipeline on, in which case `pipelineName`
+ * names it and the link goes to the Pipelines room.
+ */
+export function LiveBanner({ onDismiss, pipelineName = null }: { onDismiss: () => void; pipelineName?: string | null }) {
   return (
     <div className={`flex items-start gap-2 ${BANNER.base} ${BANNER.ready}`} data-testid="live-banner" role="status">
       <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.ready}`} aria-hidden />
       <span className="flex-1">
-        <span className="font-medium">You&rsquo;re live.</span> Your first campaign is sending. You&rsquo;ll get a daily summary, and it hands over to you the moment someone is interested.{' '}
-        <Link href="/campaigns" className={LINK}>Watch it →</Link>
+        <span className="font-medium">You&rsquo;re live.</span>{' '}
+        {pipelineName
+          ? <>{pipelineName} is switched on and running on WhatsApp. You&rsquo;ll get a daily summary, and it hands over to you the moment someone is interested.{' '}<Link href="/studio?room=pipelines" className={LINK}>See your pipelines →</Link></>
+          : <>Your first campaign is sending. You&rsquo;ll get a daily summary, and it hands over to you the moment someone is interested.{' '}<Link href="/campaigns" className={LINK}>Watch it →</Link></>}
       </span>
       <button type="button" onClick={onDismiss} className="shrink-0 rounded-md p-0.5 transition-colors duration-150 hover:bg-emerald-100 dark:hover:bg-emerald-500/20" aria-label="Dismiss">
         <X className="h-4 w-4" />
@@ -33,18 +39,34 @@ export function LiveBanner({ onDismiss }: { onDismiss: () => void }) {
   );
 }
 
-export function FirstCampaignBanner({ state, href }: { state: StudioState; href: string }) {
+/**
+ * Blue: a first campaign is drafted and waiting. A sequence draft goes to the
+ * builder (`href`); a pipeline draft has nothing to review there, so when
+ * `onReview` is given the action opens Go live instead.
+ */
+export function FirstCampaignBanner({ state, href, onReview }: { state: StudioState; href: string; onReview?: () => void }) {
   const fc = state.firstCampaign;
-  if (!fc || !fc.drafted || fc.status === 'launched' || fc.launchedCampaignId) return null;
+  if (!fc || !fc.drafted || fc.status === 'launched' || fc.launchedCampaignId || fc.launchedPipelineKey) return null;
+  const pipeline = fc.kind === 'pipeline';
   return (
     <div className={`relative flex flex-col gap-2 overflow-hidden ${CARD} ${BANNER_AI_RAIL} px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between`} data-testid="first-campaign-banner" role="status">
       <span className="flex items-start gap-2">
         <Send className="mt-0.5 h-4 w-4 shrink-0 text-[#7C5CFF] dark:text-[#B69CFF]" aria-hidden />
-        <span>Your first campaign is drafted and waiting. Review and send (2 min).</span>
+        <span>
+          {pipeline
+            ? <>{fc.offering ?? 'Your first pipeline'} is picked and waiting. Go live to switch it on (1 min).</>
+            : <>Your first campaign is drafted and waiting. Review and send (2 min).</>}
+        </span>
       </span>
-      <Link href={href} className={`inline-flex shrink-0 items-center gap-1 ${LINK}`}>
-        Review and send<ArrowRight className="h-3.5 w-3.5" />
-      </Link>
+      {pipeline && onReview ? (
+        <button type="button" onClick={onReview} className={`inline-flex shrink-0 items-center gap-1 ${LINK}`}>
+          Go live<ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      ) : !pipeline ? (
+        <Link href={href} className={`inline-flex shrink-0 items-center gap-1 ${LINK}`}>
+          Review and send<ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -81,18 +103,37 @@ export function NeutralVoiceBanner({ state, onAdd }: { state: StudioState; onAdd
 /**
  * The rooms-view entry points into Steps 7, 8 and 9, next to the team strip.
  * The "Go live" tile shows only until setup is complete; `onGoLive` is
- * omitted on backends that do not report `state.launch`.
+ * omitted on backends that do not report `state.launch`. A curated
+ * workspace also gets a Pipelines tile ("N on, M available") that stays
+ * after go-live — it is that workspace's home.
  */
-export function StudioEntries({ state, onFirstCampaign, onReferences, onGoLive }: { state: StudioState; onFirstCampaign: () => void; onReferences: () => void; onGoLive?: () => void }) {
+export function StudioEntries({ state, onFirstCampaign, onReferences, onGoLive, onPipelines }: { state: StudioState; onFirstCampaign?: () => void; onReferences?: () => void; onGoLive?: () => void; onPipelines?: () => void }) {
   const fc = state.firstCampaign;
   const refs = state.references;
   const launch = state.launch;
+  const ws = state.workspace;
   const showGoLive = Boolean(onGoLive && launch && state.setup && state.setup.completedAt === null);
-  if (fc === undefined && refs === undefined && !showGoLive) return null;
+  const showFc = fc !== undefined && Boolean(onFirstCampaign);
+  const showRefs = refs !== undefined && Boolean(onReferences);
+  const showPipelines = Boolean(onPipelines && ws?.curated);
+  if (!showFc && !showRefs && !showGoLive && !showPipelines) return null;
   const refCount = refs ? refs.documents + refs.links + refs.posts + refs.conversations + (refs.story ? 1 : 0) + refs.brand.logos + refs.brand.palette + refs.brand.fonts : 0;
-  const cols = [fc !== undefined, refs !== undefined, showGoLive].filter(Boolean).length;
+  const pipelinesOn = ws ? ws.pipelines.filter((p) => p.entitled && p.active).length : 0;
+  const pipelinesAvailable = ws ? ws.pipelines.filter((p) => p.entitled).length : 0;
+  const cols = [showFc, showRefs, showGoLive, showPipelines].filter(Boolean).length;
   return (
-    <div className={`grid gap-2 ${cols >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} data-testid="studio-entries">
+    <div className={`grid gap-2 ${cols >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : cols === 3 ? 'sm:grid-cols-3' : cols === 2 ? 'sm:grid-cols-2' : ''}`} data-testid="studio-entries">
+      {showPipelines && ws && (
+        <button type="button" onClick={onPipelines} className={`flex min-w-0 items-center justify-between gap-3 p-3 text-left ${CARD} ${CARD_HOVER} ${pipelinesOn > 0 ? 'ring-1 ring-[#7C5CFF]/40 dark:ring-[#7C5CFF]/50' : ''}`} data-testid="pipelines-tile">
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 text-sm font-semibold"><SlidersHorizontal className="h-3.5 w-3.5 text-[#7C5CFF] dark:text-[#B69CFF]" aria-hidden />Pipelines</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {pipelinesOn} on, {pipelinesAvailable} available
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        </button>
+      )}
       {showGoLive && launch && (
         <button type="button" onClick={onGoLive} className={`flex min-w-0 items-center justify-between gap-3 p-3 text-left ${CARD} ${CARD_HOVER} ${launch.canGoLive ? 'ring-1 ring-emerald-400/50 dark:ring-emerald-400/40' : ''}`} data-testid="go-live-tile">
           <span className="min-w-0">
@@ -106,18 +147,22 @@ export function StudioEntries({ state, onFirstCampaign, onReferences, onGoLive }
           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </button>
       )}
-      {fc !== undefined && (
+      {showFc && (
         <button type="button" onClick={onFirstCampaign} className={`flex min-w-0 items-center justify-between gap-3 p-3 text-left ${CARD} ${CARD_HOVER}`}>
           <span className="min-w-0">
-            <span className="block text-sm font-semibold">Your first campaign</span>
+            <span className="block text-sm font-semibold">{fc?.kind === 'pipeline' ? 'Your first pipeline' : 'Your first campaign'}</span>
             <span className="block truncate text-xs text-muted-foreground">
-              {fc?.status === 'launched' ? 'Live' : fc?.drafted ? `Drafted${fc.summary ? ` — ${fc.summary}` : fc.offering ? ` — "${fc.offering}"` : ''}` : 'Not drafted yet — it takes a minute'}
+              {fc?.status === 'launched'
+                ? 'Live'
+                : fc?.drafted
+                  ? `${fc.kind === 'pipeline' ? 'Picked' : 'Drafted'}${fc.summary ? ` — ${fc.summary}` : fc.offering ? ` — "${fc.offering}"` : ''}`
+                  : fc?.kind === 'pipeline' || (state.workspace?.curated && !fc?.drafted) ? 'Not picked yet — it takes a minute' : 'Not drafted yet — it takes a minute'}
             </span>
           </span>
           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </button>
       )}
-      {refs !== undefined && (
+      {showRefs && refs && (
         <button type="button" onClick={onReferences} className={`flex min-w-0 items-center justify-between gap-3 p-3 text-left ${CARD} ${CARD_HOVER}`}>
           <span className="min-w-0">
             <span className="block text-sm font-semibold">Brand &amp; references</span>

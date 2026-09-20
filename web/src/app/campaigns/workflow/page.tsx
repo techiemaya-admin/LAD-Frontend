@@ -15,7 +15,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import CustomWorkflowBuilder from '@/components/campaigns/CustomWorkflowBuilder';
-import { useFirstCampaign, useUpdateFirstCampaign } from '@lad/frontend-features/tenant-studio';
+import { isPipelineDraft, useFirstCampaign, useUpdateFirstCampaign } from '@lad/frontend-features/tenant-studio';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +32,9 @@ function WorkflowRoute() {
   const markLaunched = useUpdateFirstCampaign();
   // `count` is "people this week"; the builder's only knob is leads per day.
   // Memoised: the builder applies a NEW template object to the canvas.
-  const draftData = draft.data;
+  // A curated workspace's pipeline draft has no template: the server switches
+  // the pipeline on at go-live, so there is nothing for the builder to load.
+  const draftData = draft.data && !isPipelineDraft(draft.data) ? draft.data : null;
   const template = React.useMemo(
     () => (fromStudio && draftData?.template?.nodes?.length
       ? { ...draftData.template, perDay: Math.max(1, Math.ceil((draftData.count || 50) / 7)) }

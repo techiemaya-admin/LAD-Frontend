@@ -16,6 +16,7 @@ import React, { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { KnobDefinition, KnobValues, KnobOption } from '@lad/frontend-features/snapshots';
 import { useLineListEditor } from '@/components/pipelines/useLineListEditor';
+import { BORDER, CTA_PRIMARY } from '@/components/studio/studio-theme';
 
 function optionValue(option: KnobOption): string {
   return typeof option === 'string' ? option : option.value;
@@ -40,7 +41,7 @@ function KnobField({
   // switch below would change hook order between renders.
   const lineList = useLineListEditor(value, (lines) => onChange(lines));
   const base =
-    'w-full rounded-md border border-gray-300 dark:border-blue-950/40 bg-white dark:bg-[#000c3b] px-2.5 py-1.5 text-sm text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-[#071131] disabled:text-gray-400 dark:disabled:text-slate-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600';
+    'w-full rounded-md border border-gray-300 dark:border-blue-950/40 bg-white dark:bg-[#000c3b] px-2.5 py-1.5 text-sm text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-[#071131] disabled:text-gray-400 dark:disabled:text-slate-500 focus:border-[#7C5CFF]/60 focus:outline-none focus:ring-1 focus:ring-[#7C5CFF]/60';
 
   switch (knob.type) {
     case 'boolean':
@@ -212,7 +213,7 @@ export function KnobForm({
   };
 
   return (
-    <div className="mt-4 border-t border-gray-100 dark:border-blue-950/40 pt-4">
+    <div className={`mt-4 border-t ${BORDER} pt-4`}>
       <div className="grid gap-3.5">
         {knobs.map((knob) => (
           <div key={knob.key} className="grid gap-1">
@@ -245,7 +246,7 @@ export function KnobForm({
           type="button"
           onClick={() => void handleSave()}
           disabled={!dirty || saving}
-          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-slate-700"
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${CTA_PRIMARY}`}
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
           Save settings
