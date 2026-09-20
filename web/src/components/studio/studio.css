@@ -49,3 +49,17 @@
     animation: none;
   }
 }
+
+/* The three dots while Mr LAD is typing (chat thread). */
+@keyframes studio-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+.studio-typing-dot {
+  animation: studio-typing 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-typing-dot {
+    animation: none;
+  }
+}

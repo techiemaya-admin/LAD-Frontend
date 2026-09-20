@@ -16,6 +16,7 @@ export {
   saveBrandStory, uploadBrandLogos, saveBrand, uploadBrandGuide, emptyBrand,
   runTestRun, sendTestRunFeedback, applyAndUpdate, getLaunchStatus, goLive,
   getStudioHistory, undoHistory, listQuestions, answerQuestion, dismissQuestion, createQuestion,
+  getStudioChat, sendStudioChat, resetStudioChat,
 } from './api';
 export { isPipelineDraft } from './types';
 export type { ChannelsResponse } from './api';
@@ -28,7 +29,9 @@ export {
   useSaveBrandStory, useUploadBrandLogos, useSaveBrand, useUploadBrandGuide,
   useTestRun, useTestRunFeedback, useApplyAndUpdate, useLaunchStatus, useGoLive,
   useStudioHistory, useUndoHistory, useQuestions, useAnswerQuestion, useDismissQuestion, useCreateQuestion,
+  useStudioChat, useSendChat, useResetChat,
 } from './hooks';
+export type { ChatThread, SendChatVars } from './hooks';
 export type {
   Overlay, StudioState, ReviewChange, ReviewRow, Review, OverlayError, Proposal, ProfileSuggestion, TailorTurn,
   ChatTurn, Persona, TranscriptTurn, RehearsalResult, RefineResult, SampleLead, IcpScoreResult, Verdict,
@@ -50,4 +53,7 @@ export type {
   LaunchCostLine, LaunchCredits, LaunchSchedule, LaunchStatus, StudioLaunchSummary, GoLiveResult,
   HistoryKind, UndoAction, HistoryEntry, UndoResult, UndoErrorReason,
   QuestionSource, QuestionStatus, AgentQuestionContext, AgentQuestion, QuestionsResponse, AnswerQuestionResult,
+  StudioChatSummary, ChatRole, ChatMessageStatus, ChatArgs, ChatPickerOption, ChatTextBlock, ChatPickerBlock, ChatReviewBlock,
+  ChatCardKind, ChatCardBlock, ChatActionItem, ChatActionsBlock, ChatResultBlock, ChatBlock, ChatAwaiting, ChatMessage, ChatPending,
+  ChatThreadPage, ChatErrorCode, ChatSendInput, ChatSendResult,
 } from './types';

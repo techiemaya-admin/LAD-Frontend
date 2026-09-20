@@ -27,10 +27,17 @@
  * old `/pipelines` routes point there). Step 7 picks a pipeline instead of
  * drafting messages, and Go live switches it on server-side — no builder
  * hand-off. A tenant outside an edition sees none of this.
+ *
+ * CHAT (`state.chat` reported): the Studio's front door is one persistent
+ * "Mr LAD" thread. It is the home once setup is complete or for a brand-new
+ * tenant (setup runs in the thread, with "Use the step-by-step setup
+ * instead" opening the frame above), and always at `/studio?chat=1`. Every
+ * room and step stays reachable — `?room=`, `?step=N`, the thread's own
+ * `open`/launch actions — and comes back to the thread.
  */
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, MessagesSquare, SlidersHorizontal, Target, Theater } from 'lucide-react';
+import { ArrowLeft, Loader2, MessagesSquare, SlidersHorizontal, Sparkles, Target, Theater } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import StudioStatus from '@/components/studio/StudioStatus';
@@ -42,24 +49,26 @@ import RehearsalRoom from '@/components/studio/RehearsalRoom';
 import IcpRoom from '@/components/studio/IcpRoom';
 import TailorRoom from '@/components/studio/TailorRoom';
 import PipelinesRoom from '@/components/studio/PipelinesRoom';
+import { StudioChat } from '@/components/studio/chat';
 import {
   BriefStep, ChannelsStep, CHANNELS_STEP, FirstCampaignStep, FIRST_CAMPAIGN_BUILDER_HREF, FIRST_CAMPAIGN_STEP, GoLiveStep,
   GO_LIVE_BUILDER_HREF, GO_LIVE_STEP, PlanReview, ReferencesStep, REFERENCES_STEP, SetupChecklist, SetupShell, SETUP_TOTAL_STEPS,
 } from '@/components/studio/setup';
-import { AI_TEXT, SKELETON, STATUS, SURFACE, TAB_LIST, TAB_TRIGGER } from '@/components/studio/studio-theme';
+import { AI_TEXT, CHIP_BASE, CHIP_IDLE, SKELETON, STATUS, SURFACE, TAB_LIST, TAB_TRIGGER } from '@/components/studio/studio-theme';
 import '@/components/studio/studio.css';
 import {
   useSaveSetup,
   useStudioState,
   type ApplyResult,
+  type BriefPlan,
   type BriefResult,
   type LaunchRowRoom,
   type Overlay,
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
 
-/** 'pipelines' = the Pipelines room opened inside the setup frame from Step 7 or 9, returning there afterwards. */
-type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'golive' | 'pipelines' | 'studio';
+/** 'pipelines' = the Pipelines room opened inside the setup frame from Step 7 or 9, returning there afterwards; 'chat' = the Mr LAD thread. */
+type SetupPhase = 'brief' | 'review' | 'checklist' | 'channels' | 'campaign' | 'references' | 'golive' | 'pipelines' | 'studio' | 'chat';
 type StepPhase = Extract<SetupPhase, 'channels' | 'campaign' | 'references' | 'golive'>;
 type RoomTab = 'pipelines' | 'icp' | 'rehearse' | 'tailor';
 const ROOM_TABS: RoomTab[] = ['pipelines', 'icp', 'rehearse', 'tailor'];
@@ -110,8 +119,22 @@ function resumesStep(state: StudioState): StepPhase | null {
 
 const BACK_LABEL: Record<SetupPhase, string> = {
   studio: 'Back to the studio', checklist: 'Back to the checklist', golive: 'Back to go live', campaign: 'Back to your first campaign',
-  brief: 'Back', review: 'Back', channels: 'Back', references: 'Back', pipelines: 'Back',
+  brief: 'Back', review: 'Back', channels: 'Back', references: 'Back', pipelines: 'Back', chat: 'Back to Mr LAD',
 };
+
+/** Set once the tenant has talked to Mr LAD mid-setup, so the next visit lands on the thread rather than a resumed step. */
+const CHAT_PREFERRED_KEY = 'studio.chat.preferred'; // mirrored in components/studio/chat/StudioChat.tsx
+
+/**
+ * The thread is the home once setup is complete, for a brand-new tenant, or
+ * for one who chose it mid-setup; `?chat=1` opens it on any backend that has it.
+ */
+function chatIsHome(state: StudioState, wantsChat: boolean, preferred: boolean): boolean {
+  if (wantsChat) return true;
+  if (state.chat === undefined) return false; // backend predates the thread: the classic view stays
+  const setupDone = Boolean(state.setup && state.setup.completedAt !== null);
+  return setupDone || preferred || needsSetup(state);
+}
 
 /** `useSearchParams` needs a Suspense boundary above it for the static shell; the page itself is unchanged. */
 export default function StudioPage() {
@@ -142,15 +165,43 @@ function StudioPageInner() {
   // The Pipelines room opened from Step 7 or 9 (curated): where it returns to, and which pipeline's settings to open.
   const [pipelinesReturn, setPipelinesReturn] = useState<SetupPhase>('golive');
   const [pipelinesFocus, setPipelinesFocus] = useState<string | null>(null);
+  // The rooms view opened from the thread keeps a way back; the plan review opened from a plan card too.
+  const [roomsReturn, setRoomsReturn] = useState<SetupPhase | null>(null);
+  const [reviewFromChat, setReviewFromChat] = useState(false);
   const [stepVisited, setStepVisited] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   // Which room the tab rail shows. `?room=` (sidebar, redirects, bookmarks)
   // wins whenever it changes; a tab press only changes local state.
   const roomParam = searchParams.get('room');
-  const [tab, setTab] = useState<RoomTab | null>(isRoomTab(roomParam) ? roomParam : null);
+  const wantsChat = searchParams.get('chat') === '1';
+  const stepParam = searchParams.get('step');
+  const [chatPreferred, setChatPreferred] = useState(false);
   useEffect(() => {
+    try { setChatPreferred(window.localStorage.getItem(CHAT_PREFERRED_KEY) === '1'); } catch { /* private mode: the rule below decides */ }
+  }, []);
+  const [tab, setTab] = useState<RoomTab | null>(isRoomTab(roomParam) ? roomParam : null);
+  // What is on screen, for effects that must not close over a stale phase.
+  const phaseRef = useRef<SetupPhase | null>(null);
+  useEffect(() => {
+    if (!isRoomTab(roomParam) && roomParam !== 'history') return;
     if (isRoomTab(roomParam)) setTab(roomParam);
+    // `?room=history` = the change timeline drawer over the rooms view.
+    if (roomParam === 'history') setHistoryOpen(true);
+    // A sidebar item or bookmark while the thread is up: show the room, keep the way back.
+    if (phaseRef.current === 'chat') { setRoomsReturn('chat'); setPhase('studio'); }
   }, [roomParam]);
+  // The address bar going back to a bare `/studio` (the sidebar's Studio item)
+  // means "home" — drop the local phase so the home view recomputes. `?live=1`
+  // being cleared is not that: the rooms must keep showing the live banner.
+  const paramsKey = searchParams.toString();
+  const prevParamsRef = useRef(paramsKey);
+  useEffect(() => {
+    const prev = prevParamsRef.current;
+    prevParamsRef.current = paramsKey;
+    if (paramsKey !== '' || prev === paramsKey) return;
+    const before = new URLSearchParams(prev);
+    if (before.has('room') || before.has('step') || before.has('chat')) { setPhase(null); setRoomsReturn(null); }
+  }, [paramsKey]);
   // `?live=1` — the first campaign just went live (the builder launched it, or
   // a curated workspace's pipeline was switched on). Read once and cleared
   // from the address bar so a refresh does not repeat it.
@@ -184,11 +235,56 @@ function StudioPageInner() {
     setStepVisited(true);
     setPhase(step);
   };
-  /** A launch row's `fix.step`: Steps 6–8 open in the frame and return to Step 9; 1–5 live in the profile settings. */
-  const jumpToStep = (step: number) => {
+  /** A step number from a launch row or a `/studio?step=N` route: Steps 6–9 open in the frame and return to `from`; 1–5 live in the profile settings. */
+  const jumpToStepFrom = (step: number, from: SetupPhase) => {
     const target = PHASE_OF_STEP[step];
-    if (target && target !== 'golive' && state.data && reports(state.data, target)) openStep(target, 'golive');
+    if (target && target !== 'golive' && state.data && reports(state.data, target)) openStep(target, from);
+    else if (target === 'golive' && from !== 'golive' && state.data && reports(state.data, 'golive')) openStep('golive', from);
     else router.push(PROFILE_HREF);
+  };
+  /** A launch row's `fix.step` on Step 9: Steps 6–8 open in the frame and return to Step 9; 1–5 live in the profile settings. */
+  const jumpToStep = (step: number) => jumpToStepFrom(step, 'golive');
+  // `/studio?step=N` (a chat action, a bookmark): open that step once the state is here, then clear it from the address bar.
+  const stepConsumedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!stepParam || !state.data || stepConsumedRef.current === stepParam) return;
+    stepConsumedRef.current = stepParam;
+    const n = Number(stepParam);
+    if (Number.isInteger(n) && n >= 1 && n <= SETUP_TOTAL_STEPS) jumpToStepFrom(n, chatIsHome(state.data, wantsChat, chatPreferred) ? 'chat' : 'studio');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('step');
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch { /* no window: nothing to clear */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepParam, state.data]);
+  /**
+   * A route a chat turn carries. `/studio?room=…` and `/studio?step=N` open
+   * inside the Studio and come back to the thread; `/studio?chat=1` is the
+   * thread itself; any other page navigates.
+   */
+  const navigateFromChat = (route: string) => {
+    let url: URL;
+    try { url = new URL(route, window.location.origin); } catch { return; }
+    if (url.origin !== window.location.origin) { window.open(url.href, '_blank', 'noopener'); return; }
+    if (url.pathname.replace(/\/$/, '') !== '/studio') { router.push(`${url.pathname}${url.search}${url.hash}`); return; }
+    const step = Number(url.searchParams.get('step'));
+    const room = url.searchParams.get('room');
+    const focus = url.searchParams.get('focus');
+    if (Number.isInteger(step) && step >= 1) { jumpToStepFrom(step, 'chat'); return; }
+    if (isRoomTab(room)) setTab(room);
+    if (room === 'history') setHistoryOpen(true);
+    // `&focus=<key>` opens that pipeline's settings in the room (a switched-on pipeline still missing a setting).
+    setPipelinesFocus(room === 'pipelines' && focus ? focus : null);
+    if (url.searchParams.get('chat') === '1' && !room) { setPhase('chat'); return; }
+    setRoomsReturn('chat');
+    setPhase('studio');
+  };
+  /** A plan card's "Edit the full plan": today's review card, coming back to the thread. */
+  const openPlanReviewFromChat = (plan: BriefPlan) => {
+    setProposal({ result: { plan, sources: { website: false, linkedin: false, instagram: false }, model: null, links: [] }, brief: '', links: [] });
+    setReviewFromChat(true);
+    setPhase('review');
   };
   /** Open the Pipelines room inside the setup frame (from Step 7 or 9) and come back to that step afterwards. */
   const openPipelinesRoom = (from: SetupPhase, focusKey: string | null = null) => {
@@ -229,10 +325,17 @@ function StudioPageInner() {
 
   const data = state.data;
   const curated = isCurated(data);
+  // Sticky: a thread that is on screen stays on screen while the state it
+  // was computed from changes underneath it (applying the plan marks step 1
+  // done, which would otherwise flip a new tenant to the rooms mid-setup).
+  const chatHome = chatIsHome(data, wantsChat, chatPreferred) || phaseRef.current === 'chat';
+  const chatAvailable = data.chat !== undefined || wantsChat;
   // A curated tenant sent straight to the Pipelines room (sidebar, redirect,
-  // bookmark) gets the room, not a brief or a resumed step.
-  const roomRequested = curated && tab === 'pipelines' && isRoomTab(roomParam);
-  const effectivePhase: SetupPhase = phase ?? (roomRequested ? 'studio' : needsSetup(data) ? 'brief' : resumesStep(data) ?? 'studio');
+  // bookmark) gets the room, not a brief or a resumed step; with the thread
+  // as home, any `?room=` does.
+  const roomRequested = (isRoomTab(roomParam) && ((curated && tab === 'pipelines') || (chatHome && (roomParam !== 'pipelines' || curated)))) || (chatHome && roomParam === 'history');
+  const effectivePhase: SetupPhase = phase ?? (roomRequested ? 'studio' : chatHome ? 'chat' : needsSetup(data) ? 'brief' : resumesStep(data) ?? 'studio');
+  phaseRef.current = effectivePhase;
   const hasChannels = reports(data, 'channels');
   const hasFirstCampaign = reports(data, 'campaign');
   const hasReferences = reports(data, 'references');
@@ -242,20 +345,44 @@ function StudioPageInner() {
   const plan = applied?.plan ?? proposal?.result.plan;
   const personaName = plan?.profile.senderName ?? null;
 
+  if (effectivePhase === 'chat') {
+    return (
+      <StudioChat
+        state={data}
+        onNavigate={navigateFromChat}
+        onOpenSetupSteps={setupDone ? undefined : () => { setRoomsReturn(null); setPhase(needsSetup(data) ? 'brief' : resumesStep(data) ?? 'checklist'); }}
+        onOpenRooms={() => { setRoomsReturn('chat'); setPhase('studio'); }}
+        onOpenPlanReview={openPlanReviewFromChat}
+      />
+    );
+  }
+
   if (effectivePhase === 'brief') {
     return (
       <SetupShell
         step={1}
         title="Set up your workspace"
         aside={(
-          <button
-            type="button"
-            onClick={() => markStepOneDone(() => setPhase('studio'))}
-            disabled={saveSetup.isPending}
-            className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline disabled:opacity-50 dark:hover:text-[#B69CFF]"
-          >
-            Skip to the studio
-          </button>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {chatAvailable && (
+              <button
+                type="button"
+                onClick={() => setPhase('chat')}
+                className="inline-flex items-center gap-1 underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline dark:hover:text-[#B69CFF]"
+                data-testid="brief-open-chat"
+              >
+                <Sparkles className="h-3 w-3" aria-hidden />Set up by chatting with Mr LAD instead
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => markStepOneDone(() => setPhase('studio'))}
+              disabled={saveSetup.isPending}
+              className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline disabled:opacity-50 dark:hover:text-[#B69CFF]"
+            >
+              Skip to the studio
+            </button>
+          </span>
         )}
       >
         <BriefStep
@@ -270,7 +397,15 @@ function StudioPageInner() {
 
   if (effectivePhase === 'review' && proposal) {
     return (
-      <SetupShell step={1} title="Review your plan">
+      <SetupShell
+        step={1}
+        title="Review your plan"
+        aside={reviewFromChat ? (
+          <button type="button" onClick={() => { setReviewFromChat(false); setPhase('chat'); }} className="underline-offset-2 transition-colors duration-150 hover:text-[#7C5CFF] hover:underline dark:hover:text-[#B69CFF]">
+            {BACK_LABEL.chat}
+          </button>
+        ) : undefined}
+      >
         <PlanReview
           key={`${proposal.result.model ?? 'plan'}-${proposal.result.plan.summary.length}`}
           result={proposal.result}
@@ -278,11 +413,15 @@ function StudioPageInner() {
           links={proposal.links}
           onApplied={(res) => {
             setApplied(res);
-            setPhase('checklist');
+            const fromChat = reviewFromChat;
+            setReviewFromChat(false);
+            setPhase(fromChat ? 'chat' : 'checklist');
           }}
           onStartOver={() => {
             setProposal(null);
-            setPhase('brief');
+            const fromChat = reviewFromChat;
+            setReviewFromChat(false);
+            setPhase(fromChat ? 'chat' : 'brief');
           }}
         />
       </SetupShell>
@@ -421,7 +560,19 @@ function StudioPageInner() {
     <div className={`min-h-full ${SURFACE}`}>
     <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
       <header className="mb-5">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Tenant <span className={AI_TEXT}>Studio</span></h1>
+        {roomsReturn === 'chat' && (
+          <button type="button" onClick={() => { setRoomsReturn(null); setPhase('chat'); }} className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-150 hover:text-[#7C5CFF] dark:hover:text-[#B69CFF]" data-testid="rooms-back-to-chat">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />{BACK_LABEL.chat}
+          </button>
+        )}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Tenant <span className={AI_TEXT}>Studio</span></h1>
+          {chatAvailable && roomsReturn !== 'chat' && (
+            <button type="button" onClick={() => { setRoomsReturn(null); setPhase('chat'); }} className={`${CHIP_BASE} ${CHIP_IDLE} gap-1.5 px-3 py-1.5 text-xs`} data-testid="rooms-open-chat">
+              <Sparkles className="h-3.5 w-3.5 text-[#7C5CFF] dark:text-[#B69CFF]" aria-hidden />Chat with Mr LAD
+            </button>
+          )}
+        </div>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Teach the platform your business: finish the interview, train it on real leads, rehearse against your own agent, and turn feedback into changes you review before they apply.
         </p>
@@ -484,7 +635,7 @@ function StudioPageInner() {
         </TabsList>
         {curated && (
           <TabsContent value="pipelines" className="mt-4">
-            <PipelinesRoom />
+            <PipelinesRoom focusKey={roomsReturn === 'chat' ? pipelinesFocus : null} />
           </TabsContent>
         )}
         <TabsContent value="icp" className="mt-4">

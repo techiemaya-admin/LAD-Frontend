@@ -79,18 +79,30 @@ export interface ReviewCardProps {
   onApplied?: () => void;
   onDiscard?: () => void;
   noteDefault?: string;
+  /**
+   * Apply through the caller instead of the card's own PUT/POST — the Studio
+   * chat routes the press through its `apply_review` turn so the thread
+   * records it. With this set, `applying` drives the spinner and
+   * `appliedVersion` (or a resolved call) shows the Applied state.
+   */
+  onApply?: () => Promise<unknown> | void;
+  applying?: boolean;
+  /** Already applied (e.g. a review block reloaded from the thread): shows Applied with the version when known. */
+  appliedVersion?: number | null;
 }
 
 const CHANNEL_LABEL: Record<string, string> = { linkedin: 'LinkedIn', email: 'Email', whatsapp: 'WhatsApp', instagram: 'Instagram', voice: 'Voice' };
 
-export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, applyAndUpdate, onApplied, onDiscard, noteDefault }: ReviewCardProps) {
+export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, applyAndUpdate, onApplied, onDiscard, noteDefault, onApply, applying = false, appliedVersion }: ReviewCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const applyPlain = useApplyOverlay();
   const applyFull = useApplyAndUpdate();
   const apply = applyAndUpdate ? applyFull : applyPlain;
   const canApply = user?.role === 'admin' || user?.role === 'owner';
-  const [applied, setApplied] = useState(false);
+  const [appliedLocal, setApplied] = useState(false);
+  const applied = appliedLocal || appliedVersion !== undefined;
+  const busy = onApply ? applying : apply.isPending;
 
   const groups = useMemo(() => {
     const m = new Map<string, ReviewRow[]>();
@@ -104,6 +116,15 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
   const summary = proposal.review?.summary;
 
   const doApply = async () => {
+    if (onApply) {
+      try {
+        await onApply();
+        onApplied?.();
+      } catch (e: unknown) {
+        toast({ title: 'Could not apply', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });
+      }
+      return;
+    }
     try {
       if (applyAndUpdate) {
         const r = await applyFull.mutateAsync({ overlay: proposal.overlay, note: noteDefault });
@@ -162,16 +183,16 @@ export default function ReviewCard({ proposal, reply, appliesOnNextGenerate, app
           ))}
           <div className={`flex flex-wrap items-center gap-2 border-t ${BORDER} px-4 py-3`}>
             {applied ? (
-              <span className={`inline-flex items-center gap-1 text-sm ${TINT.readyText}`}><Check className="h-4 w-4" /> Applied</span>
+              <span className={`inline-flex items-center gap-1 text-sm ${TINT.readyText}`}><Check className="h-4 w-4" /> Applied{typeof appliedVersion === 'number' ? ` as version ${appliedVersion}` : ''}</span>
             ) : canApply ? (
-              <Button size="sm" onClick={doApply} disabled={apply.isPending || groups.length === 0} className={CTA_PRIMARY}>
-                {apply.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Apply this change
+              <Button size="sm" onClick={doApply} disabled={busy || groups.length === 0} className={CTA_PRIMARY}>
+                {busy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Apply this change
               </Button>
             ) : (
               <span className="text-xs text-muted-foreground">Only a workspace admin can apply changes. Share this with one.</span>
             )}
             {!applied && onDiscard && (
-              <Button size="sm" variant="ghost" onClick={onDiscard} disabled={apply.isPending}>Discard</Button>
+              <Button size="sm" variant="ghost" onClick={onDiscard} disabled={busy}>Discard</Button>
             )}
             {appliesOnNextGenerate && (
               <span className="ml-auto text-xs text-muted-foreground">
