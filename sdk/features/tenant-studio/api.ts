@@ -491,6 +491,7 @@ function normaliseThreadPage(d: ChatThreadPage | undefined): ChatThreadPage {
  * One owner turn: free text (the router classifies it), an explicit intent
  * (the quick actions), or a pick on a pending picker (no model call). Owner-
  * only intents come back 403 for members, with a lad turn explaining who can.
+ * `voice: true` (the owner spoke) asks for `speech` on every lad turn.
  */
 export async function sendStudioChat(input: ChatSendInput): Promise<ChatSendResult> {
   const res = await apiPost<Envelope<ChatSendResult>>(`${BASE}/studio/chat`, input);

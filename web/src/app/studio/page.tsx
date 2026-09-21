@@ -37,7 +37,8 @@
  * tenant (setup runs in the thread, with "Use the step-by-step setup
  * instead" opening the frame above), and always at `/studio?chat=1`. Every
  * room and step stays reachable — `?room=`, `?step=N`, the thread's own
- * `open`/launch actions — and comes back to the thread.
+ * `open`/launch actions — and comes back to the thread. `/studio?voice=1`
+ * opens the thread with the voice-chat offer (a tap starts it).
  */
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -177,7 +178,8 @@ function StudioPageInner() {
   // Which room the tab rail shows. `?room=` (sidebar, redirects, bookmarks)
   // wins whenever it changes; a tab press only changes local state.
   const roomParam = searchParams.get('room');
-  const wantsChat = searchParams.get('chat') === '1';
+  const wantsVoice = searchParams.get('voice') === '1';
+  const wantsChat = searchParams.get('chat') === '1' || wantsVoice;
   const stepParam = searchParams.get('step');
   const [chatPreferred, setChatPreferred] = useState(false);
   useEffect(() => {
@@ -204,7 +206,7 @@ function StudioPageInner() {
     prevParamsRef.current = paramsKey;
     if (paramsKey !== '' || prev === paramsKey) return;
     const before = new URLSearchParams(prev);
-    if (before.has('room') || before.has('step') || before.has('chat')) { setPhase(null); setRoomsReturn(null); }
+    if (before.has('room') || before.has('step') || before.has('chat') || before.has('voice')) { setPhase(null); setRoomsReturn(null); }
   }, [paramsKey]);
   // `?live=1` — the first campaign just went live (the builder launched it, or
   // a curated workspace's pipeline was switched on). Read once and cleared
@@ -280,7 +282,7 @@ function StudioPageInner() {
     if (room === 'history') setHistoryOpen(true);
     // `&focus=<key>` opens that pipeline's settings in the room (a switched-on pipeline still missing a setting).
     setPipelinesFocus(room === 'pipelines' && focus ? focus : null);
-    if (url.searchParams.get('chat') === '1' && !room) { setPhase('chat'); return; }
+    if ((url.searchParams.get('chat') === '1' || url.searchParams.get('voice') === '1') && !room) { setPhase('chat'); return; }
     setRoomsReturn('chat');
     setPhase('studio');
   };
@@ -357,6 +359,7 @@ function StudioPageInner() {
         onOpenSetupSteps={setupDone ? undefined : () => { setRoomsReturn(null); setPhase(needsSetup(data) ? 'brief' : resumesStep(data) ?? 'checklist'); }}
         onOpenRooms={() => { setRoomsReturn('chat'); setPhase('studio'); }}
         onOpenPlanReview={openPlanReviewFromChat}
+        autoVoice={wantsVoice}
       />
     );
   }

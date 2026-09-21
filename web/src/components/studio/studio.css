@@ -63,3 +63,27 @@
     animation: none;
   }
 }
+
+/* The voice-chat pill's waveform: four bars breathing while Mr LAD listens
+   or speaks; still (mid-height) otherwise and under reduced motion. */
+@keyframes studio-voice-bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+.studio-voice-bar {
+  transform: scaleY(0.5);
+  transform-origin: center;
+}
+.studio-voice-bars-live .studio-voice-bar {
+  animation: studio-voice-bar 1s ease-in-out infinite;
+}
+.studio-voice-bars-live .studio-voice-bar:nth-child(2) { animation-delay: 0.12s; }
+.studio-voice-bars-live .studio-voice-bar:nth-child(3) { animation-delay: 0.24s; }
+.studio-voice-bars-live .studio-voice-bar:nth-child(4) { animation-delay: 0.36s; }
+.studio-voice-bars-speaking .studio-voice-bar { animation-duration: 0.7s; }
+@media (prefers-reduced-motion: reduce) {
+  .studio-voice-bars-live .studio-voice-bar {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}

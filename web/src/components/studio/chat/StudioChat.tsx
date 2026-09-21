@@ -13,8 +13,14 @@
  * Failure is not emptiness: a thread that fails to load says so and offers
  * the step-by-step setup / the rooms; a failed send is an inline error turn
  * and the owner's words go back into the box.
+ *
+ * Voice chat (the Grok pill): the same thread, hands-free — the owner
+ * speaks, the words go up with `voice: true`, every lad turn comes back with
+ * `speech` and is read aloud, then the mic opens again. A spoken answer to a
+ * picker is matched by the backend; nothing applies without the same
+ * explicit confirm a tap needs.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ListOrdered, LayoutGrid, MoreHorizontal, RefreshCw, RotateCcw, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -27,6 +33,7 @@ import {
   useStudioChat,
   type BriefPlan,
   type ChatMessage,
+  type ChatSendResult,
   type SendChatVars,
   type StudioState,
 } from '@lad/frontend-features/tenant-studio';
@@ -40,6 +47,9 @@ import { StudioChatContext, type StudioChatContextValue } from './chat-context';
 import Composer, { type QuickIntent } from './Composer';
 import MessageList from './MessageList';
 import { LadAvatar } from './Bubble';
+import { useVoiceSession } from './voice/useVoiceSession';
+import { fallbackSpeech } from './voice/tts';
+import VoiceChatPill, { VoiceStartPill } from './voice/VoiceChatPill';
 
 export interface StudioChatProps {
   state: StudioState;
@@ -51,6 +61,8 @@ export interface StudioChatProps {
   onOpenRooms?: () => void;
   /** A plan card's "Edit the full plan": today's PlanReview with this plan. */
   onOpenPlanReview?: (plan: BriefPlan) => void;
+  /** `/studio?voice=1`: offer to start voice chat as soon as the thread is up (a tap is still needed — browsers only speak after a gesture). */
+  autoVoice?: boolean;
 }
 
 /** The server's `message` as it is (a 403 already says who can); status-based words only when it sent none. */
@@ -73,7 +85,7 @@ function errorTurn(title: string, detail: string): ChatMessage {
   };
 }
 
-export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpenRooms, onOpenPlanReview }: StudioChatProps) {
+export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpenRooms, onOpenPlanReview, autoVoice = false }: StudioChatProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const canAct = user?.role === 'admin' || user?.role === 'owner';
@@ -99,28 +111,53 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
     return undefined;
   }, [messages, prompts]);
 
-  const post = useCallback((vars: SendChatVars) => {
-    if (send.isPending) return;
-    send.mutate(vars, {
-      onSuccess: (result) => {
-        setTrailing([]);
-        // A tenant who talks to Mr LAD mid-setup lands back on the thread next visit.
-        try { window.localStorage.setItem(CHAT_PREFERRED_KEY, '1'); } catch { /* private mode: the home rule still applies */ }
-        // The `open` intent answers with a route: go there straight away.
-        const opened = result.lad.find((m) => m.intent === 'open');
-        const route = opened?.blocks.flatMap((b) => (b.type === 'actions' ? b.items : [])).find((i) => i.route && !i.intent)?.route;
-        if (route) onNavigate(route);
-      },
-      onError: (err) => {
-        const detail = describeError(err);
-        setTrailing((t) => [...t, errorTurn(vars.text ? "That didn't go through — your words are back in the box." : "That didn't go through — tap it again.", detail)]);
-        if (vars.text) setRestore({ text: vars.text, at: Date.now() });
-      },
-    });
+  // Resolves the server's turns (the voice loop speaks them), or null when the
+  // send failed — the failure is already an inline error turn by then.
+  const post = useCallback(async (vars: SendChatVars): Promise<ChatSendResult | null> => {
+    if (send.isPending) return null;
+    try {
+      const result = await send.mutateAsync(vars);
+      setTrailing([]);
+      // A tenant who talks to Mr LAD mid-setup lands back on the thread next visit.
+      try { window.localStorage.setItem(CHAT_PREFERRED_KEY, '1'); } catch { /* private mode: the home rule still applies */ }
+      // The `open` intent answers with a route: go there straight away.
+      const opened = result.lad.find((m) => m.intent === 'open');
+      const route = opened?.blocks.flatMap((b) => (b.type === 'actions' ? b.items : [])).find((i) => i.route && !i.intent)?.route;
+      if (route) onNavigate(route);
+      return result;
+    } catch (err) {
+      const detail = describeError(err);
+      const spoken = vars.voice === true;
+      setTrailing((t) => [...t, errorTurn(vars.text && !spoken ? "That didn't go through — your words are back in the box." : spoken ? "That didn't go through — say it again." : "That didn't go through — tap it again.", detail)]);
+      if (vars.text && !spoken) setRestore({ text: vars.text, at: Date.now() });
+      return null;
+    }
   }, [send, onNavigate]);
 
+  // The voice loop: spoken words go up as an owner turn with `voice: true`
+  // (answering a pending prompt exactly as a typed line would), and the lad
+  // turns come back to be spoken. `replyTo` is read through a ref so the
+  // recogniser's callback never closes over a stale thread.
+  const replyToRef = useRef<string | undefined>(undefined);
+  replyToRef.current = replyTo;
+  const sendSpoken = useCallback(async (text: string): Promise<ChatMessage[] | null> => {
+    const result = await post({ text, replyTo: replyToRef.current, voice: true });
+    return result ? result.lad : null;
+  }, [post]);
+  const voice = useVoiceSession({ sendTurn: sendSpoken });
+  // `?voice=1` before any gesture: a "Tap to start" pill until the owner taps (or dismisses it).
+  const [voiceOffer, setVoiceOffer] = useState(false);
+  useEffect(() => { if (autoVoice) setVoiceOffer(true); }, [autoVoice]);
+  // Starting on a thread whose last turn is Mr LAD's (the seeded greeting, an open
+  // question): say it first, then listen — the owner hears what they are answering.
+  const startVoice = useCallback(() => {
+    setVoiceOffer(false);
+    const last = messages[messages.length - 1];
+    voice.start({ greeting: last && last.role === 'lad' ? fallbackSpeech(last) : null });
+  }, [voice, messages]);
+
   const ctx = useMemo<StudioChatContextValue>(() => ({
-    send: post,
+    send: (vars) => { void post(vars); },
     sending: send.isPending,
     navigate: onNavigate,
     canAct,
@@ -128,7 +165,7 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
     openPlanReview: onOpenPlanReview,
   }), [post, send.isPending, onNavigate, canAct, curated, onOpenPlanReview]);
 
-  const onQuick = (q: QuickIntent) => post({ intent: q.intent, optimisticText: q.label });
+  const onQuick = (q: QuickIntent) => { void post({ intent: q.intent, optimisticText: q.label }); };
 
   const doReset = () => {
     if (!canAct || reset.isPending) return;
@@ -148,7 +185,7 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
         <Rocket className={`mt-0.5 h-4 w-4 shrink-0 ${TINT.warn}`} aria-hidden />
         <span>{blocking.length} thing{blocking.length === 1 ? '' : 's'} before go-live: {blocking.map(launchRowTitle).join(', ')}.</span>
       </span>
-      <button type="button" onClick={() => post({ intent: 'launch', optimisticText: "What's blocking go-live?" })} disabled={send.isPending} className={`shrink-0 text-sm ${LINK}`} data-testid="chat-pinned-launch-action">
+      <button type="button" onClick={() => { void post({ intent: 'launch', optimisticText: "What's blocking go-live?" }); }} disabled={send.isPending} className={`shrink-0 text-sm ${LINK}`} data-testid="chat-pinned-launch-action">
         Show me →
       </button>
     </div>
@@ -225,17 +262,25 @@ export default function StudioChat({ state, onNavigate, onOpenSetupSteps, onOpen
         )}
 
         <Composer
-          onSend={(text) => post({ text, replyTo })}
+          // Typed words during a voice session take the same loop (the reply is spoken).
+          onSend={(text) => { if (voice.live) voice.sendText(text); else void post({ text, replyTo }); }}
           onQuick={onQuick}
           sending={send.isPending}
           canAct={canAct}
           restore={restore}
           placeholder={replyTo ? 'Reply to Mr LAD…' : setupDone ? 'Ask Mr LAD anything, or tell it what to change…' : 'Tell Mr LAD about your business, or ask what to do first…'}
-          above={!setupDone && onOpenSetupSteps ? (
-            <p className="mb-1.5 text-[11px] text-muted-foreground sm:hidden">
-              Prefer a form? <button type="button" onClick={onOpenSetupSteps} className={LINK}>Use the step-by-step setup instead</button>
-            </p>
-          ) : undefined}
+          voice={{ supported: voice.supported, live: voice.live, onStart: startVoice, onEnd: voice.end, onHold: voice.hold }}
+          above={(
+            <>
+              {voice.live && <VoiceChatPill session={voice} />}
+              {!voice.live && voiceOffer && <VoiceStartPill supported={voice.supported} onStart={startVoice} onDismiss={() => setVoiceOffer(false)} />}
+              {!setupDone && onOpenSetupSteps && (
+                <p className="mb-1.5 text-[11px] text-muted-foreground sm:hidden">
+                  Prefer a form? <button type="button" onClick={onOpenSetupSteps} className={LINK}>Use the step-by-step setup instead</button>
+                </p>
+              )}
+            </>
+          )}
         />
       </div>
     </StudioChatContext.Provider>

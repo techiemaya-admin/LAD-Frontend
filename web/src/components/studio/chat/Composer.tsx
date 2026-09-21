@@ -4,15 +4,18 @@
  * Composer — the box at the bottom of the thread. Enter sends, Shift+Enter
  * breaks a line, the mic dictates into it (the same Web Speech surface the
  * setup steps use), and "+" offers the quick intents so a tenant who does
- * not know what to type has six good things to say. Pinned to the bottom,
- * safe-area aware, so it stays above a phone keyboard.
+ * not know what to type has six good things to say. The waveform button
+ * beside the mic starts (or ends) a hands-free voice session; while one is
+ * live the box still takes typed text, and typing holds the mic until the
+ * line is sent. Pinned to the bottom, safe-area aware, so it stays above a
+ * phone keyboard.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Flag, HelpCircle, ListChecks, Loader2, MessageCircleQuestion, Mic, MicOff, Plus, Rocket, RotateCcw, Send } from 'lucide-react';
+import { AudioLines, Flag, HelpCircle, ListChecks, Loader2, MessageCircleQuestion, Mic, MicOff, Plus, Rocket, RotateCcw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useDictation } from '../setup/speech';
-import { CHAT_COLUMN, COMPOSER_BOX, SEND_CIRCLE } from './chat-theme';
+import { CHAT_COLUMN, COMPOSER_BOX, SEND_CIRCLE, VOICE_BTN, VOICE_BTN_IDLE, VOICE_BTN_LIVE } from './chat-theme';
 
 export interface QuickIntent {
   intent: string;
@@ -40,16 +43,41 @@ export interface ComposerProps {
   placeholder?: string;
   /** Text to put in the box (a failed send hands the words back). Applied whenever it changes. */
   restore?: { text: string; at: number } | null;
-  /** Something rendered above the box, inside the sticky footer (a hint). */
+  /** Something rendered above the box, inside the sticky footer (a hint, the voice pill). */
   above?: ReactNode;
+  /** The voice session the waveform button drives; omitted = no button. */
+  voice?: ComposerVoice;
 }
+
+export interface ComposerVoice {
+  /** SpeechRecognition + speechSynthesis exist; otherwise the button is disabled with the reason as its title. */
+  supported: boolean;
+  live: boolean;
+  onStart: () => void;
+  onEnd: () => void;
+  /** Typed text is in the box: the session's mic waits (`true`) until it is sent or cleared (`false`). */
+  onHold: (held: boolean) => void;
+}
+
+export const VOICE_UNSUPPORTED_TITLE = 'Voice chat needs Chrome, Edge or Safari.';
 
 const MAX_ROWS = 6;
 
-export default function Composer({ onSend, onQuick, sending, canAct, placeholder = 'Ask Mr LAD anything, or tell it what to change…', restore = null, above }: ComposerProps) {
+export default function Composer({ onSend, onQuick, sending, canAct, placeholder = 'Ask Mr LAD anything, or tell it what to change…', restore = null, above, voice }: ComposerProps) {
   const [value, setValue] = useState('');
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const dictation = useDictation((text) => setValue(text), 90);
+  const voiceLive = Boolean(voice?.live);
+  // The session owns the microphone while it is live: the dictation mic steps aside.
+  const showDictation = dictation.supported && !voiceLive;
+
+  // Typing while the voice session listens: hold the mic until the line goes.
+  const onHold = voice?.onHold;
+  const typing = voiceLive && value.trim().length > 0;
+  useEffect(() => {
+    if (!onHold || !voiceLive) return;
+    onHold(typing);
+  }, [typing, voiceLive, onHold]);
 
   useEffect(() => {
     if (restore) { setValue(restore.text); ref.current?.focus(); }
@@ -105,20 +133,34 @@ export default function Composer({ onSend, onQuick, sending, canAct, placeholder
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
               onFocus={() => { setTimeout(() => ref.current?.scrollIntoView({ block: 'nearest' }), 250); }}
-              placeholder={dictation.listening ? 'Listening… tap the mic again when you are done.' : placeholder}
+              placeholder={dictation.listening ? 'Listening… tap the mic again when you are done.' : voiceLive ? 'Or type here — the mic waits while you do…' : placeholder}
               rows={1}
               enterKeyHint="send"
-              className={`block w-full resize-none px-[18px] py-3 text-[14.5px] leading-[1.55] text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 dark:text-white dark:placeholder:text-slate-500 ${COMPOSER_BOX} ${dictation.supported ? 'pr-12' : ''}`}
+              className={`block w-full resize-none px-[18px] py-3 text-[14.5px] leading-[1.55] text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 dark:text-white dark:placeholder:text-slate-500 ${COMPOSER_BOX} ${showDictation && voice ? 'pr-[5.25rem]' : showDictation || voice ? 'pr-12' : ''}`}
               data-testid="chat-input"
             />
-            {dictation.supported && (
+            {voice && (
+              <button
+                type="button"
+                onClick={() => (voiceLive ? voice.onEnd() : voice.onStart())}
+                disabled={!voice.supported}
+                aria-pressed={voiceLive}
+                aria-label={voiceLive ? 'End voice chat' : 'Start voice chat'}
+                title={!voice.supported ? VOICE_UNSUPPORTED_TITLE : voiceLive ? 'End voice chat' : 'Voice chat — talk to Mr LAD'}
+                className={`absolute bottom-2 right-2 ${VOICE_BTN} ${voiceLive ? VOICE_BTN_LIVE : VOICE_BTN_IDLE}`}
+                data-testid="chat-voice"
+              >
+                <AudioLines className="h-4 w-4" />
+              </button>
+            )}
+            {showDictation && (
               <button
                 type="button"
                 onClick={() => (dictation.listening ? dictation.stop() : dictation.start(value))}
                 aria-pressed={dictation.listening}
                 aria-label={dictation.listening ? 'Stop dictating' : 'Dictate with your microphone'}
                 title={dictation.listening ? 'Stop dictating' : 'Dictate with your microphone'}
-                className={`absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dictation.listening ? 'bg-rose-500 text-white animate-pulse motion-reduce:animate-none' : 'text-gray-400 hover:bg-slate-100 hover:text-foreground dark:hover:bg-white/10'}`}
+                className={`absolute bottom-2 ${voice ? 'right-11' : 'right-2'} inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dictation.listening ? 'bg-rose-500 text-white animate-pulse motion-reduce:animate-none' : 'text-gray-400 hover:bg-slate-100 hover:text-foreground dark:hover:bg-white/10'}`}
                 data-testid="chat-mic"
               >
                 {dictation.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
