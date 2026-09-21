@@ -82,6 +82,17 @@ export function selectionFor(
   );
 }
 
+/**
+ * A pick the admin can still change or send: not yet coordinated, or
+ * coordinated and never delivered. 'failed' arrives from Meta's status
+ * webhook (a landline, a number Meta holds out of marketing templates); the
+ * negotiation behind it was cancelled, so the pick is open again and the row
+ * shows why it failed.
+ */
+export function isOpen(sel?: CoordinationSelection): boolean {
+  return !sel || sel.status === 'pending' || sel.status === 'failed';
+}
+
 export function partnerOf(sel: CoordinationSelection, memberId: string): { id: string; name: string } {
   return sel.member_a_id === memberId
     ? { id: sel.member_b_id, name: sel.member_b_name }
@@ -125,7 +136,7 @@ const DayRow: React.FC<DayRowProps> = ({
     ? (generated.member_a_id === member.id ? generated.member_b_id : generated.member_a_id) ?? null
     : null;
   const current = selection ? partnerOf(selection, member.id).id : (generatedPartnerId ?? '');
-  const locked = !!selection && selection.status !== 'pending';
+  const locked = !isOpen(selection);
 
   // Everyone but self, sorted; the generated partner first so the default is
   // visible at the top even when the list is long.
@@ -170,7 +181,7 @@ const DayRow: React.FC<DayRowProps> = ({
           title={`Send ${member.name} the ${DAY_LABEL[day]} slot offer now — only this pair is messaged`}
           className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Send className="w-3 h-3" /> {coordinating ? 'Sending…' : 'Coordinate'}
+          <Send className="w-3 h-3" /> {coordinating ? 'Sending…' : selection?.status === 'failed' ? 'Retry' : 'Coordinate'}
         </button>
       ) : null}
       <div className="w-36 flex-shrink-0 text-right"><StatusChip sel={selection} /></div>
@@ -251,6 +262,7 @@ export const SendCoordinationPanel: React.FC<SendCoordinationPanelProps> = ({
 
   const forDay = selections.filter((s) => s.day_slot === day);
   const pending = forDay.filter((s) => s.status === 'pending').length;
+  const failed = forDay.filter((s) => s.status === 'failed').length;
   const sent = forDay.filter((s) => s.status === 'sent').length;
 
   const pickDay = (d: DaySlot) => { setDay(d); setSeedResult(null); setSendResult(null); setError(null); };
@@ -283,7 +295,7 @@ export const SendCoordinationPanel: React.FC<SendCoordinationPanelProps> = ({
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-bold text-slate-800">{generatedCount[day] ?? 0}</p><p className="text-[10px] text-slate-500">generated pairs</p></div>
-          <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-bold text-slate-800">{pending}</p><p className="text-[10px] text-slate-500">selected, not sent</p></div>
+          <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-bold text-slate-800">{pending + failed}</p><p className="text-[10px] text-slate-500">{failed > 0 ? `to send (${failed} not delivered, will retry)` : 'selected, not sent'}</p></div>
           <div className="bg-emerald-50 rounded-lg p-2"><p className="text-lg font-bold text-emerald-700">{sent}</p><p className="text-[10px] text-emerald-600">already sent</p></div>
         </div>
 
@@ -309,7 +321,7 @@ export const SendCoordinationPanel: React.FC<SendCoordinationPanelProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-500">
-              This will message <strong>{pending + seedResult.created}</strong> member{pending + seedResult.created === 1 ? '' : 's'} on WhatsApp. Already-sent pairs are not re-sent.
+              This will message <strong>{pending + failed + seedResult.created}</strong> member{pending + failed + seedResult.created === 1 ? '' : 's'} on WhatsApp. Already-sent pairs are not re-sent; pairs whose message never arrived are.
             </p>
             <button onClick={doSend} disabled={isSending}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-60">

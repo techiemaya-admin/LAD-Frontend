@@ -9,7 +9,7 @@ import {
 import type { DaySlot } from '@lad/frontend-features/community-roi';
 import MessageTemplateSender from './MessageTemplateSender';
 import {
-  MemberCoordinationCard, SendCoordinationPanel, DAY_SLOTS, DAY_LABEL, selectionFor, partnerOf,
+  MemberCoordinationCard, SendCoordinationPanel, DAY_SLOTS, DAY_LABEL, selectionFor, partnerOf, isOpen,
   type Pair, type MemberLite,
 } from './CoordinationRows';
 
@@ -163,7 +163,7 @@ export const RecommendationPairs: React.FC = () => {
   const handlePick = async (member: MemberLite, day: DaySlot, partnerId: string | null) => {
     setPickError(null);
     const existing = selectionFor(selections, member.id, day);
-    if (existing && existing.status !== 'pending') return;   // already coordinated
+    if (!isOpen(existing)) return;   // already coordinated, and delivered
     try {
       if (existing) {
         const removed = await deselect(existing.id);
@@ -200,7 +200,7 @@ export const RecommendationPairs: React.FC = () => {
   // one, otherwise the generated pair (seeded here, scoped to this member).
   const handleCoordinate = async (member: MemberLite, day: DaySlot) => {
     const existing = selectionFor(selections, member.id, day);
-    if (existing && existing.status !== 'pending') return;   // already coordinated
+    if (!isOpen(existing)) return;   // already coordinated, and delivered
     const gen = memberRows.find((r) => r.member.id === member.id)?.generatedByDay[day];
     const partner = existing
       ? partnerOf(existing, member.id)
