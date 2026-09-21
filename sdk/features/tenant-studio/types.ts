@@ -1068,6 +1068,13 @@ export interface ChatMessage {
   replyTo: string | null;
   status: ChatMessageStatus;
   createdAt: string;
+  /**
+   * Lad turns only, when the owner turn was sent with `voice: true` (and on
+   * `GET` for turns stored with one): what to SAY for this turn — plain
+   * prose, no markdown/URLs, ≤ ~60 words, pickers as "You can say: A, B, or C."
+   * The FE speaks this and falls back to the text blocks when it is absent.
+   */
+  speech?: string;
 }
 
 /** Message ids still waiting on the owner: pickers to tap, reviews to apply, prompts to answer with a line. */
@@ -1094,6 +1101,12 @@ export interface ChatSendInput {
   args?: ChatArgs;
   pick?: { messageId: string; key?: string; keys?: string[] };
   replyTo?: string;
+  /**
+   * The owner spoke this turn (voice chat): every lad turn comes back with
+   * `speech`, and a spoken answer to a pending picker / review / plan is
+   * matched server-side without the classifier ("the first one", "apply").
+   */
+  voice?: boolean;
 }
 
 /** `POST /studio/chat` — the owner turn as stored, then one or more lad turns. */

@@ -472,8 +472,9 @@ export type SendChatVars = ChatSendInput & { optimisticText?: string };
  * (status `pending`), a failed turn removes them again, and the lad turns
  * append from the response. Anything the turn may have changed elsewhere
  * (state, launch, questions, history, first campaign) is refetched; a turn
- * that touches an earlier message (a pick, an apply) also refreshes the
- * thread so that message's `chosen` / `applied` comes from the server.
+ * that touches an earlier message (a pick, an apply, a spoken answer the
+ * server matched) also refreshes the thread so that message's `chosen` /
+ * `applied` comes from the server.
  */
 export function useSendChat() {
   const qc = useQueryClient();
@@ -513,7 +514,10 @@ export function useSendChat() {
         if (vars.replyTo) pages = markAnswered(pages, vars.replyTo);
         return { ...old, pages };
       });
-      const touchesEarlier = Boolean(vars.pick) || vars.intent === 'apply_review' || result.lad.some((m) => m.intent === 'apply_review');
+      // A spoken turn (`voice: true`) may have been matched server-side to a pending picker / review / plan
+      // (`owner.args.spoken`): that earlier message's `chosen` / `applied` must come from the server.
+      const spoken = vars.voice === true || result.owner.args?.spoken === true;
+      const touchesEarlier = Boolean(vars.pick) || spoken || vars.intent === 'apply_review' || result.lad.some((m) => m.intent === 'apply_review');
       if (touchesEarlier) void qc.invalidateQueries({ queryKey: key });
       void qc.invalidateQueries({ queryKey: studioKeys.all, predicate: (q) => q.queryKey[1] !== 'chat' });
     },
