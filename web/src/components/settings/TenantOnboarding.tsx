@@ -149,7 +149,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm ${
+      className={`fixed bottom-4 left-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm sm:left-auto ${
         type === 'success' ? 'bg-green-600' : 'bg-red-600'
       }`}
     >
@@ -240,11 +240,11 @@ export function TenantOnboarding() {
   }
 
   return (
-    <div className="bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+    <div className="min-w-0 overflow-hidden bg-white dark:bg-[#071131] mx-3 mb-2 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">WhatsApp Accounts</h2>
@@ -253,7 +253,7 @@ export function TenantOnboarding() {
               Manage tenant WhatsApp accounts. Each account gets its own database, prompts, and conversation flow.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <button
               onClick={loadAccounts}
               className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 dark:hover:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -264,7 +264,7 @@ export function TenantOnboarding() {
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
-                className="h-12 px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
+                className="h-11 min-w-0 flex-1 justify-center px-4 sm:h-12 sm:flex-none sm:px-6 bg-[#0B1957] hover:bg-[#0B1957]/90 dark:bg-[#1d4ed8] text-white dark:hover:bg-blue-700 rounded-xl sm:rounded-2xl shadow-lg transition-all font-bold flex items-center gap-2"
               >
                 <Plus className="h-5 w-5" />
                 New Account
@@ -276,7 +276,7 @@ export function TenantOnboarding() {
 
       {/* Create form */}
       {showForm && (
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-indigo-50/30 dark:bg-indigo-950/10">
+        <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 bg-indigo-50/30 dark:bg-indigo-950/10">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Onboard New Tenant</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Display Name */}
@@ -520,7 +520,7 @@ export function TenantOnboarding() {
               <div key={account.slug} className="group">
                 {/* Account header row */}
                 <div
-                  className="flex items-center gap-3 px-6 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                  className="flex min-w-0 flex-wrap items-center gap-3 px-4 py-3.5 sm:flex-nowrap sm:px-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                   onClick={() => setExpandedAccount(isExpanded ? null : account.slug)}
                 >
                   {isExpanded ? (
@@ -530,7 +530,7 @@ export function TenantOnboarding() {
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                         {account.display_name}
                       </span>
@@ -546,7 +546,7 @@ export function TenantOnboarding() {
                     <p className="text-[11px] text-gray-400 dark:text-slate-300 font-mono mt-0.5">/webhook/{account.slug}</p>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-300">
+                  <div className="order-last ml-7 flex w-full min-w-0 flex-wrap items-center gap-2 text-xs text-gray-400 dark:text-slate-300 sm:order-none sm:ml-0 sm:w-auto sm:flex-nowrap sm:gap-3">
                     <span className="flex items-center gap-1">
                       <Bot className="h-3 w-3" />
                       {account.ai_model}
@@ -560,7 +560,7 @@ export function TenantOnboarding() {
                         e.stopPropagation();
                         handleDeactivate(account.slug, account.display_name);
                       }}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                      className="flex-shrink-0 p-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                       title="Deactivate account"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-400" />
@@ -570,8 +570,8 @@ export function TenantOnboarding() {
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="px-6 pb-4 ml-7">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm bg-gray-50 dark:bg-[#030a21]/60 p-4 rounded-lg">
+                  <div className="px-4 pb-4 sm:ml-7 sm:px-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm bg-gray-50 dark:bg-[#030a21]/60 p-4 rounded-lg overflow-hidden">
                       <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Tenant ID</span>
                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{account.tenant_id}</p>
@@ -582,7 +582,7 @@ export function TenantOnboarding() {
                       </div>
                       <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Webhook URL</span>
-                        <p className="font-mono text-xs text-indigo-600 dark:text-indigo-400">/webhook/{account.slug}</p>
+                        <p className="break-all font-mono text-xs text-indigo-600 dark:text-indigo-400">/webhook/{account.slug}</p>
                       </div>
                       <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Flow Template</span>
