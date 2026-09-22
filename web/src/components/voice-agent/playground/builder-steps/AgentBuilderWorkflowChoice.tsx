@@ -54,28 +54,28 @@ export function AgentBuilderWorkflowChoice({
   };
 
   return (
-    <div className="relative flex flex-col items-center w-[460px] max-w-full h-[620px] bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
+    <div className="relative flex flex-col items-center w-[460px] max-w-full h-[620px] bg-white dark:bg-[#000724] rounded-3xl border border-slate-200 dark:border-blue-950/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 outline-none">
       {/* Header */}
-      <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 bg-white/80 z-10">
+      <div className="w-full flex shrink-0 items-center justify-between p-4 border-b border-slate-100 dark:border-blue-950/40 bg-white/80 dark:bg-[#081331] z-10">
         <div className="flex items-center gap-2 pl-4">
           {onBack && (
             <button
               onClick={onBack}
-              className="mr-1 p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-transparent hover:border-slate-100"
+              className="mr-1 p-1 hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-transparent hover:border-slate-100 dark:hover:border-blue-900/60"
               aria-label="Go back"
             >
               <ArrowLeft className="size-4" />
             </button>
           )}
-          <Sparkles className="size-4 text-[#0b1957]" />
-          <span className="text-[11px] font-bold text-[#0b1957] uppercase tracking-wider">
+          <Sparkles className="size-4 text-[#0b1957] dark:text-slate-100" />
+          <span className="text-[11px] font-bold text-[#0b1957] dark:text-slate-100 uppercase tracking-wider">
             {phase || "Workflow Selection"}
           </span>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-95 border border-slate-100"
+            className="p-1.5 bg-slate-50 dark:bg-[#071131] hover:bg-slate-100 dark:hover:bg-blue-950/60 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 border border-slate-100 dark:border-blue-950/40"
           >
             <X className="size-4" />
           </button>
@@ -84,10 +84,10 @@ export function AgentBuilderWorkflowChoice({
 
       {/* Main Content Area */}
       <div className="relative flex-1 min-h-0 w-full flex flex-col pt-5 px-6 overflow-y-auto scrollbar-none pb-4">
-        <h2 className="text-xl font-bold text-[#0b1957] text-center leading-snug mb-2">
+        <h2 className="text-xl font-bold text-[#0b1957] dark:text-slate-100 text-center leading-snug mb-2">
           {title}
         </h2>
-        <p className="text-xs text-slate-500 text-center mb-6 font-medium max-w-[320px] mx-auto leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-6 font-medium max-w-[320px] mx-auto leading-relaxed">
           {description}
         </p>
 
@@ -105,17 +105,17 @@ export function AgentBuilderWorkflowChoice({
               <button
                 key={idx}
                 onClick={() => handleSelect(optionLabel)}
-                className="w-full text-left flex items-start gap-4 p-4 bg-white border border-slate-150 hover:border-primary/30 hover:bg-primary/[0.01] rounded-2xl transition-all shadow-sm hover:shadow active:scale-[0.99] cursor-pointer group"
+                className="w-full text-left flex items-start gap-4 p-4 bg-white dark:bg-[#071131] border border-slate-150 dark:border-blue-950/40 hover:border-primary/30 dark:hover:border-blue-500/40 hover:bg-primary/[0.01] dark:hover:bg-blue-950/40 rounded-2xl transition-all shadow-sm hover:shadow active:scale-[0.99] cursor-pointer group"
               >
-                <div className="size-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
+                <div className="size-10 bg-slate-50 dark:bg-[#071131] rounded-xl flex items-center justify-center shrink-0 border border-slate-100 dark:border-blue-950/40 group-hover:bg-primary/5 dark:group-hover:bg-blue-950/60 group-hover:border-primary/10 dark:group-hover:border-blue-500/40 transition-colors">
                   {wf.icon}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-bold text-[#0b1957]">
+                    <span className="text-[13px] font-bold text-[#0b1957] dark:text-slate-100">
                       {wf.title}
                     </span>
-                    <span className="text-[9px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
+                    <span className="text-[9px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-[#071131] text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md group-hover:bg-primary/10 dark:group-hover:bg-blue-950/60 group-hover:text-primary dark:group-hover:text-blue-300 transition-colors shrink-0">
                       {wf.badge}
                     </span>
                   </div>
@@ -130,7 +130,7 @@ export function AgentBuilderWorkflowChoice({
       </div>
 
       {/* Bottom Footer Actions */}
-      <div className="w-full border-t border-slate-50 bg-white p-4 shrink-0 flex items-center justify-center">
+      <div className="w-full border-t border-slate-50 dark:border-blue-950/40 bg-white dark:bg-[#000724] p-4 shrink-0 flex items-center justify-center">
         <button
           onClick={onBack || (() => {
             const backObj = options.find(opt => {
@@ -140,7 +140,7 @@ export function AgentBuilderWorkflowChoice({
             const backOpt = backObj ? (typeof backObj === "string" ? backObj : backObj.label) : "Back to script";
             handleSelect(backOpt);
           })}
-          className="text-xs font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+          className="text-xs font-bold text-slate-400 hover:text-primary dark:hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
         >
           <ArrowLeft className="size-3.5" />
           Back to script writing
