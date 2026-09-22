@@ -586,14 +586,14 @@ export const IntegrationsSettings: React.FC = () => {
               setActiveView('grid');
               refreshStatuses();
             }}
-            className="group inline-flex items-center gap-1.5 rounded-lg border border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-200 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/60 dark:hover:border-slate-700 transition-colors font-medium"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-200 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/60 dark:hover:border-slate-700 transition-colors font-medium cursor-pointer"
             style={{
               fontSize: 'clamp(0.78rem, 0.86vw, 0.9rem)',
               padding: 'clamp(0.35rem, 0.5vw, 0.5rem) clamp(0.6rem, 0.9vw, 0.9rem)',
             }}
           >
             <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            Back to integrations
+            Back to Integrations
           </button>
 
           {activeView === 'whatsapp-ai' && (

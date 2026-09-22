@@ -42,8 +42,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
         return;
       }
       window.location.href = result.url;
-    } catch (error) {
-      console.error('[MicrosoftAuthIntegration] Error starting OAuth:', error);
+    } catch {
       alert('Failed to connect Microsoft account');
     } finally {
       setIsActing(false);
@@ -54,8 +53,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
     setIsActing(true);
     try {
       await disconnect();
-    } catch (error) {
-      console.error('[MicrosoftAuthIntegration] Error disconnecting:', error);
+    } catch {
       alert('Failed to disconnect Microsoft account');
     } finally {
       setIsActing(false);
@@ -162,7 +160,7 @@ export const MicrosoftAuthIntegration: React.FC = () => {
               type="button"
               onClick={handleDisconnect}
               disabled={busy}
-              className="w-full h-11 px-5 rounded-xl text-sm font-semibold text-white bg-[#a21d59] hover:bg-[#881749] transition-all flex items-center justify-center gap-2 cursor-pointer border-none disabled:opacity-50"
+              className="w-full h-11 px-5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 transition-all flex items-center justify-center gap-2 cursor-pointer border-none disabled:opacity-50 shadow-sm"
             >
               {busy ? (
                 <>
