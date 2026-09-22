@@ -9,6 +9,9 @@ export type StepType =
   | 'linkedin_employee_list'
   | 'linkedin_autopost'
   | 'linkedin_comment_reply'
+  // Branches on whether the invite was accepted, waiting while it is merely
+  // unanswered. See the Accepted? node in CustomWorkflowBuilder.
+  | 'linkedin_acceptance'
   | 'email_send' 
   | 'email_followup' 
   | 'whatsapp_send'
@@ -45,6 +48,10 @@ export type StepType =
   | 'landing_page'
   | 'linkedin_content'
   | 'post_approval'
+  // Network Engagement: watch monitored connections' new posts and comment;
+  // the approval node gates each comment on WhatsApp (campaign-level macros).
+  | 'linkedin_post_engage'
+  | 'comment_approval'
   | 'web_scrape'
   | 'web_research'
   | 'lead_score'

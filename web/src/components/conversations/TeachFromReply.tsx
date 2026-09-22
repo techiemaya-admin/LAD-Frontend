@@ -17,8 +17,8 @@
  *
  * Deliberately a two-step (open, then confirm) rather than one click. The raw
  * reply usually needs trimming — "Hi Gus, Maggie here" names a specific person
- * — and only 15 corrections reach the prompt at a time, so a mis-click costs a
- * slot that something better could have used.
+ * — and a mis-click puts a bad lesson in front of every future reply until
+ * someone finds it in the AI Learnings panel and switches it off.
  */
 import { useState } from 'react';
 import { GraduationCap, Loader2, Check } from 'lucide-react';

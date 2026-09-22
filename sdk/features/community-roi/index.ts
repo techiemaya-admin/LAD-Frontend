@@ -81,6 +81,9 @@ export {
   useUpdateRelationshipScores,
   useGenerateBulkRecommendations,
   useSavedRecommendations,
+  useCoordinationSelections,
+  useSelectCoordination,
+  useSendCoordination,
   useNewMembers,
   useOnboardNewMembers,
   useSendOnboardingTemplate,
@@ -116,6 +119,9 @@ export type {
   UUID,
 } from './types';
 export type { NewMembersResponse, UseNewMembersReturn } from './hooks';
+export type {
+  DaySlot, CoordinationSelection, CoordinationSelectionsResponse, SeedSummary, SendSummary, SelectArgs,
+} from './hooks';
 export type {
   CommunicationTemplate,
   SendInstantMessagesRequest,

@@ -125,7 +125,7 @@ const StickyScrollFeatures = () => {
             className="inline-block"
           >
             <Link
-              href="/onboarding"
+              href="/register"
               className="inline-block px-10 py-4 bg-primary text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow"
             >
               Hire Mr LAD

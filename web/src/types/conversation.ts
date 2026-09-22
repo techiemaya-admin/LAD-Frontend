@@ -65,6 +65,8 @@ export interface ConversationNote {
   author_name: string | null;
   created_at: string;
   updated_at: string;
+  /** Whether the AI agent may read this note. Off unless someone opted in. */
+  share_with_agent?: boolean;
 }
 
 export interface Contact extends SDKContact {

@@ -9,7 +9,12 @@ import type {
   GetCallLogsLeadStatusParams,
   BatchViewParams,
   EndCallParams,
+  EndCallsParams,
+  CancelCallsResult,
   RetryCallsParams,
+  RetryCallsResult,
+  FollowUpCallParams,
+  FollowUpCallResult,
   RecordingSignedUrlParams,
   RecordingSignedUrlResponse,
   CallLogsStats,
@@ -144,10 +149,23 @@ export async function getBatchCallLogsByBatchId(batchId: string): Promise<BatchC
 /**
  * End a single call
  */
-export async function endCall({ callId }: EndCallParams): Promise<void> {
-  const response = await apiPost(`/api/voice-agent/calls/${callId}/end`, {});
+export async function endCall({ callId }: EndCallParams): Promise<CancelCallsResult> {
+  return endCalls({ callIds: [callId] });
+}
 
-  return;
+/**
+ * End one or more calls. Backend: POST /calls/cancel (there is no /calls/:id/end).
+ * `force: true` terminates calls that are already ringing / in progress, not just
+ * queued ones. A call already in a terminal state comes back with its status
+ * and cancelled_count 0 rather than an error.
+ */
+export async function endCalls({ callIds }: EndCallsParams): Promise<CancelCallsResult> {
+  const response = await apiPost<CancelCallsResult>(`/api/voice-agent/calls/cancel`, {
+    resource_id: callIds.length === 1 ? callIds[0] : callIds,
+    force: true,
+  });
+
+  return response.data;
 }
 
 /**
@@ -161,12 +179,28 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
 
 
 /**
- * Retry failed calls
+ * Retry failed calls.
+ * The backend re-dials each failed call from its stored row (number, agent,
+ * outbound number, voice) and reports per call what happened. A body with
+ * nothing retried comes back as HTTP 422 with every reason in `skipped`.
  */
-export async function retryFailedCalls(params: RetryCallsParams): Promise<void> {
-  const response = await apiPost(`/api/voice-agent/calls/retry`, params);
+export async function retryFailedCalls(params: RetryCallsParams): Promise<RetryCallsResult> {
+  const response = await apiPost<RetryCallsResult>(`/api/voice-agent/calls/retry`, params);
 
-  return;
+  return response.data;
+}
+
+/**
+ * Follow-up call after a completed call: same person, same agent, with the last
+ * call's summary handed to the agent as context. 409 if the call did not complete.
+ */
+export async function followUpCall({ callId, note }: FollowUpCallParams): Promise<FollowUpCallResult> {
+  const response = await apiPost<FollowUpCallResult>(
+    `/api/voice-agent/calls/${callId}/follow-up`,
+    note ? { note } : {},
+  );
+
+  return response.data;
 }
 
 /**

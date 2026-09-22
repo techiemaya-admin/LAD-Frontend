@@ -13,13 +13,20 @@
     @apply border-border;
   }
 
+  /* Indic (and Urdu) glyph fallback, loaded in layout.tsx. Inter and Space
+     Grotesk stop at Latin; a browser walks this list per glyph, so a Telugu
+     transcript picks up Noto Sans Telugu and everything else stays in Inter. */
+  :root {
+    --font-indic-fallback: 'Noto Sans Telugu', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Gujarati', 'Noto Sans Bengali', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Arabic';
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', var(--font-indic-fallback), system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Space Grotesk', var(--font-indic-fallback), system-ui, sans-serif;
   }
 }
 
@@ -271,7 +278,7 @@
 
   /* ── Chat message typography (WhatsApp-style) ──────────────────────────── */
   .wa-msg-text {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, var(--font-indic-fallback), sans-serif;
     font-size: 14.2px;
     line-height: 1.45;
     letter-spacing: 0.01em;
@@ -280,7 +287,7 @@
   }
 
   .wa-msg-time {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, var(--font-indic-fallback), sans-serif;
     font-size: 11px;
     line-height: 1.2;
     letter-spacing: 0.01em;

@@ -569,7 +569,11 @@ Is the timing... correct? Or does it need... a bit more... tuning? Let's find ou
         body: JSON.stringify({
           voice_id: selectedVoice.provider_voice_id || selectedVoice.id,
           text: testText,
-          language: selectedVoice.accent || "en-US"
+          language: selectedVoice.accent || "en-US",
+          // Without this the backend sends every voice to Cartesia, which 404s on
+          // an id it does not own — so previewing a Fish voice failed with a
+          // misleading "not found".
+          provider: selectedVoice.provider || "cartesia"
         })
       });
 

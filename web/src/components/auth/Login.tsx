@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
@@ -262,6 +263,12 @@ const Login: React.FC = () => {
           </Button>
         </form>
         {/* Footer */}
+        <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-5">
+          New to Mr LAD?{' '}
+          <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+            Create an account
+          </Link>
+        </p>
       </div>
     
   );

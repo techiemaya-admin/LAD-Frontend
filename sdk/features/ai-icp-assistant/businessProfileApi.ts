@@ -9,6 +9,7 @@
  * Mirrors the raw-fetch convention used by definitionsApi.ts.
  */
 import type { BusinessProfile } from './businessProfile';
+import type { ProfileContract } from './profileContract';
 
 // ── HTTP plumbing (mirrors definitionsApi.ts) ────────────────────────────────
 function getBackendUrl(): string {
@@ -147,4 +148,17 @@ export async function uploadCompanyLogo(file: File): Promise<string> {
   }
 
   return parsed.url as string;
+}
+
+/**
+ * The tenant's profile contract (which fields, which required, in what order).
+ * Resolved server-side from the tenant's industry pack; throws on failure so
+ * the hook can fall back to the hardcoded baseline.
+ */
+export async function getProfileContract(): Promise<ProfileContract> {
+  const res = await request<{ success: boolean; contract: ProfileContract }>('/api/ai-playground/contract');
+  if (!res || !res.contract || !Array.isArray(res.contract.required)) {
+    throw new Error('Malformed profile contract');
+  }
+  return res.contract;
 }

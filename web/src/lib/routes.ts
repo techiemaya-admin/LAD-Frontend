@@ -12,7 +12,11 @@ export const OPEN_ROUTES = {
   static: ['/_next', '/public'],
   
   // Auth pages & endpoints
-  auth: ['/login', '/register', '/forgot-password', '/api/auth', '/api/webhooks'],
+  auth: ['/login', '/register', '/forgot-password', '/api/auth', '/api/webhooks',
+    // Verified-signup applications: the applicant holds a signup token, not a
+    // session. The backend gates every method on this prefix itself
+    // (signup token for the applicant pair, JWT + super-admin for the queue).
+    '/api/signup/applications'],
   
   // Public pages
   public: ['/', '/pricing', '/favicon.ico', '/api/recording-proxy', '/landing', '/contact', '/privacy-policy', '/terms-of-service', '/cookies-policy', '/account-deletion-policy',
@@ -52,6 +56,8 @@ export const AUTH_ROUTES = [
   '/onboarding',
   '/community-roi',
   '/follow-ups',
+  '/sales-playbook', // Discovery call script, scoring and customisation costing
+  '/studio', // Tenant Studio — train the workspace: interview, ICP training, rehearsal, Tailor (admin/owner)
   '/instagram', // Instagram management (accounts, AI replies, comments, goals)
   '/admin', // Internal admin tooling (platform observability monitor, blog, submissions) - super-admin gated
   '/api/protected', // Mark all protected API routes with /api/protected prefix

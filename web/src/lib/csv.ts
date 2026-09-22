@@ -38,3 +38,27 @@ export function csvCell(v: unknown): string {
   if (/[",\r\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
   return s;
 }
+
+/** Build a CSV document from a header row and body rows. */
+export function buildCsv(header: string[], rows: unknown[][]): string {
+  const lines = [header.map(csvCell).join(',')];
+  rows.forEach((row) => lines.push(row.map(csvCell).join(',')));
+  return `${lines.join('\r\n')}\r\n`;
+}
+
+/**
+ * Hand a CSV to the browser as a download. Prepends a UTF-8 BOM so Excel
+ * detects the encoding instead of mangling non-Latin names.
+ */
+export function downloadCsv(filename: string, csv: string): void {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

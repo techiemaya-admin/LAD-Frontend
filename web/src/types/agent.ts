@@ -22,6 +22,8 @@ export interface Agent {
   accent?: string;
   provider?: string;
   provider_voice_id?: string;
+  /** Per-agent behaviour flags VOAG reads at call time (voice_agents.configs). */
+  configs?: Record<string, unknown> | null;
 }
 
 export interface AgentFormData {
@@ -32,6 +34,12 @@ export interface AgentFormData {
   agent_instructions: string;
   system_instructions: string;
   outbound_starter_prompt: string;
+  /**
+   * Spoken fillers — the worker's "ఆ…", "సరే," lead in front of each reply,
+   * spoken while the model is still thinking. Stored as configs.fillers; false
+   * turns them off, anything else leaves the worker's default (on).
+   */
+  spoken_fillers: boolean;
 }
 
 /**
@@ -86,6 +94,7 @@ export const DEFAULT_AGENT_FORM: AgentFormData = {
   agent_instructions: '',
   system_instructions: '',
   outbound_starter_prompt: '',
+  spoken_fillers: true,
 };
 
 export const LANGUAGES = [
@@ -101,6 +110,18 @@ export const LANGUAGES = [
   { value: 'ko-KR', label: 'Korean' },
   { value: 'zh-CN', label: 'Chinese (Simplified)' },
   { value: 'hi-IN', label: 'Hindi' },
+  // Indian languages the voice stack already supports end to end (Sarvam STT,
+  // Cartesia / Sarvam / Fish TTS). Values are what the worker derives the STT
+  // and TTS language from (agent.language → derive_stt_language / derive_language),
+  // so they must stay BCP-47 with the -IN region.
+  { value: 'te-IN', label: 'Telugu' },
+  { value: 'ta-IN', label: 'Tamil' },
+  { value: 'kn-IN', label: 'Kannada' },
+  { value: 'ml-IN', label: 'Malayalam' },
+  { value: 'mr-IN', label: 'Marathi' },
+  { value: 'gu-IN', label: 'Gujarati' },
+  { value: 'bn-IN', label: 'Bengali' },
+  { value: 'pa-IN', label: 'Punjabi' },
   { value: 'ar-SA', label: 'Arabic' },
 ];
 
