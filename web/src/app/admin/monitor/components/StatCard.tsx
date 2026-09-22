@@ -13,7 +13,7 @@ interface StatCardProps {
 
 export function StatCard({ title, value, subtitle, icon: Icon, accent = 'text-blue-500' }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-blue-950/40 dark:bg-[#071131]">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{title}</p>
         {Icon ? <Icon className={`h-4 w-4 ${accent}`} /> : null}
