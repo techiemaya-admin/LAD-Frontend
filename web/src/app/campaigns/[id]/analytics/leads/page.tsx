@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ArrowLeft, Users, Search, Loader2, Send, Linkedin, Mail, MessageCircle, Sparkles, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/app-toaster';
@@ -622,7 +623,7 @@ export default function CampaignLeadsPage() {
       {/* ── Manual Follow-up Dialog ─────────────────────────────────── */}
       <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
         <DialogContent className="max-w-2xl w-full bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="shrink-0">
+          <DialogHeader className="shrink-0 bg-white dark:bg-[#081331]">
             <DialogTitle className="flex items-center gap-2 text-[#0b1957] dark:text-white">
               <Send className="w-5 h-5" />
               Manual Follow-up
@@ -636,7 +637,7 @@ export default function CampaignLeadsPage() {
           </DialogHeader>
 
           {/* Scrollable Body Container */}
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-3">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-3 bg-background dark:bg-[#000724]">
             {/* Channel Tabs */}
             <div className="flex gap-2 border-b border-slate-200 dark:border-blue-950/40 px-4 sm:px-5 pb-3">
               {([
@@ -670,15 +671,19 @@ export default function CampaignLeadsPage() {
                 <div>
                   <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 block">From</label>
                   {connectedSenders.length > 0 ? (
-                    <select
+                    <Select
                       value={followupFromEmail}
-                      onChange={e => setFollowupFromEmail(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700/80 rounded-md bg-white dark:bg-slate-800/80 text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b1957] dark:focus:ring-[#2B7CFF]"
+                      onValueChange={setFollowupFromEmail}
                     >
-                      {connectedSenders.map(s => (
-                        <option key={s.email} value={s.email}>{s.label}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full bg-white dark:bg-slate-800/80 dark:border-slate-700/80 dark:text-white">
+                        <SelectValue placeholder="Select sender" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-[#071131] dark:border-blue-950/40 dark:text-white">
+                        {connectedSenders.map(s => (
+                          <SelectItem key={s.email} value={s.email}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-md px-3 py-2">
                       No connected email account — connect Gmail or Outlook in Settings → Integrations.
@@ -691,7 +696,7 @@ export default function CampaignLeadsPage() {
                     placeholder="e.g. Quick follow-up from our conversation"
                     value={followupSubject}
                     onChange={e => setFollowupSubject(e.target.value)}
-                    className="text-sm dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
+                    className="text-sm bg-white dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -718,7 +723,7 @@ export default function CampaignLeadsPage() {
               </div>
 
               {followupPreviewing ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80">
                   <div className="flex items-center gap-2 text-[#0b1957] dark:text-[#2B7CFF]">
                     <Sparkles className="w-5 h-5 animate-pulse" />
                     <span className="text-sm font-medium">Generating personalised message…</span>
@@ -731,7 +736,7 @@ export default function CampaignLeadsPage() {
                   onChange={e => setFollowupMessage(e.target.value)}
                   rows={6}
                   placeholder="Your follow-up message will appear here…"
-                  className="resize-y min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
+                  className="resize-y min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed bg-white dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:placeholder:text-slate-400"
                 />
               )}
 
@@ -744,10 +749,10 @@ export default function CampaignLeadsPage() {
 
             {/* Past conversation history (collapsible) */}
             {followupContext && followupContext.pastMessageCount > 0 && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mx-4 sm:mx-5">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mx-4 sm:mx-5 bg-white dark:bg-transparent">
                 <button
                   onClick={() => setFollowupHistoryOpen(v => !v)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors"
                 >
                   <span>Conversation history ({followupContext.pastMessageCount} messages)</span>
                   {followupHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -799,7 +804,7 @@ export default function CampaignLeadsPage() {
           </div>
 
           {/* Footer (Always Pinned to Bottom) */}
-          <DialogFooter className="shrink-0 pt-3 pb-4 px-4 sm:px-5 border-t border-slate-100 dark:border-blue-950/40">
+          <DialogFooter className="shrink-0 pt-3 pb-4 px-4 sm:px-5 border-t border-slate-100 bg-white dark:bg-[#081331] dark:border-blue-950/40">
             <Button
               onClick={sendFollowup}
               disabled={followupSending || followupPreviewing || !followupMessage.trim()}
