@@ -122,6 +122,9 @@ export function VoiceAgentSettings() {
             provider: v.provider,
             voice_sample_url: v.voice_sample_url,
             provider_voice_id: v.provider_voice_id,
+            // Needed by the Fish Audio tuning controls in VoiceLibrary; without it the
+            // selects would always fall back to their defaults regardless of what is stored.
+            provider_config: v.provider_config ?? undefined,
           })));
         }
         
@@ -192,6 +195,8 @@ export function VoiceAgentSettings() {
             agent_instructions: agent.agent_instructions || '',
             system_instructions: agent.system_instructions || '',
             outbound_starter_prompt: agent.outbound_starter_prompt || '',
+            // configs.fillers === false is the only "off"; absent means the worker default (on)
+            spoken_fillers: (agent.configs as Record<string, unknown> | null | undefined)?.fillers !== false,
           };
           resetForm(formData);
           setSelectedAgentVoiceSampleUrl(agent.voice_sample_url);
@@ -260,6 +265,8 @@ export function VoiceAgentSettings() {
             agent_instructions: formData.agent_instructions,
             system_instructions: formData.system_instructions,
             outbound_starter_prompt: formData.outbound_starter_prompt,
+            // Merged server-side into voice_agents.configs; only this key is touched.
+            configs: { fillers: formData.spoken_fillers },
           }),
         });
 
@@ -274,6 +281,7 @@ export function VoiceAgentSettings() {
             ? { 
                 ...agent, 
                 ...formData, 
+                configs: { ...((agent.configs as Record<string, unknown>) || {}), fillers: formData.spoken_fillers },
                 voice_id: formData.voice_id,
                 voice_sample_url: voices.find(v => v.id === formData.voice_id)?.voice_sample_url || agent.voice_sample_url,
                 updated_at: new Date().toISOString() 
@@ -363,6 +371,7 @@ export function VoiceAgentSettings() {
           agent_instructions: agent.agent_instructions || '',
           system_instructions: agent.system_instructions || '',
           outbound_starter_prompt: agent.outbound_starter_prompt || '',
+          spoken_fillers: (agent.configs as Record<string, unknown> | null | undefined)?.fillers !== false,
         });
       }
     } else {
@@ -442,6 +451,7 @@ export function VoiceAgentSettings() {
                   <FormSkeleton />
                 ) : (
                   <AgentForm
+                    agentId={selectedAgentId}
                     formData={formData}
                     errors={errors}
                     isDirty={isDirty}

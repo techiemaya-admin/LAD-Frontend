@@ -466,7 +466,7 @@ export function CallConfiguration({
               className={[
                 "relative inline-flex items-center justify-center flex-shrink-0",
                 "h-12 w-12 rounded-full shadow-lg",
-                "bg-[#0f1f5a]",
+                "bg-[#0b1957]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0f1f5a]/40",
               ].join(" ")}

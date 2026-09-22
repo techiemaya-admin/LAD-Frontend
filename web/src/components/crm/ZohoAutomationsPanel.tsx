@@ -248,14 +248,16 @@ export const ZohoAutomationsPanel: React.FC = () => {
         </div>
       )}
       {!enabled && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 text-sm text-amber-800 dark:text-amber-300">
-          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          Automation execution is currently disabled. Proposals will still appear, but approving is blocked until an admin sets <code className="mx-1">ZOHO_TASK_AUTOMATION_ENABLED=true</code>.
+        <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800/60 p-3 text-sm text-amber-800 dark:text-amber-200">
+          <p className="leading-relaxed">
+            <AlertCircle className="inline-block h-4 w-4 mr-1.5 align-text-bottom flex-shrink-0" />
+            Automation execution is currently disabled. Proposals will still appear, but approving is blocked until an admin sets <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 font-semibold">ZOHO_TASK_AUTOMATION_ENABLED=true</code>.
+          </p>
         </div>
       )}
       {banner && (
         <div className={`flex items-start gap-2 rounded-lg p-3 text-sm border ${
-          banner.kind === 'ok' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300'
+          banner.kind === 'ok' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-950/40 dark:border-green-800 dark:text-green-200' : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
         }`}>
           {banner.kind === 'ok' ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
           {banner.text}
@@ -287,21 +289,13 @@ export const ZohoAutomationsPanel: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-[#7a8ba3]">Sort</span>
+            <span className="text-xs text-muted-foreground">Sort</span>
             <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortKey)}>
-              <SelectTrigger className="h-9 px-3 rounded-lg text-xs font-medium border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-slate-800/50 text-[#172560] dark:text-white">
-                <SelectValue placeholder="Sort" />
+              <SelectTrigger className="h-8 text-xs w-36">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40">
-                {SORT_OPTIONS.map((o) => (
-                  <SelectItem
-                    key={o.value}
-                    value={o.value}
-                    className="dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white text-xs"
-                  >
-                    {o.label}
-                  </SelectItem>
-                ))}
+              <SelectContent className="z-[100000]">
+                {SORT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

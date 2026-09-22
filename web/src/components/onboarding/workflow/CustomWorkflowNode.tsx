@@ -30,6 +30,8 @@ function getBrandConfig(type: string) {
   if (type === 'landing_page')     return { bg: '#10b981', border: '#059669', glow: 'rgba(16,185,129,0.25)' };
   if (type === 'linkedin_content') return { bg: '#7c3aed', border: '#6d28d9', glow: 'rgba(124,58,237,0.25)' };
   if (type === 'post_approval')    return { bg: '#16a34a', border: '#15803d', glow: 'rgba(22,163,74,0.25)' };
+  if (type === 'comment_approval') return { bg: '#16a34a', border: '#15803d', glow: 'rgba(22,163,74,0.25)' };
+  if (type === 'linkedin_post_engage') return { bg: '#0e7490', border: '#155e75', glow: 'rgba(14,116,144,0.25)' };
   if (type === 'linkedin_post')    return { bg: '#0a66c2', border: '#004182', glow: 'rgba(10,102,194,0.25)' };
   if (type === 'instagram_post')   return { bg: '#c13584', border: '#a02c6d', glow: 'rgba(193,53,132,0.25)' };
   if (type === 'human_task')       return { bg: '#f59e0b', border: '#d97706', glow: 'rgba(245,158,11,0.25)' };
@@ -247,15 +249,15 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
 
       {/* Label below the node */}
       <div style={{ marginTop: 10, textAlign: 'center', maxWidth: 160 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 700, color: '#1f2937',
+        <div className="text-foreground dark:text-slate-100" style={{
+          fontSize: 13, fontWeight: 700,
           lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {data?.title || stepType}
         </div>
         {subtext && (
-          <div style={{
-            fontSize: 11, color: '#9ca3af', marginTop: 2,
+          <div className="text-muted-foreground dark:text-slate-400" style={{
+            fontSize: 11, marginTop: 2,
             lineHeight: 1.3, overflow: 'hidden',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
           }}>
@@ -276,6 +278,9 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           transform: scale(1.08) !important;
           box-shadow: 0 6px 20px ${brand.glow}, 0 3px 10px rgba(0,0,0,0.12) !important;
         }
+        .dark .mk-node-wrap:hover .mk-circle {
+          box-shadow: 0 0 0 3px #2B7CFF, 0 6px 20px rgba(43, 124, 255, 0.4) !important;
+        }
         .mk-node-wrap:hover .mk-actions,
         .mk-node-active .mk-actions {
           opacity: 1;
@@ -294,9 +299,9 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           width: 22px;
           height: 22px;
           border-radius: 50%;
-          border: 1.5px solid #e5e7eb;
-          background: #fff;
-          color: #6b7280;
+          border: 1.5px solid var(--border, #e5e7eb);
+          background: var(--card, #fff);
+          color: var(--muted-foreground, #6b7280);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -308,10 +313,21 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           box-shadow: 0 2px 8px rgba(0,0,0,0.12);
           z-index: 31;
         }
+        .dark .mk-io {
+          background: #1a2f6b;
+          border-color: #2b7cff;
+          color: #e0e0e0;
+        }
         .mk-io:hover {
-          background: ${brand.bg};
-          border-color: ${brand.bg};
-          color: #fff;
+          background: ${brand.bg} !important;
+          border-color: ${brand.bg} !important;
+          color: #fff !important;
+          transform: scale(1.15);
+        }
+        .dark .mk-io:hover {
+          background: #6366f1 !important;
+          border-color: #6366f1 !important;
+          color: #fff !important;
           transform: scale(1.15);
         }
 
@@ -330,8 +346,8 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           width: 24px;
           height: 24px;
           border-radius: 50%;
-          border: 1.5px solid #e5e7eb;
-          background: #fff;
+          border: 1.5px solid var(--border, #e5e7eb);
+          background: var(--card, #fff);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -339,10 +355,14 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           transition: all 0.15s;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+        .dark .mk-act-btn {
+          background: #1a2f6b;
+          border-color: #2b7cff;
+        }
         .mk-act-edit { color: #6366f1; }
-        .mk-act-edit:hover { background: #6366f1; color: #fff; border-color: #6366f1; }
+        .mk-act-edit:hover { background: #6366f1 !important; color: #fff !important; border-color: #6366f1 !important; }
         .mk-act-del { color: #ef4444; }
-        .mk-act-del:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+        .mk-act-del:hover { background: #ef4444 !important; color: #fff !important; border-color: #ef4444 !important; }
 
         @keyframes mk-pulse {
           0%, 100% { opacity: 0.3; transform: translate(-50%, calc(-50% - 12px)) scale(1); }

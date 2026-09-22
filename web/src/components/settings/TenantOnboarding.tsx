@@ -571,7 +571,7 @@ export function TenantOnboarding() {
                 {/* Expanded details */}
                 {isExpanded && (
                   <div className="px-6 pb-4 ml-7">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm bg-gray-50 dark:bg-gray-800/60 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm bg-gray-50 dark:bg-[#030a21]/60 p-4 rounded-lg">
                       <div>
                         <span className="text-xs text-gray-400 dark:text-slate-300">Tenant ID</span>
                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{account.tenant_id}</p>

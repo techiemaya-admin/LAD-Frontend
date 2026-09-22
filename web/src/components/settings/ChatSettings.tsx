@@ -628,7 +628,7 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm dark:bg-[#030a21]/60 dark:border-blue-950/40">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm dark:bg-[#071131] dark:border-blue-950/40">
       <div className="px-5 py-4 border-b border-gray-100 dark:border-blue-950/40 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Email agent (Gmail &amp; Outlook)</h3>
@@ -644,7 +644,7 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
           onClick={() => handleToggle(!enabled)}
           disabled={loading}
           className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-            enabled ? 'bg-red-500' : 'bg-gray-300'
+            enabled ? 'bg-red-500' : 'bg-input'
           } ${loading ? 'opacity-50' : ''}`}
         >
           <span
@@ -656,8 +656,8 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
       </div>
 
       <div className="px-5 py-4 space-y-3">
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          Reading inboxes needs the new read permission - accounts connected before the email
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-300 rounded-lg px-3 py-2">
+          Reading inboxes needs the new read permission — accounts connected before the email
           agent existed must be <span className="font-medium">disconnected and reconnected once</span>{' '}
           in Settings → Integrations. The agent only answers mail received after it&apos;s enabled.
         </p>
@@ -673,7 +673,7 @@ function EmailAgentCard({ showToast }: { showToast: (msg: string, type: 'success
               'pricing and availability using the knowledge base. Be concise and professional. ' +
               'If the sender asks for anything you are unsure about, say a team member will follow up.'
             }
-            className="mt-1 w-full rounded-lg border border-gray-200 dark:border-blue-950/60 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-400 disabled:bg-gray-50"
+            className="mt-1 w-full rounded-lg border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-slate-800/50 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-400 disabled:bg-gray-50"
           />
           <p className="mt-1 text-[11px] text-gray-500">
             The knowledge base and tone from your chat settings are added automatically.
@@ -700,7 +700,11 @@ export function ChatSettings() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [chatSettings, setChatSettings] = useState<ChatSettingsConfig>({
     knowledge_base: '',
+    typing_indicator: false,
+    waba_typing_indicator: false,
     campaign_frequency: { enabled: true, interval_hours: 24, max_daily_messages: 50 },
+    web_scraping_enabled: false,
+    web_scraping_urls: [],
   });
   const [followupConfig, setFollowupConfig] = useState<FollowupTimingConfig>(DEFAULT_FOLLOWUP_CONFIG);
   // Approved WhatsApp templates fetched from Meta - used to populate the
@@ -1783,18 +1787,26 @@ export function ChatSettings() {
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Send As
                         </label>
-                        <select
+                        <Select
                           value={asset.media_type || 'document'}
-                          onChange={(e) =>
+                          onValueChange={(val: 'document' | 'image') =>
                             updateShareableAsset(idx, {
-                              media_type: e.target.value as 'document' | 'image',
+                              media_type: val,
                             })
                           }
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:focus:ring-blue-500"
                         >
-                          <option value="document" className="dark:bg-[#030a21]">Document (file)</option>
-                          <option value="image" className="dark:bg-[#030a21]">Image (preview)</option>
-                        </select>
+                          <SelectTrigger className="w-full h-9.5 px-3 py-2 border border-gray-300 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:focus:ring-blue-500">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-[#071131] border-slate-200 dark:border-blue-950/40 p-1.5 space-y-1">
+                            <SelectItem value="document" className="text-xs cursor-pointer py-2 px-3">
+                              Document (file)
+                            </SelectItem>
+                            <SelectItem value="image" className="text-xs cursor-pointer py-2 px-3">
+                              Image (preview)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
@@ -2592,7 +2604,7 @@ export function ChatSettings() {
           Saved values persist regardless of visibility. */}
       {activeChannel === 'linkedin' && (
       <>
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
+      <div className="bg-white dark:bg-[#071131] rounded-lg border border-gray-200 dark:border-blue-950/40 shadow-sm">
         <div className="p-6 border-b border-gray-100 dark:border-blue-950/40">
           <div className="flex items-center gap-2 mb-1">
             <Linkedin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -2776,7 +2788,7 @@ export function ChatSettings() {
                       ai_agent_reply_delay_seconds: Number.isFinite(v) ? Math.max(0, Math.min(300, v)) : 0,
                     }));
                   }}
-                  className="w-20 px-2 py-1.5 border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-20 px-2 py-1.5 border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] dark:text-white rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200 dark:[color-scheme:dark]"
                 />
                 <span className="text-xs text-gray-500 dark:text-slate-300 w-8">sec</span>
               </div>
@@ -2787,15 +2799,15 @@ export function ChatSettings() {
               <div className="flex items-center gap-2.5">
                 <UserMinus className="h-4 w-4 text-blue-500 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Auto-withdraw old pending requests</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Auto-withdraw old pending requests</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-300">
                     Withdraw connection requests that are still pending after the set number of days (minimum 30)
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className={`flex items-center gap-1.5 ${linkedinAutomation.auto_withdraw_pending_enabled ? '' : 'opacity-40'}`}>
-                  <span className="text-xs text-gray-500">older than</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">older than</span>
                   <input
                     type="number"
                     min={30}
@@ -2815,9 +2827,9 @@ export function ChatSettings() {
                         auto_withdraw_pending_days: Math.max(30, Math.floor(Number(prev.auto_withdraw_pending_days) || 90)),
                       }))
                     }
-                    className="w-16 px-2 py-1.5 border border-gray-200 rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+                    className="w-16 px-2 py-1.5 border border-gray-200 dark:border-blue-950/60 bg-white dark:bg-[#030a21] text-gray-800 dark:text-white rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 dark:disabled:bg-[#030a21] disabled:text-gray-600 dark:disabled:text-white/80 dark:[color-scheme:dark]"
                   />
-                  <span className="text-xs text-gray-500">days</span>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">days</span>
                 </div>
                 <button
                   onClick={() =>
@@ -2828,7 +2840,7 @@ export function ChatSettings() {
                   {linkedinAutomation.auto_withdraw_pending_enabled ? (
                     <ToggleRight className="h-6 w-6 text-blue-500" />
                   ) : (
-                    <ToggleLeft className="h-6 w-6 text-gray-300" />
+                    <ToggleLeft className="h-6 w-6 text-gray-300 dark:text-gray-600" />
                   )}
                 </button>
               </div>
@@ -2849,7 +2861,7 @@ export function ChatSettings() {
       </div>
 
       {/* ───── LinkedIn Follow-up Sequence (post-acceptance cadence) ───── */}
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-xl border border-gray-200 dark:border-blue-950/40 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-[#071131] rounded-xl border border-gray-200 dark:border-blue-950/40 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200 dark:border-blue-950/40">
           <div className="flex items-center gap-3 mb-1">
             <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 rounded-lg">

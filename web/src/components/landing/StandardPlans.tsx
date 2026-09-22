@@ -20,7 +20,7 @@ export default function StandardPlans() {
         "AI powered chat-based campaign setup",
         "CRM pipeline",
       ],
-      href: "/onboarding"
+      href: "/register"
     },
     {
       name: "Professional",
@@ -34,7 +34,7 @@ export default function StandardPlans() {
         "Campaign analytics",
         "AI Recommendations for deal closure",
       ],
-      href: "/onboarding",
+      href: "/register",
       popular: true
     },
     {
@@ -48,7 +48,7 @@ export default function StandardPlans() {
         "AI Chat Agent for LinkedIn, WhatsApp",
         "Priority Support",
       ],
-      href: "/onboarding"
+      href: "/register"
     },
     {
       name: "Enterprise Business",

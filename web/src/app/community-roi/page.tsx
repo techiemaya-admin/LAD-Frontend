@@ -31,6 +31,7 @@ import RelationshipHeatmap, { RelationshipHeatmapWithRecommendations } from '@/f
 import { BroadcastPerformanceContainer } from '@/features/community-roi/components/BroadcastPerformanceContainer'
 import { AuditLogPanel } from '@/features/community-roi/components/AuditLogPanel'
 import { VerificationClaimsPanel } from '@/features/community-roi/components/VerificationClaimsPanel'
+import { MemberAvailabilityPanel } from '@/features/community-roi/components/MemberAvailabilityPanel'
 import MemberProfileView from './components/MemberProfileView'
 import LeaderboardPanel from './components/LeaderboardPanel'
 import { NetworkGrowthGraph } from './components/NetworkGrowthGraph'
@@ -336,6 +337,9 @@ export default function CommunityROIDashboard() {
 
               {/* 1-2-1 Verification Claims - admin review queue (self-hides when empty) */}
               <VerificationClaimsPanel />
+
+              {/* Per-member 1-2-1 availability - the agent RANKS slots by these */}
+              <MemberAvailabilityPanel />
 
               {/* Broadcast Performance - per-template delivery & read-rate */}
               <BroadcastPerformanceContainer />

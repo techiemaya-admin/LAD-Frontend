@@ -21,6 +21,7 @@ import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
 import { getStatusColor, type CampaignStatus } from '@/components/campaigns/campaignUtils';
+import PostPerformanceCard from '@/components/campaigns/PostPerformanceCard';
 import ScheduledFollowupsModal from '@/components/campaigns/ScheduledFollowupsModal';
 import { LiveBadge } from '@/components/LiveBadge';
 import { proxyPost } from '@/lib/api';
@@ -725,6 +726,9 @@ export default function CampaignAnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* LinkedIn post performance — renders only for campaigns that auto-post */}
+      <PostPerformanceCard campaignId={campaignId} />
 
       {/* Live Activity Feed */}
       <div className="mb-8">

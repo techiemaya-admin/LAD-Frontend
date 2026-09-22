@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneCall, SquarePen } from "lucide-react";
+import { PhoneCall, SquarePen, ThumbsDown, ThumbsUp } from "lucide-react";
 import {
   Play,
   Mic,
@@ -40,10 +40,27 @@ import {
   Clock,
   Download,
 } from "lucide-react";
+
+/** Plain-language reasons for a missing recording, keyed by VOAG's metadata.recording_error.code. */
+const RECORDING_ERROR_TEXT: Record<string, string> = {
+  egress_quota_exceeded:
+    "The LiveKit recording quota (egress minutes) for this project was exhausted when the call ran. The transcript and analysis are unaffected.",
+  egress_auth_failed: "The recording service rejected our credentials when the call ran.",
+  egress_start_failed: "The recording service could not start for this call.",
+  no_audio: "No audio was captured on this call — it most likely ended before anyone spoke.",
+  upload_failed: "The recording was made but could not be uploaded to storage.",
+  local_mix_failed: "The recording could not be assembled after the call.",
+  local_recorder_unavailable: "The recorder did not start on the worker for this call.",
+  disabled: "Recording is switched off for this agent.",
+};
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/app-toaster";
 import { logger } from "@/lib/logger";
 import { AgentAudioPlayer } from "./AgentAudioPlayer";
+import { useAgentCorrections } from "./voice-agent/corrections/useAgentCorrections";
+import { CorrectionPopover } from "./voice-agent/corrections/CorrectionPopover";
+import { CorrectionsList } from "./voice-agent/corrections/CorrectionsList";
+import { LineFeedbackPopover } from "./voice-agent/corrections/LineFeedbackPopover";
 import { downloadRecording, generateRecordingFilename } from "@/utils/recordingDownload";
 import { categorizeLead, getTagConfig, normalizeLeadCategory } from "@/utils/leadCategorization";
 import { formatDateTimeUnified } from "@/utils/dateTime";
@@ -113,49 +130,273 @@ function formatTimestamp(input: any): string {
 }
 
 /* ----------------- Transcripts Tab ------------------ */
+const isAgentSpeaker = (speaker?: string) => {
+  const sp = (speaker || "").toLowerCase();
+  return sp === "assistant" || sp === "agent";
+};
+
+/**
+ * Transcript with "strike a word, teach the fix" on agent lines.
+ *
+ * Select any text inside an agent bubble → a popover asks for the replacement and
+ * saves it as a correction for THIS call's agent. The VOAG worker applies saved
+ * corrections on the next call (prompt + before-TTS substitution), so nothing
+ * else needs to change. User lines are not selectable for this: corrections fix
+ * what the agent says, not what the customer said.
+ */
 const TranscriptsTab = ({
   segments,
+  agentId,
+  callId,
 }: {
   segments: Array<{ time?: string; speaker?: string; text: string }>;
-}) => (
-  <ScrollArea className="h-full p-4 bg-transparent">
-    <div className="space-y-3">
-      {segments.map((msg, i) => (
-        <div
-          key={i}
-          className={cn(
-            "flex items-start space-x-2",
-            (msg.speaker || "").toLowerCase() === "assistant" ||
-              (msg.speaker || "").toLowerCase() === "agent"
-              ? "justify-start"
-              : "justify-end"
-          )}
-        >
-          {((msg.speaker || "").toLowerCase() === "assistant" ||
-            (msg.speaker || "").toLowerCase() === "agent") && (
-              <Bot className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-1" />
+  agentId?: number | string | null;
+  callId?: string | null;
+}) => {
+  const { push: notify } = useToast();
+  const corrections = useAgentCorrections(agentId ?? null);
+  const [pending, setPending] = useState<{ wrong: string; anchor: { x: number; y: number } } | null>(null);
+  const [disliking, setDisliking] = useState<{ line: string; anchor: { x: number; y: number } } | null>(null);
+  const [showList, setShowList] = useState(false);
+
+  const canTeach = agentId !== null && agentId !== undefined && agentId !== "";
+
+  /**
+   * Two ways to pick text in an agent line: drag-select a phrase, or simply click
+   * a word. A click leaves the selection collapsed, so the word under the caret
+   * is expanded from the surrounding text node (whitespace/punctuation-bounded).
+   */
+  const onAgentLineMouseUp = (e: React.MouseEvent<HTMLParagraphElement>) => {
+    if (!canTeach) return;
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    // Only honour a selection that lives entirely inside this bubble.
+    if (!e.currentTarget.contains(range.commonAncestorContainer)) return;
+
+    let wrong = sel.toString().replace(/\s+/g, " ").trim();
+    let rect = range.getBoundingClientRect();
+
+    if (!wrong && sel.isCollapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
+      const text = range.startContainer.textContent || "";
+      const at = range.startOffset;
+      const isEdge = (ch: string) => /[\s.,!?;:'"()\[\]{}\-–—…/]/.test(ch);
+      let a = at;
+      let b = at;
+      while (a > 0 && !isEdge(text[a - 1])) a--;
+      while (b < text.length && !isEdge(text[b])) b++;
+      wrong = text.slice(a, b).trim();
+      if (wrong) {
+        const r = document.createRange();
+        r.setStart(range.startContainer, a);
+        r.setEnd(range.startContainer, b);
+        rect = r.getBoundingClientRect();
+        sel.removeAllRanges();
+        sel.addRange(r); // show the user what was picked
+      }
+    }
+
+    if (!wrong || wrong.length > 200) return;
+    setPending({ wrong, anchor: { x: rect.left, y: rect.bottom } });
+  };
+
+  // Lines already rated, so the thumbs reflect what is saved and a repeat click undoes it.
+  const ratedLines = useMemo(() => {
+    const m = new Map<string, { id: string; kind: "liked" | "disliked" }>();
+    for (const c of corrections.items) {
+      if (c.kind === "liked" || c.kind === "disliked") m.set(c.wrong.trim(), { id: c.id, kind: c.kind });
+    }
+    return m;
+  }, [corrections.items]);
+
+  const rateLine = async (line: string, verdict: "liked" | "disliked", e: React.MouseEvent<HTMLButtonElement>) => {
+    const existing = ratedLines.get(line.trim());
+    try {
+      if (existing && existing.kind === verdict) {
+        await corrections.remove(existing.id); // toggle off
+        return;
+      }
+      if (verdict === "disliked") {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setDisliking({ line, anchor: { x: rect.left, y: rect.bottom } });
+        return;
+      }
+      const row = await corrections.save({ wrong: line.trim(), right: "", kind: "liked", source: "transcript", source_call_id: callId ?? null });
+      notify({ title: "Kept as an example", description: `"${row.wrong.slice(0, 60)}${row.wrong.length > 60 ? "…" : ""}"`, variant: "success" });
+    } catch (err) {
+      notify({ title: "Could not save feedback", description: err instanceof Error ? err.message : undefined, variant: "error" });
+    }
+  };
+
+  // Remembered per session so a struck word is shown as fixed in the transcript
+  // right away, before the next call proves it.
+  const fixes = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of corrections.items) {
+      if (c.kind === "vocab" || c.kind === "pronunciation") m.set(c.wrong.toLowerCase(), c.right);
+    }
+    return m;
+  }, [corrections.items]);
+
+  const renderAgentText = (text: string) => {
+    if (fixes.size === 0) return text;
+    // Split on any known `wrong` (longest first) and render it struck + replaced.
+    const keys = Array.from(fixes.keys()).sort((a, b) => b.length - a.length);
+    const re = new RegExp(`(${keys.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+    const parts = text.split(re);
+    return parts.map((part, i) => {
+      const fix = fixes.get(part.toLowerCase());
+      if (fix === undefined) return <React.Fragment key={i}>{part}</React.Fragment>;
+      return (
+        <React.Fragment key={i}>
+          <span className="line-through decoration-destructive/70 opacity-70">{part}</span>
+          {fix ? <span className="ml-1 font-semibold underline decoration-emerald-500/70">{fix}</span> : null}
+        </React.Fragment>
+      );
+    });
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      {canTeach && (
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-xs text-muted-foreground">
+          <span>
+            Click a word (or select a phrase) in an agent line to teach a replacement; 👍 / 👎 a whole line.
+            {corrections.items.length > 0 && (
+              <> Applied on the next call.</>
             )}
-          <div
-            className={cn(
-              "p-3 rounded-2xl max-w-xs shadow-md",
-              (msg.speaker || "").toLowerCase() === "user"
-                ? "bg-linear-to-r from-orange-100 to-orange-200 text-orange-900 dark:from-orange-950/40 dark:to-orange-900/40 dark:text-orange-200"
-                : "bg-linear-to-r from-blue-100 to-blue-200 text-blue-900 dark:from-blue-950/40 dark:to-blue-900/40 dark:text-blue-200"
-            )}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 font-medium text-foreground hover:underline"
+            onClick={() => setShowList((v) => !v)}
+            aria-expanded={showList}
           >
-            <p className="text-sm font-medium wrap-break-word">{msg.text}</p>
-            <span className="text-[10px] text-muted-foreground dark:text-gray-500 block mt-1">
-              {formatTimestamp(msg.time)}
-            </span>
-          </div>
-          {(msg.speaker || "").toLowerCase() === "user" && (
-            <User className="h-5 w-5 text-orange-500 dark:text-orange-400 mt-1" />
-          )}
+            Corrections ({corrections.items.length})
+          </button>
         </div>
-      ))}
+      )}
+      {canTeach && showList && (
+        <div className="border-b border-border px-4 py-2">
+          <CorrectionsList
+            compact
+            items={corrections.items}
+            loading={corrections.loading}
+            error={corrections.error}
+            onDelete={async (id) => {
+              try {
+                await corrections.remove(id);
+              } catch (err) {
+                notify({ title: "Could not delete correction", description: err instanceof Error ? err.message : undefined, variant: "error" });
+              }
+            }}
+          />
+        </div>
+      )}
+      {/* min-h-0: a flex child defaults to min-height:auto and grows past the
+          container, which left this area unscrollable inside the tab. */}
+      <ScrollArea className="flex-1 min-h-0 p-4 bg-transparent">
+        <div className="space-y-3">
+          {segments.map((msg, i) => {
+            const agent = isAgentSpeaker(msg.speaker);
+            return (
+              <div
+                key={i}
+                className={cn("flex items-start space-x-2", agent ? "justify-start" : "justify-end")}
+              >
+                {agent && <Bot className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-1" />}
+                <div
+                  className={cn(
+                    "p-3 rounded-2xl max-w-xs shadow-md",
+                    (msg.speaker || "").toLowerCase() === "user"
+                      ? "bg-linear-to-r from-orange-100 to-orange-200 text-orange-900 dark:from-orange-950/40 dark:to-orange-900/40 dark:text-orange-200"
+                      : "bg-linear-to-r from-blue-100 to-blue-200 text-blue-900 dark:from-blue-950/40 dark:to-blue-900/40 dark:text-blue-200"
+                  )}
+                >
+                  <p
+                    className={cn("text-sm font-medium wrap-break-word", agent && canTeach && "cursor-text select-text")}
+                    onMouseUp={agent ? onAgentLineMouseUp : undefined}
+                    title={agent && canTeach ? "Select text to teach a replacement" : undefined}
+                  >
+                    {agent ? renderAgentText(msg.text) : msg.text}
+                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-muted-foreground dark:text-gray-500 block">
+                      {formatTimestamp(msg.time)}
+                    </span>
+                    {agent && canTeach && msg.text.trim() && (() => {
+                      const rated = ratedLines.get(msg.text.trim());
+                      return (
+                        <span className="flex items-center gap-1" aria-label="Rate this line">
+                          <button
+                            type="button"
+                            aria-label={rated?.kind === "liked" ? "Remove like" : "Like this line — keep as an example"}
+                            aria-pressed={rated?.kind === "liked"}
+                            className={cn("rounded p-0.5 transition-colors hover:bg-black/5 dark:hover:bg-white/10", rated?.kind === "liked" ? "text-emerald-600" : "text-blue-900/40 dark:text-blue-200/40")}
+                            onClick={(e) => void rateLine(msg.text, "liked", e)}
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={rated?.kind === "disliked" ? "Remove dislike" : "Dislike this line — teach what to say instead"}
+                            aria-pressed={rated?.kind === "disliked"}
+                            className={cn("rounded p-0.5 transition-colors hover:bg-black/5 dark:hover:bg-white/10", rated?.kind === "disliked" ? "text-destructive" : "text-blue-900/40 dark:text-blue-200/40")}
+                            onClick={(e) => void rateLine(msg.text, "disliked", e)}
+                          >
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {(msg.speaker || "").toLowerCase() === "user" && (
+                  <User className="h-5 w-5 text-orange-500 dark:text-orange-400 mt-1" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+
+      {disliking && (
+        <LineFeedbackPopover
+          line={disliking.line}
+          anchor={disliking.anchor}
+          onClose={() => setDisliking(null)}
+          onSave={async (input) => {
+            const row = await corrections.save({ ...input, source: "transcript", source_call_id: callId ?? null });
+            notify({
+              title: row.right ? "Agent taught" : "Dislike saved",
+              description: row.right ? `It will say "${row.right.slice(0, 60)}${row.right.length > 60 ? "…" : ""}" instead.` : "It will not say that line again.",
+              variant: "success",
+            });
+          }}
+        />
+      )}
+
+      {pending && (
+        <CorrectionPopover
+          wrong={pending.wrong}
+          anchor={pending.anchor}
+          onClose={() => {
+            setPending(null);
+            if (typeof window !== "undefined") window.getSelection()?.removeAllRanges();
+          }}
+          onSave={async (input) => {
+            const row = await corrections.save({ ...input, source: "transcript", source_call_id: callId ?? null });
+            notify({
+              title: "Agent taught",
+              description: row.kind === "style" ? `Rule saved: ${row.wrong}` : `"${row.wrong}" → "${row.right}" from the next call.`,
+              variant: "success",
+            });
+          }}
+        />
+      )}
     </div>
-  </ScrollArea>
-);
+  );
+};
 
 /* ----------------- Analysis Tab ------------------ */
 const StatBox = ({ label, value, subValue, colorClass }: { label: string; value: string; subValue?: string; colorClass?: string }) => (
@@ -1013,6 +1254,13 @@ export function CallLogModal({
   // Availability flags & default tab
   const hasTranscripts = segments && segments.length > 0;
   const hasAudio = Boolean(signedRecordingUrl);
+
+  // Why there is no player, when the worker told us (metadata.recording_error).
+  const recordingNotice = useMemo(() => {
+    const err = log?.metadata?.recording_error as { code?: string; message?: string } | undefined;
+    if (!err?.code) return null;
+    return RECORDING_ERROR_TEXT[err.code] ?? `Recording could not be saved (${err.code}).`;
+  }, [log]);
   const hasAnalysis = analysis && typeof analysis === "object" && Object.keys(analysis).length > 0;
 
   const availableTabs: Array<"transcripts" | "analysis" | "messages"> = [];
@@ -1064,8 +1312,8 @@ export function CallLogModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden dark:bg-[#000c3b] dark:border-gray-800">
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+      <DialogContent className="sm:max-w-5xl w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden dark:bg-[#000724] dark:border-blue-950/40">
+        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-blue-950/40 dark:bg-[#081331]">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-full bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/60 shadow-sm">
               <PhoneCall className="h-6 w-6 text-orange-600 dark:text-orange-400" />
@@ -1103,8 +1351,43 @@ export function CallLogModal({
           ) : (
             <>
               {hasAudio && (
-                <div className="w-full">
-                  <AgentAudioPlayer src={signedRecordingUrl} />
+                <div className="w-full flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <AgentAudioPlayer
+                      src={signedRecordingUrl}
+                      downloadBaseName={generateRecordingFilename(
+                        [log?.lead_first_name, log?.lead_last_name].filter(Boolean).join(' '),
+                        log?.started_at,
+                      )}
+                    />
+                  </div>
+                  {/* Save the file. The handler and its state were kept when the modal was
+                      restyled (7e8f63ef) but the button that called them was dropped. */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadRecording}
+                    disabled={isDownloadingRecording}
+                    aria-label="Download recording"
+                    title="Download recording"
+                    className="shrink-0 rounded-xl"
+                  >
+                    <Download className={cn("h-4 w-4", isDownloadingRecording && "animate-pulse")} />
+                    <span className="hidden sm:inline ml-1 text-xs">{isDownloadingRecording ? "Saving…" : "Download"}</span>
+                  </Button>
+                </div>
+              )}
+              {!hasAudio && recordingNotice && (
+                <div
+                  role="status"
+                  className="w-full flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-medium">Recording unavailable</div>
+                    <div className="text-xs opacity-90">{recordingNotice}</div>
+                  </div>
                 </div>
               )}
 
@@ -1155,7 +1438,7 @@ export function CallLogModal({
 
                 {hasTranscripts && (
                   <TabsContent value="transcripts" className="flex-1 flex flex-col overflow-hidden mt-4 border border-gray-200 dark:border-gray-800 rounded-2xl">
-                    <TranscriptsTab segments={segments} />
+                    <TranscriptsTab segments={segments} agentId={log?.agent_id ?? null} callId={id ?? null} />
                   </TabsContent>
                 )}
 

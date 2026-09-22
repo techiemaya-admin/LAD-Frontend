@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
+import { useWhatsAppAccounts } from '@lad/frontend-features/meta-onboarding';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,14 @@ interface CreateWabaTemplateModalProps {
 export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: CreateWabaTemplateModalProps) {
   // ── Basic info ──────────────────────────────────────────────────────────────
   const [name,     setName]     = useState('');
+  // WhatsApp templates live on a WABA, not on a workspace, so a tenant with two
+  // connected numbers has two separate template libraries. Submitting without
+  // choosing sent every template to whichever number was connected FIRST.
+  const { accounts } = useWhatsAppAccounts();
+  const [accountId, setAccountId] = useState('');
+  const targetAccount = accounts.find(a => a.id === accountId) ?? accounts[0];
+  const effectiveAccountId = targetAccount?.id ?? '';
+
   const [language, setLanguage] = useState('en_US');
   const [category, setCategory] = useState<Category>('MARKETING');
 
@@ -160,7 +169,9 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ file_base64: base64, filename: file.name, content_type: file.type }),
+          // Same number as the submission — a header handle is WABA-scoped,
+          // and Meta rejects one created against a different number.
+          body: JSON.stringify({ file_base64: base64, filename: file.name, content_type: file.type, account_id: effectiveAccountId }),
         }
       );
       const data = await res.json();
@@ -178,7 +189,10 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
     }
     // reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+    // effectiveAccountId is a real dependency: a handle uploaded against one
+    // number is rejected by Meta when the template is submitted to another, so a
+    // stale closure here silently breaks every media template.
+  }, [effectiveAccountId]);
 
   // ── Build Meta components array ────────────────────────────────────────────
   const buildComponents = useCallback((): object[] => {
@@ -306,6 +320,7 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
             language,
             category,
             components: buildComponents(),
+            account_id: effectiveAccountId,
           }),
         }
       );
@@ -380,6 +395,45 @@ export function CreateWabaTemplateModal({ open, onOpenChange, onCreated }: Creat
               {/* ── Basic info ── */}
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Basic Info</h3>
+
+                {/* Shown whenever there is a number at all, not only when there are
+                    several. A template is submitted to Meta against ONE number and
+                    cannot be moved afterwards, so which number that is belongs on
+                    screen even when there is no choice to make — a single-number
+                    tenant otherwise submits against a silent `accounts[0]` fallback
+                    and finds out where it landed only when approval comes back on
+                    the wrong WABA. It also keeps the form from changing shape the
+                    day a second number is connected. */}
+                {accounts.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">WhatsApp number <span className="text-red-500">*</span></label>
+                    {accounts.length > 1 ? (
+                    <Select value={effectiveAccountId} onValueChange={setAccountId}>
+                      <SelectTrigger className="w-full h-8 text-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors">
+                        <SelectValue placeholder="Select number" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100">
+                        {accounts.map(a => (
+                          <SelectItem key={a.id} value={a.id} className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-700 dark:focus:text-zinc-100">
+                            {a.display_phone_number || a.display_name || a.slug}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    ) : (
+                      <div
+                        className="w-full h-8 px-3 flex items-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100"
+                        data-testid="waba-template-single-account"
+                      >
+                        {targetAccount?.display_phone_number || targetAccount?.display_name || targetAccount?.slug}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                      Templates belong to one number. This one is submitted to Meta for approval on{' '}
+                      {accounts.length > 1 ? 'the number you pick' : 'this number'}.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">

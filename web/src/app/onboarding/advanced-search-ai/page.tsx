@@ -5,6 +5,9 @@ import {
 } from "@/components/ui/select";
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import rehypeHighlight from 'rehype-highlight';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -47,7 +50,7 @@ import {
     useVoiceAgent,
     useBilling,
     useBusinessProfile,
-    computeCompleteness,
+    computeCompletenessFor,
     computeOfferCompleteness,
     type BusinessProfile,
 } from '@lad/frontend-features/ai-icp-assistant';
@@ -91,7 +94,10 @@ interface LeadProfile {
     locked?: boolean;
     phone?: string;
     email?: string;
-    icp_score?: number;
+    // null = the model returned no verdict for this lead. Distinct from undefined,
+    // which means scoring has not finished yet (defer_icp).
+    icp_score?: number | null;
+    icp_scored?: boolean;
     match_level?: 'strong' | 'moderate' | 'weak';
     icp_reasoning?: string;
     enriched_profile?: {
@@ -417,6 +423,7 @@ const WF_MAX_ROUNDS = 6;
 const WF_SOURCE_LABELS: Record<string, { label: string; sub: string }> = {
     linkedin_search:  { label: 'LinkedIn Search',            sub: 'Find new leads by keywords' },
     linkedin_signal:  { label: 'LinkedIn Signal Search',     sub: 'Find leads from hiring/buying signals' },
+    linkedin_connections: { label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network' },
     file_import:      { label: 'File import (CSV / Excel)',  sub: 'Upload a list and map columns' },
     zoho_once:        { label: 'Zoho CRM (One-Time)',        sub: 'Import synced contacts now' },
     zoho_recurring:   { label: 'Zoho CRM (Recurring)',       sub: 'Import new contacts daily' },
@@ -604,6 +611,117 @@ function resolveProfileUrl(item: any): string {
  * scored 1/100 is noise either way. Idempotent, so applying it again at a
  * render site is harmless.
  */
+/** One progress tick from the prospect-search stream. */
+type ProspectProgress = { phase: string; done: number; total: number; latest?: string | null };
+
+/**
+ * POST /prospect-search, reading progress as it arrives.
+ *
+ * The search takes 73-119s in production — Claude discovery plus several
+ * sequential web lookups per company — and used to return nothing until it was
+ * finished, so the chat showed one motionless line for two minutes and read as a
+ * hang. Passing `onProgress` opts into a newline-delimited JSON stream and gets
+ * real counts as they happen.
+ *
+ * Returns the same `{ok, status, data}` a plain fetch would, so the branches at
+ * the call sites are unchanged. Without `onProgress` — or against a backend that
+ * ignores the flag — it falls back to one JSON body, which is what "Get More" and
+ * the lead-preview panel still do.
+ */
+async function runProspectSearch(
+    body: Record<string, unknown>,
+    onProgress?: (p: ProspectProgress) => void,
+): Promise<{ ok: boolean; status: number; data: any }> {
+    const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, stream: Boolean(onProgress) }),
+    });
+
+    const ctype = resp.headers.get('content-type') || '';
+    if (!onProgress || !ctype.includes('ndjson') || !resp.body) {
+        const data = await resp.json().catch(() => null);
+        return { ok: resp.ok && data?.success !== false, status: resp.status, data };
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let final: any = null;
+
+    const consume = (line: string) => {
+        if (!line.trim()) return;
+        let evt: any;
+        // A chunk can split mid-line, so an unparseable fragment is expected —
+        // never let one throw away a search that has already been paid for.
+        try { evt = JSON.parse(line); } catch { return; }
+        if (evt.type === 'progress') onProgress(evt as ProspectProgress);
+        else if (evt.type === 'result' || evt.type === 'error') final = evt;
+    };
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';   // keep the trailing partial line for the next chunk
+        lines.forEach(consume);
+    }
+    consume(buf);
+
+    if (!final) {
+        // The stream ended without a verdict — a dropped connection, not an empty
+        // result. Saying "no matches" here would repeat the bug one layer down.
+        return {
+            ok: false,
+            status: resp.status,
+            data: { success: false, error: 'The search ended before returning a result.' },
+        };
+    }
+    return { ok: final.type !== 'error' && final.success !== false, status: resp.status, data: final };
+}
+
+/** Live text for the "still working" bubble. Real counts, never a fake animation. */
+function prospectProgressText(p: ProspectProgress | null): string {
+    if (!p || p.phase === 'discovering') {
+        return `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts.\n\n⚡ *Identifying companies...*`;
+    }
+    const at = p.latest ? ` — latest: **${p.latest}**` : '';
+    return `🔍 **Finding specific companies and decision makers for you...**\n\nResearching each prospect across the web, LinkedIn and company databases.\n\n⚡ *Researched **${p.done} of ${p.total}** prospects${at}*`;
+}
+
+/**
+ * Say what the size clause did — including when it could not be verified.
+ *
+ * "…with 50 to 200 employees" was previously parsed by nothing and applied by
+ * nothing, and the silence is what made it a bug rather than a limitation. A
+ * filter that ran and a filter that never existed must not look the same.
+ */
+function sizeConstraintNote(sc: any): string {
+    if (!sc || !sc.applied) return '';
+    const bits: string[] = [`📏 **Size filter applied:** ${sc.requested}.`];
+    if (sc.excluded > 0) bits.push(`${sc.excluded} compan${sc.excluded === 1 ? 'y' : 'ies'} outside that range excluded.`);
+    if (sc.unverified > 0) {
+        bits.push(`${sc.unverified} kept without a published headcount — I could not verify their size, so check those before reaching out.`);
+    }
+    if (sc.excluded === 0 && sc.unverified === 0) bits.push('All results are within range.');
+    return `\n\n${bits.join(' ')}`;
+}
+
+/**
+ * Did the model actually judge this lead?
+ *
+ * Three states, and collapsing any two of them is how four leads came to be shown
+ * as a confident "0%" and filtered out of their own search:
+ *   number     — a verdict, including a genuine 0
+ *   null       — scoring ran and returned nothing for this person
+ *   undefined  — scoring has not finished yet (defer_icp); shown as "Scoring…"
+ */
+function isLeadUnscored(lead: { icp_score?: number | null; icp_scored?: boolean }): boolean {
+    if (lead.icp_scored === false) return true;
+    return lead.icp_score === null;
+}
+
 function normalizeIcpScore(raw: unknown): number | undefined {
     if (raw === null || raw === undefined || raw === '') return undefined;
     const n = Number(raw); // pg NUMERIC can arrive as a string
@@ -617,7 +735,7 @@ function normalizeIcpScore(raw: unknown): number | undefined {
  * Using the score directly ensures the badge colour reflects what the user sees.
  * Normalises first - a 0-1 score would otherwise never be 'strong'.
  */
-function scoreToMatchLevel(score: number | undefined): 'strong' | 'moderate' {
+function scoreToMatchLevel(score: number | null | undefined): 'strong' | 'moderate' {
     if ((normalizeIcpScore(score) ?? 0) >= 70) return 'strong';
     return 'moderate'; // yellow for everything else - never show red on lead badges
 }
@@ -1165,6 +1283,10 @@ export default function AdvancedSearchAIPage() {
     const [leads, setLeads] = useState<LeadProfile[]>([]);
     const [filteredLeads, setFilteredLeads] = useState<LeadProfile[]>([]);   // below ICP threshold
     const [showFilteredLeads, setShowFilteredLeads] = useState(false);        // toggle "Show all"
+    // The threshold the BACKEND actually applied. The banner used to hardcode "50"
+    // while /search/unified was filtering on whatever icp_min_score we sent, so the
+    // number on screen could describe a rule nothing had run.
+    const [icpThresholdApplied, setIcpThresholdApplied] = useState<number | null>(null);
     // True between "leads rendered" and "ICP scores arrived" when the search ran
     // with defer_icp. Drives the pulsing dot that stands in for the score chip.
     const [icpScoringPending, setIcpScoringPending] = useState(false);
@@ -1466,6 +1588,24 @@ export default function AdvancedSearchAIPage() {
     const [directContactLeadIds, setDirectContactLeadIds] = useState<string[]>([]); // Real UUIDs for chat-entered direct contacts
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Which model answers this chat. null = Auto, i.e. leave the workspace's own
+    // routing rule in charge — deliberately NOT the same as picking a model.
+    // Kept per browser: it is a personal preference, not workspace configuration.
+    const [chatModel, setChatModel] = useState<ModelChoice>(null);
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('adv-chat-model');
+            if (raw) setChatModel(JSON.parse(raw));
+        } catch { /* corrupt or unavailable storage → Auto */ }
+    }, []);
+    const pickChatModel = useCallback((c: ModelChoice) => {
+        setChatModel(c);
+        try {
+            if (c) localStorage.setItem('adv-chat-model', JSON.stringify(c));
+            else localStorage.removeItem('adv-chat-model');
+        } catch { /* storage full or blocked — the choice still applies this session */ }
+    }, []);
 
     // Contact picker modal state
     const [showContactPicker, setShowContactPicker] = useState(false);
@@ -1790,7 +1930,7 @@ export default function AdvancedSearchAIPage() {
     // iterates Object.keys) - any canonical key missing here is silently
     // dropped on load even when the server has it. Keep it in sync with
     // BUSINESS_PROFILE_ALL_FIELDS.
-    const { profile: loadedProfile, loading: profileLoading } = useBusinessProfile();
+    const { profile: loadedProfile, loading: profileLoading, contract: profileContract } = useBusinessProfile();
     const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({
         companyName: '', industry: '', website: '', companyDescription: '',
         productsServices: '', targetCustomers: '', icpJobTitles: '',
@@ -1849,7 +1989,7 @@ export default function AdvancedSearchAIPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: msg }),
+                body: JSON.stringify({ message: msg, ...(chatModel || {}) }),
             });
             const data = await res.json();
             if (data.success) {
@@ -1947,7 +2087,7 @@ export default function AdvancedSearchAIPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: '__init__' }),
+                body: JSON.stringify({ message: '__init__', ...(chatModel || {}) }),
             });
             const data = await res.json();
             if (data.success && data.reply) {
@@ -5286,20 +5426,28 @@ export default function AdvancedSearchAIPage() {
                             setSeenProspectIds([]);
                             setLeads([]);
 
+                            // A stable id so the stream can rewrite this one bubble in
+                            // place, rather than stacking a new message per tick.
+                            const progressId = `a-gps-${Date.now()}`;
+                            setMessages(p => p.concat({
+                                id: progressId, role: 'ai', text: prospectProgressText(null), ts: new Date(),
+                            }));
+
                             try {
-                                const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
+                                const { ok: respOk, status: respStatus, data: d } = await runProspectSearch(
+                                    {
                                         query: prospectQuery,
                                         icpProfile: businessProfile,
                                         sessionId: `gps-${Date.now()}`,
                                         seenIds: [],
                                         batchSize: leadCount,
-                                    }),
-                                });
-                                const d = await resp.json();
+                                    },
+                                    (prog) => setMessages(p => p.map(m => (
+                                        m.id === progressId ? { ...m, text: prospectProgressText(prog) } : m
+                                    ))),
+                                );
                                 setIsSearching(false);
+                                setMessages(p => p.filter(m => m.id !== progressId));
                                 if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                                     const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
                                         id: item.id || `gps-${idx}`,
@@ -5316,7 +5464,8 @@ export default function AdvancedSearchAIPage() {
                                         locked: idx >= 5,
                                         phone: item.phone || item.company_phone || '',
                                         email: item.email || '',
-                                        icp_score: normalizeIcpScore(item.icp_score),
+                                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                        icp_scored: item.icp_scored,
                                         match_level: item.match_level || undefined,
                                         icp_reasoning: item.icp_reasoning || undefined,
                                         enriched_profile: item.enriched_profile || undefined,
@@ -5330,15 +5479,15 @@ export default function AdvancedSearchAIPage() {
                                     setTotalResults(d.total || prospectLeads.length);
                                     setMessages(p => p.concat({
                                         id: `a-sr-${Date.now()}`, role: 'ai',
-                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
+                                        text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length > 0 ? `🎯 **${prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length} strong ICP matches** identified.\n\n` : ''}Results include contact details, LinkedIn profiles, and ICP scores.${sizeConstraintNote(d.sizeConstraint)}\n\n💡 Click **"Get More Leads"** to find additional prospects.`,
                                         ts: new Date(),
                                     }));
-                                } else if (!resp.ok || d.success === false) {
+                                } else if (!respOk || d?.success === false) {
                                     // A server-side failure is NOT an empty result set. The
                                     // endpoint returns JSON on 500, so resp.json() succeeds and
                                     // this used to fall through to "try rephrasing" - telling
                                     // people to reword a query that was never the problem.
-                                    console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                                    console.error('[ProspectSearch] server error', respStatus, d?.error, d?.detail);
                                     setMessages(p => p.concat({
                                         id: `a-err-${Date.now()}`, role: 'ai',
                                         text: `⚠️ The search failed on our side - this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
@@ -5354,7 +5503,9 @@ export default function AdvancedSearchAIPage() {
                             } catch (prospectErr) {
                                 setIsSearching(false);
                                 console.error('[ProspectSearch] error', prospectErr);
-                                setMessages(p => p.concat({
+                                // Drop the progress bubble too - a "researched 6 of 10" line
+                                // left frozen above an error reads as a partial result.
+                                setMessages(p => p.filter(m => m.id !== progressId).concat({
                                     id: `a-err-${Date.now()}`, role: 'ai',
                                     text: `⚠️ Prospect search failed. Please try again or rephrase your query.`,
                                     ts: new Date(),
@@ -5402,9 +5553,12 @@ export default function AdvancedSearchAIPage() {
                 // This catches cases where the backend classified the intent as CONTEXT_SEARCH
                 // or extracted LinkedIn keywords instead of detecting the generic pattern.
                 if (shouldRunSearch && isGenericCompanySearchQuery(text)) {
+                    // Stable id: the stream rewrites THIS bubble as prospects land, so
+                    // the two minutes stop looking like a hang.
+                    const gpsProgressId = `a-gps-${Date.now()}`;
                     setMessages(p => p.filter(m => m.id !== lid).concat({
-                        id: `a-${Date.now()}`, role: 'ai',
-                        text: `🔍 **Finding specific companies and decision makers for you...**\n\nI'm using AI to identify real companies matching your description and their key contacts. This may take a moment as I research each prospect.\n\n⚡ *Searching across the web, LinkedIn, and company databases...*`,
+                        id: gpsProgressId, role: 'ai',
+                        text: prospectProgressText(null),
                         ts: new Date(),
                     }));
                     setIsSearching(true);
@@ -5415,19 +5569,20 @@ export default function AdvancedSearchAIPage() {
                     setLeads([]);
 
                     try {
-                        const resp = await fetch('/api/ai-icp-assistant/prospect-search', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
+                        const { ok: respOk, status: respStatus, data: d } = await runProspectSearch(
+                            {
                                 query: text,
                                 icpProfile: businessProfile,
                                 sessionId: `gps-${Date.now()}`,
                                 seenIds: [],
                                 batchSize: leadCount,
-                            }),
-                        });
-                        const d = await resp.json();
+                            },
+                            (prog) => setMessages(p => p.map(m => (
+                                m.id === gpsProgressId ? { ...m, text: prospectProgressText(prog) } : m
+                            ))),
+                        );
                         setIsSearching(false);
+                        setMessages(p => p.filter(m => m.id !== gpsProgressId));
                         if (d.success && Array.isArray(d.results) && d.results.length > 0) {
                             const prospectLeads: LeadProfile[] = d.results.map((item: any, idx: number) => ({
                                 id: item.id || `gps-${idx}`,
@@ -5444,7 +5599,8 @@ export default function AdvancedSearchAIPage() {
                                 locked: idx >= 5,
                                 phone: item.phone || item.company_phone || '',
                                 email: item.email || '',
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -5458,13 +5614,13 @@ export default function AdvancedSearchAIPage() {
                             const strongMatches = prospectLeads.filter(l => l.icp_score && l.icp_score >= 70).length;
                             setMessages(p => p.concat({
                                 id: `a-sr-${Date.now()}`, role: 'ai',
-                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
+                                text: `✅ **Found ${prospectLeads.length} prospect${prospectLeads.length !== 1 ? 's' : ''}** for your query!\n\n${strongMatches > 0 ? `🎯 **${strongMatches} strong ICP match${strongMatches !== 1 ? 'es' : ''}** identified.\n\n` : ''}Results include company contact details, LinkedIn profiles, and ICP scores.${sizeConstraintNote(d.sizeConstraint)}\n\n💡 Click **"Get More Leads"** to discover additional prospects.`,
                                 ts: new Date(),
                             }));
-                        } else if (!resp.ok || d.success === false) {
+                        } else if (!respOk || d?.success === false) {
                             // See the sibling handler above: a 500 returns JSON, so this branch
                             // must be split out or a server crash reads as "no matches".
-                            console.error('[ProspectSearch] server error', resp.status, d?.error, d?.detail);
+                            console.error('[ProspectSearch] server error', respStatus, d?.error, d?.detail);
                             setMessages(p => p.concat({
                                 id: `a-err-${Date.now()}`, role: 'ai',
                                 text: `⚠️ The search failed on our side - this isn't your query. Please try again in a moment; if it keeps happening, let support know.`,
@@ -5480,7 +5636,9 @@ export default function AdvancedSearchAIPage() {
                     } catch (prospectErr) {
                         setIsSearching(false);
                         console.error('[ProspectSearch] error', prospectErr);
-                        setMessages(p => p.concat({
+                        // Drop the progress bubble too - a "researched 6 of 10" line left
+                        // frozen above an error reads as a partial result.
+                        setMessages(p => p.filter(m => m.id !== gpsProgressId).concat({
                             id: `a-err-${Date.now()}`, role: 'ai',
                             text: `⚠️ Prospect search failed. Please try again.`,
                             ts: new Date(),
@@ -5863,6 +6021,9 @@ export default function AdvancedSearchAIPage() {
                     setSearchCursor(nextCursor);
                     setCursorHistory([null, nextCursor]); // page1=null(start), page2=nextCursor
                     icpWasApplied = !!d.icp_applied;
+                    setIcpThresholdApplied(
+                        typeof d.icp_min_score === 'number' ? d.icp_min_score : null,
+                    );
                     excludedAlreadyContacted = Number(d.excluded_already_contacted) || 0;
                     searchRateLimited = !!d.rate_limited;
                     searchModule = d.module_used || '';
@@ -5884,7 +6045,8 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: idx >= 5,
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -6028,7 +6190,8 @@ export default function AdvancedSearchAIPage() {
                                 industry: item.industry || '',
                                 network_distance: item.network_distance || '',
                                 locked: false,
-                                icp_score: normalizeIcpScore(item.icp_score),
+                                icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                                icp_scored: item.icp_scored,
                                 match_level: item.match_level || undefined,
                                 icp_reasoning: item.icp_reasoning || undefined,
                                 enriched_profile: item.enriched_profile || undefined,
@@ -6464,7 +6627,8 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: idx >= 5,
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -6813,7 +6977,8 @@ export default function AdvancedSearchAIPage() {
                         locked: (existingCount + idx) >= 5,
                         phone: item.phone || '',
                         email: item.email || '',
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -6904,7 +7069,8 @@ export default function AdvancedSearchAIPage() {
                         industry: item.industry || '',
                         network_distance: item.network_distance || '',
                         locked: (existingCount + idx) >= 5,
-                        icp_score: normalizeIcpScore(item.icp_score),
+                        icp_score: item.icp_score === null ? null : normalizeIcpScore(item.icp_score),
+                        icp_scored: item.icp_scored,
                         match_level: item.match_level || undefined,
                         icp_reasoning: item.icp_reasoning || undefined,
                         enriched_profile: item.enriched_profile || undefined,
@@ -7840,6 +8006,9 @@ export default function AdvancedSearchAIPage() {
                                     {!mediaMode && (
                                         <RolesLauncher onPick={startRole} />
                                     )}
+                                    {!mediaMode && (
+                                        <ModelPicker value={chatModel} onChange={pickChatModel} />
+                                    )}
                                   </div>
                                     {/* Premium Search or Mic Button based on mediaMode */}
                                     {mediaMode ? (
@@ -7890,7 +8059,9 @@ export default function AdvancedSearchAIPage() {
                                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                             </svg>
-                                            {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
+                                            <span className="adv-premium-label">
+                                                {useSalesNav ? 'Premium Search ON' : 'Premium Search'}
+                                            </span>
                                         </button>
                                     )}
                                     {/* Right flank - a wrapper, not flex on the button itself:
@@ -8240,7 +8411,18 @@ export default function AdvancedSearchAIPage() {
                                                         ) : (
                                                             <span className="adv-lead-name text-gray-900 dark:text-gray-100 font-bold text-[14px]">{lead.name} {!lead.locked && <span className="adv-verified">✓</span>}</span>
                                                         )}
-                                                        {!targetingFiltersActive && lead.icp_score !== undefined && (
+                                                        {/* The model returned no verdict for this lead. Showing "0%" here
+                                                            claimed a judgement that was never made — and the same coercion
+                                                            filtered the lead out of its own search. */}
+                                                        {!targetingFiltersActive && isLeadUnscored(lead) && (
+                                                          <span
+                                                            className="inline-flex items-center gap-[3px] px-[8px] py-[2px] rounded-[12px] text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                                            title="The AI did not return a score for this lead. It has not been judged either way — review it yourself."
+                                                          >
+                                                            ○ Not scored
+                                                          </span>
+                                                        )}
+                                                        {!targetingFiltersActive && typeof lead.icp_score === 'number' && (
                                                           <span className={`inline-flex items-center gap-[3px] px-[8px] py-[2px] rounded-[12px] text-[11px] font-bold ${scoreToMatchLevel(lead.icp_score) === 'strong' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300'}`}>
                                                                 {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
                                                             </span>
@@ -8398,7 +8580,7 @@ export default function AdvancedSearchAIPage() {
                                         }}>
                                             <span style={{ fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                                                Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} below ICP threshold of 50
+                                                Filtered {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} the AI scored below {icpThresholdApplied ?? 50}
                                             </span>
                                             <button
                                                 onClick={() => setShowFilteredLeads(v => !v)}
@@ -8448,7 +8630,7 @@ export default function AdvancedSearchAIPage() {
                                                                         background: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#dcfce7' : '#fef9c3',
                                                                         color: scoreToMatchLevel(lead.icp_score) === 'strong' ? '#166534' : '#854d0e',
                                                                     }}>
-                                                                        {scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡'} {normalizeIcpScore(lead.icp_score)}%
+                                                                        {isLeadUnscored(lead) ? '○' : (scoreToMatchLevel(lead.icp_score) === 'strong' ? '🟢' : '🟡')} {isLeadUnscored(lead) ? 'Not scored' : `${normalizeIcpScore(lead.icp_score)}%`}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -8638,7 +8820,7 @@ export default function AdvancedSearchAIPage() {
                                     the wizard / Settings / this drawer always agree. When pgIsComplete
                                     we lock to 100% regardless of trailing blank optional fields. */}
                                 {(() => {
-                                    const c = computeCompleteness(businessProfile as BusinessProfile);
+                                    const c = computeCompletenessFor(businessProfile as BusinessProfile, profileContract);
                                     const filled = pgIsComplete ? c.total : c.filled;
                                     const total = c.total;
                                     const pct = pgIsComplete ? 100 : c.pct;
@@ -9570,6 +9752,259 @@ function RoleChain({ tpl, compact = false }: { tpl: WorkflowTemplate; compact?: 
  *  NOTE: the component and its CSS keep the older `roles` naming - renaming those
  *  is churn with no user-visible effect, and `.adv-roles-btn` is referenced in
  *  four style blocks. */
+/** A model the user may pick, as returned by GET /api/ai-playground/models. */
+type PickableModel = { model: string; input: number | null; output: number | null };
+type ModelChoice = { provider: string; model: string } | null;
+
+/** Display names. Anything not listed falls back to the raw provider key. */
+const PROVIDER_LABEL: Record<string, string> = {
+    anthropic: 'Claude',
+    openai: 'GPT',
+    gemini: 'Gemini',
+    deepseek: 'DeepSeek',
+};
+
+/** "claude-sonnet-4-6" → "Sonnet 4 6" — the family, without the vendor prefix. */
+function modelLabel(model: string): string {
+    return model
+        .replace(/^(claude|gpt|gemini|deepseek)-?/i, '')
+        .replace(/-/g, ' ')
+        .trim() || model;
+}
+
+/**
+ * Model picker for the chat composer.
+ *
+ * The options come from the server, never a hardcoded list here: the backend
+ * serves only models it can actually price, and an unpriced id would bill the
+ * tenant at a $5/$15 "unknown model" rate. A list duplicated in the client would
+ * drift out of that guarantee the first time anyone added a model.
+ *
+ * "Auto" (no pick) is the default and is not the same as choosing a model — it
+ * leaves the tenant's own routing rule in charge.
+ */
+function ModelPicker({ value, onChange }: { value: ModelChoice; onChange: (c: ModelChoice) => void }) {
+    const [open, setOpen] = React.useState(false);
+    const [providers, setProviders] = React.useState<Record<string, PickableModel[]>>({});
+
+    React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/ai-playground/models', { credentials: 'include' });
+                const data = await res.json();
+                if (!cancelled && data?.success) setProviders(data.providers || {});
+            } catch {
+                // Non-fatal: with no list the chip stays on Auto and the chat
+                // works exactly as it did before the picker existed.
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const h = () => setOpen(false);
+        document.addEventListener('click', h);
+        return () => document.removeEventListener('click', h);
+    }, [open]);
+
+    const label = value ? `${PROVIDER_LABEL[value.provider] || value.provider}` : 'Auto';
+    const hasOptions = Object.keys(providers).length > 0;
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <button type="button" className="adv-roles-btn"
+                title={value ? `Answers come from ${value.provider}/${value.model}` : 'Model chosen automatically for this workspace'}
+                onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 0 1 5 5v1a4 4 0 0 1 0 8v1a5 5 0 0 1-10 0v-1a4 4 0 0 1 0-8V7a5 5 0 0 1 5-5Z" /></svg>
+                {label}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ opacity: .55, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            {open && (
+                <div className="adv-roles-menu" onClick={(e) => e.stopPropagation()}>
+                    <div className="px-2.5 pt-1.5 pb-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Answer with</span>
+                    </div>
+                    <button type="button"
+                        className="w-full text-left rounded-xl p-2.5 flex gap-2.5 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        onClick={() => { setOpen(false); onChange(null); }}>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">Auto</span>
+                            <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Use this workspace&apos;s configured model</span>
+                        </span>
+                        {!value && <svg className="mt-1 flex-shrink-0 text-emerald-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                    </button>
+                    {!hasOptions && (
+                        <div className="px-2.5 py-2 text-[11px] text-slate-400 dark:text-slate-500">No other models available</div>
+                    )}
+                    {Object.entries(providers).map(([provider, models]) => (
+                        <React.Fragment key={provider}>
+                            <div className="flex items-center gap-2 px-2.5 pt-2 pb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{PROVIDER_LABEL[provider] || provider}</span>
+                                <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                            </div>
+                            {models.map((m) => {
+                                const selected = value?.provider === provider && value?.model === m.model;
+                                return (
+                                    <button key={m.model} type="button"
+                                        className="w-full text-left rounded-xl p-2.5 flex gap-2.5 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                                        onClick={() => { setOpen(false); onChange({ provider, model: m.model }); }}>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[13px] font-semibold text-slate-900 dark:text-white leading-tight">{modelLabel(m.model)}</span>
+                                            <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{m.model}</span>
+                                        </span>
+                                        {selected && <svg className="mt-1 flex-shrink-0 text-emerald-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                                    </button>
+                                );
+                            })}
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** Recursively pull the plain text out of a rendered node tree. */
+function nodeText(node: React.ReactNode): string {
+    if (node == null || typeof node === 'boolean') return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(nodeText).join('');
+    if (React.isValidElement(node)) {
+        return nodeText((node.props as { children?: React.ReactNode }).children);
+    }
+    return '';
+}
+
+/**
+ * A fenced code block, with the header + copy affordance people expect.
+ *
+ * The copy target is derived by walking the rendered tree, because
+ * rehype-highlight has already replaced the raw string with <span> tokens by
+ * the time this renders — reading `children` as text would copy nothing.
+ */
+function ChatCodeBlock({ children }: { children?: React.ReactNode }) {
+    const [copied, setCopied] = React.useState(false);
+
+    // react-markdown hands <pre> a single <code> child carrying the language
+    // class that rehype-highlight resolved (e.g. "hljs language-sql").
+    const codeEl = React.Children.toArray(children).find(
+        (c) => React.isValidElement(c) && c.type === 'code'
+    ) as React.ReactElement<{ className?: string; children?: React.ReactNode }> | undefined;
+
+    const className = codeEl?.props?.className || '';
+    const lang = (className.match(/language-([\w-]+)/) || [])[1] || '';
+    const raw = nodeText(codeEl?.props?.children ?? children);
+
+    const copy = React.useCallback(() => {
+        navigator.clipboard?.writeText(raw).then(
+            () => { setCopied(true); setTimeout(() => setCopied(false), 1600); },
+            () => { /* clipboard blocked — the code is still selectable */ }
+        );
+    }, [raw]);
+
+    return (
+        <div className="adv-code-block">
+            <div className="adv-code-head">
+                <span className="adv-code-lang">{lang || 'code'}</span>
+                <button type="button" className="adv-code-copy" onClick={copy} title="Copy code">
+                    {copied ? (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>Copied</>
+                    ) : (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>Copy</>
+                    )}
+                </button>
+            </div>
+            <pre className="adv-code-pre">{children}</pre>
+        </div>
+    );
+}
+
+/**
+ * The assistant message body.
+ *
+ * REPLACES a hand-rolled line-by-line parser that split on '\n' and regexed for
+ * **bold** / ### / bullets. That could never render a fenced code block, a
+ * table, a link or a nested list — a ``` block came out as literal backticks,
+ * one <p> per line, and `[text](url)` shipped as raw markdown.
+ *
+ * Plugin choices, each for a specific reason:
+ *   remarkGfm    — tables, strikethrough, task lists, autolinks. This product
+ *                  answers with lead tables constantly.
+ *   remarkBreaks — a single newline stays a line break. Standard markdown
+ *                  collapses it into the paragraph, which would have visibly
+ *                  reflowed every existing answer.
+ *   rehypeHighlight — the colour highlighting, with ignoreMissing so an
+ *                  unknown language label renders plain instead of throwing.
+ *
+ * The component map deliberately reuses the existing adv-ai-* classes for
+ * headings, bullets and numbered items, so the elements that already looked
+ * right are untouched and only the missing ones are new.
+ */
+function MarkdownMessage({ text }: { text: string }) {
+    // The agent emits "• " bullets in places. Markdown does not know that
+    // character, so they would render as literal text in a paragraph.
+    const src = React.useMemo(() => text.replace(/^([ \t]*)•[ \t]+/gm, '$1- '), [text]);
+
+    return (
+        <div className="adv-md">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+                components={{
+                    /* eslint-disable @typescript-eslint/no-unused-vars --
+                       `node` and `ref` are destructured purely to keep them OFF the
+                       DOM element; naming them is the only way to exclude them from
+                       the rest spread. */
+                    // Two props from react-markdown must not reach the DOM element:
+                    //   node — its hast element, not a DOM attribute
+                    //   ref  — typed LegacyRef, which permits a string ref; React 19's
+                    //          intrinsic elements accept only Ref, so spreading it is
+                    //          a type error on EVERY entry. This is the real cause;
+                    //          dropping `node` alone changes nothing.
+                    // Real heading tags rather than divs: the types then line up,
+                    // and a screen reader gets the document structure for free.
+                    h1: ({ node, ref, ...props }) => <h1 className="adv-ai-h3 adv-md-h1" {...props} />,
+                    h2: ({ node, ref, ...props }) => <h2 className="adv-ai-h3" style={{ fontSize: '14.5px' }} {...props} />,
+                    h3: ({ node, ref, ...props }) => <h3 className="adv-ai-h3" {...props} />,
+                    h4: ({ node, ref, ...props }) => <h4 className="adv-ai-h3" style={{ fontSize: '12.5px' }} {...props} />,
+                    p:  ({ node, ref, ...props }) => <p className="adv-md-p" {...props} />,
+                    hr: ({ node, ref, ...props }) => <hr className="adv-ai-hr" {...props} />,
+                    ul: ({ node, ref, ...props }) => <ul className="adv-md-ul" {...props} />,
+                    ol: ({ node, ref, ...props }) => <ol className="adv-md-ol" {...props} />,
+                    li: ({ node, ref, ...props }) => <li className="adv-md-li" {...props} />,
+                    a:  ({ node, ref, ...props }) => (
+                        // Untrusted: this text comes from a model and from scraped
+                        // pages. noopener/noreferrer so a link can never reach back
+                        // into this tab via window.opener.
+                        <a className="adv-md-a" target="_blank" rel="noopener noreferrer nofollow" {...props} />
+                    ),
+                    blockquote: ({ node, ref, ...props }) => <blockquote className="adv-md-quote" {...props} />,
+                    table: ({ node, ref, ...props }) => (
+                        // Wrapped so a wide table scrolls itself instead of pushing
+                        // the whole conversation column sideways.
+                        <div className="adv-md-table-wrap"><table className="adv-md-table" {...props} /></div>
+                    ),
+                    th: ({ node, ref, ...props }) => <th className="adv-md-th" {...props} />,
+                    td: ({ node, ref, ...props }) => <td className="adv-md-td" {...props} />,
+                    pre: ({ children }) => <ChatCodeBlock>{children}</ChatCodeBlock>,
+                    code: ({ node, ref, className, ...props }) =>
+                        // A block's <code> carries the language class from
+                        // rehype-highlight; inline code has none. That is the
+                        // discriminator, since react-markdown v9 dropped `inline`.
+                        className
+                            ? <code className={className} {...props} />
+                            : <code className="adv-md-code-inline" {...props} />,
+                    /* eslint-enable @typescript-eslint/no-unused-vars */
+                }}
+            >
+                {src}
+            </ReactMarkdown>
+        </div>
+    );
+}
+
 function RolesLauncher({ onPick }: { onPick: (t: WorkflowTemplate) => void }) {
     const [open, setOpen] = React.useState(false);
     React.useEffect(() => {
@@ -9948,50 +10383,7 @@ function Bubble({ msg, onOpt, onShowPanel, onStartCheckpoints, onLetAgentDeal, a
 
                 {/* ── Rich markdown-aware renderer ── */}
                 <div className="adv-ai-text" style={{ marginBottom: msg.targeting ? "16px" : "0", display: msg.roleCard && !msg.text ? 'none' : undefined }}>
-                    {msg.text.split('\n').map((line, i) => {
-                        // ── Inline rich text parser: **bold**, *italic*, `code` ──────
-                        const renderInline = (raw: string) => {
-                            const tokens = raw.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
-                            return tokens.map((t, j) => {
-                                if (t.startsWith('**') && t.endsWith('**')) return <strong key={j}>{t.slice(2, -2)}</strong>;
-                                if (t.startsWith('*') && t.endsWith('*')) return <em key={j} className="adv-ai-em">{t.slice(1, -1)}</em>;
-                                if (t.startsWith('`') && t.endsWith('`')) return <code key={j} style={{ background: '#f3f4f6', padding: '1px 5px', borderRadius: '4px', fontSize: '13px', fontFamily: 'monospace', color: '#0b1957' }}>{t.slice(1, -1)}</code>;
-                                return t;
-                            });
-                        };
-
-                        const trimmed = line.trim();
-                        if (!trimmed) return <div key={i} style={{ height: '6px' }} />;
-
-                        // ### Heading
-                        if (trimmed.startsWith('### ')) return <div key={i} className="adv-ai-h3">{renderInline(trimmed.slice(4))}</div>;
-                        if (trimmed.startsWith('## ')) return <div key={i} className="adv-ai-h3" style={{ fontSize: '14.5px' }}>{renderInline(trimmed.slice(3))}</div>;
-
-                        // --- Divider
-                        if (/^-{3,}$/.test(trimmed)) return <hr key={i} className="adv-ai-hr" />;
-
-                        // Numbered list  1. Item
-                        const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
-                        if (numMatch) return (
-                            <div key={i} className="adv-ai-num-item">
-                                <span className="adv-ai-num-badge">{numMatch[1]}</span>
-                                <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(numMatch[2])}</span>
-                            </div>
-                        );
-
-                        // Bullet list  • or - or *
-                        if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || /^\* [^*]/.test(trimmed)) {
-                            const content = trimmed.replace(/^[•\-\*]\s+/, '');
-                            return (
-                                <div key={i} className="adv-ai-bullet">
-                                    <span className="adv-ai-bullet-dot" />
-                                    <span style={{ flex: 1, lineHeight: '1.65' }}>{renderInline(content)}</span>
-                                </div>
-                            );
-                        }
-
-                        return <p key={i} style={{ margin: '3px 0' }}>{renderInline(trimmed)}</p>;
-                    })}
+                    <MarkdownMessage text={msg.text} />
                 </div>
 
                 {/* ── Web search source links ── */}
@@ -11600,7 +11992,7 @@ function CheckpointFormInline({
                 const fb = leadFeedback[l.id];
                 if (fb) acc.push({ lead_id: l.id, name: l.name, headline: l.headline, company: l.current_company, rating: fb, icp_score: l.icp_score });
                 return acc;
-            }, [] as { lead_id: string; name: string; headline: string; company: string; rating: string; icp_score?: number }[]);
+            }, [] as { lead_id: string; name: string; headline: string; company: string; rating: string; icp_score?: number | null }[]);
 
             // Build checkpoint selections object
             const checkpointSelections = buildCheckpointSelections();
@@ -11944,7 +12336,7 @@ function CheckpointFormInline({
     return (
         <div className="adv-bubble adv-bubble-ai fadeUp" style={{ marginBottom: '16px' }}>
             <div className="adv-ai-avatar adv-ai-avatar-viz"><AgentVisualizer state="idle" size={36} /></div>
-            <div style={{ flex: 1, maxWidth: '540px' }}>
+            <div className="adv-checkpoint-content" style={{ flex: 1, maxWidth: '540px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div className="adv-ai-name">LAD in Action</div>
                     <button onClick={() => setStep(-1)} title="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
@@ -11978,7 +12370,7 @@ function CheckpointFormInline({
                 >
                     {q.question}
                 </div>
-                <div style={baseBox}>
+                <div className="adv-checkpoint-box" style={baseBox}>
                     {/* Step 0: ICP Threshold */}
                     {step === 0 && (
                         <div className="flex flex-col dark:bg-[#000724]" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -12931,7 +13323,7 @@ function CheckpointFormInline({
                             {/* Voice Agent Config (inline when voice_call selected) */}
                             {nextChannels.includes('voice_call') && (
                               <div
-                                className="bg-[#f8faff] dark:bg-[#000724] border border-[#e0eaf5] dark:border-[#1e3a8a] rounded-xl"
+                                className="adv-voice-settings bg-[#f8faff] dark:bg-[#000724] border border-[#e0eaf5] dark:border-[#1e3a8a] rounded-xl"
                                 style={{ marginTop: '12px', padding: '14px', borderRadius: '12px' }}
                               >
                                   <div
@@ -12958,7 +13350,7 @@ function CheckpointFormInline({
                                                   <SelectTrigger className="flex items-center w-full px-3 bg-white dark:bg-[#000724] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#111c3a] rounded-lg focus:ring-0 shadow-none h-[42px] text-sm">
                                                       <SelectValue placeholder="Select an AI Agent" />
                                                   </SelectTrigger>
-                                                  <SelectContent  className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                                                  <SelectContent align="start" className="adv-voice-select-content bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
                                                       {voiceAgents.map((a: any) => (
                                                         <SelectItem
                                                           key={a.id}
@@ -12999,7 +13391,7 @@ function CheckpointFormInline({
                                                   <SelectTrigger className="flex items-center w-full px-3 bg-white dark:bg-[#000724] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#111c3a] rounded-lg focus:ring-0 shadow-none h-[42px] text-sm">
                                                       <SelectValue placeholder="Select a number" />
                                                   </SelectTrigger>
-                                                  <SelectContent  className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
+                                                  <SelectContent align="start" className="adv-voice-select-content bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
                                                       {voiceNumbers.map((n: any) => {
                                                           const num = n.phone_number || n.number || n.phoneNumber || '';
                                                           const label = num + (n.number_type ? ` (${n.number_type})` : '') + (n.provider ? ` - ${n.provider}` : '');
@@ -14843,17 +15235,7 @@ function MediaStepWidget({
                         loading={isActive ? mb.loadingGallery : false}
                         onBack={() => mb.setStep("welcome")}
                         onGenerateImages={isActive ? mb.generateImagesFromGallery : undefined}
-                        onAnimateImage={isActive ? async (url) => {
-                            setMediaMessages(prev => [
-                                ...prev.filter(m => !m.loading),
-                                {
-                                    id: `user-${Date.now()}`,
-                                    role: "user",
-                                    text: "Animate this concept",
-                                    references: [{ path: url, thumbnail: url }],
-                                    timestamp: new Date()
-                                }
-                            ]);
+                        onAnimateImage={isActive ? async (url: string) => {
                             await mb.animateImageFromGallery(url);
                         } : undefined}
                         onExtendVideo={isActive ? mb.extendVideoFromGallery : undefined}
@@ -15256,6 +15638,55 @@ const css = `
             .adv-ai-bullet-dot {width:5px; height:5px; border-radius:50%; background:#0b1957; flex-shrink:0; margin-top:8px; opacity:.6; }
             .adv-ai-num-item {display:flex; align-items:flex-start; gap:9px; margin:5px 0; }
             .adv-ai-num-badge {min-width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#e8ecfa,#dce3f5); color:#0b1957; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+            /* ── RICH MARKDOWN MESSAGE ──────────────────────────────────────
+               Everything below renders elements the previous hand-rolled parser
+               could not produce at all: fenced code, tables, links, quotes,
+               nested lists. Headings/bullets/numbers keep their original
+               adv-ai-* classes, so nothing that already looked right moved. */
+            .adv-md {font-size:13.5px; line-height:1.65; color:#374151; }
+            .adv-md-p {margin:6px 0; }
+            .adv-md-p:first-child {margin-top:0; }
+            .adv-md-p:last-child {margin-bottom:0; }
+            .adv-md-h1 {font-size:16px; }
+            .adv-md-ul, .adv-md-ol {margin:6px 0 8px; padding-left:20px; display:flex; flex-direction:column; gap:3px; }
+            .adv-md-ul {list-style:disc; }
+            .adv-md-ol {list-style:decimal; }
+            .adv-md-li {line-height:1.65; padding-left:2px; }
+            .adv-md-li::marker {color:#0b1957; opacity:.65; font-weight:600; }
+            /* Nested lists tighten up rather than inheriting the top gap. */
+            .adv-md-li > .adv-md-ul, .adv-md-li > .adv-md-ol {margin:3px 0 2px; }
+            .adv-md-a {color:#1a3a8f; font-weight:500; text-decoration:none; border-bottom:1px solid rgba(26,58,143,.28); transition:border-color .15s, color .15s; }
+            .adv-md-a:hover {color:#2563eb; border-bottom-color:#2563eb; }
+            .adv-md-quote {margin:8px 0; padding:6px 0 6px 12px; border-left:3px solid #dce3f5; color:#4b5563; font-style:italic; }
+            .adv-md-code-inline {background:#f3f4f6; padding:1.5px 5px; border-radius:4px; font-size:12.5px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#0b1957; border:1px solid #ececf1; }
+            /* Tables: the wrapper scrolls, so a wide result set never widens the
+               conversation column. */
+            .adv-md-table-wrap {margin:10px 0; overflow-x:auto; border:1px solid #e9ecf5; border-radius:10px; }
+            .adv-md-table {border-collapse:collapse; width:100%; font-size:12.5px; }
+            .adv-md-th {background:#f7f9fd; color:#0b1957; font-weight:700; text-align:left; padding:8px 12px; border-bottom:1px solid #e9ecf5; white-space:nowrap; }
+            .adv-md-td {padding:8px 12px; border-bottom:1px solid #f1f3f9; color:#374151; vertical-align:top; }
+            .adv-md-table tr:last-child .adv-md-td {border-bottom:none; }
+            .adv-md-table tbody tr:nth-child(even) {background:#fcfdff; }
+            /* ── CODE BLOCK ── */
+            .adv-code-block {margin:10px 0; border:1px solid #e9ecf5; border-radius:10px; overflow:hidden; background:#fbfcfe; }
+            .adv-code-head {display:flex; align-items:center; justify-content:space-between; padding:6px 10px 6px 12px; background:#f7f9fd; border-bottom:1px solid #e9ecf5; }
+            .adv-code-lang {font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6b7280; }
+            .adv-code-copy {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#4b5563; background:transparent; border:1px solid transparent; border-radius:6px; padding:3px 8px; cursor:pointer; transition:background .15s,color .15s,border-color .15s; }
+            .adv-code-copy:hover {background:#fff; border-color:#e0e7ff; color:#0b1957; }
+            .adv-code-pre {margin:0; padding:12px 14px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.6; }
+            .adv-code-pre code {background:none; border:none; padding:0; font-size:inherit; color:#1f2937; }
+            /* Syntax colours. Scoped to this block rather than importing a full
+               highlight.js theme, which would be a global stylesheet fighting
+               the app's own palette. */
+            .adv-code-pre .hljs-comment, .adv-code-pre .hljs-quote {color:#8b93a7; font-style:italic; }
+            .adv-code-pre .hljs-keyword, .adv-code-pre .hljs-selector-tag, .adv-code-pre .hljs-literal, .adv-code-pre .hljs-doctag {color:#7c3aed; font-weight:600; }
+            .adv-code-pre .hljs-string, .adv-code-pre .hljs-attr, .adv-code-pre .hljs-addition {color:#0f7b52; }
+            .adv-code-pre .hljs-number, .adv-code-pre .hljs-symbol, .adv-code-pre .hljs-bullet {color:#c2410c; }
+            .adv-code-pre .hljs-title, .adv-code-pre .hljs-name, .adv-code-pre .hljs-section, .adv-code-pre .hljs-title\.function_ {color:#1a3a8f; font-weight:600; }
+            .adv-code-pre .hljs-built_in, .adv-code-pre .hljs-type, .adv-code-pre .hljs-class {color:#0369a1; }
+            .adv-code-pre .hljs-variable, .adv-code-pre .hljs-template-variable, .adv-code-pre .hljs-attribute {color:#0e7490; }
+            .adv-code-pre .hljs-deletion {color:#b91c1c; }
+            .adv-code-pre .hljs-meta {color:#6b7280; }
             .adv-web-searched {display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#6b7280; background:#f8faff; border:1px solid #e0e7ff; padding:3px 10px 3px 8px; border-radius:20px; margin-bottom:10px; }
             /* ── THINKING STATE ── */
             .adv-thinking-wrap{display:flex;align-items:center;gap:8px;height:22px;overflow:hidden;padding-top:2px}
@@ -15275,11 +15706,11 @@ const css = `
             }
             .adv-chat-blur { pointer-events: none; opacity: 0.5; }
             .adv-msg-counter {font-size:11px; color:#9ca3af; padding:4px 0 8px; text-align:center; }
-            .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid transparent; border-radius:24px; padding:16px 20px 12px; max-width:70%; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(11,25,87,0.06); position:relative; z-index:0; }
-            .adv-chat-input-box::before {content:''; position:absolute; inset:-1.5px; border-radius:25.5px; padding:1.5px; background:linear-gradient(90deg,#0b1957,#1a3a8f,#2563eb,#3b82f6,#0b1957); background-size:300% 100%; animation:adv-border-move 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; z-index:-1; pointer-events:none; }
-            .adv-chat-input-box:focus-within::before {animation:adv-border-move 2s linear infinite; opacity:1; }
-            @keyframes adv-border-move {0%{background-position:0% 50%}100%{background-position:300% 50%}}
-            .adv-chat-ta {width:100%; resize:none; border:none; outline:none; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; }
+            .adv-chat-input-box {display:flex; flex-direction:column; background:#fff; border:1.5px solid #e5e7eb; border-radius:24px; padding:16px 20px 12px; max-width:70%; margin:0 auto; transition:all .2s; box-shadow:0 2px 12px rgba(11,25,87,0.06); position:relative; z-index:0; outline:none!important; ring:0!important; -webkit-ring-color:transparent!important; --tw-ring-color:transparent!important; --tw-ring-shadow:0 0 #0000!important; }
+            .adv-chat-input-box::before, .adv-chat-input-box:focus-within::before, .adv-chat-input-box.has-extension::before { display:none!important; content:none!important; opacity:0!important; }
+            .adv-chat-input-box:focus, .adv-chat-input-box:focus-within, .adv-chat-input-box:focus-visible { outline:none!important; box-shadow:none!important; ring:0!important; -webkit-ring-color:transparent!important; --tw-ring-color:transparent!important; --tw-ring-shadow:0 0 #0000!important; }
+            .adv-chat-ta, textarea.adv-chat-ta {width:100%; resize:none; border:none!important; outline:none!important; background:transparent; font-size:16px; color:#111827; font-family:inherit; line-height:1.6; padding:0; max-height:120px; box-shadow:none!important; ring:0!important; -webkit-ring-color:transparent!important; --tw-ring-color:transparent!important; --tw-ring-shadow:0 0 #0000!important; }
+            .adv-chat-ta:focus, .adv-chat-ta:focus-visible, .adv-chat-ta:focus-within, textarea.adv-chat-ta:focus, textarea.adv-chat-ta:focus-visible, .dark textarea.adv-chat-ta:focus, .dark textarea.adv-chat-ta:focus-visible { outline:none!important; border:none!important; box-shadow:none!important; ring:0!important; -webkit-ring-color:transparent!important; --tw-ring-color:transparent!important; --tw-ring-shadow:0 0 #0000!important; border-color:transparent!important; }
             .adv-chat-ta::placeholder {color:#0b1957; font-weight:400; }
             .adv-chat-input-foot {display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #f3f4f6; }
             /* Equal-width flanks put the middle child (Premium Search / the mic)
@@ -15290,15 +15721,15 @@ const css = `
                drifts off centre rather than sliding under the Accelerators button. */
             .adv-foot-side {flex:1 1 0; }
             .adv-chat-input-foot > .adv-premium-btn {flex:0 0 auto; }
-            .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-            .adv-chat-attach-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
-            .adv-mic-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
-            .adv-mic-btn:hover {background:#e0eaf5; border-color:#c2d6eb; color:#0b1957; }
+            .adv-chat-attach-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s ease; }
+            .adv-chat-attach-btn:hover {border-color:#0b1957; box-shadow:0 4px 14px rgba(11,25,87,.14); transform:translateY(-1px); }
+            .adv-mic-btn {width:32px; height:32px; border-radius:50%; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s ease; flex-shrink:0; }
+            .adv-mic-btn:hover {border-color:#0b1957; box-shadow:0 4px 14px rgba(11,25,87,.14); transform:translateY(-1px); }
             .adv-mic-btn:disabled {cursor:default; color:#94a3b8; }
             .adv-mic-btn.adv-mic-btn-rec, .adv-mic-btn.adv-mic-btn-rec:hover {background:#fef2f2; border-color:#ef4444; color:#ef4444; }
             .adv-roles-btn {display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:7px 14px; border-radius:999px; border:1.5px solid #e5e7eb; background:#fff; color:#0b1957; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s ease; }
             .adv-roles-btn:hover {border-color:#0b1957; box-shadow:0 4px 14px rgba(11,25,87,.14); transform:translateY(-1px); }
-            .adv-roles-menu {position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:8px; width:370px; max-width:calc(100vw - 32px); max-height:440px; overflow-y:auto; box-shadow:0 16px 48px rgba(15,23,42,.16); z-index:100; animation:fadeUp .15s ease both; }
+            .adv-roles-menu {position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:8px; width:370px; max-width:calc(100vw - 32px); max-height:min(340px, 45vh); overflow-y:auto; box-shadow:0 16px 48px rgba(15,23,42,.16); z-index:100; animation:fadeUp .15s ease both; }
             .adv-model-label {display:flex; align-items:center; gap:4px; font-size:12px; color:#9ca3af; font-weight:500; cursor:pointer; }
             .adv-model-label:hover {color:#374151; }
             .adv-send-sm {width:34px!important; height:34px!important; }
@@ -15556,12 +15987,17 @@ const css = `
                 .adv-input-central-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
                 .adv-chat-ta { width: 100% !important; border: none !important; background: none !important; font-size: 11px !important; text-align: left !important; padding: 2px 0 !important; min-height: 24px !important; height: 24px !important; line-height: 24px !important; }
                 .adv-chat-input-foot { padding: 4px 0 2px !important; margin-top: 4px !important; border: none !important; background: none !important; justify-content: space-between !important; gap: 10px !important; }
-                /* Mobile keeps the tuned space-between layout - at this width equal
-                   flanks would squeeze the pill against its 95px min-width. */
+                /* Mobile keeps the tuned space-between layout and reduces Premium
+                   Search to its icon so the chatbox controls cannot overflow. */
                 .adv-foot-side { flex: 0 1 auto !important; }
-                .adv-premium-btn { width: auto !important; min-width: 95px !important; justify-content: center !important; padding: 3px 10px !important; margin: 0 !important; font-size: 10px !important; }
-                .adv-chat-attach-btn, .adv-send-sm, .adv-mic-btn { width: 28px !important; height: 28px !important; }
+                .adv-premium-btn { width: 30px !important; height: 30px !important; min-width: 30px !important; justify-content: center !important; padding: 0 !important; margin: 0 !important; }
+                .adv-premium-btn .adv-premium-label { display: none !important; }
+                .adv-premium-btn svg { width: 13px !important; height: 13px !important; }
+                .adv-chat-attach-btn, .adv-send-sm, .adv-mic-btn { width: 30px !important; height: 30px !important; flex-shrink: 0 !important; }
                 .adv-chat-attach-btn svg, .adv-send-sm svg, .adv-mic-btn svg { width: 13px !important; height: 13px !important; }
+                .adv-roles-btn { padding: 5px 10px !important; font-size: 11px !important; max-width: 120px !important; flex-shrink: 0 !important; text-overflow: ellipsis !important; overflow: hidden !important; white-space: nowrap !important; }
+                .adv-roles-menu { position: fixed !important; bottom: 85px !important; left: 16px !important; right: 16px !important; transform: none !important; width: auto !important; max-width: calc(100vw - 32px) !important; max-height: min(400px, calc(100vh - 140px)) !important; z-index: 1000 !important; }
+                .adv-attach-menu { position: fixed !important; bottom: 85px !important; left: 16px !important; right: 16px !important; transform: none !important; width: auto !important; max-width: calc(100vw - 32px) !important; max-height: min(360px, calc(100vh - 140px)) !important; z-index: 1000 !important; }
                 .adv-msg-counter { font-size: 10px !important; color: #9ca3af !important; margin: 4px 0 0 !important; padding: 0 !important; line-height: 1.2 !important; }
                 
                 .adv-mobile-add-btn, .adv-mobile-send-btn {
@@ -15596,6 +16032,12 @@ const css = `
                 .adv-ai-name { justify-content: flex-start !important; }
                 .adv-ai-avatar { width: 32px !important; height: 32px !important; flex-shrink: 0 !important; }
                 .adv-bubble-ai { gap: 10px !important; width: 100% !important; max-width: 100% !important; align-items: flex-start !important; }
+                .adv-checkpoint-content { min-width: 0 !important; max-width: calc(100% - 42px) !important; }
+                .adv-checkpoint-box, .adv-voice-settings { width: 100% !important; min-width: 0 !important; max-width: 100% !important; box-sizing: border-box !important; }
+                .adv-voice-settings [data-slot="select-trigger"] { min-width: 0 !important; max-width: 100% !important; }
+                .adv-voice-select-content { width: var(--radix-select-trigger-width) !important; max-width: calc(100vw - 24px) !important; }
+                .adv-voice-select-content [data-slot="select-item"] { min-width: 0 !important; max-width: 100% !important; }
+                .adv-voice-select-content [data-slot="select-item"] > span:last-child { min-width: 0 !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
                 .adv-ai-text { text-align: left !important; width: 100% !important; font-size: 13.5px !important; }
                 .adv-rc { padding: 10px 12px !important; border-radius: 10px !important; gap: 8px !important; overflow-x: hidden !important; }
                 .adv-rc-icon { width: 26px !important; height: 26px !important; border-radius: 6px !important; font-size: 14px !important; }
@@ -15718,16 +16160,17 @@ const css = `
                 .adv-chat-ta { background: transparent; }
 
                 /* ── MOBILE DARK MODE OVERRIDES ── */
+                /* ── MOBILE DARK MODE OVERRIDES ── */
                 .dark html, .dark body, .dark main, .dark #__next, .dark [data-reactroot], .dark .adv-landing, .dark .adv-chat-root, .dark .adv-chat-main, .dark .adv-chat-left { background: #000724 !important; }
-                .dark .adv-chat-input-box { background: #1A2A43 !important; border: 1.5px solid #1e293b !important; }
+                .dark .adv-chat-input-box { background: #071131 !important; border: 1.5px solid rgba(23, 37, 84, 0.4) !important; }
                 .dark .adv-chat-ta { background: transparent !important; }
-                .dark .adv-chat-input-wrap { background: #000724 !important; }
+                .dark .adv-chat-input-wrap { background: #071131 !important; }
                 .dark .adv-mobile-footer { background: #000724 !important; border-top: 1px solid #1e293b !important; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important; }
                 .dark .adv-footer-btn.active .adv-footer-btn-icon { background: #2B7CFF !important; color: #000724 !important; }
                 .dark .adv-footer-btn { color: #7a8ba3; }
                 .dark .adv-footer-btn-icon { color: #cbd5e1; }
                 .dark .adv-footer-btn.active { color: #ffffff; }
-                .dark .adv-mobile-add-btn { background: #1A2A43 !important; border-color: #1e293b !important; color: #ffffff !important; }
+                .dark .adv-mobile-add-btn { background: #071131 !important; border-color: #1e293b !important; color: #ffffff !important; }
                 .dark .adv-mobile-send-btn { background: #2B7CFF !important; border-color: #2B7CFF !important; color: #000724 !important; }
                 .dark .adv-mobile-send-btn:disabled { background: #1A2A43 !important; border-color: #1e293b !important; color: #7a8ba3 !important; }
                 .dark .adv-opt-btn { background: #1A2A43 !important; border-color: #1e293b !important; color: #ffffff !important; }
@@ -15754,8 +16197,8 @@ const css = `
             .dark .adv-chat-left-empty .adv-chat-input-wrap { background: transparent; }
             /* ── Chat Input Wrap ── */
             .dark .adv-chat-input-wrap { 
-                background: #000724; 
-                border-top: 1px solid #000724; /* Prevents a light line appearing above the input */
+                background: linear-gradient(to top, #000724 65%, rgba(0,7,36,0.92) 85%, transparent 100%) !important; 
+                border-top: none !important;
             }
             /* Text & Titles */
             .dark .adv-title { color: #ffffff; }
@@ -15786,13 +16229,14 @@ const css = `
             .dark .adv-button:hover { background: #1e5fa8; }
             .dark .adv-send-btn { color: #2B7CFF; }
             .dark .adv-send-btn:hover { color: #ffffff; }
-            .dark .adv-send-circle.adv-send-sm { background: #1A2A43 !important; border: 1px solid #484b4f !important; box-shadow: none !important; color: #ffffff; }
+            .dark .adv-send-circle.adv-send-sm { background: #071131 !important; border: 1px solid rgba(23, 37, 84, 0.4) !important; box-shadow: none !important; color: #ffffff; }
             .dark .adv-send-circle.adv-send-sm svg { stroke: #ffffff; }
-            .dark .adv-send-circle.adv-send-sm:hover { background: #253456 !important; border-color: #484b4f !important; }
+            .dark .adv-send-circle.adv-send-sm:hover { background: #111e42 !important; border-color: rgba(23, 37, 84, 0.4) !important; }
 
             /* Chat Input */
-            .dark .adv-chat-input-box { background: #1A2A43; color: #ffffff; border-color: #000724; box-shadow: none; z-index: auto; }
-            .dark .adv-chat-input-box::before { display: none; }
+            .dark .adv-chat-input-box { background: #071131 !important; color: #ffffff; border: 1.5px solid rgba(23, 37, 84, 0.4) !important; box-shadow: none; z-index: auto; outline: none !important; ring: 0 !important; }
+            .dark .adv-chat-input-box::before, .dark .adv-chat-input-box:focus-within::before { display: none !important; content: none !important; opacity: 0 !important; }
+            .dark .adv-chat-input-box:focus, .dark .adv-chat-input-box:focus-within, .dark .adv-chat-input-box:focus-visible { outline: none !important; box-shadow: none !important; ring: 0 !important; }
             .dark .adv-chat-input-box::placeholder { color: #7a8ba3; }
             .dark .adv-chat-input-box textarea,
             .dark .adv-chat-input-box input { color: #ffffff; }
@@ -15814,6 +16258,32 @@ const css = `
             .dark .adv-ai-name { color: #60a5fa; }
             .dark .adv-ai-text { color: #e5e7eb; }
             .dark .adv-ai-h3 { color: #f3f4f6; }
+            /* Dark variants for the rich-markdown elements. Without these the
+               code block and table keep their light backgrounds and go
+               unreadable the moment the app is in dark mode. */
+            .dark .adv-md {color:#cbd5e1; }
+            .dark .adv-md-li::marker {color:#93a4d4; }
+            .dark .adv-md-a {color:#93b4ff; border-bottom-color:rgba(147,180,255,.3); }
+            .dark .adv-md-a:hover {color:#bfd3ff; border-bottom-color:#bfd3ff; }
+            .dark .adv-md-quote {border-left-color:#27324f; color:#9fb0c9; }
+            .dark .adv-md-code-inline {background:#111a35; border-color:#1e2a4d; color:#c7d6ff; }
+            .dark .adv-md-table-wrap {border-color:#1e2a4d; }
+            .dark .adv-md-th {background:#0d1630; color:#c7d6ff; border-bottom-color:#1e2a4d; }
+            .dark .adv-md-td {color:#cbd5e1; border-bottom-color:#16203d; }
+            .dark .adv-md-table tbody tr:nth-child(even) {background:#0b142e; }
+            .dark .adv-code-block {background:#0a1229; border-color:#1e2a4d; }
+            .dark .adv-code-head {background:#0d1630; border-bottom-color:#1e2a4d; }
+            .dark .adv-code-lang {color:#8fa0c0; }
+            .dark .adv-code-copy {color:#a9b8d4; }
+            .dark .adv-code-copy:hover {background:#111a35; border-color:#27324f; color:#dbe6ff; }
+            .dark .adv-code-pre code {color:#dbe4f7; }
+            .dark .adv-code-pre .hljs-comment, .dark .adv-code-pre .hljs-quote {color:#6b7a99; }
+            .dark .adv-code-pre .hljs-keyword, .dark .adv-code-pre .hljs-selector-tag, .dark .adv-code-pre .hljs-literal, .dark .adv-code-pre .hljs-doctag {color:#c4a4ff; }
+            .dark .adv-code-pre .hljs-string, .dark .adv-code-pre .hljs-attr, .dark .adv-code-pre .hljs-addition {color:#6ee7a8; }
+            .dark .adv-code-pre .hljs-number, .dark .adv-code-pre .hljs-symbol, .dark .adv-code-pre .hljs-bullet {color:#ffb27a; }
+            .dark .adv-code-pre .hljs-title, .dark .adv-code-pre .hljs-name, .dark .adv-code-pre .hljs-section {color:#93b4ff; }
+            .dark .adv-code-pre .hljs-built_in, .dark .adv-code-pre .hljs-type, .dark .adv-code-pre .hljs-class {color:#7dd3fc; }
+            .dark .adv-code-pre .hljs-variable, .dark .adv-code-pre .hljs-template-variable, .dark .adv-code-pre .hljs-attribute {color:#5eead4; }
             .dark .adv-ai-bullet {
                 color: #e5e7eb; 
             }
@@ -15881,22 +16351,30 @@ const css = `
             .dark .adv-close-panel:hover { background: #253456; border-color: #000724; }
 
             /* ATTACH & UNLOCK BUTTONS */
-            .dark .adv-chat-attach-btn { background: #1A2A43; border: 1px solid #484b4f; color: #ffffff; box-shadow: none; }
-            .dark .adv-roles-btn { background: #1A2A43; border-color: #484b4f; color: #ffffff; }
-            .dark .adv-roles-btn:hover { border-color: #5b7cff; box-shadow: 0 4px 14px rgba(43,124,255,.18); }
-            .dark .adv-roles-menu { background: #0f1b33; border-color: #31415f; }
+            .dark .adv-chat-attach-btn { background: #071131 !important; border: 1px solid rgba(23, 37, 84, 0.4) !important; color: #ffffff; box-shadow: none; transition: all .15s ease; }
+            .dark .adv-roles-btn { background: #071131 !important; border: 1px solid rgba(23, 37, 84, 0.4) !important; color: #ffffff; transition: all .15s ease; }
+            .dark .adv-roles-btn:hover,
+            .dark .adv-chat-attach-btn:hover,
+            .dark .adv-mic-btn:hover,
+            .dark .adv-mobile-add-btn:hover,
+            .dark .adv-send-circle.adv-send-sm:hover { border-color: #2b7cff !important; background: #111e42 !important; box-shadow: 0 4px 14px rgba(43,124,255,.18) !important; transform: translateY(-1px); }
+            .dark .adv-roles-menu { background: #000724; border: 1px solid rgba(23, 37, 84, 0.4); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+            .dark .adv-roles-menu button:hover { background: #1e293b !important; }
             .dark .adv-chat-attach-btn svg { stroke: #ffffff; }
-            .dark .adv-chat-attach-btn:hover { background: #253456; border-color: #484b4f; }
-            .dark .adv-mic-btn { background: #1A2A43; border: 1px solid #484b4f; color: #ffffff; }
-            .dark .adv-mic-btn:hover { background: #253456; border-color: #484b4f; }
+            .dark .adv-mic-btn { background: #071131 !important; border: 1px solid rgba(23, 37, 84, 0.4) !important; color: #ffffff; transition: all .15s ease; }
             .dark .adv-mic-btn svg { stroke: #ffffff; }
-            .dark .adv-mic-btn.adv-mic-btn-rec, .dark .adv-mic-btn.adv-mic-btn-rec:hover { background: #3b1d1d; border-color: #ef4444; color: #ef4444; }
+            .dark .adv-mic-btn.adv-mic-btn-rec, .dark .adv-mic-btn.adv-mic-btn-rec:hover { background: #3b1d1d !important; border-color: #ef4444 !important; color: #ef4444 !important; }
             .dark .adv-mic-btn.adv-mic-btn-rec svg { stroke: #ef4444; fill: #ef4444; }
+            .dark .adv-premium-btn { background: #111e42 !important; border: 1px solid rgba(23, 37, 84, 0.4) !important; color: #60a5fa !important; transition: all .15s ease; }
+            .dark .adv-premium-btn:hover { background: #192a58 !important; border-color: #2b7cff !important; color: #93c5fd !important; box-shadow: 0 4px 14px rgba(43,124,255,.18) !important; transform: translateY(-1px); }
             .dark .adv-unlock-btn { background: #2B7CFF; color: #000724; }
             .dark .adv-unlock-btn:hover { background: #1e5fa8; box-shadow: 0 4px 12px rgba(43, 124, 255, 0.3); }
 
             /* TARGETING CARD */
-            .dark .adv-targeting-card { background: linear-gradient(135deg, #1A2A43, #253456); border-color: #000724; }
+            .dark .adv-targeting-card { background: linear-gradient(135deg, #071131, #111e42); border-color: #1e293b; }
+            .dark .adv-tc-header { color: #60a5fa; }
+            .dark .adv-tag-label { color: #7a8ba3; }
+            .dark .adv-tag { background: #111e42; color: #ffffff; border-color: #1e293b; }
             .dark .adv-tc-header { color: #60a5fa; }
             .dark .adv-tag-label { color: #7a8ba3; }
             .dark .adv-tag { background: #253456; color: #ffffff; border-color: #000724; }

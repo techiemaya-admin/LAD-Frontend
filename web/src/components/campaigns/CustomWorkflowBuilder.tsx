@@ -32,17 +32,86 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 import LeadPreviewPanel from './LeadPreviewPanel';
+
+function CustomSelect({
+  value,
+  onValueChange,
+  disabled,
+  placeholder,
+  className,
+  options,
+  children,
+}: {
+  value?: string;
+  onValueChange?: (val: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+  options?: Array<{ value: string; label: React.ReactNode }>;
+  children?: React.ReactNode;
+}) {
+  const selectOptions: Array<{ value: string; label: React.ReactNode }> = useMemo(() => {
+    if (options && options.length > 0) return options;
+    const parsed: Array<{ value: string; label: React.ReactNode }> = [];
+    React.Children.forEach(children, (child) => {
+      if (React.isValidElement(child)) {
+        const props = child.props as any;
+        const val = props?.value !== undefined ? String(props.value) : String(props?.children ?? '');
+        const lbl = props?.children;
+        parsed.push({ value: val, label: lbl });
+      }
+    });
+    return parsed;
+  }, [options, children]);
+
+  const hasNoneOption = selectOptions.some((opt) => opt.value === '' || opt.value === '__none__');
+  const radixValue = (value === '' || value === undefined || value === null)
+    ? (hasNoneOption ? '__none__' : undefined)
+    : String(value);
+
+  const handleValueChange = (val: string) => {
+    const actualVal = val === '__none__' ? '' : val;
+    onValueChange?.(actualVal);
+  };
+
+  return (
+    <Select value={radixValue} onValueChange={handleValueChange} disabled={disabled}>
+      <SelectTrigger
+        className={cn("w-full text-xs h-9 bg-background dark:bg-slate-800/50 dark:border-slate-700/80", className)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <SelectValue placeholder={placeholder || "Select..."} />
+      </SelectTrigger>
+      <SelectContent className="dark:bg-[#071131] dark:border-blue-950/40 z-[100000]">
+        {selectOptions.map((opt, idx) => {
+          const itemVal = opt.value === '' ? '__none__' : opt.value;
+          return (
+            <SelectItem key={`${itemVal}-${idx}`} value={itemVal} className="text-xs">
+              {opt.label as any}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
 import {
   WORKFLOW_TEMPLATES, WorkflowTemplate,
   SOURCE_STEP_ID, FOLLOWUP_STEP_ID, ANALYTICS_STEP_ID, ZOHO_UPDATE_STEP_ID,
   MEDIA_STEP_ID, MULTICOND_STEP_ID, AI_STEP_ID, ENRICH_STEP_ID, EXPORT_STEP_ID,
   AUTOPOST_STEP_ID, CONTENT_STEP_ID, APPROVAL_STEP_ID, AI_DEFAULT_INSTRUCTION, EXPORT_DEFAULT_COLUMNS,
+  POST_ENGAGE_STEP_ID, COMMENT_APPROVAL_STEP_ID,
   IG_AUTOPOST_STEP_ID, HUMAN_TASK_STEP_ID, REPORT_STEP_ID,
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
-  SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
+  SPLIT_STEP_ID, ACCEPT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
   templateToPreviewSteps,
 } from './workflowTemplates';
 import {
@@ -76,9 +145,10 @@ const edgeTypes = { labeled: LabeledEdge };
 
 // ─── Palette definitions ─────────────────────────────────────────────────────
 
-type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract';
+type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts' | 'linkedin_connections';
 
 const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNode; chip: string; recurring?: boolean }[] = [
+  { key: 'own_contacts', label: 'Your own contacts', sub: 'People who already gave you their details', icon: <Users className="h-4 w-4 text-amber-600" />, chip: 'bg-amber-50 dark:bg-amber-950/30', recurring: true },
   { key: 'zoho_recurring', label: 'Zoho CRM (Recurring)', sub: 'Import new contacts daily', icon: <Repeat className="h-4 w-4 text-red-600" />, chip: 'bg-red-50 dark:bg-red-950/30', recurring: true },
   { key: 'zoho_once', label: 'Zoho CRM (One-Time)', sub: 'Import synced contacts now', icon: <Users className="h-4 w-4 text-red-600" />, chip: 'bg-red-50 dark:bg-red-950/30' },
   { key: 'ghl_once', label: 'GoHighLevel (One-Time)', sub: 'Import synced contacts now', icon: <Users className="h-4 w-4 text-blue-600" />, chip: 'bg-blue-50 dark:bg-blue-950/30' },
@@ -87,6 +157,7 @@ const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNo
   { key: 'linkedin_search', label: 'LinkedIn Search', sub: 'Find new leads by keywords', icon: <Search className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30' },
   { key: 'web_extract', label: 'Web page (exhibitors, directories)', sub: 'Pull companies off a page, then find the roles you name', icon: <Globe className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30' },
   { key: 'linkedin_signal', label: 'LinkedIn Signal Search', sub: 'Find leads from hiring/buying signals', icon: <Radar className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
+  { key: 'linkedin_connections', label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network', icon: <UserCheck className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
 ];
 
 // Target fields the file columns map to. 'ignore' drops the column.
@@ -195,6 +266,22 @@ const IconChip = ({ icon, chip, size = 'h-9 w-9' }: { icon: React.ReactNode; chi
   <span className={`${size} ${chip} rounded-lg flex items-center justify-center flex-shrink-0`}>{icon}</span>
 );
 
+function MultiCondBranchBody({ b, onChange }: { b: any; onChange: (p: any) => void }) {
+  return (
+    <>
+      <CustomSelect className="w-full text-xs" value={b.channel || 'email'} onValueChange={(val) => onChange({ channel: val })}>
+        <option value="email">Send email</option>
+        <option value="linkedin">LinkedIn message</option>
+        <option value="whatsapp">WhatsApp</option>
+      </CustomSelect>
+      {(b.channel || 'email') === 'email' && (
+        <Input value={b.subject || ''} onChange={(e) => onChange({ subject: e.target.value })} placeholder="Email subject" />
+      )}
+      <textarea className="w-full rounded-md border border-input dark:border-slate-700/80 bg-background dark:bg-slate-800/50 px-2 py-1.5 text-xs min-h-[56px]" value={b.body || ''} onChange={(e) => onChange({ body: e.target.value })} placeholder="Message (leave blank to let Mr LAD draft it)" />
+    </>
+  );
+}
+
 const CONDITIONS = [
   { value: 'connection_accepted', label: 'Connection accepted', action: 'CONNECTION_ACCEPTED' },
   { value: 'message_replied', label: 'Message replied', action: 'REPLY_RECEIVED' },
@@ -215,13 +302,15 @@ const CONDITIONS = [
 // independent lookup so it can't break their exhaustiveness.
 const STEP_INSTRUCTIONS: Record<string, string> = {
   // Sources
-  zoho_recurring: 'Imports newly-created Zoho CRM contacts every day for the life of the campaign. Nothing is required - the tag filter is optional.',
+  own_contacts: 'Works through the contacts already in your account - people who messaged you or were imported from your booking system. Email only: they have no open WhatsApp window, so a WhatsApp step would need an approved template. Anyone without a usable email address is skipped.',
+  zoho_recurring: 'Imports newly-created Zoho CRM records every day for the life of the campaign. Contacts and Leads need nothing beyond the optional tag filter; Accounts are companies, so they also need a job title to find at each one.',
   zoho_once: 'Imports contacts already synced from Zoho CRM, once. Nothing is required.',
   ghl_once: 'Imports contacts already synced from GoHighLevel, once. Nothing is required.',
   ghl_recurring: 'Imports newly-created GoHighLevel contacts every day for the life of the campaign. Nothing is required - the tag filter is optional. GoHighLevel must be connected and synced first.',
   file_import: "Imports leads from an uploaded CSV/Excel file. Needs a file with at least one column mapped to name, company, email, or LinkedIn URL. Rows with no LinkedIn URL are resolved automatically by name+company at send time - some may never match, and those retry indefinitely rather than fail. Map a LinkedIn URL column directly when you have one.",
   linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
   linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
+  linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed. Pair it with the Comment on new posts + Approval nodes to engage their posts. Needs an active LinkedIn account in Settings.',
   // LinkedIn outreach
   linkedin_connect: "Sends a LinkedIn connection request - no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
   linkedin_message: "Sends a LinkedIn DM - but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
@@ -245,6 +334,8 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [EXPORT_STEP_ID]: 'Sends the final lead list to a file, database, email, WhatsApp, webhook, Sheet, or Slack. Needs at least one destination configured.',
   [AUTOPOST_STEP_ID]: "Publishes on a recurring schedule to the tenant's own LinkedIn feed - not sent to leads. Needs post content from a LinkedIn content node.",
   [CONTENT_STEP_ID]: 'Writes (or AI-generates) the text for the scheduled LinkedIn post.',
+  [POST_ENGAGE_STEP_ID]: "Watches every lead in this campaign for new LinkedIn posts (every few hours) and engages: likes, and an AI-drafted comment. Add the Approval node after it so each comment is sent to you on WhatsApp first - without it, comments post automatically. Meant for the Your LinkedIn connections source: engaging your own network reads as organic; commenting on strangers' posts does not.",
+  [COMMENT_APPROVAL_STEP_ID]: 'Holds each drafted comment for a WhatsApp tap before it is posted. Approve posts the suggestion as written; Reject opens a page where you write your own comment instead, or skip. Needs a Comment on new posts node in this workflow. The approver defaults to your account phone.',
   [APPROVAL_STEP_ID]: 'Holds a post for approval over WhatsApp/email before it publishes. Needs an approver contact, AND a LinkedIn auto-post node in this workflow - approval has nothing to gate without one.',
   // Rewritten against WebIntelStepService.executeWebScrapeStep, which resolves
   // `(stepConfig.url || '').trim() || resolveWebsite(leadData)`. The previous
@@ -256,6 +347,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [RESEARCH_STEP_ID]: "Runs AI research on each lead's company from the open web. Nothing is required.",
   [SCORE_STEP_ID]: 'Scores each lead\'s buy-intent 0-100 and labels it hot/warm/cold. Nothing is required. Pairs naturally with a Multi-condition step placed right after it, to branch hot vs. cold leads.',
   [SPLIT_STEP_ID]: 'Sends variant A or B (roughly 50/50, sticky per lead) to compare two openers. Needs a message for BOTH variants.',
+  [ACCEPT_STEP_ID]: 'Waits to see if the lead accepts your connection request, then branches. Accepted goes one way; still unanswered after the chosen number of days goes the other. The clock starts when the invite was SENT.',
   [SETFIELD_STEP_ID]: 'Writes a tag or value onto the lead record for later branching or export.',
   [HTTP_STEP_ID]: "Calls any external API with this lead's data. Requests to internal/private/cloud-metadata addresses are blocked.",
 };
@@ -1348,12 +1440,43 @@ const WORKFLOW_DATA_POINTS: DataPoint[] = [
   { key: 'location',           label: 'Location',             match: /location|\bcity\b|\bstate\b|country|address/i },
   { key: 'industry',           label: 'Industry',             match: /industry|sector/i },
   { key: 'headline',           label: 'Headline / summary',   match: /headline|about|summary|description/i },
-  { key: 'campaign_status',    label: 'Campaign status',      match: /lead.?status|\bstatus\b|\bstage\b/i },
+  // Listed BEFORE campaign_status so a status-shaped field suggests this one.
+  // campaign_status resolves to the engine's internal lead status ("active",
+  // "contacted"), which a Zoho picklist refuses; this one resolves to a
+  // sequence outcome the operator maps onto the field's own options below.
+  { key: 'campaign_outcome',   label: 'Campaign outcome',     match: /lead.?status|\bstatus\b|\bstage\b|outcome|result/i },
+  { key: 'campaign_status',    label: 'Campaign status (raw)', match: /^$/ },
   { key: 'campaign_name',      label: 'Campaign name',        match: /campaign/i },
   { key: 'last_channel',       label: 'Last channel used',    match: /channel|\bsource\b/i },
   { key: 'last_activity_date', label: "Today's date",         match: /date|last.?activity|modified/i },
   { key: 'notes',              label: 'Last message / notes', match: /\bnote|comment|remark/i },
 ];
+
+/** The outcomes a sequence can leave a lead in. MIRRORS the backend's
+ *  CAMPAIGN_OUTCOMES in ZohoWritebackService — same keys, same order — and
+ *  the backend pins them with a test. A key here that the backend does not
+ *  know resolves to nothing at run time; a backend key missing here can never
+ *  be mapped. Change both together. */
+const CAMPAIGN_OUTCOMES: { key: string; label: string; hint: RegExp }[] = [
+  { key: 'linkedin_not_found',     label: 'LinkedIn account not found', hint: /not.?found|no.?linkedin|acc(ount)?.?not|invalid|missing/i },
+  { key: 'connection_sent',        label: 'Connection request sent',    hint: /(connection|invite|invitation|request).*(sent|pending)|requested/i },
+  { key: 'connection_accepted',    label: 'Connection accepted',        hint: /accept|connected\b/i },
+  { key: 'linkedin_followup_sent', label: 'LinkedIn follow-up sent',    hint: /follow.?up|linkedin.*(message|dm|sent)|messaged/i },
+  { key: 'replied',                label: 'Replied',                    hint: /repl|respond|answer/i },
+  { key: 'email_sent',             label: 'Email sent',                 hint: /e-?mail.*sent|sent.*e-?mail|emailed/i },
+  { key: 'email_opened',           label: 'Email opened',               hint: /e-?mail.*(open|read|viewed)|(open|read).*e-?mail/i },
+  { key: 'whatsapp_sent',          label: 'WhatsApp sent',              hint: /whats?app|\bwa\b/i },
+];
+
+/** Pick the picklist option that most plausibly means this outcome, or ''. A
+ *  suggestion, not a decision — the operator sees every row and can override. */
+function suggestPicklistOption(outcomeKey: string, options: string[]): string {
+  const o = CAMPAIGN_OUTCOMES.find((x) => x.key === outcomeKey);
+  if (!o) return '';
+  // "-None-" is Zoho's empty option; never suggest it as a meaning.
+  const real = options.filter((v) => v && !/^-?none-?$/i.test(v.trim()));
+  return real.find((v) => o.hint.test(v)) || '';
+}
 
 /** Suggest a data-point for a Zoho field, sequence-aware (only maps a channel
  *  source when that channel is actually in the Accelerator). Returns key or ''. */
@@ -1427,6 +1550,42 @@ function BuilderCanvas({ steps, branches = [], switchId }: { steps: WorkflowPrev
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+/** A Meta template's BODY text. Approved templates carry their copy in
+ *  `components`, not a flat field, and the list endpoint may omit it entirely —
+ *  so an empty string is normal and must not be treated as an error. */
+function waTemplateBody(t: any): string {
+  // The WABA service's list already flattens the BODY component to `body`;
+  // the raw Meta shape keeps it in `components`. Read both.
+  if (t?.body && typeof t.body === 'string') return t.body;
+  const body = (t?.components || []).find((c: any) => c?.type === 'BODY');
+  return body?.text || '';
+}
+
+/** What a Meta template is keyed on. NOT an id — the WABA service's list has
+ *  none, so `<option value={t.id}>` rendered value=undefined and the browser
+ *  fell back to the option's TEXT: the label "developer_outreach · en · +971…"
+ *  went into the config as the template id, and the lookup by id found
+ *  nothing, so name and language were never stored and the engine had no
+ *  template to send (stage, campaign f8cfedcd, 2026-09-11). Meta addresses a
+ *  template by name + language, and the same name can exist in two languages,
+ *  so that pair is the identity. */
+function waTemplateKey(t: any): string {
+  return `${t?.name || ''}|${t?.language || t?.language_code || 'en'}`;
+}
+function findWaTemplate(list: any[], key: string): any | undefined {
+  return (list || []).find((x: any) => waTemplateKey(x) === key);
+}
+
+/** What to call a Meta template in a dropdown. The NAME is what Meta knows it
+ *  by and what the operator approved; the language disambiguates the same name
+ *  registered twice, and the number says which WABA it lives on. */
+function waTemplateLabel(t: any): string {
+  const parts = [t?.name || 'Template'];
+  if (t?.language) parts.push(`· ${t.language}`);
+  if (t?.account_phone) parts.push(`· ${t.account_phone}`);
+  return parts.join(' ');
+}
+
 /** Loads the connected accounts/templates a step config can reference:
  *  voice agents + numbers, email senders + templates, WhatsApp accounts +
  *  templates, LinkedIn templates. Reuses the same hooks/endpoints the
@@ -1437,14 +1596,33 @@ function useBuilderResources() {
   const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
   const [waAccounts, setWaAccounts] = useState<any[]>([]);
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  // Why the WhatsApp template list is empty, when it is empty for a REASON.
+  // The service answers 200 with total 0 and a `degraded` array naming the
+  // number and Meta's error; ignoring that rendered nothing at all, and the
+  // operator read "no templates" when the truth was "your token is revoked".
+  const [waTemplatesDegraded, setWaTemplatesDegraded] = useState<string | null>(null);
   const [liTemplates, setLiTemplates] = useState<any[]>([]);
 
   useEffect(() => { voice.fetchAll?.().catch(() => {}); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
     fetch('/api/social-integration/whatsapp/accounts', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (Array.isArray(d?.accounts)) setWaAccounts(d.accounts); }).catch(() => {});
-    fetch('/api/campaigns/whatsapp-templates', { credentials: 'include' })
-      .then((r) => r.json()).then((d) => { if (d?.success) setWaTemplates(d.data || []); }).catch(() => {});
+    // The Meta-APPROVED templates, the same list the Templates page shows —
+    // not communication_templates, which holds the "Welcome Message" /
+    // "Follow-Up Message" pair seeded into every tenant at onboarding and has
+    // nothing to do with Meta approval. A WABA send to a lead outside the 24h
+    // window is only accepted as an approved template, so those seeded rows
+    // could never have been sent to a cold lead.
+    fetch('/api/whatsapp-conversations/conversations/templates?channel=waba', { credentials: 'include' })
+      .then((r) => r.json()).then((d) => {
+        const list = Array.isArray(d) ? d : Array.isArray(d?.templates) ? d.templates : Array.isArray(d?.data) ? d.data : [];
+        // Only APPROVED can be sent; PENDING and REJECTED would fail at Meta.
+        setWaTemplates(list.filter((t: any) => String(t?.status || '').toUpperCase() === 'APPROVED'));
+        const deg: any[] = Array.isArray(d?.degraded) ? d.degraded : [];
+        setWaTemplatesDegraded(deg.length
+          ? deg.map((g: any) => `${g?.account_phone || g?.account_name || 'WhatsApp number'}: ${g?.error || 'could not load templates'}`).join(' · ')
+          : null);
+      }).catch(() => {});
     fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (d?.success) setLiTemplates(d.data || []); }).catch(() => {});
   }, []);
@@ -1460,12 +1638,19 @@ function useBuilderResources() {
     voiceAgents, voiceNumbers,
     emailSenders: (emailSenders as any[]) || [],
     emailTemplates: (emailTemplates as any[]) || [],
-    waAccounts, waTemplates, liTemplates,
+    waAccounts, waTemplates, liTemplates, waTemplatesDegraded,
   };
 }
 
-export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId }: {
+export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId, onLaunched, afterLaunchHref }: {
   onClose: () => void;
+  /**
+   * Called once a NEW campaign has been created, before the redirect to
+   * /campaigns, with the created campaign's id when the response carried one.
+   * The Studio's first-campaign hand-off records the launch here. Awaited but
+   * never allowed to fail the launch - the campaign already exists.
+   */
+  onLaunched?: (campaignId: string | null) => void | Promise<void>;
   /**
    * A pipeline drafted from a description in the chat, applied to the canvas on
    * mount. Unlike `initialTemplateKey` this is the template itself: it was
@@ -1491,6 +1676,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   initialNodeCfg?: Record<string, any>;
   /** Fire launch() automatically once the template is applied. */
   autoLaunch?: boolean;
+  /** Where a successful NEW launch lands; defaults to the campaigns list. */
+  afterLaunchHref?: string;
   /** Reopen an existing custom workflow for editing; launch updates it in place. */
   editCampaignId?: string;
 }) {
@@ -2069,6 +2256,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   /** Put a finished draft on the canvas via the one existing apply path. */
   const applyAiTemplate = (t: any) => {
     const srcDef = SOURCES.find((s) => s.key === t.source?.key);
+    // A drafter may say how many leads a day it planned for (the Studio's
+    // first campaign does); the source cfg has no such key of its own.
+    if (Number(t.perDay) > 0) setPerDay(String(Math.round(Number(t.perDay))));
     // silent: replacing the canvas was already confirmed when the draft started.
     applyTemplate({
       key: `ai-${Date.now()}`,
@@ -2080,7 +2270,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         : undefined,
       nodes: t.nodes,
       inputs: [],
-      accent: '#0b1957',
+      accent: '#38bdf8',
       meta: { cycleDays: parseInt(days, 10) || 30, channels: new Set(t.nodes.map((n: any) => n.type.split('_')[0])).size },
       category: 'general',
     } as WorkflowTemplate, { silent: true });
@@ -2453,11 +2643,47 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     [strategyTemplates, communityTemplates],
   );
 
+  /**
+   * What on this canvas actually CONSUMES leads — and therefore whether a
+   * contact source is required at all.
+   *
+   * Hoisted to component scope because BOTH launch and saveAsStrategy need it.
+   * It used to be a local inside the launch handler, so saving the very same
+   * canvas as a strategy still demanded a contact source: a publisher-only
+   * workflow could be launched but not saved, which reads as the builder
+   * contradicting itself. One definition, two callers, no drift.
+   *
+   * The auto-post genuinely does not iterate leads — campaign_linkedin_posts
+   * holds one row per campaign (UNIQUE on campaign_id) and a cron fires it on
+   * its own timer — so a publisher-only workflow has nobody to enrol.
+   */
+  const leadConsumption = useMemo(() => {
+    const outreachSteps = workflowPreview.filter(
+      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID && s.id !== POST_ENGAGE_STEP_ID && s.id !== COMMENT_APPROVAL_STEP_ID
+    );
+    const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
+    const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
+    // Publisher-only is about what CONSUMES leads, not about which nodes are on
+    // the canvas. A contact source on its own consumes nothing: with no per-lead
+    // step the imported contacts have nowhere to go, so a workflow whose only
+    // real work is the scheduled post stays publisher-only even with a source
+    // attached. Defining it by node identity instead meant picking a source
+    // silently turned the exemption off.
+    const publisherOnly =
+      workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID) &&
+      !outreachSteps.length && !followupNode && !multiCondNode;
+    return { outreachSteps, multiCondNode, followupNode, publisherOnly };
+  }, [workflowPreview]);
+
   /** Snapshot the current canvas as a named, reusable strategy. */
   const saveAsStrategy = async () => {
     setStrategyMsg(null);
     if (!name.trim()) { setError('Name your workflow before saving it as a strategy.'); return; }
-    if (!source) { setError('Pick a contact source before saving.'); return; }
+    // The same exemption launch applies: a publisher-only workflow has nobody
+    // to enrol, so demanding a source here rejects a canvas Launch accepts.
+    if (!source && !leadConsumption.publisherOnly) {
+      setError('Pick a contact source before saving.'); return;
+    }
     if (!workflowPreview.length) { setError('Add at least one step before saving.'); return; }
 
     setStrategySaving(true);
@@ -2504,6 +2730,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       });
     }
     setEditingId(SPLIT_STEP_ID);
+  };
+
+  const addAcceptanceBranch = () => {
+    if (!workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+      addWorkflowStep({
+        id: ACCEPT_STEP_ID, type: 'linkedin_acceptance', channel: 'linkedin',
+        title: 'Accepted?', description: 'Accepted · or after 5 days',
+      });
+      setCfg(ACCEPT_STEP_ID, {
+        wait_days: 5,
+        // Defaults chosen to match the shape people actually ask for: a phone
+        // number is what makes WhatsApp possible, an official email is what
+        // makes the fallback possible, and neither channel works without the
+        // enrichment in front of it.
+        accepted: { enrich: 'phone', channel: 'whatsapp', body: '' },
+        expired: { enrich: 'official_email', channel: 'email', subject: '', body: '' },
+      });
+    }
+    setEditingId(ACCEPT_STEP_ID);
   };
 
   const addSetField = () => {
@@ -2560,6 +2805,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       setCfg(APPROVAL_STEP_ID, { approval_channel: 'whatsapp', approval_to: '' });
     }
     setEditingId(APPROVAL_STEP_ID);
+  };
+
+  const addPostEngage = () => {
+    if (!workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      addWorkflowStep({ id: POST_ENGAGE_STEP_ID, type: 'linkedin_post_engage', channel: 'linkedin', title: 'Comment on new posts', description: 'Watch their posts · AI-drafted comment · like' });
+      setCfg(POST_ENGAGE_STEP_ID, { like_posts: true, min_icp_score: '50' });
+    }
+    setEditingId(POST_ENGAGE_STEP_ID);
+  };
+
+  const addCommentApproval = () => {
+    if (!workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID)) {
+      addWorkflowStep({ id: COMMENT_APPROVAL_STEP_ID, type: 'comment_approval', channel: 'whatsapp', title: 'Approval', description: 'WhatsApp · approve, or write your own' });
+      setCfg(COMMENT_APPROVAL_STEP_ID, { approval_to: '' });
+    }
+    setEditingId(COMMENT_APPROVAL_STEP_ID);
   };
 
   const addExport = () => {
@@ -2927,7 +3188,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   }, [editingId, liOrganizations.length]);
 
   // Lazy-load Zoho field metadata when the write-back node is open, per module.
-  const zohoModule = configs[ZOHO_UPDATE_STEP_ID]?.module === 'Leads' ? 'Leads' : 'Contacts';
+  // Contacts and Leads are people; Accounts are companies, and their field
+  // list has nothing in common with either (no first name, no email).
+  const ZOHO_WRITEBACK_MODULES = ['Contacts', 'Leads', 'Accounts'] as const;
+  const zohoModule = ZOHO_WRITEBACK_MODULES.includes(configs[ZOHO_UPDATE_STEP_ID]?.module)
+    ? configs[ZOHO_UPDATE_STEP_ID]?.module as string
+    : 'Contacts';
   useEffect(() => {
     if (editingId !== ZOHO_UPDATE_STEP_ID) return;
     let cancelled = false;
@@ -3004,6 +3270,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (workflowPreview.some((s) => s.id === APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       issues.push({ id: APPROVAL_STEP_ID, message: 'The Approval node needs a LinkedIn post node - it gates what that node publishes.' });
     }
+    if (workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      issues.push({ id: COMMENT_APPROVAL_STEP_ID, message: 'The comment Approval node needs a Comment on new posts node - it gates the comments that node drafts.' });
+    }
+    // Zoho Accounts: an account is a company, so without a target job title the
+    // import has nobody to search for and the campaign would launch, run daily
+    // and enrol zero leads without ever erroring. Same reasoning as the
+    // broadcast template below — catch it before Launch, not after.
+    if (source === 'zoho_recurring'
+        && (configs[SOURCE_STEP_ID] || {}).zoho_modules === 'accounts'
+        && !String((configs[SOURCE_STEP_ID] || {}).zoho_account_title || '').trim()) {
+      issues.push({
+        id: SOURCE_STEP_ID,
+        message: 'Importing Zoho Accounts needs a job title to look for. An account is a company, not a person — without a title there is nobody to enrol.',
+      });
+    }
     // Broadcasts: catch the missing-required-field case here rather than letting
     // the backend validator answer with a 400 after the user hits Launch.
     if (workflowPreview.some((x) => x.id === WA_BROADCAST_STEP_ID)
@@ -3022,7 +3303,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       });
     }
     return issues;
-  }, [workflowPreview, configs]);
+  }, [workflowPreview, configs, source]);
 
   // Router-style branch visualisation for the Multi-condition node: one output
   // node per condition (+ else), fanned out on the canvas.
@@ -3062,20 +3343,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     // is nobody to enrol, so demanding a contact source - or an outreach step  - 
     // would block a perfectly valid pipeline. Any other node present means the
     // workflow does operate on leads, and the normal guards apply again.
-    const outreachSteps = workflowPreview.filter(
-      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID
-    );
-    const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
-    const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
-    // Publisher-only is about what CONSUMES leads, not about which nodes are on
-    // the canvas. A contact source on its own consumes nothing: with no per-lead
-    // step the imported contacts have nowhere to go, so a workflow whose only
-    // real work is the scheduled post stays publisher-only even with a source
-    // attached. Defining it by node identity instead meant picking a source
-    // silently turned the exemption off.
-    const publisherOnly =
-      workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID) &&
-      !outreachSteps.length && !followupNode && !multiCondNode;
+    // One shared definition with saveAsStrategy — see leadConsumption above.
+    const { outreachSteps, multiCondNode, followupNode, publisherOnly } = leadConsumption;
     if (!source && !publisherOnly) { setError('Pick a contact source (first node).'); return; }
     // LinkedIn Search needs at least one criterion - templates seed these empty
     // on purpose, so catch it here with a pointer instead of a backend 400.
@@ -3095,7 +3364,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const analyticsNode = workflowPreview.find((s) => s.id === ANALYTICS_STEP_ID);
     const autopostNode = workflowPreview.find((s) => s.id === AUTOPOST_STEP_ID);
     const zohoUpdateNode = workflowPreview.find((s) => s.id === ZOHO_UPDATE_STEP_ID);
-    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly) { setError('Add at least one outreach step.'); return; }
+    // A connections campaign with post engagement on does its work in the
+    // background (the monitor cron comments on their posts), so it is a
+    // complete pipeline with no outreach step at all - like publisher-only.
+    const engagementOnly = workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID);
+    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly && !engagementOnly) { setError('Add at least one outreach step.'); return; }
 
     // InMail needs an entitlement the account may not have. Checking here means
     // the user finds out while looking at the canvas, instead of one lead
@@ -3152,8 +3425,27 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     // would launch silently doing nothing - point at the offending node instead.
     if (workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       const hasContent = ((configs[CONTENT_STEP_ID]?.content ?? configs[AUTOPOST_STEP_ID]?.content) || '').trim();
-      if (!hasContent) {
-        setError('Add the LinkedIn content node and write what the post should say.');
+      // With "write a fresh post with AI each time" on, the body is a TOPIC
+      // SEED, not the post — which is what the checkbox itself says ("uses the
+      // text above as the topic"). generatePost() with an empty seed writes
+      // from the tenant's business profile and campaign targeting, which is the
+      // whole point of a recurring series that does not repeat itself.
+      //
+      // Demanding text anyway made the toggle look broken: it is ticked, the
+      // node is open, and the builder still refuses to launch.
+      //
+      // Nothing downstream needs the guard either. If generation fails at run
+      // time there is no silent empty post — publishPost() refuses a blank body
+      // ("Post content is required") and the failure lands on the schedule row.
+      const aiWritesIt = !!(configs[CONTENT_STEP_ID]?.ai_generate ?? configs[AUTOPOST_STEP_ID]?.ai_generate);
+      if (!hasContent && !aiWritesIt) {
+        // ABSENT and EMPTY are different problems with different fixes. Telling
+        // someone to "add" a node that is plainly on their canvas reads as the
+        // builder being broken, when the instruction is to open it and type.
+        const hasContentNode = workflowPreview.some((s) => s.id === CONTENT_STEP_ID);
+        setError(hasContentNode
+          ? 'Open the LinkedIn content node and write what the post should say.'
+          : 'Add a LinkedIn content node and write what the post should say.');
         setEditingId(workflowPreview.some((s) => s.id === CONTENT_STEP_ID) ? CONTENT_STEP_ID : AUTOPOST_STEP_ID);
         return;
       }
@@ -3210,6 +3502,46 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             source: 'zoho_contacts',
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
+            leadGenerationLimit: perDayN,
+          },
+        });
+      } else if (source === 'linkedin_connections') {
+        // The tenant's own 1st-degree network, a page a day, decision-makers
+        // only. Nobody here needs an invite. Post engagement is campaign-level
+        // (config.post_engagement below), not a step: the monitor cron sweeps
+        // every lead of the campaign for new posts.
+        steps.push({
+          type: 'lead_generation', title: 'Your LinkedIn connections', channel: 'linkedin', order_index: order++,
+          config: {
+            source: 'linkedin_connections',
+            decision_maker_titles: String(srcCfg.decision_maker_titles || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            min_seniority: srcCfg.min_seniority || 'director',
+            keywords: (srcCfg.keywords || '').trim() || undefined,
+            min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
+            leadGenerationLimit: perDayN,
+          },
+        });
+      } else if (source === 'own_contacts') {
+        // Walks the tenant's OWN contact list a page a day. The segment splits
+        // on when we last HEARD from someone - not when they last visited,
+        // which the conversation database does not know.
+        steps.push({
+          type: 'lead_generation', title: 'Your own contacts', channel: 'email', order_index: order++,
+          config: {
+            source: 'own_contacts',
+            segment: srcCfg.segment || 'all',
+            window_days: Number(srcCfg.window_days) > 0 ? Number(srcCfg.window_days) : 180,
             leadGenerationLimit: perDayN,
           },
         });
@@ -3443,7 +3775,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         else if (s.type === 'linkedin_inmail') steps.push({ type: s.type, title: 'Send LinkedIn InMail', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), subject: (c.subject || '').trim() || undefined, template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_visit') steps.push({ type: s.type, title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: order++, config: { ...delay } });
         else if (s.type === 'email_send') steps.push({ type: s.type, title: 'Send Email', channel: 'email', order_index: order++, config: { subject: (c.subject || '').trim(), body: (c.body || '').trim(), from_email: c.from_email || undefined, email_provider: c.email_provider || undefined, template_id: c.template_id || undefined, ...delay } });
-        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, ...delay } });
+        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, whatsapp_template_name: c.whatsapp_template_name || undefined, whatsapp_template_language: c.whatsapp_template_language || undefined, ...delay } });
         // added_context is the key the voice executors read (they also accept
         // voiceContext); without it the panel's extra-context box would collect
         // text that never left the browser.
@@ -3460,7 +3792,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       // else the chosen template id). Delays are relative to the prior step.
       const fc = configs[FOLLOWUP_STEP_ID] || {};
       const fuChannel = fc.channel === 'email' ? 'email' : fc.channel === 'whatsapp' ? 'whatsapp' : 'linkedin';
-      const fuTouchList: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] =
+      const fuTouchList: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] =
         Array.isArray(fc.touches) && fc.touches.length ? fc.touches.slice(0, 7) : [{ hours: 24 }, { hours: 72 }, { hours: 168 }];
       if (followupNode) {
         fuTouchList.forEach((t, idx) => {
@@ -3477,7 +3809,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           // modes so other touch_type values (e.g. lead_report) fall through.
           const liTouchType = (t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') ? t.touch_type : undefined;
           if (fuChannel === 'email') steps.push({ type: 'email_send', title: `Follow-up ${n} (email)`, channel: 'email', order_index: order++, config: { subject: '', body, template_id: tid, ...d } });
-          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...d } });
+          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...(t.template_name ? { whatsapp_template_name: t.template_name, whatsapp_template_language: t.template_language || 'en' } : {}), ...d } });
           else steps.push({ type: 'linkedin_message', title: `Follow-up ${n} (LinkedIn)`, channel: 'linkedin', order_index: order++, config: { message: body, template_id: tid, ...(liTouchType ? { touch_type: liTouchType } : {}), ...d } });
         });
       }
@@ -3538,13 +3870,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       if (zohoUpdateNode) {
         const zc = configs[ZOHO_UPDATE_STEP_ID] || {};
         const map: Record<string, string> = zc.map || {};
+        const pick: Record<string, Record<string, string>> = zc.picklist || {};
         const mappings = Object.entries(map)
           .filter(([, sourceKey]) => sourceKey)
-          .map(([zoho_field, source]) => ({ zoho_field, source }));
+          .map(([zoho_field, source]) => {
+            // Only the rows the operator actually chose; an empty row must
+            // read as "don't write", not as a blank value posted to Zoho.
+            const chosen = Object.fromEntries(Object.entries(pick[zoho_field] || {}).filter(([, v]) => v && String(v).trim()));
+            return source === 'campaign_outcome' && Object.keys(chosen).length
+              ? { zoho_field, source, picklist_map: chosen }
+              : { zoho_field, source };
+          });
         if (mappings.length) {
           steps.push({
             type: 'zoho_update', title: 'Update Zoho record', channel: 'linkedin', order_index: order++,
-            config: { module: zc.module === 'Leads' ? 'Leads' : 'Contacts', mappings },
+            config: { module: ['Contacts', 'Leads', 'Accounts'].includes(zc.module) ? zc.module : 'Contacts', mappings },
           });
         }
       }
@@ -3605,6 +3945,96 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         }
       }
 
+      // "Accepted?" node → a linkedin_acceptance step plus, per branch, an
+      // enrichment step and a message step, both guarded by run_if_branch. The
+      // backend stamps 'accepted' or 'expired' into switch_outcomes and prunes
+      // the branch not taken — the same machinery the split test and the
+      // multi-condition node already use.
+      //
+      // The enrichment is INSIDE the branch on purpose: revealing a phone
+      // number for a lead who never accepted, or an email for one who did,
+      // spends credits on contact details that branch will never use.
+      if (workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+        const ac = configs[ACCEPT_STEP_ID] || {};
+        const acceptId = `ab-${ACCEPT_STEP_ID}`;
+        const buildBranch = (v: any, branchKey: string, label: string) => {
+          const guard = { run_if_branch: { switch_id: acceptId, branch: branchKey } };
+          const out: any[] = [];
+          if (v?.enrich) {
+            out.push({
+              type: 'data_enrich', title: `${label} · enrich`, channel: 'email', order_index: order++,
+              config: { enrich: [v.enrich], ...guard },
+            });
+          }
+          const body = (v?.body || '').trim();
+          const tmplId = v?.template_id || undefined;
+          // A branch with neither a message nor a template is just the
+          // enrichment. A template alone IS a send: an approved WhatsApp
+          // template carries its own body, so requiring text here would drop
+          // the step for exactly the branches that need it most.
+          if (!body && !tmplId) return out;
+          // Same three channels the multi-condition branch already compiles
+          // (buildBranchStep above), and the same template_id keys the engine
+          // reads: email_send → template_id, whatsapp_send →
+          // whatsapp_template_id, linkedin_message → linkedin_template_id.
+          if (v?.channel === 'email') {
+            out.push({ type: 'email_send', title: `${label} (email)`, channel: 'email', order_index: order++,
+              config: {
+                subject: (v?.subject || '').trim(), body,
+                ...(tmplId ? { template_id: tmplId } : {}),
+                // Sender is optional here: the email executor falls back to the
+                // tenant's own active account when from_email is unset.
+                ...(v?.from_email ? { from_email: v.from_email, email_provider: v.email_provider || undefined } : {}),
+                ...guard,
+              } });
+          } else if (v?.channel === 'linkedin') {
+            out.push({ type: 'linkedin_message', title: `${label} (LinkedIn)`, channel: 'linkedin', order_index: order++,
+              config: { message: body, ...(tmplId ? { linkedin_template_id: tmplId } : {}), ...guard } });
+          } else {
+            out.push({ type: 'whatsapp_send', title: `${label} (WhatsApp)`, channel: 'whatsapp', order_index: order++,
+              config: {
+                whatsappMessage: body,
+                ...(tmplId ? { whatsapp_template_id: tmplId } : {}),
+                // What the engine sends when the lead's 24h window is shut —
+                // without these the send is free text only, which Meta rejects
+                // for anyone who has not messaged the tenant first.
+                ...(v?.whatsapp_template_name ? {
+                  whatsapp_template_name: v.whatsapp_template_name,
+                  whatsapp_template_language: v.whatsapp_template_language || 'en',
+                } : {}),
+                // NOT optional, unlike email: whatsAppDispatcher.resolveAccount
+                // has no tenant default and errors with "No WhatsApp account
+                // configured for this step" when this is missing. The branch
+                // never sent one, so its WhatsApp step could not have worked.
+                ...(v?.whatsapp_account_id ? { whatsapp_account_id: v.whatsapp_account_id } : {}),
+                ...guard,
+              } });
+          }
+          return out;
+        };
+        // Mirrors the backend's own guard (WorkflowProcessor, acceptance
+        // branch): an ABSENT or unusable value must not collapse to "expire
+        // immediately", which would email every lead the moment the invite goes
+        // out. An explicit 0 is a real choice — "don't wait, decide on the next
+        // pass" — and is passed through.
+        //
+        // The supplied-ness check has to come before the conversion: Number(null)
+        // is 0, so an absent value would otherwise read as a deliberate zero.
+        // Number rather than parseInt for the same reason the engine uses it —
+        // parseInt('5 days') is 5, and quietly accepting that here would put a
+        // number in the config the box never showed.
+        const rawWaitDays = ac.wait_days;
+        const waitDaysSupplied = rawWaitDays !== undefined && rawWaitDays !== null
+          && String(rawWaitDays).trim() !== '';
+        const days = waitDaysSupplied ? Number(rawWaitDays) : NaN;
+        steps.push({
+          type: 'linkedin_acceptance', title: 'Accepted?', channel: 'linkedin', order_index: order++,
+          config: { branch_id: acceptId, wait_days: Number.isFinite(days) && days >= 0 ? days : 5 },
+        });
+        buildBranch(ac.accepted, 'accepted', 'Accepted').forEach((s) => steps.push(s));
+        buildBranch(ac.expired, 'expired', 'No answer').forEach((s) => steps.push(s));
+      }
+
       // "AI Media" node → records a media_generation step AND attaches the
       // generated asset to every email/WhatsApp step that has no media of its
       // own (the engine's email/whatsapp executors read config.media_url).
@@ -3634,7 +4064,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         campaign_start_date: start.toISOString(),
         campaign_end_date: end.toISOString(),
         config: {
-          data_source: source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
+          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'linkedin_connections' ? 'linkedin_connections' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
           builder: 'custom_workflow',
           // The builder's own state, stored so "Edit Accelerator" can reopen it
           // exactly as it was. Launch flattens these nodes into config.* and
@@ -3668,9 +4098,41 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           leads_per_day: perDayN,
           campaign_days: daysN,
           working_days: 'monday-friday',
+          // Post engagement is the campaign-level opt-in the post-monitor cron
+          // keys on (LinkedInPostMonitorService._campaignMonitoredLeads). Only
+          // the connections source writes it: the toggle lives on that drawer,
+          // so a value left behind by a switched-away selection cannot enrol
+          // a search campaign's strangers into background commenting.
+          ...(workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID) ? (() => {
+            const ec = configs[POST_ENGAGE_STEP_ID] || {};
+            const apc = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) ? (configs[COMMENT_APPROVAL_STEP_ID] || {}) : null;
+            return {
+              post_engagement: {
+                enabled: true,
+                like: ec.like_posts !== false,
+                // The Approval node's presence is the mode: with it every
+                // comment waits for a WhatsApp tap, without it comments post
+                // automatically (supervised). 'off' = like only.
+                comment_mode: ec.comment === 'off' ? 'off' : apc ? 'approve' : 'auto',
+                min_icp_score: Number(ec.min_icp_score) > 0 ? Number(ec.min_icp_score) : 0,
+                notify_phone: (apc?.approval_to || '').trim() || undefined,
+              },
+            };
+          })() : {}),
           ...(source === 'zoho_recurring' ? {
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
             // Compliant, read-only Instagram enrichment: resolve each contact's
             // handle + optional public business_discovery profile. No follow/DM
             // (Meta's API exposes none) - maps contacts to IG for inbound.
@@ -3802,9 +4264,34 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         // Steps are not in update()'s allowedFields - they have their own
         // endpoint, so without this an edited outreach sequence saved nothing.
         if (res.ok && Array.isArray(editSteps)) {
-          await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
-          }).catch(() => { /* surfaced by the reload below */ });
+          // This used to swallow every failure and fall through to the redirect
+          // below, so a save that never wrote a step reported as done. It hid a
+          // 500 on this endpoint for as long as that endpoint has been broken —
+          // and worse, on the old non-transactional handler the delete had
+          // already committed, so "saved" meant the workflow was gone.
+          try {
+            const stepsRes = await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
+            });
+            if (!stepsRes.ok) {
+              const body = await stepsRes.text();
+              let parsed: any = null;
+              try { parsed = body ? JSON.parse(body) : null; } catch { /* not JSON */ }
+              // The backend says whether the campaign kept its previous steps.
+              // Worth repeating verbatim: it is the difference between "your
+              // edit did not save" and "your workflow is now empty".
+              const kept = parsed?.stepsPreserved
+                ? ' Your previous steps were kept.'
+                : '';
+              setError(`${parsed?.message || parsed?.error || `Could not save the workflow steps (${stepsRes.status})`}.${kept}`);
+              setLaunching(false);
+              return;
+            }
+          } catch (stepsErr: any) {
+            setError(stepsErr?.message || 'Could not save the workflow steps');
+            setLaunching(false);
+            return;
+          }
         }
       } else {
         res = await fetchWithTenant('/api/campaigns', {
@@ -3817,8 +4304,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       const raw = await res.text();
       let data: any = null;
       try { data = raw ? JSON.parse(raw) : null; } catch { /* not JSON */ }
-      if (res.ok && (data?.success || data?.id || data?.data?.id)) window.location.href = '/campaigns';
-      else {
+      if (res.ok && (data?.success || data?.id || data?.data?.id)) {
+        if (!editCampaignId && onLaunched) {
+          const createdId = data?.data?.id ?? data?.id ?? data?.campaign?.id ?? data?.data?.campaign?.id ?? null;
+          try { await onLaunched(createdId != null ? String(createdId) : null); } catch { /* the campaign is live either way */ }
+        }
+        window.location.href = (!editCampaignId && afterLaunchHref) || '/campaigns';
+      } else {
         setError(data?.error || `${editCampaignId ? 'Could not save changes' : 'Failed to launch Accelerator'} (${res.status})`);
         setLaunching(false);
       }
@@ -3891,6 +4383,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     appliedTplRef.current = true;
     setPaletteTab('ai');
     applyAiTemplate(initialAiTemplate);
+    // Re-arm on cleanup: the "fresh canvas on mount" effect above clears the
+    // store again when React re-runs effects (dev Strict Mode), and a one-shot
+    // ref would leave the draft applied-then-wiped. Callers pass a stable
+    // template object, so this never re-applies on an ordinary re-render.
+    return () => { appliedTplRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAiTemplate]);
   // Re-arm the banner if a fresh draft arrives while the builder is already
@@ -3936,6 +4433,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       })),
       macro(MULTICOND_STEP_ID, 'Multi-condition', 'Branch by a field value', <Split className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addMultiCond, 'Logic & routing'),
       macro(SPLIT_STEP_ID, 'A/B split test', 'Compare two openers', <Shuffle className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addSplitTest, 'Logic & routing'),
+      macro(ACCEPT_STEP_ID, 'Accepted?', 'Branch on the connection request', <UserCheck className="h-4 w-4 text-emerald-600" />, 'bg-emerald-50 dark:bg-emerald-950/30', addAcceptanceBranch, 'Logic & routing'),
       macro(SETFIELD_STEP_ID, 'Set field', 'Tag or write a value', <PenLine className="h-4 w-4 text-lime-600" />, 'bg-lime-50 dark:bg-lime-950/30', addSetField, 'Logic & routing'),
       macro(AI_STEP_ID, 'AI Agent', 'Clean & normalise lead data', <Sparkles className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addAiParse, 'Enrich & AI'),
       macro(ENRICH_STEP_ID, 'Enrich contact', 'Official email · phone', <Contact className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addDataEnrich, 'Enrich & AI'),
@@ -3947,6 +4445,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       macro(HTTP_STEP_ID, 'HTTP request', 'Call any API per lead', <Webhook className="h-4 w-4 text-slate-600" />, 'bg-slate-100 dark:bg-slate-800/50', addHttpRequest, 'Automation & output'),
       macro(CONTENT_STEP_ID, 'LinkedIn content', 'Write or AI-generate a post', <PenTool className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addLinkedInContent, 'Automation & output'),
       macro(APPROVAL_STEP_ID, 'Approval', 'Approve before posting', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addPostApproval, 'Automation & output'),
+      macro(POST_ENGAGE_STEP_ID, 'Comment on new posts', "Engage your connections' posts", <MessageCircle className="h-4 w-4 text-cyan-700" />, 'bg-cyan-50 dark:bg-cyan-950/30', addPostEngage, 'Automation & output'),
+      macro(COMMENT_APPROVAL_STEP_ID, 'Comment approval', 'Approve or rewrite on WhatsApp', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addCommentApproval, 'Automation & output'),
       macro(AUTOPOST_STEP_ID, 'LinkedIn auto-post', 'Recurring post to your feed', <Megaphone className="h-4 w-4 text-[#0077B5]" />, 'bg-sky-50 dark:bg-sky-950/30', addAutopost, 'Automation & output'),
       macro(IG_AUTOPOST_STEP_ID, 'Instagram auto-post', 'Image or Reel · on a schedule', <Instagram className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addInstagramPost, 'Automation & output'),
       macro(REPORT_STEP_ID, 'Audit report', 'PDF · attach or offer', <FileText className="h-4 w-4 text-teal-700" />, 'bg-teal-50 dark:bg-teal-950/30', addReport, 'Automation & output'),
@@ -3988,9 +4488,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       setOverviewTpl(null);
     };
     return (
-      <div className="absolute right-0 top-0 h-full w-[22rem] bg-card border-l border-border shadow-2xl z-10 flex flex-col">
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[22rem] bg-card dark:bg-[#071131] border-l border-border dark:border-blue-950/40 shadow-2xl z-30 flex flex-col">
         {/* Header */}
-        <div className="flex items-start gap-3 p-4 border-b border-border">
+        <div className="flex items-start gap-3 p-4 border-b border-border dark:border-blue-950/40">
           <span className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${t.accent}14` }}>
             <TemplateIcon tplKey={t.key} color={t.accent} size={20} />
           </span>
@@ -4014,7 +4514,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { n: t.meta.cycleDays, l: 'day cycle' },
               { n: t.meta.channels, l: 'channels' },
             ].map((st) => (
-              <div key={st.l} className="rounded-xl border border-border bg-muted/30 dark:bg-slate-800/30 px-3 py-3 text-center">
+              <div key={st.l} className="rounded-xl border border-border dark:border-blue-950/40 bg-muted/30 dark:bg-[#030a21]/60 px-3 py-3 text-center">
                 <div className="text-[19px] font-bold text-foreground leading-none">{st.n}</div>
                 <div className="text-[11px] text-muted-foreground mt-1">{st.l}</div>
               </div>
@@ -4027,7 +4527,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {steps.map((st, i) => (
                 <div key={i} className="relative flex items-start gap-3 pb-3.5 last:pb-0">
                   {i < steps.length - 1 && (
-                    <span className="absolute left-[13px] top-7 bottom-0 w-px bg-border" />
+                    <span className="absolute left-[13px] top-7 bottom-0 w-px bg-border dark:bg-blue-950/40" />
                   )}
                   <span className="relative z-[1] h-[26px] w-[26px] rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold"
                     style={{ background: `${t.accent}14`, color: t.accent }}>{i + 1}</span>
@@ -4041,19 +4541,19 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </div>
 
           <button type="button" onClick={use}
-            className="mt-5 w-full rounded-xl bg-[#0b1957] text-white text-[13.5px] font-semibold py-3 hover:bg-[#0b1957]/90 transition-colors">
+            className="mt-5 w-full rounded-xl bg-[#0b1957] dark:bg-sky-600 text-white text-[13.5px] font-semibold py-3 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 transition-colors">
             Use this template
           </button>
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-border flex items-center gap-2">
+        <div className="p-3 border-t border-border dark:border-blue-950/40 flex items-center gap-2">
           <button type="button" onClick={() => setOverviewTpl(null)}
-            className="px-4 py-2.5 rounded-xl bg-muted text-foreground text-[13px] font-semibold hover:bg-muted/70 transition-colors">
+            className="px-4 py-2.5 rounded-xl bg-muted dark:bg-[#030a21]/60 text-foreground text-[13px] font-semibold hover:bg-muted/70 transition-colors">
             Preview
           </button>
           <button type="button" onClick={() => { use(); setPaletteTab('steps'); }}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#0b1957] text-white text-[13px] font-semibold hover:bg-[#0b1957]/90 transition-colors">
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[#0b1957] dark:bg-sky-600 text-white text-[13px] font-semibold hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 transition-colors">
             Customize steps
           </button>
         </div>
@@ -4062,7 +4562,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   };
 
   // ── Config drawer fields per node type ────────────────────────────────────
-  const field = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+  const field = 'w-full rounded-md border border-input dark:border-slate-700/80 bg-background dark:bg-slate-800/50 px-3 py-2 text-sm';
   const renderEditor = () => {
     if (!editingStep || !editingId) return null;
     const isSource = editingId === SOURCE_STEP_ID;
@@ -4085,13 +4585,16 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isResearch = editingId === RESEARCH_STEP_ID;
     const isScore = editingId === SCORE_STEP_ID;
     const isSplit = editingId === SPLIT_STEP_ID;
+    const isAccept = editingId === ACCEPT_STEP_ID;
     const isSetField = editingId === SETFIELD_STEP_ID;
     const isHttp = editingId === HTTP_STEP_ID;
     const isLanding = editingId === LANDING_STEP_ID;
     const isIgPost = editingId === IG_AUTOPOST_STEP_ID;
     const isHumanTask = editingId === HUMAN_TASK_STEP_ID;
     const isReport = editingId === REPORT_STEP_ID;
-    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport;
+    const isPostEngage = editingId === POST_ENGAGE_STEP_ID;
+    const isCommentApproval = editingId === COMMENT_APPROVAL_STEP_ID;
+    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport || isPostEngage || isCommentApproval;
     const visual = isSource
       ? SOURCES.find((s) => s.key === source)
       : isFollowup
@@ -4122,6 +4625,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ? { icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30' }
           : isScore
             ? { icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30' }
+          : isPostEngage
+            ? { icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30' }
+          : isCommentApproval
+            ? { icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30' }
           : isSplit
             ? { icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30' }
           : isSetField
@@ -4136,13 +4643,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const instructionsKey = isSource ? (source || '') : isRouter ? 'router' : isMacro ? editingId : editingStep.type;
     const instructions = STEP_INSTRUCTIONS[instructionsKey as string];
     return (
-      <div className="absolute right-0 top-0 h-full w-[22rem] bg-card border-l border-border shadow-2xl z-10 flex flex-col">
-        <div className="flex items-start gap-3 p-4 border-b border-border">
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[22rem] bg-card dark:bg-[#071131] border-l border-border dark:border-blue-950/40 shadow-2xl z-30 flex flex-col">
+        <div className="flex items-start gap-3 p-4 border-b border-border dark:border-blue-950/40">
           {visual && <IconChip icon={visual.icon} chip={visual.chip} size="h-10 w-10" />}
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-foreground truncate">{editingStep.title}</div>
             <div className="text-xs text-muted-foreground">
-              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
+              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isPostEngage ? 'What to engage' : isCommentApproval ? 'Who approves comments' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
             </div>
           </div>
           <button onClick={() => setEditingId(null)} className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
@@ -4152,17 +4659,60 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         <div className="flex-1 p-4 space-y-4 overflow-y-auto text-sm">
           {instructions && (
             <div className="rounded-lg border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 p-2.5 text-[12px] leading-relaxed text-sky-900 dark:text-sky-200">
+              <strong>
               {instructions}
+              </strong>
             </div>
           )}
           {isSource && source === 'zoho_recurring' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Import from</label>
-              <select className={field} value={cfg.zoho_modules || 'contacts'} onChange={(e) => setCfg(editingId, { zoho_modules: e.target.value })}>
+              <CustomSelect className={field} value={cfg.zoho_modules || 'contacts'} onValueChange={(val) => setCfg(editingId, { zoho_modules: val })}>
                 <option value="contacts">Contacts only</option><option value="contacts_leads">Contacts + Leads</option>
-              </select></div>
+                <option value="accounts">Accounts (companies)</option>
+              </CustomSelect></div>
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Job title to find at each account</label>
+                <Input
+                  value={cfg.zoho_account_title || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_title: e.target.value })}
+                  placeholder="e.g. Head of Operations, Operations Director"
+                />
+                <p className="text-xs text-muted-foreground">
+                  An account is a company, not a person. Each one is searched on LinkedIn for people with this title. Separate alternatives with commas — they widen one search rather than adding more.
+                </p>
+                {!(cfg.zoho_account_title || '').trim() && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">Required — without a title there is nobody to import.</p>
+                )}
+              </div>
+            )}
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Location (optional)</label>
+                <Input
+                  value={cfg.zoho_account_location || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_location: e.target.value })}
+                  placeholder="e.g. Dubai"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Added to each company&apos;s people search, so it favours profiles based there.
+                  It <strong>steers</strong> the search rather than filtering it — a few people
+                  elsewhere will still come through. Leave blank to search worldwide.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This does not read the account&apos;s address in Zoho: on most accounts the
+                  billing city is empty, so filtering on it would skip nearly every company —
+                  and permanently, because the daily import moves past whatever it reads.
+                </p>
+              </div>
+            )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only tag (optional)</label>
               <Input value={cfg.zoho_tag || ''} onChange={(e) => setCfg(editingId, { zoho_tag: e.target.value })} placeholder="e.g. Auto-Conversion Lead" /></div>
-            <p className="text-xs text-muted-foreground">Imports up to {perDay}/day of newly-created records, every day until the campaign ends.</p>
+            <p className="text-xs text-muted-foreground">
+              {cfg.zoho_modules === 'accounts'
+                ? `Imports up to ${perDay}/day of newly-created accounts and finds people at each, every day until the campaign ends.`
+                : `Imports up to ${perDay}/day of newly-created records, every day until the campaign ends.`}
+            </p>
             <div className="rounded-lg border border-border p-2.5 space-y-2 bg-muted/20">
               <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
                 <input type="checkbox" checked={!!cfg.resolve_instagram} onChange={(e) => setCfg(editingId, { resolve_instagram: e.target.checked })} />
@@ -4181,11 +4731,71 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
           {isSource && source === 'zoho_once' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Record type</label>
-              <select className={field} value={cfg.zoho_type || 'contacts'} onChange={(e) => setCfg(editingId, { zoho_type: e.target.value })}>
+              <CustomSelect className={field} value={cfg.zoho_type || 'contacts'} onValueChange={(val) => setCfg(editingId, { zoho_type: val })}>
                 <option value="contacts">Contacts</option><option value="leads">Leads</option>
-              </select></div>
+              </CustomSelect></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">How many (max 500)</label>
               <Input type="number" value={cfg.import_count || '100'} onChange={(e) => setCfg(editingId, { import_count: e.target.value })} /></div>
+          </>)}
+          {isSource && source === 'linkedin_connections' && (<>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Decision-maker titles (optional)</label>
+              <Input value={cfg.decision_maker_titles || ''} onChange={(e) => setCfg(editingId, { decision_maker_titles: e.target.value })} placeholder="e.g. Founder, CEO, Managing Director" />
+              <p className="text-[11px] text-muted-foreground">Matched against each connection&apos;s headline. Leave blank to use the seniority floor below instead.</p></div>
+            {!(cfg.decision_maker_titles || '').trim() && (
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum seniority</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={cfg.min_seniority || 'director'}
+                  onChange={(e) => setCfg(editingId, { min_seniority: e.target.value })}
+                >
+                  <option value="c_suite">C-suite &amp; founders only</option>
+                  <option value="vp">VP and above</option>
+                  <option value="director">Director and above</option>
+                  <option value="manager">Manager and above</option>
+                  <option value="any">Everyone</option>
+                </select></div>
+            )}
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Headline keywords (optional)</label>
+              <Input value={cfg.keywords || ''} onChange={(e) => setCfg(editingId, { keywords: e.target.value })} placeholder="e.g. real estate, proptech" />
+              <p className="text-[11px] text-muted-foreground">Comma-separated; at least one must appear in the headline. Narrows to your industry.</p></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum ICP fit (0&ndash;100)</label>
+              <Input type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(editingId, { min_icp_score: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">Scored from seniority, department and your business profile&apos;s target titles/industries. No AI credits are spent.</p></div>
+            <p className="text-xs text-muted-foreground">
+              Reviews your connections newest-first, up to {perDay} matches a day, carrying on where it
+              left off until the whole list has been seen. Add <strong>Comment on new posts</strong> and
+              <strong> Approval</strong> from the palette to engage their posts; that keeps running after the
+              list is done, for as long as the campaign is active.
+            </p>
+          </>)}
+          {isSource && source === 'own_contacts' && (<>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Who to include</label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={cfg.segment || 'all'}
+                onChange={(e) => setCfg(editingId, { segment: e.target.value })}
+              >
+                <option value="all">Everyone with an email address</option>
+                <option value="recent">Only people we&apos;ve heard from recently</option>
+                <option value="lapsed">Only people we haven&apos;t heard from</option>
+              </select>
+              {/* "Heard from", not "visited". The conversation database knows
+                  when someone last MESSAGED; it has no idea when they last
+                  came to a class, and a label saying otherwise would be read
+                  as attendance. */}
+              <p className="text-[11px] text-muted-foreground">
+                Based on when they last messaged you, not when they last came in.
+              </p></div>
+            {(cfg.segment === 'recent' || cfg.segment === 'lapsed') && (
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Over how many days</label>
+                <Input type="number" value={cfg.window_days || '180'} onChange={(e) => setCfg(editingId, { window_days: e.target.value })} /></div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Works through up to {perDay}/day, carrying on where it left off each day
+              until the list runs out. Email only &mdash; these contacts have no open
+              WhatsApp window, so a WhatsApp step would need an approved template.
+              Anyone without a usable email address is skipped.
+            </p>
           </>)}
           {isSource && source === 'ghl_once' && (
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">How many (max 500)</label>
@@ -4282,11 +4892,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 {fileHeaders.map((h, i) => (
                   <div key={i} className="grid grid-cols-2 gap-2 items-center">
                     <span className="text-xs text-foreground truncate" title={h}>{h || `Column ${i + 1}`}</span>
-                    <select className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                    <CustomSelect className="w-full text-xs"
                       value={fileMapping[i] || 'ignore'}
-                      onChange={(e) => setFileMapping((m) => ({ ...m, [i]: e.target.value }))}>
+                      onValueChange={(val) => setFileMapping((m) => ({ ...m, [i]: val }))}>
                       {IMPORT_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
+                    </CustomSelect>
                   </div>
                 ))}
               </div>
@@ -4417,7 +5027,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const reportBeforeFollowup = reportIdx !== -1 && followupIdx !== -1 && reportIdx < followupIdx;
             const eid = editingId!;
             const channel: string = cfg.channel || 'linkedin';
-            const touches: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
+            const touches: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
             const tmpls: any[] = channel === 'email' ? res.emailTemplates : channel === 'whatsapp' ? res.waTemplates : res.liTemplates;
             const tmplName = (t: any) => t.name || t.title || 'Template';
             const syncDesc = (n: number, ch: string) => updateWorkflowStep(eid, { description: `${n} touches · ${FU_CHANNELS.find((c2) => c2.value === ch)?.label}` });
@@ -4431,16 +5041,16 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   would silently fall back to a plain message. Check position. */}
               {(() => null)()}
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Follow-up channel</label>
-                <select className={field} value={channel} onChange={(e) => { setCfg(eid, { channel: e.target.value }); syncDesc(touches.length, e.target.value); }}>
+                <CustomSelect className={field} value={channel} onValueChange={(val) => { setCfg(eid, { channel: val }); syncDesc(touches.length, val); }}>
                   {FU_CHANNELS.map((c2) => <option key={c2.value} value={c2.value}>{c2.label}</option>)}
-                </select></div>
+                </CustomSelect></div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-foreground">Touch timeline ({touches.length})</label>
                 {touches.map((t, i) => {
                   const h = t.hours ?? 24;
                   return (
-                    <div key={i} className="rounded-lg border border-border p-2.5 space-y-2 bg-muted/20">
+                    <div key={i} className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-2 bg-muted/20 dark:bg-[#030a21]/60">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-foreground">Touch {i + 1}</span>
                         {touches.length > 1 && (
@@ -4451,23 +5061,30 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                         <Input type="number" className="w-24 h-8" value={String(h)} onChange={(e) => setTouch(i, { hours: Math.max(1, parseInt(e.target.value, 10) || 1) })} />
                         <span className="text-xs text-muted-foreground">hours (≈ {Math.round((h / 24) * 10) / 10}d) after {i === 0 ? 'the previous step' : `touch ${i}`}</span>
                       </div>
-                      <select className={`${field} h-8`}
+                      <CustomSelect className={`${field} h-8`}
                         value={
                           t.touch_type === 'lead_report' ? '__lead_report__'
                           : t.touch_type === 'industry_trend' ? '__industry_trend__'
                           : t.touch_type === 'company_page_post' ? '__company_post__'
                           : (t.template_id || '')
                         }
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          // These options are TOUCH TYPES, not templates - the
-                          // backend branches on touch_type, so selecting one must
-                          // clear template_id or the row carries both and the
-                          // template path wins.
+                        onValueChange={(v) => {
                           if (v === '__lead_report__') setTouch(i, { touch_type: 'lead_report', template_id: undefined });
                           else if (v === '__industry_trend__') setTouch(i, { touch_type: 'industry_trend', template_id: undefined });
                           else if (v === '__company_post__') setTouch(i, { touch_type: 'company_page_post', template_id: undefined });
-                          else setTouch(i, { touch_type: undefined, template_id: v || undefined });
+                          else {
+                            const tm = channel === 'whatsapp' ? findWaTemplate(tmpls, v) : tmpls.find((x: any) => String(x.id) === v);
+                            setTouch(i, {
+                              touch_type: undefined,
+                              template_id: v || undefined,
+                              // WhatsApp templates are addressed by name +
+                              // language, not by id — see waTemplateLabel.
+                              ...(channel === 'whatsapp' ? {
+                                template_name: tm?.name || undefined,
+                                template_language: tm?.language || undefined,
+                              } : {}),
+                            });
+                          }
                         }}>
                         <option value="">AI-generated (default)</option>
                         {reportBeforeFollowup && (
@@ -4479,8 +5096,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             <option value="__company_post__">Share a post from our company page</option>
                           </>
                         )}
-                        {tmpls.map((tm: any) => <option key={tm.id} value={tm.id}>{tmplName(tm)}</option>)}
-                      </select>
+                        {tmpls.map((tm: any) => {
+                          const v = channel === 'whatsapp' ? waTemplateKey(tm) : String(tm.id);
+                          return <option key={v} value={v}>{channel === 'whatsapp' ? waTemplateLabel(tm) : tmplName(tm)}</option>;
+                        })}
+                      </CustomSelect>
                       {(t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') && (
                         <p className="text-[11px] leading-snug text-muted-foreground">
                           {t.touch_type === 'industry_trend'
@@ -4496,7 +5116,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   );
                 })}
                 {touches.length < 7 && (
-                  <button onClick={addTouch} className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1">
+                  <button onClick={addTouch} className="text-xs font-semibold text-amber-600 dark:text-sky-400 hover:text-amber-700 dark:hover:text-sky-300 flex items-center gap-1">
                     <span className="text-base leading-none">+</span> Add another touch
                   </button>
                 )}
@@ -4506,11 +5126,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   href="/followup-simulator.html"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 flex items-start gap-2 rounded-lg border border-dashed border-border p-2.5 hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors group"
+                  className="mt-1 flex items-start gap-2 rounded-lg border border-dashed border-border p-2.5 hover:border-indigo-600 hover:bg-muted/30 transition-colors group"
                 >
                   <span className="text-base leading-none mt-0.5">🧪</span>
                   <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-foreground group-hover:text-amber-700">
+                    <span className="block text-xs font-semibold text-foreground">
                       Test this sequence first
                     </span>
                     <span className="block text-[11px] text-muted-foreground leading-snug">
@@ -4533,22 +5153,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
           {isAnalytics && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Notify me via</label>
-              <select className={field} value={cfg.channel || 'email'} onChange={(e) => {
-                setCfg(editingId, { channel: e.target.value });
-                updateWorkflowStep(editingId, { description: `${(cfg.frequency || 'daily') === 'weekly' ? 'Weekly' : 'Daily'} · ${e.target.value === 'whatsapp' ? 'WhatsApp' : 'Email'}` });
+              <CustomSelect className={field} value={cfg.channel || 'email'} onValueChange={(val) => {
+                setCfg(editingId, { channel: val });
+                updateWorkflowStep(editingId, { description: `${(cfg.frequency || 'daily') === 'weekly' ? 'Weekly' : 'Daily'} · ${val === 'whatsapp' ? 'WhatsApp' : 'Email'}` });
               }}>
                 <option value="email">Email</option><option value="whatsapp">WhatsApp</option>
-              </select></div>
+              </CustomSelect></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Recipient</label>
               <Input value={cfg.recipient || ''} onChange={(e) => setCfg(editingId, { recipient: e.target.value })}
                 placeholder={(cfg.channel || 'email') === 'whatsapp' ? 'WhatsApp number, e.g. +9715…' : 'you@company.com'} /></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Frequency</label>
-              <select className={field} value={cfg.frequency || 'daily'} onChange={(e) => {
-                setCfg(editingId, { frequency: e.target.value });
-                updateWorkflowStep(editingId, { description: `${e.target.value === 'weekly' ? 'Weekly' : 'Daily'} · ${(cfg.channel || 'email') === 'whatsapp' ? 'WhatsApp' : 'Email'}` });
+              <CustomSelect className={field} value={cfg.frequency || 'daily'} onValueChange={(val) => {
+                setCfg(editingId, { frequency: val });
+                updateWorkflowStep(editingId, { description: `${val === 'weekly' ? 'Weekly' : 'Daily'} · ${(cfg.channel || 'email') === 'whatsapp' ? 'WhatsApp' : 'Email'}` });
               }}>
                 <option value="daily">Daily (08:00 GST)</option><option value="weekly">Weekly (Mondays)</option>
-              </select></div>
+              </CustomSelect></div>
             <div className="space-y-1.5"><label className="text-xs font-medium text-foreground">Data to send</label>
               <label className="flex items-center gap-2 text-sm text-foreground"><input type="checkbox" className="h-4 w-4" checked={cfg.m_new_leads !== false} onChange={(e) => setCfg(editingId, { m_new_leads: e.target.checked })} /> New leads imported (24h)</label>
               <label className="flex items-center gap-2 text-sm text-foreground"><input type="checkbox" className="h-4 w-4" checked={cfg.m_pipeline !== false} onChange={(e) => setCfg(editingId, { m_pipeline: e.target.checked })} /> Lead pipeline status</label>
@@ -4734,22 +5354,49 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const channels = new Set<Channel>();
             workflowPreview.forEach((s) => { const o = OUTREACH.find((x) => x.type === s.type); if (o) channels.add(o.channel); });
             if ((source === 'zoho_recurring' || source === 'ghl_recurring') && configs[SOURCE_STEP_ID]?.resolve_instagram) channels.add('instagram');
+            // Per picklist field: which of ITS options each outcome becomes.
+            // { [api_name]: { [outcome_key]: option } }. Kept apart from `map`
+            // so the module-switch reset above clears both together.
+            const zpick: Record<string, Record<string, string>> = cfg.picklist || {};
             const setMap = (api: string, val: string) => setCfg(eid, { map: { ...zmap, [api]: val } });
+            const setPick = (api: string, outcome: string, option: string) =>
+              setCfg(eid, { picklist: { ...zpick, [api]: { ...(zpick[api] || {}), [outcome]: option } } });
+            const optionsOf = (f: any): string[] => Array.isArray(f?.pick_list_values) ? f.pick_list_values.map(String) : [];
             const applySuggestions = () => {
               const next: Record<string, string> = { ...zmap };
-              zohoFields.forEach((f) => { if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; } });
-              setCfg(eid, { map: next });
+              const nextPick: Record<string, Record<string, string>> = { ...zpick };
+              zohoFields.forEach((f) => {
+                if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; }
+                // A picklist mapped to the outcome gets its rows suggested too,
+                // but only the rows the operator has not already set.
+                if (next[f.api_name] === 'campaign_outcome' && optionsOf(f).length) {
+                  const cur = nextPick[f.api_name] || {};
+                  const filled: Record<string, string> = { ...cur };
+                  CAMPAIGN_OUTCOMES.forEach((o) => { if (!filled[o.key]) { const s = suggestPicklistOption(o.key, optionsOf(f)); if (s) filled[o.key] = s; } });
+                  nextPick[f.api_name] = filled;
+                }
+              });
+              setCfg(eid, { map: next, picklist: nextPick });
             };
             const mappedCount = Object.values(zmap).filter(Boolean).length;
             return (<>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Update which record</label>
-                <select className={field} value={cfg.module || 'Contacts'} onChange={(e) => { setCfg(eid, { module: e.target.value }); updateWorkflowStep(eid, { description: `Write back to ${e.target.value}` }); }}>
-                  <option value="Contacts">Contacts</option><option value="Leads">Leads</option>
-                </select></div>
+                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => {
+                  // Drop the existing mapping. It is keyed by Zoho api_name, and
+                  // the save path writes EVERY key in it — not just the rows still
+                  // on screen — so a mapping left over from Contacts would be
+                  // posted invisibly to Accounts, where those fields do not exist.
+                  setCfg(eid, { module: val, map: {} });
+                  updateWorkflowStep(eid, { description: `Write back to ${val}` });
+                }}>
+                  <option value="Contacts">Contacts</option>
+                  <option value="Leads">Leads</option>
+                  <option value="Accounts">Accounts (companies)</option>
+                </CustomSelect></div>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Field mapping{mappedCount ? ` (${mappedCount})` : ''}</label>
                 <button type="button" onClick={applySuggestions} disabled={!zohoFields.length}
-                  className="text-[11px] font-medium text-[#0b1957] hover:underline disabled:opacity-40 disabled:no-underline">Suggest mappings</button>
+                  className="text-[11px] font-medium text-[#0b1957] dark:text-sky-400 hover:underline disabled:opacity-40 disabled:no-underline">Suggest mappings</button>
               </div>
               {zohoFieldsLoading && <p className="text-xs text-muted-foreground">Loading Zoho fields…</p>}
               {zohoFieldsError && <p className="text-xs text-red-600">{zohoFieldsError}</p>}
@@ -4757,17 +5404,50 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {!!zohoFields.length && (
                 <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
                   {zohoFields.map((f) => (
-                    <div key={f.api_name} className="grid grid-cols-2 gap-2 items-center">
-                      <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
-                      <select className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs" value={zmap[f.api_name] || ''} onChange={(e) => setMap(f.api_name, e.target.value)}>
-                        <option value=""> -  Skip  - </option>
-                        {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
-                      </select>
-                    </div>
+                    <Fragment key={f.api_name}>
+                      <div className="grid grid-cols-2 gap-2 items-center">
+                        <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
+                        <CustomSelect className="w-full text-xs" value={zmap[f.api_name] || ''} onValueChange={(val) => setMap(f.api_name, val)}>
+                          <option value="">— Skip —</option>
+                          {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
+                        </CustomSelect>
+                      </div>
+                      {/* A picklist mapped to the outcome needs one more answer per
+                          outcome: which of the field's OWN options it becomes.
+                          Zoho refuses any value that is not an option, and the
+                          write-back fails softly, so without this the field
+                          silently never changed. An outcome left at "— Don't
+                          write —" leaves the field alone on those leads. */}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length > 0 && (
+                        <div className="ml-3 pl-2 border-l-2 border-border dark:border-blue-950/40 space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            <strong>{f.field_label}</strong> is a picklist. Choose which of its options each outcome becomes:
+                          </p>
+                          {CAMPAIGN_OUTCOMES.map((o) => (
+                            <div key={o.key} className="grid grid-cols-2 gap-2 items-center">
+                              <span className="text-[11px] text-foreground truncate" title={o.label}>{o.label}</span>
+                              <CustomSelect className="w-full text-[11px]" value={(zpick[f.api_name] || {})[o.key] || ''} onValueChange={(val) => setPick(f.api_name, o.key, val)}>
+                                <option value="">— Don&apos;t write —</option>
+                                {optionsOf(f).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                              </CustomSelect>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length === 0 && (
+                        <p className="ml-3 text-[11px] text-amber-700 dark:text-amber-400">
+                          This field is not a picklist, so the outcome key (e.g. <code>connection_accepted</code>) is written as plain text.
+                        </p>
+                      )}
+                    </Fragment>
                   ))}
                 </div>
               )}
-              <p className="text-[11px] leading-snug text-muted-foreground">Runs when a lead finishes the sequence - writes the mapped workflow &amp; enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {(cfg.module || 'Contacts') === 'Accounts'
+                  ? 'Runs when a lead finishes the sequence - writes the mapped data onto the COMPANY the lead was found at, not the person. Only leads that came from the Zoho Accounts source carry an account to update; for anyone else this step is skipped. Only non-empty values are written; blank fields are left untouched.'
+                  : 'Runs when a lead finishes the sequence - writes the mapped workflow & enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.'}
+              </p>
             </>);
           })()}
 
@@ -4794,11 +5474,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 <button type="button" onClick={() => setShowMediaStudio(true)}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-fuchsia-300 bg-fuchsia-50 dark:bg-fuchsia-950/30 px-3 py-2 text-sm font-medium text-fuchsia-700 hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/40">
                   <Wand2 className="h-4 w-4" /> Open AI Media Studio</button>
-                <button type="button" onClick={openGallery} className="text-xs font-medium text-[#0b1957] hover:underline text-left">
+                <button type="button" onClick={openGallery} className="text-xs font-medium text-[#0b1957] dark:text-sky-400 hover:underline text-left">
                   {mediaGalleryOpen ? 'Hide generated media' : 'Pick from generated media'}</button>
               </div>
               {mediaGalleryOpen && (
-                <div className="rounded-lg border border-border p-2 bg-muted/20">
+                <div className="rounded-lg border border-border dark:border-blue-950/40 p-2 bg-muted/20 dark:bg-[#030a21]/60">
                   {mediaBuilder.loadingGallery ? (
                     <p className="py-3 text-center text-xs text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</p>
                   ) : (!imgs.length && !vids.length) ? (
@@ -4829,46 +5509,37 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const setCase = (i: number, patch: any) => { const next = cases.map((c, idx) => (idx === i ? { ...c, ...patch } : c)); setCfg(eid, { cases: next }); updateWorkflowStep(eid, { description: `${next.length} conditions + else` }); };
             const addCase = () => { if (cases.length >= 6) return; const next = [...cases, { op: 'equals', value: '', channel: 'email', subject: '', body: '' }]; setCfg(eid, { cases: next }); updateWorkflowStep(eid, { description: `${next.length} conditions + else` }); };
             const removeCase = (i: number) => { if (cases.length <= 1) return; const next = cases.filter((_, idx) => idx !== i); setCfg(eid, { cases: next }); updateWorkflowStep(eid, { description: `${next.length} conditions + else` }); };
-            const BranchBody = ({ b, onChange }: { b: any; onChange: (p: any) => void }) => (<>
-              <select className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs" value={b.channel || 'email'} onChange={(e) => onChange({ channel: e.target.value })}>
-                <option value="email">Send email</option><option value="linkedin">LinkedIn message</option><option value="whatsapp">WhatsApp</option>
-              </select>
-              {(b.channel || 'email') === 'email' && (
-                <Input value={b.subject || ''} onChange={(e) => onChange({ subject: e.target.value })} placeholder="Email subject" />
-              )}
-              <textarea className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs min-h-[56px]" value={b.body || ''} onChange={(e) => onChange({ body: e.target.value })} placeholder="Message (leave blank to let Mr LAD draft it)" />
-            </>);
             return (<>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Branch on {mcFieldsLoading && <span className="text-muted-foreground">· loading fields…</span>}</label>
-                <select className={field} value={swField} onChange={(e) => setCfg(eid, { field: e.target.value })}>
+                <CustomSelect className={field} value={swField} onValueChange={(val) => setCfg(eid, { field: val })}>
                   {!mcFields.some((f) => f.value === swField) && swField && <option value={swField}>{swField}</option>}
                   {mcFields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                </CustomSelect>
                 <p className="text-[11px] text-muted-foreground">{(source === 'zoho_recurring' || source === 'zoho_once') ? 'Fields from your connected Zoho module.' : 'Contact fields available for this source.'}</p>
               </div>
               {cases.map((c, i) => (
-                <div key={i} className="rounded-lg border border-border p-2.5 space-y-2 bg-muted/20">
+                <div key={i} className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-2 bg-muted/20 dark:bg-[#030a21]/60">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground">{i === 0 ? 'If' : 'Else if'}</span>
                     {cases.length > 1 && <button type="button" onClick={() => removeCase(i)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground shrink-0">{fieldLabel}</span>
-                    <select className="rounded-md border border-input bg-background px-1.5 py-1.5 text-xs" value={c.op || 'equals'} onChange={(e) => setCase(i, { op: e.target.value })}>
+                    <CustomSelect className="w-full text-xs" value={c.op || 'equals'} onValueChange={(val) => setCase(i, { op: val })}>
                       {SWITCH_OPS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    </CustomSelect>
                     <Input value={c.value || ''} onChange={(e) => setCase(i, { value: e.target.value })} placeholder="e.g. person1" />
                   </div>
-                  <BranchBody b={c} onChange={(p) => setCase(i, p)} />
+                  <MultiCondBranchBody b={c} onChange={(p) => setCase(i, p)} />
                 </div>
               ))}
               {cases.length < 6 && (
-                <button type="button" onClick={addCase} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0b1957] hover:underline"><Plus className="h-3.5 w-3.5" /> Add condition</button>
+                <button type="button" onClick={addCase} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0b1957] dark:text-sky-400 hover:underline"><Plus className="h-3.5 w-3.5" /> Add condition</button>
               )}
-              <div className="rounded-lg border border-dashed border-border p-2.5 space-y-2">
+              <div className="rounded-lg border border-dashed border-border dark:border-blue-950/40 p-2.5 space-y-2 bg-card dark:bg-[#030a21]/60">
                 <span className="text-xs font-semibold text-foreground">Otherwise (else)</span>
-                <BranchBody b={def} onChange={(p) => setCfg(eid, { default: { ...def, ...p } })} />
+                <MultiCondBranchBody b={def} onChange={(p) => setCfg(eid, { default: { ...def, ...p } })} />
               </div>
               <p className="text-[11px] leading-snug text-muted-foreground">Each lead runs exactly ONE branch - the first condition that matches, else the fallback. Conditions are checked top-to-bottom.</p>
             </>);
@@ -4958,11 +5629,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {!!cfg.ai_generate && (
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground">Post shape</label>
-                  <select className={field} value={cfg.post_format || 'insight'}
-                    onChange={(e) => setCfg(eid, { post_format: e.target.value })}>
+                  <CustomSelect className={field} value={cfg.post_format || 'insight'}
+                    onValueChange={(val) => setCfg(eid, { post_format: val })}>
                     <option value="insight">Short insight post (80-150 words)</option>
                     <option value="structured">Structured list (200-400 words)</option>
-                  </select>
+                  </CustomSelect>
                   <p className="text-[11px] text-muted-foreground">
                     {(cfg.post_format || 'insight') === 'structured'
                       ? 'A heading and 3-6 numbered points. This is the shape AI search engines cite most: LinkedIn found headings in 92% of cited posts, and a list in every top-cited article.'
@@ -5272,6 +5943,69 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             </>);
           })()}
 
+          {isPostEngage && (() => {
+            const eid = editingId!;
+            const hasApproval = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID);
+            const ownNetwork = source === 'linkedin_connections';
+            return (<>
+              <div className="rounded-md border border-cyan-200 bg-cyan-50 dark:border-cyan-900 dark:bg-cyan-950/30 px-3 py-2">
+                <p className="text-[11px] text-cyan-800 dark:text-cyan-300">
+                  Every few hours the campaign checks each lead for a new LinkedIn post (last 14 days,
+                  one post per person per check) and engages it. One engagement per post, ever; a daily
+                  cap keeps the pattern human.
+                </p>
+              </div>
+              {!ownNetwork && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  This source enrols people you are <strong>not</strong> connected to. Commenting on strangers&apos;
+                  posts reads as automation; this node is built for the <strong>Your LinkedIn connections</strong> source.
+                </div>
+              )}
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">When someone posts</label>
+                <CustomSelect className={field} value={cfg.comment === 'off' ? 'off' : 'comment'}
+                  onValueChange={(val) => { setCfg(eid, { comment: val }); updateWorkflowStep(eid, { description: val === 'off' ? 'Watch their posts · like only' : 'Watch their posts · AI-drafted comment · like' }); }}>
+                  <option value="comment">Draft an AI comment</option>
+                  <option value="off">Like only, never comment</option>
+                </CustomSelect></div>
+              {cfg.comment !== 'off' && (hasApproval ? (
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Each draft goes to the <strong>Approval</strong> node: you get the post and the suggested comment on WhatsApp.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  <strong>No Approval node</strong> - comments post automatically under your name (each one still
+                  passes a safety check). <button type="button" className="underline font-semibold" onClick={addCommentApproval}>Add the Approval node</button> to review each comment first.
+                </div>
+              ))}
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input type="checkbox" checked={cfg.like_posts !== false} onChange={(e) => setCfg(eid, { like_posts: e.target.checked })} />
+                Also like the post
+              </label>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only leads with ICP fit at least (0&ndash;100)</label>
+                <input className={field} type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(eid, { min_icp_score: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Uses the ICP score on each lead; leads without one are included.</p></div>
+            </>);
+          })()}
+
+          {isCommentApproval && (() => {
+            const eid = editingId!;
+            return (<>
+              <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-3 py-2">
+                <p className="text-[11px] text-green-800 dark:text-green-300">
+                  Nothing is posted until you tap. You get the post and a suggested comment on WhatsApp:
+                  <strong> Approve</strong> posts it as written; <strong>Reject</strong> opens a page where you
+                  write your own comment instead, or skip.
+                </p>
+              </div>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Approver WhatsApp number (optional)</label>
+                <input className={field} value={cfg.approval_to || ''} onChange={(e) => setCfg(eid, { approval_to: e.target.value })} placeholder="+971500000000 - defaults to your account phone" />
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                A request nobody answers expires after 48 hours and posts nothing - a comment days after the post reads as automation.
+              </p>
+            </>);
+          })()}
+
           {isApproval && (() => {
             const eid = editingId!;
             return (<>
@@ -5282,11 +6016,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 </p>
               </div>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Send the draft to</label>
-                <select className={field} value={cfg.approval_channel || 'whatsapp'}
-                  onChange={(e) => { setCfg(eid, { approval_channel: e.target.value }); updateWorkflowStep(eid, { description: `${e.target.value === 'email' ? 'Email' : 'WhatsApp'} · before posting` }); }}>
+                <CustomSelect className={field} value={cfg.approval_channel || 'whatsapp'}
+                  onValueChange={(val) => { setCfg(eid, { approval_channel: val }); updateWorkflowStep(eid, { description: `${val === 'email' ? 'Email' : 'WhatsApp'} · before posting` }); }}>
                   <option value="whatsapp">WhatsApp</option>
                   <option value="email">Email</option>
-                </select></div>
+                </CustomSelect></div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">
                   {(cfg.approval_channel || 'whatsapp') === 'email' ? 'Approver email' : 'Approver WhatsApp number'}
@@ -5323,18 +6057,18 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 </p>
               </div>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Post as</label>
-                <select className={field} value={cfg.post_as || 'personal'} onChange={(e) => setCfg(eid, { post_as: e.target.value })}>
+                <CustomSelect className={field} value={cfg.post_as || 'personal'} onValueChange={(val) => setCfg(eid, { post_as: val })}>
                   <option value="personal">My personal profile</option>
                   {liOrganizations.map((o) => <option key={o.id} value={o.id}>{o.name} (company page)</option>)}
-                </select>
+                </CustomSelect>
                 {liOrganizations.length === 0 && (
                   <p className="text-[11px] text-muted-foreground">No company pages found for this account - posting to your personal profile.</p>
                 )}</div>
 
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">How often</label>
-                <select className={field} value={freq} onChange={(e) => { setCfg(eid, { frequency: e.target.value }); updateWorkflowStep(eid, { description: describe(e.target.value, days) }); }}>
+                <CustomSelect className={field} value={freq} onValueChange={(val) => { setCfg(eid, { frequency: val }); updateWorkflowStep(eid, { description: describe(val, days) }); }}>
                   {AUTOPOST_FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select></div>
+                </CustomSelect></div>
 
               {freq === 'weekly' && (
                 <div className="space-y-1.5">
@@ -5344,7 +6078,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                       <button key={d.value} type="button" onClick={() => toggleDay(d.value)}
                         className={`px-2.5 py-1 rounded-md border text-[12px] transition-colors ${
                           days.includes(d.value)
-                            ? 'border-[#0b1957] bg-[#0b1957] text-white'
+                            ? 'border-[#0b1957] dark:border-sky-600 bg-[#0b1957] dark:bg-sky-600 text-white'
                             : 'border-border text-foreground hover:bg-muted/40'
                         }`}>{d.label}</button>
                     ))}
@@ -5354,7 +6088,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               )}
 
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Time</label>
-                <input type="time" className={field} value={cfg.time || '09:00'}
+                <input type="time" className={`${field} dark:[color-scheme:dark] dark:bg-slate-800/50 dark:text-white dark:border-slate-700/80`} value={cfg.time || '09:00'}
                   onChange={(e) => { setCfg(eid, { time: e.target.value }); updateWorkflowStep(eid, { description: describe(freq, days) }); }} />
                 <p className="text-[11px] text-muted-foreground">Your local timezone. Posting stops when the campaign is paused or finishes.</p></div>
 
@@ -5392,19 +6126,155 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           })()}
 
 
+          {isAccept && (() => {
+            const eid = editingId!;
+            const setBranch = (k: 'accepted' | 'expired', patch: any) =>
+              setCfg(eid, { [k]: { ...(cfg[k] || {}), ...patch } });
+            // Defaults match what buildBranch compiles when nothing is set.
+            const branchChannel = (k: 'accepted' | 'expired') =>
+              (cfg[k] || {}).channel || (k === 'accepted' ? 'whatsapp' : 'email');
+            const branchTemplates = (k: 'accepted' | 'expired'): any[] => {
+              const ch = branchChannel(k);
+              return ch === 'email' ? res.emailTemplates : ch === 'linkedin' ? res.liTemplates : res.waTemplates;
+            };
+            // Derived, never passed in: a hardcoded "phone → WhatsApp" goes
+            // stale the moment someone changes the channel, and a label that
+            // disagrees with the config is how a step nobody expected gets sent.
+            const branchHint = (k: 'accepted' | 'expired') => {
+              const ch = branchChannel(k);
+              const enrich = (cfg[k] || {}).enrich;
+              const chLabel = ch === 'email' ? 'Email' : ch === 'linkedin' ? 'LinkedIn' : 'WhatsApp';
+              const enrichLabel = enrich === 'phone' ? 'phone' : enrich === 'official_email' ? 'email' : null;
+              return enrichLabel ? `${enrichLabel} → ${chLabel}` : chLabel;
+            };
+            const branch = (k: 'accepted' | 'expired', label: string) => (
+              <div className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-1.5 bg-muted/20 dark:bg-[#030a21]/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-foreground">{label}</span>
+                  <span className="text-[11px] text-muted-foreground">{branchHint(k)}</span>
+                </div>
+                <CustomSelect className={field} value={(cfg[k] || {}).enrich || ''} onValueChange={(val) => setBranch(k, { enrich: val })}>
+                  <option value="">No enrichment</option>
+                  <option value="phone">Reveal phone</option>
+                  <option value="official_email">Reveal official email</option>
+                </CustomSelect>
+                <CustomSelect className={field} value={branchChannel(k)} onValueChange={(val) => setBranch(k, { channel: val, template_id: undefined })}>
+                  <option value="whatsapp">Send WhatsApp</option>
+                  <option value="linkedin">Send LinkedIn message</option>
+                  <option value="email">Send email</option>
+                </CustomSelect>
+                {/* Same templates the standalone message nodes offer, picked per
+                    branch because each branch chooses its own channel. Selecting
+                    one copies its text into the box below so it stays editable
+                    and visible; the id travels too, since the engine's email and
+                    WhatsApp executors resolve HTML, media and approved WhatsApp
+                    templates from it rather than from the text. */}
+                {branchTemplates(k).length > 0 && (
+                  <CustomSelect className={field} value={(cfg[k] || {}).template_id || ''} onValueChange={(val) => {
+                    const isWa = branchChannel(k) === 'whatsapp';
+                    const t = isWa
+                      ? findWaTemplate(branchTemplates(k), val)
+                      : branchTemplates(k).find((x: any) => String(x.id) === val);
+                    setBranch(k, {
+                      template_id: val || undefined,
+                      // WhatsApp is addressed by name + language: that is what
+                      // Meta accepts outside the 24h window, and the id alone
+                      // cannot express it (the same name can exist on two of a
+                      // tenant's numbers).
+                      ...(isWa ? {
+                        whatsapp_template_name: t?.name || undefined,
+                        whatsapp_template_language: t?.language || undefined,
+                      } : {}),
+                      ...(t ? { body: (isWa ? waTemplateBody(t) : (t.content ?? t.body ?? t.message)) || (cfg[k] || {}).body } : {}),
+                      ...(t && branchChannel(k) === 'email' && t.subject ? { subject: t.subject } : {}),
+                    });
+                  }}>
+                    <option value="">— No template (write below / AI-drafted) —</option>
+                    {branchTemplates(k).map((t: any) => {
+                      const isWa = branchChannel(k) === 'whatsapp';
+                      const v = isWa ? waTemplateKey(t) : String(t.id);
+                      return <option key={v} value={v}>{isWa ? waTemplateLabel(t) : (t.name || t.title || 'Template')}</option>;
+                    })}
+                  </CustomSelect>
+                )}
+                {branchChannel(k) === 'whatsapp' && branchTemplates(k).length === 0 && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    {res.waTemplatesDegraded
+                      ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                      : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+                  </p>
+                )}
+                {/* Sending account. WhatsApp needs one — the dispatcher has no
+                    tenant default and fails the step without it. Email does
+                    default to the tenant's own active account, so its picker is
+                    a choice rather than a requirement. */}
+                {(branchChannel(k) === 'whatsapp') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).whatsapp_account_id || ''} onValueChange={(val) => setBranch(k, { whatsapp_account_id: val || undefined })}>
+                    <option value="">— Pick the WhatsApp number to send from —</option>
+                    {res.waAccounts.map((a: any) => <option key={a.id} value={a.id}>{a.slug || a.display_name || a.phone_number || a.id}</option>)}
+                  </CustomSelect>
+                  {res.waAccounts.length === 0
+                    ? <p className="text-[11px] text-muted-foreground">No WhatsApp account connected — connect one in Settings.</p>
+                    : !(cfg[k] || {}).whatsapp_account_id
+                      ? <p className="text-[11px] text-amber-700 dark:text-amber-400">Pick a number — WhatsApp has no default sender, so this branch would fail without one.</p>
+                      : null}
+                </>)}
+                {(branchChannel(k) === 'email') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).from_email || ''} onValueChange={(val) => {
+                    const s = res.emailSenders.find((x: any) => x.email === val);
+                    setBranch(k, { from_email: val || undefined, email_provider: s?.provider || undefined });
+                  }}>
+                    <option value="">— Default connected account —</option>
+                    {res.emailSenders.map((s: any) => <option key={s.email} value={s.email}>{s.email}{s.provider ? ` (${s.provider})` : ''}</option>)}
+                  </CustomSelect>
+                  <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setBranch(k, { subject: e.target.value })} placeholder="Subject" />
+                </>)}
+                <textarea className={`${field} min-h-[70px]`} value={(cfg[k] || {}).body || ''} onChange={(e) => setBranch(k, { body: e.target.value })}
+                  placeholder="Message (leave blank to send nothing on this branch)" />
+              </div>
+            );
+            return (
+              <div className="space-y-2.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Waits to see if the lead accepts your connection request, then branches. The
+                  clock starts when the invite was <strong>sent</strong>, not when the workflow
+                  reaches this step.
+                </p>
+                <div>
+                  <label className="text-[12px] font-semibold text-foreground">Give them how long?</label>
+                  <input
+                    className={field}
+                    type="number"
+                    min={0}
+                    value={cfg.wait_days ?? 5}
+                    onChange={(e) => setCfg(eid, { wait_days: e.target.value })}
+                    placeholder="5"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Days to wait before treating the invite as unanswered. Leave it blank for the
+                    default of 5. <strong>0</strong> decides on the next pass — useful for testing
+                    the sequence, but it sends the no-answer follow-up within minutes of the invite.
+                  </p>
+                </div>
+                {branch('accepted', 'If accepted')}
+                {branch('expired', 'If still no answer')}
+              </div>
+            );
+          })()}
+
           {isSplit && (() => {
             const eid = editingId!;
             const pct = Math.min(100, Math.max(0, parseInt(cfg.split_pct, 10) || 50));
             const setV = (k: 'a' | 'b', patch: any) => setCfg(eid, { [k]: { ...(cfg[k] || {}), ...patch } });
             const variant = (k: 'a' | 'b', label: string) => (
-              <div className="rounded-lg border border-border p-2.5 space-y-1.5">
+              <div className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-1.5 bg-muted/20 dark:bg-[#030a21]/60">
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] font-semibold text-foreground">Variant {label}</span>
                   <span className="text-[11px] text-muted-foreground">{k === 'a' ? pct : 100 - pct}% of leads</span>
                 </div>
-                <select className={field} value={(cfg[k] || {}).channel || 'linkedin'} onChange={(e) => setV(k, { channel: e.target.value })}>
+                <CustomSelect className={field} value={(cfg[k] || {}).channel || 'linkedin'} onValueChange={(val) => setV(k, { channel: val })}>
                   {ROUTER_CHANNELS.filter((c) => c.value !== 'voice').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                </CustomSelect>
                 {((cfg[k] || {}).channel === 'email') && (
                   <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setV(k, { subject: e.target.value })} placeholder="Subject" />
                 )}
@@ -5454,7 +6324,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   </div>
                 ))}
                 <button type="button" onClick={() => setCfg(eid, { fields: [...rows, { key: '', value: '' }] })}
-                  className="text-[12px] font-medium text-[#0b1957] dark:text-sky-300 hover:underline inline-flex items-center gap-1">
+                  className="text-[12px] font-medium text-[#0b1957] dark:text-sky-400 hover:underline inline-flex items-center gap-1">
                   <Plus className="h-3 w-3" /> Add field
                 </button>
               </div>
@@ -5481,11 +6351,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Post type</label>
-                <select className={field} value={cfg.media_type || 'image'}
-                  onChange={(e) => setCfg(eid, { media_type: e.target.value })}>
+                <CustomSelect className={field} value={cfg.media_type || 'image'}
+                  onValueChange={(val) => setCfg(eid, { media_type: val })}>
                   <option value="image">Image post</option>
                   <option value="reel">Reel (video)</option>
-                </select>
+                </CustomSelect>
               </div>
 
               <div className="space-y-1">
@@ -5541,11 +6411,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">How often</label>
-                <select className={field} value={cfg.frequency || 'daily'}
-                  onChange={(e) => setCfg(eid, { frequency: e.target.value })}>
+                <CustomSelect className={field} value={cfg.frequency || 'daily'}
+                  onValueChange={(val) => setCfg(eid, { frequency: val })}>
                   <option value="daily">Every day</option>
                   <option value="weekly">Chosen days</option>
-                </select>
+                </CustomSelect>
               </div>
 
               {cfg.frequency === 'weekly' && (
@@ -5596,11 +6466,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">What is it about?</label>
-                <select className={field} value={cfg.scope || 'lead'}
-                  onChange={(e) => setCfg(eid, { scope: e.target.value })}>
+                <CustomSelect className={field} value={cfg.scope || 'lead'}
+                  onValueChange={(val) => setCfg(eid, { scope: val })}>
                   <option value="lead">Each lead&apos;s own company</option>
                   <option value="campaign">The campaign&apos;s industry</option>
-                </select>
+                </CustomSelect>
                 <p className="text-[11px] text-muted-foreground">
                   {isCampaign
                     ? 'One report for the whole campaign. The same document for everyone, so it can be given away on a landing page.'
@@ -5610,8 +6480,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Report</label>
-                <select className={field} value={cfg.report_type || 'growth_opportunity_audit'}
-                  onChange={(e) => setCfg(eid, { report_type: e.target.value })}>
+                <CustomSelect className={field} value={cfg.report_type || 'growth_opportunity_audit'}
+                  onValueChange={(val) => setCfg(eid, { report_type: val })}>
                   <option value="growth_opportunity_audit">Growth Opportunity Audit</option>
                   <option value="competitor_analysis">Competitor Analysis</option>
                   <option value="lead_conversion_assessment">Lead Conversion Assessment</option>
@@ -5622,7 +6492,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <option value="followup_effectiveness_audit">Follow-up Effectiveness Audit</option>
                   <option value="marketing_performance_snapshot">Marketing Performance Snapshot</option>
                   <option value="industry_benchmark_report">Industry Benchmark Report</option>
-                </select>
+                </CustomSelect>
               </div>
 
               {isCampaign && (
@@ -5689,11 +6559,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 <div className="space-y-2 pl-5">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Send the review request by</label>
-                    <select className={field} value={cfg.approval_channel || 'email'}
-                      onChange={(e) => setCfg(eid, { approval_channel: e.target.value })}>
+                    <CustomSelect className={field} value={cfg.approval_channel || 'email'}
+                      onValueChange={(val) => setCfg(eid, { approval_channel: val })}>
                       <option value="email">Email</option>
                       <option value="whatsapp">WhatsApp</option>
-                    </select>
+                    </CustomSelect>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">
@@ -5759,11 +6629,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Notify by</label>
-                <select className={field} value={cfg.assignee_channel || 'email'}
-                  onChange={(e) => setCfg(eid, { assignee_channel: e.target.value })}>
+                <CustomSelect className={field} value={cfg.assignee_channel || 'email'}
+                  onValueChange={(val) => setCfg(eid, { assignee_channel: val })}>
                   <option value="email">Email</option>
                   <option value="whatsapp">WhatsApp</option>
-                </select>
+                </CustomSelect>
               </div>
 
               <div className="space-y-1">
@@ -6040,9 +6910,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 </p>
               </div>
               <div className="flex gap-1.5">
-                <select className={`${field} w-28`} value={cfg.method || 'POST'} onChange={(e) => setCfg(eid, { method: e.target.value })}>
+                <CustomSelect className={`${field} w-28`} value={cfg.method || 'POST'} onValueChange={(val) => setCfg(eid, { method: val })}>
                   {['POST', 'GET', 'PUT', 'PATCH', 'DELETE'].map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
+                </CustomSelect>
                 <input className={`${field} flex-1`} value={cfg.url || ''} onChange={(e) => { setCfg(eid, { url: e.target.value }); updateWorkflowStep(eid, { description: (e.target.value || 'Call any API').slice(0, 40) }); }}
                   placeholder="https://api.example.com/leads" />
               </div>
@@ -6057,7 +6927,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   </div>
                 ))}
                 <button type="button" onClick={() => setCfg(eid, { headers: [...hdrs, { key: '', value: '' }] })}
-                  className="text-[12px] font-medium text-[#0b1957] dark:text-sky-300 hover:underline inline-flex items-center gap-1">
+                  className="text-[12px] font-medium text-[#0b1957] dark:text-sky-400 hover:underline inline-flex items-center gap-1">
                   <Plus className="h-3 w-3" /> Add header
                 </button>
               </div>
@@ -6155,9 +7025,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             return (<>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">File format</label>
-                <select className={field} value={fmt} onChange={(e) => { setCfg(eid, { format: e.target.value }); updateWorkflowStep(eid, { description: describe(dests, e.target.value) }); }}>
+                <CustomSelect className={field} value={fmt} onValueChange={(val) => { setCfg(eid, { format: val }); updateWorkflowStep(eid, { description: describe(dests, val) }); }}>
                   {EXPORT_FORMATS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                </CustomSelect>
               </div>
 
               <div className="space-y-2">
@@ -6226,7 +7096,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {/* Execute now - proves the destinations work before launch. */}
               <div className="space-y-2 pt-1">
                 <button type="button" onClick={runExportNow} disabled={exportRunning}
-                  className="w-full rounded-md bg-[#0b1957] text-white text-sm font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2">
+                  className="w-full rounded-md bg-[#0b1957] dark:bg-sky-600 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 text-white text-sm font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2">
                   {exportRunning ? <><Loader2 className="h-4 w-4 animate-spin" /> Exporting…</> : <><Download className="h-4 w-4" /> Export now</>}
                 </button>
                 <p className="text-[11px] leading-snug text-muted-foreground">
@@ -6288,13 +7158,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
             {res.liTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">LinkedIn template (optional)</label>
-                <select className={field} value={cfg.linkedin_template_id || ''} onChange={(e) => {
-                  const t = res.liTemplates.find((x: any) => String(x.id) === e.target.value);
-                  setCfg(editingId!, { linkedin_template_id: e.target.value || undefined, message: t?.content ?? t?.message ?? cfg.message });
+                <CustomSelect className={field} value={cfg.linkedin_template_id || ''} onValueChange={(val) => {
+                  const t = res.liTemplates.find((x: any) => String(x.id) === val);
+                  setCfg(editingId!, { linkedin_template_id: val || undefined, message: t?.content ?? t?.message ?? cfg.message });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
                   {res.liTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
-                </select></div>
+                </CustomSelect></div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message {editingStep.type === 'linkedin_connect' ? '(optional note)' : ''}</label>
               <textarea className={`${field} min-h-[90px]`} value={cfg.message || ''} onChange={(e) => { setCfg(editingId, { message: e.target.value }); updateWorkflowStep(editingId, { description: e.target.value.slice(0, 40) }); }}
@@ -6309,13 +7179,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             </div>
             {res.liTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">LinkedIn template (optional)</label>
-                <select className={field} value={cfg.linkedin_template_id || ''} onChange={(e) => {
-                  const t = res.liTemplates.find((x: any) => String(x.id) === e.target.value);
-                  setCfg(editingId!, { linkedin_template_id: e.target.value || undefined, message: t?.content ?? t?.message ?? cfg.message });
+                <CustomSelect className={field} value={cfg.linkedin_template_id || ''} onValueChange={(val) => {
+                  const t = res.liTemplates.find((x: any) => String(x.id) === val);
+                  setCfg(editingId!, { linkedin_template_id: val || undefined, message: t?.content ?? t?.message ?? cfg.message });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
                   {res.liTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
-                </select></div>
+                </CustomSelect></div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Subject (optional)</label>
               <input className={field} value={cfg.subject || ''} onChange={(e) => setCfg(editingId!, { subject: e.target.value })}
@@ -6326,20 +7196,35 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
           {!isSource && editingStep.type === 'whatsapp_send' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">WhatsApp account</label>
-              <select className={field} value={cfg.whatsapp_account_id || ''} onChange={(e) => setCfg(editingId!, { whatsapp_account_id: e.target.value || undefined })}>
-                <option value=""> -  Default connected account  - </option>
+              <CustomSelect className={field} value={cfg.whatsapp_account_id || ''} onValueChange={(val) => setCfg(editingId!, { whatsapp_account_id: val || undefined })}>
+                <option value="">— Default connected account —</option>
                 {res.waAccounts.map((a: any) => <option key={a.id} value={a.id}>{a.slug || a.display_name || a.phone_number || a.id}</option>)}
-              </select>
-              {res.waAccounts.length === 0 && <p className="text-[11px] text-muted-foreground">No WhatsApp account connected - connect one in Settings.</p>}</div>
+              </CustomSelect>
+              {res.waAccounts.length === 0 && <p className="text-[11px] text-muted-foreground">No WhatsApp account connected — connect one in Settings.</p>}</div>
             {res.waTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Template (optional)</label>
-                <select className={field} value={cfg.whatsapp_template_id || ''} onChange={(e) => {
-                  const t = res.waTemplates.find((x: any) => String(x.id) === e.target.value);
-                  setCfg(editingId!, { whatsapp_template_id: e.target.value || undefined, message: t?.content ?? t?.body ?? cfg.message });
+                <CustomSelect className={field} value={cfg.whatsapp_template_id || ''} onValueChange={(val) => {
+                  const t = findWaTemplate(res.waTemplates, val);
+                  setCfg(editingId!, {
+                    whatsapp_template_id: val || undefined,
+                    // Meta addresses a template by NAME + LANGUAGE, not by id —
+                    // the same name can exist on two of a tenant's numbers. The
+                    // engine sends these two; the id is kept for media lookup.
+                    whatsapp_template_name: t?.name || undefined,
+                    whatsapp_template_language: t?.language || undefined,
+                    message: waTemplateBody(t) || cfg.message,
+                  });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
-                  {res.waTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
-                </select></div>
+                  {res.waTemplates.map((t: any) => <option key={waTemplateKey(t)} value={waTemplateKey(t)}>{waTemplateLabel(t)}</option>)}
+                </CustomSelect></div>
+            )}
+            {res.waTemplates.length === 0 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                {res.waTemplatesDegraded
+                  ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                  : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+              </p>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message</label>
               <textarea className={`${field} min-h-[90px]`} value={cfg.message || ''} onChange={(e) => { setCfg(editingId!, { message: e.target.value }); updateWorkflowStep(editingId!, { description: e.target.value.slice(0, 40) }); }}
@@ -6347,23 +7232,23 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
           {!isSource && editingStep.type === 'email_send' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Send from</label>
-              <select className={field} value={cfg.from_email || ''} onChange={(e) => {
-                const s = res.emailSenders.find((x: any) => x.email === e.target.value);
-                setCfg(editingId!, { from_email: e.target.value || undefined, email_provider: s?.provider || undefined });
+              <CustomSelect className={field} value={cfg.from_email || ''} onValueChange={(val) => {
+                const s = res.emailSenders.find((x: any) => x.email === val);
+                setCfg(editingId!, { from_email: val || undefined, email_provider: s?.provider || undefined });
               }}>
                 <option value=""> -  Default connected account  - </option>
                 {res.emailSenders.map((s: any) => <option key={s.email} value={s.email}>{s.email}{s.provider ? ` (${s.provider})` : ''}</option>)}
-              </select>
-              {res.emailSenders.length === 0 && <p className="text-[11px] text-muted-foreground">No email account connected - connect Gmail/Outlook in Settings.</p>}</div>
+              </CustomSelect>
+              {res.emailSenders.length === 0 && <p className="text-[11px] text-muted-foreground">No email account connected — connect Gmail/Outlook in Settings.</p>}</div>
             {res.emailTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Template (optional)</label>
-                <select className={field} value={cfg.template_id || ''} onChange={(e) => {
-                  const t = res.emailTemplates.find((x: any) => String(x.id) === e.target.value);
-                  setCfg(editingId!, { template_id: e.target.value || undefined, subject: t?.subject ?? cfg.subject, body: t?.body ?? t?.content ?? cfg.body });
+                <CustomSelect className={field} value={cfg.template_id || ''} onValueChange={(val) => {
+                  const t = res.emailTemplates.find((x: any) => String(x.id) === val);
+                  setCfg(editingId!, { template_id: val || undefined, subject: t?.subject ?? cfg.subject, body: t?.body ?? t?.content ?? cfg.body });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
                   {res.emailTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
-                </select></div>
+                </CustomSelect></div>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Subject</label>
               <Input value={cfg.subject || ''} onChange={(e) => { setCfg(editingId, { subject: e.target.value }); updateWorkflowStep(editingId, { description: e.target.value.slice(0, 40) }); }} /></div>
@@ -6380,21 +7265,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
           {!isSource && editingStep.type === 'voice_agent_call' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Calling number</label>
-              <select className={field} value={cfg.from_number || ''} onChange={(e) => setCfg(editingId!, { from_number: e.target.value || undefined })}>
-                <option value=""> -  Default number  - </option>
+              <CustomSelect className={field} value={cfg.from_number || ''} onValueChange={(val) => setCfg(editingId!, { from_number: val || undefined })}>
+                <option value="">— Default number —</option>
                 {res.voiceNumbers.map((n: any) => <option key={n.phone_number} value={n.phone_number}>{n.phone_number}</option>)}
-              </select>
+              </CustomSelect>
               {res.voiceNumbers.length === 0 && <p className="text-[11px] text-muted-foreground">No voice number configured.</p>}</div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Voice agent</label>
-              <select className={field} value={cfg.agent_id || ''} onChange={(e) => {
-                const a = res.voiceAgents.find((x: any) => x.id === e.target.value);
-                setCfg(editingId!, { agent_id: e.target.value || undefined, voice_id: a?.voice_id || undefined });
+              <CustomSelect className={field} value={cfg.agent_id || ''} onValueChange={(val) => {
+                const a = res.voiceAgents.find((x: any) => x.id === val);
+                setCfg(editingId!, { agent_id: val || undefined, voice_id: a?.voice_id || undefined });
                 updateWorkflowStep(editingId!, { description: a?.name || 'AI voice call' });
               }}>
                 <option value=""> -  Select an agent  - </option>
                 {res.voiceAgents.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              {res.voiceAgents.length === 0 && <p className="text-[11px] text-muted-foreground">No voice agent found - create one in the Voice playground.</p>}</div>
+              </CustomSelect>
+              {res.voiceAgents.length === 0 && <p className="text-[11px] text-muted-foreground">No voice agent found — create one in the Voice playground.</p>}</div>
             {/* The panel's description has always promised a "script" field.
                 It is real: the executor reads stepConfig.added_context ||
                 stepConfig.voiceContext, runs it through personalizeContext (so
@@ -6415,12 +7300,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 updateWorkflowStep(editingId!, { description: `${Math.min(10, Math.max(1, parseInt(e.target.value, 10) || 3))} tries → ${ROUTER_CHANNELS.find((r) => r.value === (cfg.fallback_channel || 'email'))?.label}` });
               }} /></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Fallback channel</label>
-              <select className={field} value={cfg.fallback_channel || 'email'} onChange={(e) => {
-                setCfg(editingId, { fallback_channel: e.target.value });
-                updateWorkflowStep(editingId!, { description: `${cfg.attempts || 3} tries → ${ROUTER_CHANNELS.find((r) => r.value === e.target.value)?.label}` });
+              <CustomSelect className={field} value={cfg.fallback_channel || 'email'} onValueChange={(val) => {
+                setCfg(editingId, { fallback_channel: val });
+                updateWorkflowStep(editingId!, { description: `${cfg.attempts || 3} tries → ${ROUTER_CHANNELS.find((r) => r.value === val)?.label}` });
               }}>
                 {ROUTER_CHANNELS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select></div>
+              </CustomSelect></div>
             {(cfg.fallback_channel || 'email') === 'email' && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Fallback email subject</label>
                 <Input value={cfg.subject || ''} onChange={(e) => setCfg(editingId, { subject: e.target.value })} placeholder="Blank = Mr LAD drafts it" /></div>
@@ -6434,17 +7319,17 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
           {!isSource && !isRouter && editingStep.type === 'condition' && (
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Continue when…</label>
-              <select className={field} value={cfg.condition || 'connection_accepted'} onChange={(e) => { setCfg(editingId, { condition: e.target.value }); updateWorkflowStep(editingId, { description: CONDITIONS.find((c) => c.value === e.target.value)?.label || '' }); }}>
+              <CustomSelect className={field} value={cfg.condition || 'connection_accepted'} onValueChange={(val) => { setCfg(editingId, { condition: val }); updateWorkflowStep(editingId, { description: CONDITIONS.find((c) => c.value === val)?.label || '' }); }}>
                 {CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select></div>
+              </CustomSelect></div>
           )}
           {!isSource && !isMacro && editingStep.type !== 'condition' && (
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Delay before this step (days)</label>
               <Input type="number" className="w-24" value={cfg.delayDays || '0'} onChange={(e) => setCfg(editingId, { delayDays: e.target.value })} /></div>
           )}
         </div>
-        <div className="p-3 border-t border-border bg-muted/20">
-          <Button className="w-full" onClick={() => setEditingId(null)}>Done</Button>
+        <div className="p-3 border-t border-border bg-muted/20 dark:bg-[#030a21]/60 dark:border-blue-950/40">
+          <Button className="w-full dark:text-white" onClick={() => setEditingId(null)}>Done</Button>
         </div>
       </div>
     );
@@ -6709,7 +7594,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-medium text-muted-foreground">Posted</label>
-                <Input type="date" value={signalManual.posted_at}
+                <Input type="date" className="dark:[color-scheme:dark]" value={signalManual.posted_at}
                   onChange={(e) => setSignalManual((p) => ({ ...p, posted_at: e.target.value }))} />
               </div>
             </div>
@@ -7122,8 +8007,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         ? 'bg-card border border-border text-foreground shadow-sm'
         : 'text-muted-foreground hover:text-foreground'}`;
     return (
-      <div className="absolute right-0 top-0 h-full w-[24rem] bg-card border-l border-border shadow-2xl z-10 flex flex-col">
-        <div className="flex items-start gap-3 p-4 border-b border-border">
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[24rem] bg-card dark:bg-[#071131] border-l border-border dark:border-blue-950/40 shadow-2xl z-30 flex flex-col">
+        <div className="flex items-start gap-3 p-4 border-b border-border dark:border-blue-950/40">
           <IconChip icon={<FlaskConical className="h-4 w-4 text-emerald-600" />} chip="bg-emerald-50 dark:bg-emerald-950/30" size="h-10 w-10" />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-foreground">Test run</div>
@@ -7173,7 +8058,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           )}
 
           {!runnable && !!workflowPreview.length && (
-            <div className="rounded-lg border border-border bg-muted/30 p-2.5 text-[12px] leading-relaxed text-muted-foreground">
+            <div className="rounded-lg border border-border dark:border-blue-950/40 bg-muted/30 dark:bg-[#030a21]/60 p-2.5 text-[12px] leading-relaxed text-muted-foreground">
               Nothing in this workflow produces something to look at yet. A test run executes research,
               scraping, scoring, reports, landing pages and exports - add one of those and there will be an
               artifact to review.
@@ -7184,7 +8069,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-semibold text-foreground">Sample lead</span>
               <button type="button" onClick={generateSampleLead} disabled={testSampling}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border text-[11.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 disabled:opacity-50 transition-colors">
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border dark:border-blue-950/40 text-[11.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 dark:hover:border-[#2B7CFF]/50 disabled:opacity-50 transition-colors">
                 {testSampling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 {testSampling ? 'Generating…' : 'Generate for me'}
               </button>
@@ -7219,7 +8104,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   </div>
                   {artifacts.map((a, i) => (
                     <a key={`${a.url}-${i}`} href={a.url} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-2 rounded-lg bg-card border border-border p-2 hover:border-[#0b1957]/40 transition-colors">
+                      className="flex items-center gap-2 rounded-lg bg-card dark:bg-[#030a21]/60 border border-border dark:border-blue-950/40 p-2 hover:border-[#0b1957]/40 dark:hover:border-[#2B7CFF]/50 transition-colors">
                       <span className="flex-shrink-0">{ARTIFACT_ICON[a.kind] || ARTIFACT_ICON.file}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[12px] font-semibold text-foreground truncate">{a.label}</span>
@@ -7239,7 +8124,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {testSteps.map((s, i) => (
                 <div key={`${s.type}-${i}`} className={`rounded-xl border p-2.5 ${tone[s.status] || tone.skipped}`}>
                   <div className="flex items-center gap-2">
-                    <span className="h-5 w-5 rounded-full bg-card border border-border text-[10px] font-bold text-muted-foreground flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <span className="h-5 w-5 rounded-full bg-card dark:bg-[#030a21]/60 border border-border dark:border-blue-950/40 text-[10px] font-bold text-muted-foreground flex items-center justify-center flex-shrink-0">{i + 1}</span>
                     <span className="text-[12.5px] font-semibold text-foreground flex-1 truncate">{s.title}</span>
                     <span className={`text-[9.5px] font-bold uppercase tracking-wider ${badge[s.status] || badge.skipped}`}>
                       {s.status === 'ran' ? 'Ran' : s.status === 'failed' ? 'Failed' : 'Skipped'}
@@ -7267,7 +8152,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           </>)}
         </div>
 
-        <div className="p-3 border-t border-border bg-muted/20 space-y-1.5">
+        <div className="p-3 border-t border-border dark:border-blue-950/40 bg-muted/20 dark:bg-[#071131] space-y-1.5">
           {signalMode ? (<>
             <Button className="w-full" onClick={generateAndTest}
               disabled={signalSampling || signalLiveRunning || !signalDraft.signal.trim()}>
@@ -7373,7 +8258,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   return (
     <div className="h-full min-h-0 flex flex-col bg-[#F8F9FE] dark:bg-[#000724]">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-card flex-wrap">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border dark:border-blue-950/40 bg-card dark:bg-[#071131] flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onClose} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" title="Close builder">
             <X className="h-4 w-4" /> Close
@@ -7396,14 +8281,14 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             {strategySaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Bookmark className="h-4 w-4 mr-2" />}
             Save as strategy
           </Button>
-          <Button onClick={launch} disabled={launching || hydrating || sequenceIssues.length > 0}
+          <Button onClick={launch} className='dark:text-white' disabled={launching || hydrating || sequenceIssues.length > 0}
             title={sequenceIssues.length ? sequenceIssues[0].message : undefined}>
             {(launching || hydrating) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Rocket className="h-4 w-4 mr-2" />}
             {hydrating ? 'Loading…' : editCampaignId ? 'Save changes' : 'Launch Accelerator'}
           </Button>
         </div>
       </div>
-      {error && <div className="mx-4 mt-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
+      {error && <div className="mx-4 mt-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
       {!error && sequenceIssues.length > 0 && (
         <div className="mx-4 mt-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900 p-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
           <span className="flex-1">
@@ -7448,14 +8333,14 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         {/* Palette */}
         {/* Column, not a plain scroller: the AI tab pins its composer to the
             bottom the way a chat does, so it owns its own scroll region. */}
-        <div className="w-[19rem] border-r border-border bg-card flex flex-col min-h-0">
-          {/* Tabs - Templates | Build with AI | Build from steps */}
-          <div className="flex items-center gap-1 p-1 m-4 mb-0 flex-shrink-0 rounded-xl bg-muted/60 dark:bg-slate-800/60">
+        <div className="w-full sm:w-[19rem] max-w-full sm:max-w-[19rem] flex-shrink-0 border-r border-border dark:border-blue-950/40 bg-card dark:bg-[#071131] flex flex-col min-h-0">
+          {/* Tabs — Templates | Build with AI | Build from steps */}
+          <div className="flex items-center gap-1 p-1 m-4 mb-0 flex-shrink-0 rounded-xl bg-muted/60 dark:bg-[#030a21]/60 border border-transparent dark:border-blue-950/40">
             {([['templates', 'Templates'], ['ai', 'Build with AI'], ['steps', 'From steps']] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setPaletteTab(k)}
                 className={`flex-1 inline-flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-[12px] font-semibold transition-all ${
                   paletteTab === k
-                    ? 'bg-card text-foreground shadow-sm'
+                    ? 'bg-card dark:bg-[#071131] text-foreground shadow-sm border border-transparent dark:border-blue-950/40'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}>
                 {k === 'templates'
@@ -7496,7 +8381,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             el.scrollTop = 0;
                           });
                         }}
-                        className="w-full flex items-center gap-3 rounded-full border border-border bg-card px-2 py-2 text-left hover:border-[#0b1957]/40 hover:bg-muted/40 transition-colors">
+                        className="w-full flex items-center gap-3 rounded-full border border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 px-2 py-2 text-left hover:border-[#0b1957]/40 dark:hover:border-sky-400/50 hover:bg-muted/40 transition-colors">
                         <span className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${s.chip}`}>
                           {s.icon}
                         </span>
@@ -7524,7 +8409,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 return (
                   <div className="space-y-3">
                     {/* What you asked for, and what has been settled so far. */}
-                    <div className="rounded-xl bg-muted/50 dark:bg-slate-800/40 p-2.5">
+                    <div className="rounded-xl bg-muted/50 dark:bg-[#030a21]/60 border border-transparent dark:border-blue-950/40 p-2.5">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">You asked for</div>
                       <p className="text-[12px] text-foreground leading-snug">{aiPrompt.trim()}</p>
                     </div>
@@ -7538,7 +8423,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                       </div>
                     ))}
 
-                    <div className="rounded-2xl border border-[#0b1957]/30 bg-[#0b1957]/[0.03] dark:bg-[#0b1957]/[0.08] p-3">
+                    <div className="rounded-2xl border border-[#0b1957]/30 dark:border-blue-950/40 bg-[#0b1957]/[0.03] dark:bg-[#030a21]/60 p-3">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#0b1957] dark:text-sky-300">
                           Question {aiStep + 1} of {aiQuestions.length}
@@ -7553,7 +8438,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                         <div className="mt-2.5 space-y-1.5">
                           {q.options?.map((o) => (
                             <button key={o.value} type="button" onClick={() => answerAiQuestion(o.value)} disabled={aiBuilding}
-                              className={`w-full text-left border border-border bg-card px-3 py-2 hover:border-[#0b1957] hover:bg-[#0b1957]/[0.04] disabled:opacity-50 transition-all ${
+                              className={`w-full text-left border border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 px-3 py-2 hover:border-[#0b1957] dark:hover:border-sky-400 hover:bg-[#0b1957]/[0.04] dark:hover:bg-sky-500/10 disabled:opacity-50 transition-all ${
                                 o.hint ? 'rounded-2xl' : 'rounded-full'}`}>
                               <span className="block text-[12.5px] font-medium text-foreground">{o.label}</span>
                               {o.hint && <span className="block text-[10.5px] text-muted-foreground">{o.hint}</span>}
@@ -7561,27 +8446,27 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           ))}
                           {/* Escape hatch, only where a typed answer is honoured. */}
                           {q.allowOther && (aiOtherFor === q.id ? (
-                            <div className="rounded-2xl border border-[#0b1957] bg-card px-3 py-2.5 space-y-2">
+                            <div className="rounded-2xl border border-[#0b1957] dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 px-3 py-2.5 space-y-2">
                               {q.otherHelp && <p className="text-[10.5px] text-muted-foreground leading-snug">{q.otherHelp}</p>}
                               <input autoFocus value={aiText} onChange={(e) => setAiText(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && aiText.trim()) answerAiQuestion(aiText.trim()); }}
                                 placeholder={q.otherPlaceholder || ''}
-                                className="w-full rounded-full border border-input bg-background px-3 py-1.5 text-[12.5px] outline-none focus:border-[#0b1957]/40" />
+                                className="w-full rounded-full border border-input dark:border-slate-700/80 bg-background dark:bg-slate-800/50 px-3 py-1.5 text-[12.5px] outline-none focus:border-[#0b1957]/40 dark:focus:border-sky-400" />
                               <div className="flex items-center gap-1.5">
                                 <button type="button" disabled={aiBuilding || !aiText.trim()}
                                   onClick={() => answerAiQuestion(aiText.trim())}
-                                  className="flex-1 rounded-full bg-[#0b1957] text-white text-[12px] font-semibold py-1.5 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                                  className="flex-1 rounded-full bg-[#0b1957] dark:bg-sky-600 text-white text-[12px] font-semibold py-1.5 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 disabled:opacity-40 transition-colors">
                                   Use this
                                 </button>
                                 <button type="button" onClick={() => { setAiOtherFor(null); setAiText(''); }}
-                                  className="px-3 py-1.5 rounded-full border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                                  className="px-3 py-1.5 rounded-full border border-border dark:border-blue-950/40 text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
                                   Back
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <button type="button" onClick={() => { setAiOtherFor(q.id); setAiText(''); }} disabled={aiBuilding}
-                              className="w-full text-left rounded-full border border-dashed border-border bg-transparent px-3 py-2 text-[12.5px] font-medium text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 disabled:opacity-50 transition-all">
+                              className="w-full text-left rounded-full border border-dashed border-border dark:border-blue-950/40 bg-transparent px-3 py-2 text-[12.5px] font-medium text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 dark:hover:border-sky-400/50 disabled:opacity-50 transition-all">
                               {q.otherLabel || 'Something else…'}
                             </button>
                           ))}
@@ -7595,10 +8480,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             return (
                               <button key={o.value} type="button" onClick={() => toggleMulti(o.value)}
                                 className={`w-full text-left rounded-full border px-3 py-2 transition-all ${
-                                  on ? 'border-[#0b1957] bg-[#0b1957]/[0.06]' : 'border-border bg-card hover:border-[#0b1957]/40'}`}>
+                                  on ? 'border-[#0b1957] dark:border-sky-400 bg-[#0b1957]/[0.06] dark:bg-sky-500/10' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/40 dark:hover:border-sky-400/50'}`}>
                                 <span className="flex items-center gap-2">
                                   <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
-                                    on ? 'bg-[#0b1957] border-[#0b1957]' : 'border-muted-foreground/40'}`}>
+                                    on ? 'bg-[#0b1957] dark:bg-sky-500 border-[#0b1957] dark:border-sky-500' : 'border-muted-foreground/40'}`}>
                                     {on && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>}
                                   </span>
                                   <span className="min-w-0">
@@ -7611,7 +8496,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           })}
                           <button type="button" disabled={aiBuilding || !multiSelected.length}
                             onClick={() => answerAiQuestion(multiSelected)}
-                            className="w-full rounded-xl bg-[#0b1957] text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                            className="w-full rounded-xl bg-[#0b1957] dark:bg-sky-600 text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 disabled:opacity-40 transition-colors">
                             Continue
                           </button>
                         </div>
@@ -7622,22 +8507,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           {q.type === 'longtext' ? (
                             <textarea value={aiText} onChange={(e) => setAiText(e.target.value)}
                               placeholder={q.placeholder || ''}
-                              className="w-full min-h-[80px] rounded-xl border border-input bg-background px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40 resize-y" />
+                              className="w-full min-h-[80px] rounded-xl border border-input dark:border-slate-700/80 bg-background dark:bg-slate-800/50 px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40 dark:focus:border-sky-400 resize-y" />
                           ) : (
                             <input value={aiText} onChange={(e) => setAiText(e.target.value)}
                               onKeyDown={(e) => { if (e.key === 'Enter' && aiText.trim()) answerAiQuestion(aiText.trim()); }}
                               placeholder={q.placeholder || ''}
-                              className="w-full rounded-xl border border-input bg-background px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40" />
+                              className="w-full rounded-xl border border-input dark:border-slate-700/80 bg-background dark:bg-slate-800/50 px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0b1957]/40 dark:focus:border-sky-400" />
                           )}
                           <div className="flex items-center gap-1.5">
                             <button type="button" disabled={aiBuilding || (!!q.required && !aiText.trim())}
                               onClick={() => answerAiQuestion(aiText.trim())}
-                              className="flex-1 rounded-xl bg-[#0b1957] text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 disabled:opacity-40 transition-colors">
+                              className="flex-1 rounded-xl bg-[#0b1957] dark:bg-sky-600 text-white text-[12.5px] font-semibold py-2 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 disabled:opacity-40 transition-colors">
                               Continue
                             </button>
                             {!q.required && (
                               <button type="button" onClick={skipAiQuestion} disabled={aiBuilding}
-                                className="px-3 py-2 rounded-xl border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
+                                className="px-3 py-2 rounded-xl border border-border dark:border-blue-950/40 text-[12px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
                                 {q.skippable ? 'Let Mr LAD write it' : 'Skip'}
                               </button>
                             )}
@@ -7662,7 +8547,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               )}
 
               {aiResult && (
-                <div className="mt-3 rounded-xl border border-border bg-card p-3">
+                <div className="mt-3 rounded-xl border border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 p-3">
                   <div className="text-[13px] font-bold text-foreground">{aiResult.name}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-y-1.5" style={{ columnGap: 4 }}>
                     {aiResult.chain.map((c, i) => (
@@ -7675,11 +8560,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   {aiResult.notes && <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{aiResult.notes}</p>}
                   <div className="flex items-center gap-1.5 mt-3">
                     <button type="button" onClick={() => setPaletteTab('steps')}
-                      className="flex-1 rounded-full border border-border py-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 transition-colors">
+                      className="flex-1 rounded-full border border-border dark:border-blue-950/40 py-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 dark:hover:border-sky-400/50 transition-colors">
                       Adjust the steps
                     </button>
                     <button type="button" onClick={() => { setAiResult(null); setAiPrompt(''); }}
-                      className="px-3 py-2 rounded-full border border-border text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                      className="px-3 py-2 rounded-full border border-border dark:border-blue-950/40 text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
                       New
                     </button>
                   </div>
@@ -7691,8 +8576,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 answer controls are the input at that point, and two places to
                 type would be ambiguous. */}
             {!aiQuestions.length && (
-              <div className="flex-shrink-0 border-t border-border p-3">
-                <div className="rounded-2xl border border-input bg-muted/40 dark:bg-slate-800/40 focus-within:bg-background focus-within:border-[#0b1957]/40 transition-colors">
+              <div className="flex-shrink-0 border-t border-border dark:border-blue-950/40 p-3">
+                <div className="rounded-2xl border border-input dark:border-blue-950/40 bg-muted/40 dark:bg-[#030a21]/60 focus-within:bg-background focus-within:border-[#0b1957]/40 dark:focus-within:border-sky-400 transition-colors">
                   <textarea
                     ref={aiInputRef}
                     value={aiPrompt}
@@ -7707,7 +8592,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <div className="flex items-center justify-between px-2 pb-2">
                     <span className="text-[10px] text-muted-foreground pl-1">Enter to send</span>
                     <button type="button" onClick={buildWithAi} disabled={aiBuilding || !aiPrompt.trim()}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-[#0b1957] text-white text-[12px] font-semibold pl-2.5 pr-3 py-1.5 hover:bg-[#0b1957]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#0b1957] dark:bg-sky-600 text-white text-[12px] font-semibold pl-2.5 pr-3 py-1.5 hover:bg-[#0b1957]/90 dark:hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                       {aiBuilding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                       {aiBuilding ? 'Thinking' : 'Build'}
                     </button>
@@ -7728,7 +8613,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
               <input value={tplSearch} onChange={(e) => setTplSearch(e.target.value)} placeholder="Search templates…"
-                className="w-full rounded-xl border border-input bg-muted/40 dark:bg-slate-800/40 pl-9 pr-3 py-2.5 text-[13px] outline-none focus:bg-background focus:border-[#0b1957]/40 transition-colors" />
+                className="w-full rounded-xl border border-input dark:border-slate-700/80 bg-muted/40 dark:bg-slate-800/50 pl-9 pr-3 py-2.5 text-[13px] outline-none focus:bg-background focus:border-[#0b1957]/40 dark:focus:border-sky-400 transition-colors" />
             </div>
 
             <div>
@@ -7751,8 +8636,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     const open = expandedTpl === t.key;
                     return (
                       <div key={t.key}
-                        className={`rounded-2xl border bg-card transition-all ${
-                          open ? 'border-[#0b1957]/40 shadow-[0_2px_16px_rgba(11,25,87,0.08)]' : 'border-border hover:border-[#0b1957]/25'
+                        className={`rounded-2xl border bg-card dark:bg-[#030a21]/60 transition-all ${
+                          open ? 'border-[#0b1957]/40 dark:border-blue-950/40 shadow-[0_2px_16px_rgba(11,25,87,0.08)]' : 'border-border dark:border-blue-950/40 hover:border-[#0b1957]/25 dark:hover:border-sky-400/40'
                         }`}>
                         <button type="button" onClick={() => setExpandedTpl(open ? null : t.key)}
                           className="w-full flex items-start gap-3 p-3 text-left">
@@ -7782,7 +8667,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
                         {open && (
                           <div className="px-3 pb-3">
-                            <div className="border-t border-border pt-3 flex flex-wrap items-center gap-y-1.5" style={{ columnGap: 4 }}>
+                            <div className="border-t border-border dark:border-blue-950/40 pt-3 flex flex-wrap items-center gap-y-1.5" style={{ columnGap: 4 }}>
                               {t.chain.map((c, i) => (
                                 <Fragment key={i}>
                                   {i > 0 && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
@@ -7791,26 +8676,30 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                                 </Fragment>
                               ))}
                             </div>
-                            <div className="flex items-center gap-3 mt-3">
-                              <span className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-                                <strong className="font-semibold text-foreground">{t.meta.cycleDays}-day</strong> cycle
-                              </span>
-                              <span className="h-3 w-px bg-border" />
-                              <span className="text-[11.5px] text-muted-foreground">
-                                <strong className="font-semibold text-foreground">{t.meta.channels}</strong> channels
-                              </span>
-                              {t.category === 'strategy' && (
-                                <button type="button"
-                                  onClick={(e) => { e.stopPropagation(); setPublishingId(strategyIdFromKey(t.key)); }}
-                                  className="ml-auto px-3 py-2 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 transition-colors">
-                                  Share
+                            <div className="flex flex-col gap-2.5 mt-3 pt-2.5 border-t border-border/50 dark:border-blue-950/40">
+                              <div className="flex items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                                  <strong className="font-semibold text-foreground">{t.meta.cycleDays}-day</strong> cycle
+                                </span>
+                                <span className="h-3 w-px bg-border dark:bg-blue-950/40" />
+                                <span className="text-[11.5px] text-muted-foreground">
+                                  <strong className="font-semibold text-foreground">{t.meta.channels}</strong> channels
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {t.category === 'strategy' && (
+                                  <button type="button"
+                                    onClick={(e) => { e.stopPropagation(); setPublishingId(strategyIdFromKey(t.key)); }}
+                                    className="flex-1 px-3 py-1.5 rounded-xl border border-border dark:border-blue-950/40 text-[12px] font-semibold text-muted-foreground hover:text-foreground hover:border-[#0b1957]/40 dark:hover:border-sky-400/50 transition-colors text-center truncate">
+                                    Share
+                                  </button>
+                                )}
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setOverviewTpl(t.key); setEditingId(null); }}
+                                  className="flex-1 px-3 py-1.5 rounded-xl bg-primary text-white text-[12px] font-semibold hover:bg-primary/90 transition-colors text-center truncate">
+                                  {t.category === 'community' ? 'Import' : 'Use template'}
                                 </button>
-                              )}
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setOverviewTpl(t.key); setEditingId(null); }}
-                                className={`${t.category === 'strategy' ? '' : 'ml-auto '}px-3.5 py-2 rounded-xl bg-[#0b1957] text-white text-[12.5px] font-semibold hover:bg-[#0b1957]/90 transition-colors`}>
-                                {t.category === 'community' ? 'Import' : 'Use template'}
-                              </button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -7825,7 +8714,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <div className="flex items-center gap-2 pt-1 pb-0.5">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
                       <span className="text-[10px] font-semibold text-muted-foreground/70">{count}</span>
-                      <span className="flex-1 h-px bg-border" />
+                      <span className="flex-1 h-px bg-border dark:bg-blue-950/40" />
                     </div>
                   );
                   return (<>
@@ -7844,7 +8733,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               </div>
 
               <button type="button" onClick={() => setPaletteTab('steps')}
-                className="mt-3 w-full rounded-2xl border border-dashed border-border hover:border-[#0b1957]/40 hover:bg-muted/40 py-3 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center justify-center gap-2">
+                className="mt-3 w-full rounded-2xl border border-dashed border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/40 dark:hover:border-sky-400/50 hover:bg-muted/40 py-3 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center justify-center gap-2">
                 <Plus className="h-4 w-4" /> Or build from scratch with steps
               </button>
             </div>
@@ -7854,7 +8743,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* Suggested next step - a shortcut, not a requirement. Every option
               here is also always pickable manually from the sections below. */}
           {suggestions.length > 0 && (
-            <div className="rounded-2xl border border-dashed border-[#0b1957]/30 bg-[#0b1957]/[0.03] dark:bg-[#0b1957]/[0.08] p-3 space-y-2">
+            <div className="rounded-2xl border border-dashed border-[#0b1957]/30 dark:border-blue-950/40 bg-[#0b1957]/[0.03] dark:bg-[#030a21]/60 p-3 space-y-2">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-[#0b1957] dark:text-sky-300" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#0b1957] dark:text-sky-300">Suggested next step</span>
@@ -7864,8 +8753,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <button key={s.key} type="button" onClick={s.action}
                     className={`w-full flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition-all ${
                       s.primary
-                        ? 'border-[#0b1957] bg-card shadow-sm hover:bg-[#0b1957]/[0.04]'
-                        : 'border-border bg-card/60 hover:border-[#0b1957]/30 hover:bg-muted/40'
+                        ? 'border-[#0b1957] dark:border-sky-400 bg-card dark:bg-[#030a21]/60 shadow-sm hover:bg-[#0b1957]/[0.04] dark:hover:bg-sky-500/10'
+                        : 'border-border dark:border-blue-950/40 bg-card/60 dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-sky-400/40 hover:bg-muted/40'
                     }`}>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[12.5px] font-semibold text-foreground truncate">{s.label}</span>
@@ -7881,7 +8770,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* 1 · Contact source */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">1</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">1</span>
               <span className="text-sm font-semibold text-foreground">Contact source</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Where leads enter this Accelerator</p>
@@ -7892,8 +8781,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <button key={s.key} onClick={() => pickSource(s.key)}
                     className={`relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                       active
-                        ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20'
-                        : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                        ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30'
+                        : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                     }`}>
                     <IconChip icon={s.icon} chip={s.chip} />
                     <span className="min-w-0 flex-1">
@@ -7906,7 +8795,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                       <span className="block text-xs text-muted-foreground truncate">{s.sub}</span>
                     </span>
                     {active && (
-                      <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                      <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </span>
                     )}
@@ -7915,7 +8804,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               })}
               <div className="flex gap-2">
                 {COMING_SOON.map((s) => (
-                  <div key={s.label} className="flex-1 flex items-center gap-2 rounded-xl border border-dashed border-border px-2.5 py-2 opacity-60 min-w-0">
+                  <div key={s.label} className="flex-1 flex items-center gap-2 rounded-xl border border-dashed border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 px-2.5 py-2 opacity-60 min-w-0">
                     {s.icon}
                     <span className="min-w-0">
                       <span className="block text-xs font-medium text-foreground truncate">{s.label}</span>
@@ -7930,7 +8819,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* 2 · Outreach steps, grouped by channel */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">2</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">2</span>
               <span className="text-sm font-semibold text-foreground">Outreach steps</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Click to add to the sequence</p>
@@ -7940,10 +8829,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 <div className="space-y-1">
                   {OUTREACH.filter((o) => o.group === group).map((o) => (
                     <button key={o.label} onClick={() => (o.router ? addRouter() : addOutreach(o.type))}
-                      className="group w-full flex items-center gap-2.5 rounded-lg border border-border px-2.5 py-2 text-left hover:border-[#0b1957]/30 hover:bg-muted/40 transition-all">
+                      className="group w-full flex items-center gap-2.5 rounded-lg border border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 px-2.5 py-2 text-left hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40 transition-all">
                       <IconChip icon={o.icon} chip={o.chip} size="h-7 w-7" />
                       <span className="text-[13px] font-medium text-foreground truncate flex-1">{o.label}</span>
-                      <span className="h-6 w-6 rounded-full border border-border text-muted-foreground group-hover:bg-[#0b1957] group-hover:border-[#0b1957] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
+                      <span className="h-6 w-6 rounded-full border border-border dark:border-blue-950/40 text-muted-foreground group-hover:bg-[#0b1957] dark:group-hover:bg-[#2b7cff] group-hover:border-[#0b1957] dark:group-hover:border-[#2b7cff] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                       </span>
                     </button>
@@ -7958,7 +8847,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addMultiCond}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Split className="h-4 w-4 text-amber-600" />} chip="bg-amber-50 dark:bg-amber-950/30" />
                   <span className="min-w-0 flex-1">
@@ -7966,7 +8855,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Route by tag / field → different message</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -7979,7 +8868,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addAiParse}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Sparkles className="h-4 w-4 text-violet-600" />} chip="bg-violet-50 dark:bg-violet-950/30" />
                   <span className="min-w-0 flex-1">
@@ -7987,7 +8876,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Clean messy titles / names before LinkedIn</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8000,7 +8889,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addDataEnrich}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Contact className="h-4 w-4 text-teal-600" />} chip="bg-teal-50 dark:bg-teal-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8008,7 +8897,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Reveal email &amp; phone (FullEnrich)</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8021,7 +8910,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addExport}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Download className="h-4 w-4 text-cyan-700" />} chip="bg-cyan-50 dark:bg-cyan-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8029,7 +8918,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">File · DB · Email · WhatsApp · more</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8042,7 +8931,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addInstagramPost}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Instagram className="h-4 w-4 text-pink-600" />} chip="bg-pink-50 dark:bg-pink-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8050,7 +8939,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Image or Reel · On a schedule</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8064,7 +8953,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addReport}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<FileText className="h-4 w-4 text-teal-700" />} chip="bg-teal-50 dark:bg-teal-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8072,7 +8961,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">PDF · Attach or offer as a download</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8086,7 +8975,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addHumanTask}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<UserCheck className="h-4 w-4 text-amber-600" />} chip="bg-amber-50 dark:bg-amber-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8094,7 +8983,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Pauses the lead until someone confirms</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8108,7 +8997,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addLandingPage}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<LayoutTemplate className="h-4 w-4 text-emerald-700" />} chip="bg-emerald-50 dark:bg-emerald-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8116,7 +9005,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">AI-written from your ICP · Captures leads</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8129,16 +9018,19 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { id: RESEARCH_STEP_ID, on: addWebResearch, icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30', label: 'Web research', sub: 'AI company intel from the web' },
               { id: SCORE_STEP_ID, on: addLeadScore, icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30', label: 'Lead scoring', sub: 'Buy-intent 0-100 · hot/warm/cold' },
               { id: SPLIT_STEP_ID, on: addSplitTest, icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30', label: 'A/B split test', sub: 'Compare two openers' },
+              { id: ACCEPT_STEP_ID, on: addAcceptanceBranch, icon: <UserCheck className="h-4 w-4 text-emerald-600" />, chip: 'bg-emerald-50 dark:bg-emerald-950/30', label: 'Accepted?', sub: 'Branch on the connection request' },
               { id: SETFIELD_STEP_ID, on: addSetField, icon: <PenLine className="h-4 w-4 text-lime-600" />, chip: 'bg-lime-50 dark:bg-lime-950/30', label: 'Set field', sub: 'Tag or write a value' },
               { id: HTTP_STEP_ID, on: addHttpRequest, icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50', label: 'HTTP request', sub: 'Call any API per lead' },
               { id: CONTENT_STEP_ID, on: addLinkedInContent, icon: <PenTool className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', label: 'LinkedIn content', sub: 'Write or AI-generate the post' },
               { id: APPROVAL_STEP_ID, on: addPostApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Approval', sub: 'Approve on WhatsApp before posting' },
+              { id: POST_ENGAGE_STEP_ID, on: addPostEngage, icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30', label: 'Comment on new posts', sub: "Like + AI comment on your connections' posts" },
+              { id: COMMENT_APPROVAL_STEP_ID, on: addCommentApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Comment approval', sub: 'Approve or write your own on WhatsApp' },
             ]).map((b) => {
               const added2 = workflowPreview.some((s) => s.id === b.id);
               return (
                 <button key={b.id} onClick={b.on}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added2 ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added2 ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={b.icon} chip={b.chip} />
                   <span className="min-w-0 flex-1">
@@ -8146,7 +9038,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">{b.sub}</span>
                   </span>
                   {added2 && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8159,7 +9051,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addAutopost}
                   className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Megaphone className="h-4 w-4 text-[#0077B5]" />} chip="bg-sky-50 dark:bg-sky-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8167,7 +9059,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Recurring posts to your own feed</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8179,7 +9071,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* 3 · Follow-ups */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">3</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">3</span>
               <span className="text-sm font-semibold text-foreground">Follow-ups</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Automatic touch points after your outreach</p>
@@ -8188,7 +9080,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addFollowup}
                   className={`relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<ListOrdered className="h-4 w-4 text-indigo-600" />} chip="bg-indigo-50 dark:bg-indigo-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8196,7 +9088,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Touches · spacing · channel · human review</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8208,7 +9100,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* 4 · Analytics */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">4</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">4</span>
               <span className="text-sm font-semibold text-foreground">Analytics</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Campaign stats to your inbox or WhatsApp</p>
@@ -8217,7 +9109,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addAnalytics}
                   className={`relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<BarChart3 className="h-4 w-4 text-cyan-600" />} chip="bg-cyan-50 dark:bg-cyan-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8225,7 +9117,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Channel · frequency · data to send</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8237,7 +9129,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* ── 5. AI Media ───────────────────────────────────────────────── */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">5</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">5</span>
               <span className="text-sm font-semibold text-foreground">AI Media</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Generate a brand image or video to attach to outreach</p>
@@ -8246,7 +9138,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addMedia}
                   className={`relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<Wand2 className="h-4 w-4 text-fuchsia-600" />} chip="bg-fuchsia-50 dark:bg-fuchsia-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8254,7 +9146,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Image / video · attaches to email &amp; WhatsApp</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}
@@ -8266,7 +9158,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           {/* ── 6. Sync back to CRM ───────────────────────────────────────── */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-5 w-5 rounded-full bg-[#0b1957] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">6</span>
+              <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">6</span>
               <span className="text-sm font-semibold text-foreground">Sync back to Zoho</span>
             </div>
             <p className="text-xs text-muted-foreground mb-2.5 ml-7">Write campaign data back onto the Zoho contact</p>
@@ -8275,7 +9167,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               return (
                 <button onClick={addZohoUpdate}
                   className={`relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                    added ? 'border-[#0b1957] bg-[#0b1957]/[0.04] shadow-sm ring-1 ring-[#0b1957]/20' : 'border-border hover:border-[#0b1957]/30 hover:bg-muted/40'
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
                   }`}>
                   <IconChip icon={<DatabaseZap className="h-4 w-4 text-red-600" />} chip="bg-red-50 dark:bg-red-950/30" />
                   <span className="min-w-0 flex-1">
@@ -8283,7 +9175,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                     <span className="block text-xs text-muted-foreground truncate">Map fields · write-back on completion</span>
                   </span>
                   {added && (
-                    <span className="h-5 w-5 rounded-full bg-[#0b1957] flex items-center justify-center flex-shrink-0">
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                   )}

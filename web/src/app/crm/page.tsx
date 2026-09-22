@@ -301,7 +301,7 @@ export default function CrmPage() {
           </div>
           <Link
             href="/crm/zoho"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-slate-200 dark:border-[#262831] bg-white dark:bg-[#000724] text-[13px] font-medium text-slate-700 dark:text-[#c7d2e0] hover:bg-slate-50 dark:hover:bg-[#1a2a43] transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131] text-[13px] font-medium text-slate-700 dark:text-[#c7d2e0] hover:bg-slate-50 dark:hover:bg-[#1a2a43] transition-colors"
           >
             <span className="text-red-600 font-bold leading-none" aria-hidden>Z</span> Zoho CRM
           </Link>

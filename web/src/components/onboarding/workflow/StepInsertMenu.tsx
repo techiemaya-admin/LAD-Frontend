@@ -75,18 +75,18 @@ export function StepInsertMenu({
       <div className="fixed inset-0" style={{ zIndex: zIndex - 1 }} onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
       <div
         ref={panelRef}
-        className="fixed rounded-xl border border-border bg-popover shadow-2xl overflow-hidden"
+        className="fixed rounded-xl border border-border dark:border-blue-950/40 bg-popover dark:bg-[#071131] shadow-2xl overflow-hidden"
         style={{ left, top, width: PANEL_W, zIndex }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-blue-950/40 bg-muted/40 dark:bg-[#0b1739]">
           {position === 'before'
-            ? <ArrowUpFromLine className="h-3.5 w-3.5 text-muted-foreground" />
-            : <ArrowDownToLine className="h-3.5 w-3.5 text-muted-foreground" />}
-          <span className="text-[12px] font-semibold text-foreground">
+            ? <ArrowUpFromLine className="h-3.5 w-3.5 text-muted-foreground dark:text-slate-400" />
+            : <ArrowDownToLine className="h-3.5 w-3.5 text-muted-foreground dark:text-slate-400" />}
+          <span className="text-[12px] font-semibold text-foreground dark:text-white">
             {position === 'before' ? 'Add input step' : 'Add output step'}
           </span>
-          <span className="ml-auto text-[10px] text-muted-foreground">
+          <span className="ml-auto text-[10px] text-muted-foreground dark:text-slate-400">
             {position === 'before' ? 'runs before' : 'runs after'}
           </span>
         </div>
@@ -95,7 +95,7 @@ export function StepInsertMenu({
           {groups.map((g) => (
             <div key={g.name || '_'}>
               {g.name && (
-                <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground dark:text-slate-400">
                   {g.name}
                 </div>
               )}
@@ -106,18 +106,18 @@ export function StepInsertMenu({
                   disabled={it.disabled}
                   onClick={() => { if (!it.disabled) { it.onSelect(); onClose(); } }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${
-                    it.disabled ? 'opacity-45 cursor-not-allowed' : 'hover:bg-muted/60'
+                    it.disabled ? 'opacity-45 cursor-not-allowed' : 'hover:bg-muted/60 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   {it.icon && (
-                    <span className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${it.chip || 'bg-muted'}`}>
+                    <span className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${it.chip || 'bg-muted dark:bg-slate-800'}`}>
                       {it.icon}
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium text-foreground truncate">{it.label}</span>
+                    <span className="block text-[13px] font-medium text-foreground dark:text-slate-100 truncate">{it.label}</span>
                     {(it.disabled && it.hint ? it.hint : it.sub) && (
-                      <span className="block text-[11px] text-muted-foreground truncate">
+                      <span className="block text-[11px] text-muted-foreground dark:text-slate-400 truncate">
                         {it.disabled && it.hint ? it.hint : it.sub}
                       </span>
                     )}
@@ -127,7 +127,7 @@ export function StepInsertMenu({
             </div>
           ))}
           {items.length === 0 && (
-            <div className="px-3 py-6 text-center text-xs text-muted-foreground">Nothing to add here.</div>
+            <div className="px-3 py-6 text-center text-xs text-muted-foreground dark:text-slate-400">Nothing to add here.</div>
           )}
         </div>
       </div>

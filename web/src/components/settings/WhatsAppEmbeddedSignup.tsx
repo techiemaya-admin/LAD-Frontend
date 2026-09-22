@@ -203,7 +203,7 @@ export function WhatsAppEmbeddedSignup() {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40"
+                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-[#030a21]/60"
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">

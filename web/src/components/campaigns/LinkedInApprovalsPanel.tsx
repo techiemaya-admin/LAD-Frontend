@@ -20,7 +20,13 @@ import {
 } from 'lucide-react';
 import { fetchWithTenant } from '@/lib/fetch-with-tenant';
 
-type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+// 'revised' has always been written by the backend (recordRevisionFeedback) and
+// was missing from this union, so every draft the approver asked to change fell
+// through STATUS_STYLE's `|| expired` and rendered as "No answer" — the exact
+// opposite of what happened. 'superseded' is new: a draft replaced without
+// anyone asking, which is what a concurrent revision leaves behind.
+type ApprovalStatus =
+  | 'pending' | 'approved' | 'rejected' | 'expired' | 'revised' | 'superseded';
 
 interface ApprovalRow {
   id: string;
@@ -57,7 +63,12 @@ const STATUS_STYLE: Record<ApprovalStatus, { label: string; icon: React.ElementT
   approved: { label: 'Approved', icon: CheckCircle2, cls: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400' },
   rejected: { label: 'Skipped', icon: XCircle, cls: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400' },
   expired: { label: 'No answer', icon: AlertTriangle, cls: 'text-slate-500 bg-slate-100 dark:bg-slate-500/10 dark:text-slate-400' },
+  revised: { label: 'Changes requested', icon: RefreshCw, cls: 'text-sky-600 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400' },
+  superseded: { label: 'Replaced', icon: RefreshCw, cls: 'text-slate-500 bg-slate-100 dark:bg-slate-500/10 dark:text-slate-400' },
 };
+
+/** Statuses that mean a human actually decided something. */
+const DECIDED: ApprovalStatus[] = ['approved', 'rejected', 'expired', 'revised'];
 
 function when(iso?: string | null): string {
   if (!iso) return '-';
@@ -120,6 +131,7 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
   const counts = rows.reduce<Record<string, number>>((a, r) => {
     a[r.status] = (a[r.status] || 0) + 1; return a;
   }, {});
+  const decided = rows.filter((r) => DECIDED.includes(r.status)).length;
 
   return (
     <div className="absolute top-4 right-4 w-[22rem] max-h-[calc(100%-2rem)] flex flex-col rounded-2xl border border-[#E2E8F0] dark:border-blue-950/40 bg-white dark:bg-[#1a2a43] shadow-xl z-20 overflow-hidden">
@@ -134,7 +146,12 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
         <span className="min-w-0 flex-1">
           <span className="block text-[13.5px] font-semibold text-slate-900 dark:text-white">Post approvals</span>
           <span className="block text-[11.5px] text-slate-500 dark:text-slate-400 truncate">
-            {isPending ? 'A draft is waiting on you' : `${rows.length} decision${rows.length === 1 ? '' : 's'} so far`}
+            {/* Count DECIDED rows, not every row: a superseded draft was
+                replaced before anyone could answer it, and calling it a
+                decision inflates the number with drafts nobody ever saw. */}
+            {isPending
+              ? 'A draft is waiting on you'
+              : `${decided} decision${decided === 1 ? '' : 's'} so far`}
           </span>
         </span>
         <RefreshCw
@@ -168,6 +185,9 @@ export default function LinkedInApprovalsPanel({ campaignId }: { campaignId: str
           {/* Counts */}
           {rows.length > 0 && (
             <div className="grid grid-cols-3 gap-2 px-3 pb-1">
+              {/* A 'superseded' row is not a decision — it is a draft that was
+                  replaced before anyone could answer it, so it is deliberately
+                  absent here and visible only in the list below. */}
               {(['approved', 'rejected', 'expired'] as ApprovalStatus[]).map((s) => (
                 <div key={s} className="rounded-lg border border-[#E2E8F0] dark:border-blue-950/40 px-2 py-2 text-center">
                   <div className="text-[15px] font-bold text-slate-900 dark:text-white">{counts[s] || 0}</div>

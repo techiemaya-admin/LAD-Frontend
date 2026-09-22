@@ -104,6 +104,22 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     );
   }
 
+  /* DECLINED — the person ended the ring (declined / busy / no answer). Not a failure of ours. */
+  if (
+    value.includes("declined") ||
+    value.includes("rejected") ||
+    value.includes("busy") ||
+    value.includes("no_answer") ||
+    value.includes("no-answer")
+  ) {
+    return (
+      <span className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-100/70 text-orange-700 border border-orange-300 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-500/40">
+        <span className="w-2 h-2 rounded-full bg-orange-500 dark:bg-orange-400" />
+        Declined
+      </span>
+    );
+  }
+
   /* FAILED */
   if (
     value.includes("failed") ||

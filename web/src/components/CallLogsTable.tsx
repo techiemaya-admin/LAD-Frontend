@@ -2,9 +2,12 @@ import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
 import { cn } from "@/lib/utils";
+import { LiveDuration, isLiveCallStatus } from "@/components/call-logs/LiveDuration";
 import {
   PhoneIncoming,
   PhoneOutgoing,
+  PhoneForwarded,
+  Loader2,
   StopCircle,
   ChevronDown,
   ChevronRight,
@@ -90,6 +93,18 @@ interface CallLogsTableProps {
   selectAllMode?: 'none' | 'page' | 'all';
   onRowClick: (id: string) => void;
   onEndCall: (id: string) => void;
+  /** Place a follow-up call to the same person after a completed call. */
+  onFollowUpCall?: (id: string) => void;
+  /** Row whose follow-up request is in flight — its button shows a spinner and ignores clicks. */
+  followingUpId?: string | null;
+  /** True while POST /calls/retry is out; both Retry buttons disable. */
+  isRetrying?: boolean;
+  /** Row whose single End Call is in flight. */
+  endingId?: string | null;
+  /** True while End Selected is out. */
+  isEndingSelected?: boolean;
+  /** How many of the selected calls are live (what End Selected would act on). */
+  activeCount?: number;
   batchGroups?: { groups: Record<string, CallLog[]>; noBatchCalls: CallLog[] };
   expandedBatches?: Set<string>;
   onToggleBatch?: (batchId: string) => void;
@@ -130,6 +145,12 @@ export function CallLogsTable({
   selectAllMode = 'none',
   onRowClick,
   onEndCall,
+  onFollowUpCall,
+  followingUpId = null,
+  isRetrying = false,
+  endingId = null,
+  isEndingSelected = false,
+  activeCount,
   batchGroups,
   expandedBatches = new Set(),
   onToggleBatch,
@@ -555,7 +576,15 @@ export function CallLogsTable({
       id: 'duration',
       accessorKey: 'duration',
       header: 'Duration',
-      cell: ({ getValue }) => <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>,
+      // A call still on the line has no stored duration yet; count up live from
+      // when it started instead of showing "-" until it ends.
+      cell: ({ getValue, row }) => {
+        const item = row.original;
+        if (isLiveCallStatus(item.status) && item.startedAt) {
+          return <LiveDuration since={item.startedAt} />;
+        }
+        return <span className="font-mono text-sm">{formatDuration(getValue() as number)}</span>;
+      },
     },
     {
       id: 'tag',
@@ -670,20 +699,37 @@ export function CallLogsTable({
         const item = row.original;
         return (
           <div onClick={(e) => e.stopPropagation()} className="flex gap-2 items-center">
-            {item.status?.toLowerCase().includes("ongoing") && (
+            {["ongoing", "ringing", "in_progress", "calling"].includes(item.status?.toLowerCase() ?? "") && (
               <button
                 onClick={() => onEndCall(item.id)}
-                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                title="End Call"
+                disabled={endingId !== null}
+                aria-busy={endingId === item.id}
+                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                title={endingId === item.id ? "Ending call…" : "End Call"}
               >
-                <StopCircle className="w-5 h-5" />
+                {endingId === item.id
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <StopCircle className="w-5 h-5" />}
+              </button>
+            )}
+            {onFollowUpCall && ["completed", "ended"].includes(item.status?.toLowerCase() ?? "") && (
+              <button
+                onClick={() => onFollowUpCall(item.id)}
+                disabled={followingUpId !== null}
+                aria-busy={followingUpId === item.id}
+                className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                title={followingUpId === item.id ? "Starting follow-up call…" : "Follow-up call (same number, same agent, last call as context)"}
+              >
+                {followingUpId === item.id
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <PhoneForwarded className="w-5 h-5" />}
               </button>
             )}
           </div>
         );
       },
     },
-  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, getLeadTag, selectAllMode]);
+  ], [selectedCalls, onSelectCall, onSelectAll, onEndCall, endingId, onFollowUpCall, followingUpId, getLeadTag, selectAllMode]);
 
   // Setup table instance with filtered data
   const table = useReactTable({
@@ -714,6 +760,12 @@ export function CallLogsTable({
     const completedCalls =
       (headerRow as any)?.batch_completed_calls ??
       detailCalls.filter(c => c.status?.toLowerCase() === 'completed' || c.status?.toLowerCase() === 'ended').length;
+    const failedCalls =
+      (headerRow as any)?.batch_failed_calls ??
+      detailCalls.filter(c => c.status?.toLowerCase() === 'failed').length;
+    const declinedCalls =
+      (headerRow as any)?.batch_declined_calls ??
+      detailCalls.filter(c => c.status?.toLowerCase() === 'declined').length;
     const totalCost = detailCalls.reduce((sum, call) => {
       const cost = Number(call.cost || call.call_cost || 0);
       return sum + (isNaN(cost) ? 0 : cost);
@@ -751,6 +803,16 @@ export function CallLogsTable({
                 <span className="text-muted-foreground min-w-[100px]">
                   <span className="font-semibold text-foreground">{completedCalls}</span> completed
                 </span>
+                {declinedCalls > 0 && (
+                  <span className="text-muted-foreground" title="The person declined, was busy or did not answer">
+                    <span className="font-semibold text-orange-600 dark:text-orange-400">{declinedCalls}</span> declined
+                  </span>
+                )}
+                {failedCalls > 0 && (
+                  <span className="text-muted-foreground" title="Carrier or trunk failure on our side">
+                    <span className="font-semibold text-red-600 dark:text-rose-400">{failedCalls}</span> failed
+                  </span>
+                )}
                 <span className="text-muted-foreground">
                   Total: <span className="font-semibold text-foreground">${totalCost.toFixed(2)}</span>
                 </span>
@@ -900,6 +962,7 @@ export function CallLogsTable({
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="ended">Completed</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
                 <SelectItem value="calling">Calling</SelectItem>
                 <SelectItem value="ongoing">Ongoing</SelectItem>
                 <SelectItem value="queue">Queue</SelectItem>
@@ -936,9 +999,11 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onRetrySelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                    disabled={isRetrying}
+                    aria-busy={isRetrying}
+                    className="flex-1 px-3 py-2 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                   >
-                    Retry ({failedCount})
+                    {isRetrying ? "Retrying…" : `Retry (${failedCount})`}
                   </button>
                 )}
                 {onEndSelected && (
@@ -947,9 +1012,11 @@ export function CallLogsTable({
                       e.stopPropagation();
                       onEndSelected();
                     }}
-                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95"
+                    disabled={isEndingSelected || activeCount === 0}
+                    aria-busy={isEndingSelected}
+                    className="flex-1 px-3 py-2 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-lg transition-all duration-300 text-xs font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    End ({selectedCalls.size})
+                    {isEndingSelected ? "Ending…" : `End (${activeCount ?? selectedCalls.size})`}
                   </button>
                 )}
               </div>
@@ -1354,9 +1421,9 @@ export function CallLogsTable({
 
       {/* Booking Dialog */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
+        <DialogContent className="flex flex-col p-0 max-h-[90vh] overflow-hidden bg-white dark:bg-[#000724] border border-slate-200 dark:border-blue-950/40 text-foreground dark:text-white">
           {/* Added padding and matching sub-borders to the dialog header line */}
-          <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40">
+          <DialogHeader className="p-6 border-b border-slate-100 dark:border-blue-950/40 dark:bg-[#081331]">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400 border border-blue-100 dark:border-blue-900/40 shadow-sm flex items-center justify-center w-10 h-10">
                 <CalendarRange className="h-5 w-5" />

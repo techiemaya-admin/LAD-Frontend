@@ -27,6 +27,11 @@ interface User {
    * for the general-purpose product. Served by /auth/me from tenants.vertical.
    */
   vertical?: string | null;
+  /**
+   * Served by /auth/me: true iff the tenant's edition declares at least one
+   * pipeline. Absent on backends that predate the flag — see isCuratedWorkspace.
+   */
+  curatedWorkspace?: boolean;
 }
 interface AuthContextType {
   user: User | null;
@@ -178,11 +183,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // defaults to "not curated" and changes nothing for them.
   const vertical = user?.vertical ?? null;
 
-  // Today the rule is simply: a tenant on a vertical runs curated pipelines and
-  // does not get the workflow builder. If a future snapshot ever wants the
-  // builder, this should read a flag from that snapshot's manifest rather than
-  // being inferred here.
-  const isCuratedWorkspace = vertical !== null;
+  // The backend decides: `curatedWorkspace` is true only when the edition's
+  // manifest declares pipelines (wellness yes, staffing no — it has a vertical
+  // but pack sections only). A backend that predates the flag reports nothing,
+  // and then the old rule stands in: a tenant on a vertical is curated.
+  const isCuratedWorkspace = user?.curatedWorkspace ?? (vertical !== null);
 
   const value = {
     user,

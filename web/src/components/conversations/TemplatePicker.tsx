@@ -49,6 +49,11 @@ interface WhatsAppTemplate {
   header_type: string;        // "text" | "image" | "document" | "video" | ""
   header_param_count: number; // how many leading parameters belong to the header component
   header_url: string;         // media handle for image/document/video header templates
+  // Which connected number this template lives on. A template belongs to a WABA,
+  // not to a workspace, so a tenant with two numbers has two libraries and the
+  // same name can legitimately appear in both.
+  account_id?: string;
+  account_phone?: string;
 }
 
 type NameFormat = 'first' | 'full';
@@ -64,7 +69,9 @@ export interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string) => void;
+  /** accountId is the number the template LIVES on — a template exists on one
+   *  WABA, so the blast has to go out from that number or Meta cannot find it. */
+  onSend: (templateName: string, languageCode: string, parameters: string[], nameFormat: NameFormat, batch: BatchOptions, headerParamCount: number, headerType: string, headerUrl: string, accountId: string) => void;
   sending?: boolean;
   /** Track progress: { sent: number; total: number; running: boolean } */
   sendProgress?: { sent: number; total: number; running: boolean } | null;
@@ -288,6 +295,7 @@ export function TemplatePicker({
       selectedTemplate.header_param_count ?? 0,
       selectedTemplate.header_type ?? '',
       headerMediaUrl,
+      selectedTemplate.account_id ?? '',
     );
   }, [selectedTemplate, paramValues, nameFormat, channel, batchSize, delayMin, delayRandom, dailyLimit, onSend, headerMediaUrl]);
 
@@ -426,7 +434,10 @@ export function TemplatePicker({
                   <div className={cn(isWA ? "space-y-1.5" : "space-y-1")}>
                     {filtered.map((template) => (
                       <div
-                        key={`${template.name}-${template.language}`}
+                        // account_id is part of the identity, not decoration:
+                        // without it two numbers holding a same-named template
+                        // collide into one React key and the list mis-renders.
+                        key={`${template.account_id ?? ''}-${template.name}-${template.language}`}
                         className={cn(
                           "cursor-pointer transition-all group",
                           isWA

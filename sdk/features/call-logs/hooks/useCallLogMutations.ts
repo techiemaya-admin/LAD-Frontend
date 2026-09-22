@@ -5,7 +5,7 @@
  * Framework-independent (no Next.js imports).
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { EndCallParams, RetryCallsParams } from "../types";
+import type { EndCallParams, EndCallsParams, FollowUpCallParams, RetryCallsParams } from "../types";
 import * as api from "../api";
 
 /**
@@ -24,6 +24,20 @@ export function useEndCall() {
 }
 
 /**
+ * Hook to end several calls at once (the End Selected action)
+ */
+export function useEndCalls() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: EndCallsParams) => api.endCalls(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["call-logs"] });
+    },
+  });
+}
+
+/**
  * Hook to retry failed calls
  */
 export function useRetryFailedCalls() {
@@ -33,6 +47,21 @@ export function useRetryFailedCalls() {
     mutationFn: (params: RetryCallsParams) => api.retryFailedCalls(params),
     onSuccess: () => {
       // Invalidate call logs to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["call-logs"] });
+    },
+  });
+}
+
+/**
+ * Hook to place a follow-up call after a completed call
+ */
+export function useFollowUpCall() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: FollowUpCallParams) => api.followUpCall(params),
+    onSuccess: () => {
+      // The new call appears in the list as pending/ringing
       queryClient.invalidateQueries({ queryKey: ["call-logs"] });
     },
   });

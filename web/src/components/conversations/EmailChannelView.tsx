@@ -42,6 +42,32 @@ interface EmailContact {
   channel: string;
   created_at?: string;
   metadata?: Record<string, unknown>;
+  // Thread summary from email_messages (LAD-WABA-Comms GET /api/email/contacts).
+  // Absent on older backends; the folders then fall back to contact order.
+  inbound_count?: number | string | null;
+  outbound_count?: number | string | null;
+  last_message_at?: string | null;
+  last_direction?: 'inbound' | 'outbound' | null;
+  last_subject?: string | null;
+  last_preview?: string | null;
+}
+
+/** Thread summary helpers - tolerant of the bigint-as-string asyncpg/JSON shape. */
+const inboundCount = (c: EmailContact) => Number(c.inbound_count ?? 0) || 0;
+const outboundCount = (c: EmailContact) => Number(c.outbound_count ?? 0) || 0;
+const hasThread = (c: EmailContact) => inboundCount(c) + outboundCount(c) > 0;
+const lastActivity = (c: EmailContact) => (c.last_message_at ? new Date(c.last_message_at).getTime() : 0);
+/** A thread whose latest message came FROM the contact is waiting on us. */
+const awaitingReply = (c: EmailContact) => c.last_direction === 'inbound';
+
+function fmtListDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString([], sameYear ? { month: 'short', day: 'numeric' } : { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 interface EmailGroup {
@@ -84,6 +110,8 @@ interface EmailMessage {
   preview_text: string | null;
   status: string;
   sent_at: string;
+  /** RFC 5322 Message-ID (or provider id) - what a reply's In-Reply-To points at. */
+  external_id?: string | null;
 }
 
 // Defined at module level - not inside the component - to avoid redefining on
@@ -254,6 +282,19 @@ function formatDate(iso?: string): string {
 function getEmailDetails(contact: EmailContact) {
   const meta = contact.metadata ?? {};
   const mockDetails = MOCK_EMAIL_DETAILS[contact.id];
+  // A real thread (mirrored sends / IMAP replies) wins over metadata and mocks:
+  // the row shows the latest message, and a thread waiting on a reply reads
+  // as unread.
+  if (hasThread(contact)) {
+    return {
+      subject: contact.last_subject || '(no subject)',
+      snippet: contact.last_preview || '',
+      date: contact.last_message_at ? fmtListDate(contact.last_message_at) : '',
+      unread: awaitingReply(contact),
+      category: 'primary' as CategoryTab,
+      labels: [] as string[],
+    };
+  }
   return {
     subject: (meta.subject as string) ?? mockDetails?.subject ?? `Email from ${contact.contact_name ?? 'Unknown'}`,
     snippet: (meta.snippet as string) ?? mockDetails?.snippet ?? `Message from ${contact.email ?? 'unknown'}...`,
@@ -1365,7 +1406,8 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
       const res = await fetch(`${API}/messages?contact_id=${contact.id}`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setMessages(Array.isArray(data) ? data : (data.messages ?? []));
+      // LAD-WABA-Comms answers { success, data: [...] }; older shapes are kept.
+      setMessages(Array.isArray(data) ? data : (data.data ?? data.messages ?? []));
     } catch (_err) {
       console.error('Failed to load thread messages:', _err);
       setThreadError(true);
@@ -1402,6 +1444,10 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
     setSending(true);
     setError('');
     try {
+      // Thread the reply under the latest message that has a Message-ID
+      // (preferring the lead's own mail), so their client groups it.
+      const anchor = [...messages].reverse().find(m => m.external_id && m.direction === 'inbound')
+        ?? [...messages].reverse().find(m => m.external_id);
       const res = await fetch(`${API}/send-bulk`, {
         method: 'POST',
         headers: authHeaders(),
@@ -1410,6 +1456,7 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
           recipients: [{ email: contact.email!, name: contact.contact_name ?? '', company: contact.company ?? '' }],
           subject: subject.trim(),
           body_html: body.trim(),
+          ...(anchor?.external_id ? { in_reply_to: anchor.external_id } : {}),
         }),
       });
       if (!res.ok) {
@@ -1438,6 +1485,9 @@ function EmailComposePanel({ contact, provider, onShowDetails, showDetails, onBa
         description: 'Reply sent successfully.',
       });
       onSentSuccess?.(contact.id);
+      // The backend mirrors the sent reply into the thread; swap the
+      // optimistic row for the stored one once it lands.
+      setTimeout(() => { loadThread(); }, 1500);
       setTimeout(() => {
         setSent(false);
         setSubject('');
@@ -2048,6 +2098,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   const [groups, setGroups] = useState<EmailGroup[]>([]);
   const [labels, setLabels] = useState<EmailLabels[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  const [contactsError, setContactsError] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
 
   const [activeContact, setActiveContact] = useState<EmailContact | null>(null);
@@ -2060,6 +2111,8 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [importantIds, setImportantIds] = useState<Set<string>>(new Set());
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+  // Custom SMTP inbox sync state: undefined = not loaded, null = never set up.
+  const [customImap, setCustomImap] = useState<{ status?: string; error?: string | null } | null | undefined>(undefined);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [page, setPage] = useState(0);
@@ -2128,26 +2181,27 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
       return;
     }
     setLoadingContacts(true);
+    setContactsError(false);
     try {
       const qs = new URLSearchParams({ limit: '500', ...(search ? { search } : {}) });
       const res = await fetch(`${API}/contacts?${qs}`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.success && data.data?.length) {
-        setContacts(data.data);
+      if (data.success) {
+        // An empty list is an answer, not a failure: never show sample rows
+        // to a tenant whose real inbox is simply empty.
+        setContacts(Array.isArray(data.data) ? data.data : []);
         setLoadingContacts(false);
         return;
       }
-    } catch {
-      // Silently fall back to mock data - backend endpoint may not be implemented yet
+    } catch (err) {
+      // Failure is not emptiness: a 401/502 from the contacts service used to
+      // be swallowed into an empty list, which is how a proxy that never
+      // authenticated to WABA went unnoticed. Show nothing and say so.
+      console.error('Failed to load email contacts:', err);
     }
-    const filtered = search
-      ? MOCK_CONTACTS.filter(c =>
-        (c.contact_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (c.email ?? '').toLowerCase().includes(search.toLowerCase()),
-      )
-      : MOCK_CONTACTS;
-    setContacts(filtered);
+    setContacts([]);
+    setContactsError(true);
     setLoadingContacts(false);
   }, [isHostedProvider]);
 
@@ -2206,6 +2260,28 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   }, [provider, isHostedProvider]);
 
   useEffect(() => { loadContacts(); }, [loadContacts]);
+  useEffect(() => {
+    if (provider !== 'custom') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/email-conversations/status', { headers: authHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setCustomImap(data?.custom?.imap ?? null);
+      } catch {
+        // leave undefined - no banner rather than a wrong one
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [provider]);
+  // Replies arrive via the backend's IMAP sync (every few minutes); refresh
+  // the list on a matching cadence while the tab is visible.
+  useEffect(() => {
+    if (isHostedProvider) return;
+    const id = setInterval(() => { if (document.visibilityState === 'visible') loadContacts(); }, 120000);
+    return () => clearInterval(id);
+  }, [isHostedProvider, loadContacts]);
   useEffect(() => { loadGroups(); }, [loadGroups, groupRefreshKey]);
   useEffect(() => { loadLabels(); }, [loadLabels, groupRefreshKey]);
 
@@ -2294,11 +2370,23 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   // ── Derived state ──────────────────────────────────────────────────────────
   const filteredContacts = useMemo(() => {
     let list = contacts.filter(c => !deletedIds.has(c.id));
+    // Threads waiting on a reply first, then by latest activity, then the
+    // contacts with no mail yet in their original order.
+    const byActivity = (a: EmailContact, b: EmailContact) =>
+      (Number(awaitingReply(b)) - Number(awaitingReply(a))) || (lastActivity(b) - lastActivity(a));
     if (activeFolder === 'starred') list = list.filter(c => starredIds.has(c.id));
     else if (activeFolder === 'important') list = list.filter(c => importantIds.has(c.id));
-    else if (activeFolder === 'sent') list = list.filter(c => sentIds.has(c.id));
-    else if (activeFolder === 'inbox') {
-      list = list.filter(c => getEmailDetails(c).category === 'primary');
+    else if (activeFolder === 'sent') {
+      // Sent = every contact we have mailed (campaign steps, compose, replies
+      // - all mirrored server-side), plus anything sent in this session.
+      list = list.filter(c => outboundCount(c) > 0 || sentIds.has(c.id)).sort((a, b) => lastActivity(b) - lastActivity(a));
+    } else if (activeFolder === 'inbox') {
+      // Inbox = mail the tenant RECEIVED. A contact we have only written to
+      // belongs in Sent, not here - with the thread summary in place every
+      // campaign send was showing up as an "inbox" row (16 sends, 0 replies).
+      // Contacts with no mail at all stay out too; they are reachable from
+      // Compose and Broadcast Groups.
+      list = list.filter(c => inboundCount(c) > 0 && getEmailDetails(c).category === 'primary').sort(byActivity);
     }
     return list;
   }, [contacts, deletedIds, activeFolder, starredIds, importantIds, sentIds]);
@@ -2327,8 +2415,12 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
   }, [selectedContacts, provider]);
 
   const unreadCount = useMemo(
-    () => contacts.filter(c => !deletedIds.has(c.id) && getEmailDetails(c).unread && getEmailDetails(c).category === 'primary').length,
+    () => contacts.filter(c => !deletedIds.has(c.id) && inboundCount(c) > 0 && getEmailDetails(c).unread && getEmailDetails(c).category === 'primary').length,
     [contacts, deletedIds],
+  );
+  const sentCount = useMemo(
+    () => contacts.filter(c => !deletedIds.has(c.id) && (outboundCount(c) > 0 || sentIds.has(c.id))).length,
+    [contacts, deletedIds, sentIds],
   );
 
   // ── Create group ───────────────────────────────────────────────────────────
@@ -2469,7 +2561,7 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
     { id: 'starred' as FolderType, label: 'Starred', icon: Star, count: starredIds.size },
     { id: 'snoozed' as FolderType, label: 'Snoozed', icon: Clock, count: 0 },
     { id: 'important' as FolderType, label: 'Important', icon: Tag, count: importantIds.size },
-    { id: 'sent' as FolderType, label: 'Sent', icon: Send, count: sentIds.size },
+    { id: 'sent' as FolderType, label: 'Sent', icon: Send, count: sentCount },
     { id: 'drafts' as FolderType, label: 'Drafts', icon: FileText, count: 0 },
     { id: 'spam' as FolderType, label: 'Spam', icon: AlertCircle, count: 0 },
     { id: 'trash' as FolderType, label: 'Trash', icon: Trash2, count: 0 },
@@ -3134,6 +3226,22 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                   For 'custom' provider or other folders, fall through to the existing
                   contacts-list path.
                 */}
+                {contactsError && (
+                  <div className="mx-4 mt-3 mb-1 flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-800 dark:text-red-200">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Could not load your email contacts - the list below may be incomplete. Try refresh; if it persists, sign out and back in.</span>
+                  </div>
+                )}
+                {provider === 'custom' && activeFolder === 'inbox' && customImap !== undefined && (customImap === null || customImap.status === 'error') && (
+                  <div className="mx-4 mt-3 mb-1 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>
+                      {customImap === null
+                        ? <>Inbox sync is off, so replies from leads will not appear here. Turn it on under <strong>Settings → Integrations → Custom Email</strong>.</>
+                        : <>Inbox sync cannot log in{customImap.error ? ` (${customImap.error})` : ''}. Fix it under <strong>Settings → Integrations → Custom Email</strong>.</>}
+                    </span>
+                  </div>
+                )}
                 {activeFolder === 'sent' && (provider === 'gmail' || provider === 'outlook') ? (
                   <EmailBroadcastsSentList />
                 ) : loadingContacts ? (
@@ -3150,7 +3258,13 @@ export function EmailChannelView({ provider, connectedEmail, userImage, onSignOu
                     <h3 className="font-semibold text-base text-[#202124] dark:text-[#e8eaed] mb-1">
                       {activeFolder === 'inbox' ? 'Your inbox is empty' : `No ${activeFolder} emails yet`}
                     </h3>
-                    <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] max-w-xs mb-6">Import your leads or compose a new email.</p>
+                    <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] max-w-xs mb-6">
+                      {activeFolder === 'sent'
+                        ? 'Emails sent to leads - from campaigns, compose, or replies - appear here.'
+                        : activeFolder === 'inbox' && provider === 'custom'
+                          ? 'No replies yet. Emails you have sent are under Sent; replies from leads appear here.'
+                          : 'Import your leads or compose a new email.'}
+                    </p>
                     <div className="flex gap-2">
                       <button onClick={() => openCompose()} aria-label="Compose new email"
                         className="flex items-center gap-2 px-4 h-9 rounded-full text-white text-sm" style={{ backgroundColor: providerColor }}>

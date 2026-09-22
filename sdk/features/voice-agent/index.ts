@@ -6,4 +6,5 @@ export * from "./hooks/useTriggerBatchCall";
 export * from "./hooks/useUpdateSummary";
 export * from "./hooks/useUpdateCallLeadTags";
 export * from "./api";
+export * from "./phone";
 export * from "./types";

@@ -625,6 +625,9 @@ export const MessageComposer = memo(function MessageComposer({
     headerParamCount: number,
     headerType: string,
     headerUrl: string,
+    // The number the template lives on. A template exists on one WABA, so the
+    // send has to leave from that number or Meta cannot find it.
+    accountId: string,
   ) => {
     // Broadcast mode (no conversation): hand the template name + params to the
     // parent, which fans it out to the selected groups.
@@ -676,6 +679,7 @@ export const MessageComposer = memo(function MessageComposer({
             header_param_count: headerParamCount ?? 0,
             header_type:        headerType || '',
             header_url:         headerUrl || '',
+            account_id:         accountId || '',
           }),
         });
       }

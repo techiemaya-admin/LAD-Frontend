@@ -31,7 +31,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary/50 focus-visible:ring-primary/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-slate-800/50 dark:border-blue-950/40 dark:text-white dark:hover:bg-slate-800/70 flex w-fit items-center justify-between gap-2 rounded-lg border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary/50 focus-visible:ring-primary/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-slate-800/50 dark:border-slate-700/80 dark:text-white dark:hover:bg-slate-800/70 flex w-fit items-center justify-between gap-2 rounded-lg border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -50,6 +50,7 @@ function SelectContent({
   align = "center",
   side = "bottom",
   avoidCollisions = true,
+  style,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -57,11 +58,12 @@ function SelectContent({
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(
-          "bg-popover text-popover-foreground dark:bg-[#071131] dark:text-white dark:border-blue-950/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-[1001] max-h-(--radix-select-content-available-height) origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border shadow-xl p-1",
+          "bg-popover text-popover-foreground dark:bg-[#071131] dark:text-white dark:border-blue-950/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-[100000] max-h-(--radix-select-content-available-height) origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border shadow-xl p-1",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
         )}
+        style={{ zIndex: 100000, ...style }}
         position={position}
         align={align}
         side={side}
@@ -106,18 +108,18 @@ function SelectItem({
       className={cn(
         "relative flex w-full cursor-pointer items-center gap-2 rounded-md py-2 pr-8 pl-3 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 transition-colors duration-150 group",
 
-        // Light Mode
-        "data-[state=checked]:font-semibold focus:bg-primary/95 focus:text-primary-foreground data-[state=checked]:bg-primary/95 data-[state=checked]:text-primary-foreground data-[state=checked]:focus:bg-primary/95 data-[state=checked]:focus:text-primary-foreground",
+        // Light Mode — Solid #0B1957 for selected, hovered, and highlighted states
+        "data-[state=checked]:font-semibold focus:bg-[#0B1957] focus:text-white data-[highlighted]:bg-[#0B1957] data-[highlighted]:text-white data-[state=checked]:bg-[#0B1957] data-[state=checked]:text-white data-[state=checked]:focus:bg-[#0B1957] data-[state=checked]:focus:text-white",
 
-        // Dark Mode - Standard Light Blue (#2563eb) for active/hover/checked states
-        "dark:text-slate-200 dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white dark:data-[state=checked]:bg-blue-600/20 dark:data-[state=checked]:text-white",
+        // Dark Mode — Light Blue (#2B7CFF) for active, hover, and checked states
+        "dark:text-slate-200 dark:focus:bg-[#2B7CFF] dark:focus:text-white dark:data-[highlighted]:bg-[#2B7CFF] dark:data-[highlighted]:text-white dark:data-[state=checked]:focus:bg-[#2B7CFF] dark:data-[state=checked]:focus:text-white dark:data-[state=checked]:bg-[#2B7CFF] dark:data-[state=checked]:text-white",
         className
       )}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4 text-primary dark:text-white group-focus:text-primary-foreground dark:group-focus:text-white group-data-[state=checked]:text-primary-foreground dark:group-data-[state=checked]:text-white" />
+          <CheckIcon className="size-4 text-white group-focus:text-white group-data-[state=checked]:text-white dark:group-data-[state=checked]:text-white" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
