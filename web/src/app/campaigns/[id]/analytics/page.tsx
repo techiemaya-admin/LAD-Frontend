@@ -399,6 +399,22 @@ export default function CampaignAnalyticsPage() {
     hasVoice    && { name: 'Voice',     sent: analyticsAny?.platform_metrics?.voice?.sent     ?? 0, connected: analyticsAny?.platform_metrics?.voice?.connected     ?? 0, replied: analyticsAny?.platform_metrics?.voice?.replied     ?? 0 },
   ].filter(Boolean) as Array<{ name: string; sent: number; connected: number; replied: number }>;
 
+  // ── What has actually happened? ────────────────────────────────────────────
+  // Every section below is gated on real data. A card of zeros or an empty
+  // table says nothing; an auto-post campaign (no leads, no messages) used to
+  // show four zero tiles, an empty feed and five empty charts.
+  const ov = analytics?.overview ?? ({} as any);
+  const stepsHaveData = chartSteps.some(st => st.sent || st.connected || st.replied || st.errors);
+  const hasLeadActivity = Boolean(
+    ov.total_leads || ov.sent || ov.delivered || ov.opened || ov.clicked || ov.connected || ov.replied
+    || totalFollowupsSent || stepsHaveData
+  );
+  const funnelHasData = (chartFunnel[0]?.count ?? 0) > 0;
+  const leadStatusHasData = chartLeadStatus.some(st => st.value > 0);
+  const visualHasData = funnelHasData || stepsHaveData || leadStatusHasData || chartChannels.length > 1;
+  const outreachMetricsHaveData = Boolean(ov.sent || ov.delivered || ov.opened || ov.clicked || ov.connected || ov.replied);
+  const platformHasData = platformAnalytics.some((pa: any) => (pa?.actions ?? 0) > 0);
+
   const campaignType = hasLinkedIn ? 'linkedin' : hasEmail ? 'email' : hasWhatsApp ? 'whatsapp' : hasVoice ? 'voice' : 'mixed';
 
   // Theme colors
@@ -459,7 +475,8 @@ export default function CampaignAnalyticsPage() {
         </div>
       </div>
 
-      {/* Quick Stats Row */}
+      {/* Quick Stats Row — only once the campaign has leads or sends */}
+      {hasLeadActivity && (
       <div className="flex gap-4 mb-6 flex-wrap items-stretch">
         {/* Total Leads */}
         <div
@@ -579,10 +596,25 @@ export default function CampaignAnalyticsPage() {
         </div>
       </div>
 
-      {/* LinkedIn post performance — renders only for campaigns that auto-post */}
-      <PostPerformanceCard campaignId={campaignId} />
+      )}
+
+      {/* LinkedIn post performance — renders only for campaigns that auto-post.
+          When the campaign has no lead activity either, the card supplies the
+          page's empty state so the reader is never left with a blank page. */}
+      <PostPerformanceCard
+        campaignId={campaignId}
+        emptyFallback={!hasLeadActivity ? (
+          <div className="mb-8 bg-white dark:bg-[#071131] rounded-2xl border border-dashed border-slate-300 dark:border-blue-950/60 p-10 text-center">
+            <p className="text-lg font-bold text-[#1E293B] dark:text-white">Nothing to report yet</p>
+            <p className="text-sm text-slate-500 dark:text-slate-300 mt-1 max-w-md mx-auto">
+              This campaign has not enrolled any leads, sent any messages or published any posts. Metrics appear here as soon as it does.
+            </p>
+          </div>
+        ) : null}
+      />
 
       {/* Live Activity Feed */}
+      {hasLeadActivity && (
       <div className="mb-8">
         <LiveActivityTable
           campaignId={campaignId}
@@ -591,8 +623,10 @@ export default function CampaignAnalyticsPage() {
           campaignSteps={analytics?.step_analytics}
         />
       </div>
+      )}
 
       {/* ── Bulk Follow-up Panel ────────────────────────────────────────── */}
+      {hasLeadActivity && (
       <div className="mb-8">
         {/* Collapsed header - always visible */}
         <div className="flex items-stretch gap-2">
@@ -804,7 +838,10 @@ export default function CampaignAnalyticsPage() {
         )}
       </div>
 
-      {/* Analytics Charts Section */}
+      )}
+
+      {/* Analytics Charts Section — hidden until at least one chart has data */}
+      {visualHasData && (
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
           <Avatar className="w-11 h-11 bg-white dark:bg-[#071131] border border-slate-200 dark:border-blue-950/40 shadow-sm">
@@ -832,11 +869,13 @@ export default function CampaignAnalyticsPage() {
           }} />
         </div>
       </div>
+      )}
 
-      {/* Performance Metrics - 3 Column Layout */}
+      {/* Performance Metrics - 3 Column Layout (each card only when it has numbers) */}
+      {(platformHasData || outreachMetricsHaveData) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Channel Performance */}
-        {platformAnalytics.length > 0 && (
+        {platformHasData && (
           <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
@@ -923,6 +962,7 @@ export default function CampaignAnalyticsPage() {
         )}
 
 
+        {outreachMetricsHaveData && (
         <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -957,7 +997,10 @@ export default function CampaignAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
+        {/* Performance Rates — the same numbers as Outreach Metrics, as ratios; nothing to show when those are zero */}
+        {outreachMetricsHaveData && (
         <Card className="bg-white dark:bg-[#071131] border border-[#E2E8F0] dark:border-blue-950/40 shadow-sm rounded-xl h-full transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -991,7 +1034,9 @@ export default function CampaignAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* No Steps Message - Commented out for testing */}
       {/* {(!analytics.step_analytics || analytics.step_analytics.length === 0) && platformAnalytics.length === 0 && (

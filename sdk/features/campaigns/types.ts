@@ -173,6 +173,8 @@ export interface CampaignPostStatsPost {
 export interface CampaignPostStats {
   has_schedule: boolean;
   linkedin_connected: boolean;
+  /** The posting profile's audience (null when LinkedIn did not answer). */
+  profile: { followers: number | null; connections: number | null } | null;
   schedule: {
     status: string | null;
     frequency: string | null;

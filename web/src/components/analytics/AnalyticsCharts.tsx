@@ -86,16 +86,26 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
   } = data;
 
   const totalLeads   = funnel[0]?.count || 1;
-  const hasSteps     = steps.length > 0;
+  // A chart with nothing in it is hidden, not drawn empty: a funnel of one
+  // 100% bar, a "no step data" placeholder and a blank donut told the reader
+  // nothing and made a quiet campaign look broken.
+  const hasFunnel    = (funnel[0]?.count ?? 0) > 0;
+  const hasSteps     = steps.some(st => st.sent || st.connected || st.replied || st.errors);
+  const hasStatus    = leadStatus.some(st => st.value > 0);
   const hasMultiChan = channelBreakdown.length > 1;
+  const row1Count    = [hasFunnel, hasSteps, hasStatus].filter(Boolean).length;
+  if (!row1Count && !hasMultiChan) return null;
+  const row1Cols     = row1Count === 1 ? 'md:grid-cols-1' : row1Count === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3';
 
   return (
     <div className="space-y-6">
 
       {/* ── Row 1: Funnel | Step Performance | Lead Status ────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {row1Count > 0 && (
+      <div className={`grid grid-cols-1 ${row1Cols} gap-6`}>
 
         {/* Conversion Funnel */}
+        {hasFunnel && (
         <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Conversion Funnel</CardTitle>
@@ -121,8 +131,10 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
             })}
           </CardContent>
         </Card>
+        )}
 
         {/* Step Performance */}
+        {hasSteps && (
         <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Step Performance</CardTitle>
@@ -160,8 +172,10 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Lead Status Donut */}
+        {hasStatus && (
         <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-blue-950/40 bg-white dark:bg-[#071131]">
           <CardHeader className="pb-1">
             <CardTitle className="text-base font-bold text-slate-800 dark:text-white">Lead Status</CardTitle>
@@ -200,7 +214,9 @@ export const AnalyticsCharts: React.FC<{ data: AnalyticsChartsData }> = ({ data 
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* ── Row 3: Channel Comparison (only when multi-channel) ───────────── */}
       {hasMultiChan && (
