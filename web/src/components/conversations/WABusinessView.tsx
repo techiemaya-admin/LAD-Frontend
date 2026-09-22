@@ -937,7 +937,7 @@ function WABAContextPanel({ conversation, onClose, onFavoriteChat }: WABAContext
           <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
             <Bell className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
             <span className="text-[16px] text-foreground dark:text-white flex-1">Mute notifications</span>
-            <Switch />
+            <Switch className="data-[state=checked]:bg-emerald-400 dark:data-[state=checked]:bg-emerald-600" />
           </div>
           <div className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-[#202c33] transition-colors">
             <Clock className="w-5 h-5 text-muted-foreground dark:text-white mr-6" />
@@ -1977,7 +1977,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                 <DropdownMenuTrigger asChild>
                   <MoreVertical className="w-5 h-5 cursor-pointer hover:text-foreground transition-colors" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] py-2 [&_[role=menuitem]]:hover:bg-zinc-100 dark:[&_[role=menuitem]]:hover:bg-zinc-800 [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:hover:text-foreground dark:[&_[role=menuitem]]:hover:text-[#d1d7db] [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db] [&_[role=menuitem][data-state=open]]:bg-zinc-100 dark:[&_[role=menuitem][data-state=open]]:bg-zinc-800 [&_[role=menuitem][data-state=open]]:text-foreground dark:[&_[role=menuitem][data-state=open]]:text-[#d1d7db]">
+                <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] py-2 [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db]">
                   <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={onTogglePanel}>
                     <Info className="w-4 h-4" /> <span>Contact info</span>
                   </DropdownMenuItem>
@@ -1997,7 +1997,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                       <div className="flex items-center gap-4"><Users className="w-4 h-4" /> <span>Add to Group</span></div>
                       <ChevronRight className="w-4 h-4" />
                     </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] [&_[role=menuitem]]:hover:bg-zinc-100 dark:[&_[role=menuitem]]:hover:bg-zinc-800 [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:hover:text-foreground dark:[&_[role=menuitem]]:hover:text-[#d1d7db] [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db]">
+                    <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto bg-white dark:bg-[#161717] border border-border dark:border-0 shadow-lg text-foreground dark:text-[#d1d7db] [&_[role=menuitem]]:focus:bg-zinc-100 dark:[&_[role=menuitem]]:focus:bg-zinc-800 [&_[role=menuitem]]:focus:text-foreground dark:[&_[role=menuitem]]:focus:text-[#d1d7db]">
                       {addGroupsLoading ? (
                         <DropdownMenuItem disabled className="py-2.5 px-4 text-muted-foreground">Loading…</DropdownMenuItem>
                       ) : addGroups.length === 0 ? (
@@ -2031,7 +2031,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                   <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onClearChat?.(conversation?.id)}>
                     <MinusCircle className="w-4 h-4" /> <span>Clear chat</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4" onClick={() => onDeleteChat?.(conversation?.id)}>
+                  <DropdownMenuItem className="cursor-pointer py-2.5 px-4 flex items-center gap-4 !text-red-600 dark:!text-red-400 focus:!bg-red-50 dark:focus:!bg-red-950/50 focus:!text-red-600 dark:focus:!text-red-400" onClick={() => onDeleteChat?.(conversation?.id)}>
                     <Trash2 className="w-4 h-4" /> <span>Delete chat</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -2219,7 +2219,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
               onChange={e => setText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={pendingFiles.length > 0 ? 'Add a caption (optional)…' : 'Type a message'}
-              className="flex-1 border-0 dark:bg-transparent text-foreground dark:text-[#e9edef] py-2 px-1 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] my-0.5 leading-normal shadow-none"
+              className="flex-1 border-0 dark:bg-transparent text-foreground dark:text-[#e9edef] py-2 px-1 text-[15px] outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#8696a0] dark:placeholder:text-[#a2a2a2] resize-none min-h-[24px] max-h-[120px] my-0.5 leading-normal shadow-none"
               rows={1}
             />
           </div>
@@ -2234,14 +2234,14 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
                 {agentType === 'human' ? <User className="h-5 w-5" /> : <img src={isDark ? '/logo-white.svg' : '/logo.svg'} alt="Mr LAD" className="h-7 w-7 object-contain" />}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover z-50">
-              <DropdownMenuItem onClick={() => handleAgentTypeChange('human')} className={cn('cursor-pointer focus:bg-muted focus:text-foreground dark:focus:text-white', agentType === 'human' && 'bg-muted')}>
+            <DropdownMenuContent align="end" className="bg-popover dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 z-50">
+              <DropdownMenuItem onClick={() => handleAgentTypeChange('human')} className={cn('cursor-pointer focus:bg-muted focus:text-foreground dark:text-zinc-200 dark:focus:bg-zinc-800 dark:focus:text-zinc-100', agentType === 'human' && 'bg-muted dark:bg-emerald-800 dark:focus:bg-emerald-800')}>
                 <User className="h-4 w-4 mr-2" /> Human Agent
-                {agentType === 'human' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+                {agentType === 'human' && <span className="ml-auto text-xs text-muted-foreground dark:text-zinc-400">Active</span>}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAgentTypeChange('ai')} className={cn('cursor-pointer focus:bg-muted focus:text-foreground dark:focus:text-white', agentType === 'ai' && 'bg-muted')}>
+              <DropdownMenuItem onClick={() => handleAgentTypeChange('ai')} className={cn('cursor-pointer focus:bg-muted focus:text-foreground dark:text-zinc-200 dark:focus:bg-zinc-800 dark:focus:text-zinc-100', agentType === 'ai' && 'bg-muted dark:bg-emerald-800 dark:focus:bg-emerald-800')}>
                 <MrLadAvatar size={16} className="mr-2" /> Mr LAD
-                {agentType === 'ai' && <span className="ml-auto text-xs text-muted-foreground">Active</span>}
+                {agentType === 'ai' && <span className="ml-auto text-xs text-muted-foreground dark:text-zinc-400">Active</span>}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -3521,159 +3521,153 @@ function WABASidebar({
       )}
 
       {/* ── Chat List ─────────────────────────────────────────────────────── */}
-      {/* ── Select mode bar ── */}
+      {/* ── Select mode unified action bar ── */}
       {isSelectMode && (
-        <div className="px-3 py-2 border-b border-border dark:border-[#222d34]/80 bg-[#0a332c]/10 dark:bg-[#1a342a]/20 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-medium text-[#00a884]">
-            <CheckSquare className="h-4 w-4" />
-            <span>{selectedChatIds.size} selected</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const allIds = filteredConversations.map(c => c.id);
-                const allSelected = allIds.every(id => selectedChatIds.has(id));
-                if (allSelected) {
-                  setSelectedChatIds(new Set());
-                } else {
-                  setSelectedChatIds(new Set(allIds));
-                }
-              }}
-              className="text-[10px] text-[#00a884] hover:text-[#008f6f] font-medium transition-colors"
-            >
-              {filteredConversations.every(c => selectedChatIds.has(c.id)) ? 'Deselect all' : 'Select all'}
-            </button>
-            <button
-              onClick={exitSelectMode}
-              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
-            >
-              <X className="h-3 w-3" /> Cancel
-            </button>
-          </div>
-        </div>
-      )}
+        <TooltipProvider delayDuration={100}>
+          <div className="px-3 py-2 border-b border-border dark:border-[#222d34]/80 bg-white dark:bg-[#161717] flex items-center justify-between gap-2 shrink-0 animate-in fade-in duration-150">
+            {/* Left: Cancel + Count + Select/Deselect All */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={exitSelectMode}
+                    className="h-8 w-8 flex items-center justify-center rounded-full text-zinc-500 dark:text-[#aebac1] hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors shrink-0"
+                    aria-label="Cancel selection"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
+                  Cancel
+                </TooltipContent>
+              </Tooltip>
 
-      {/* ── Bulk action bar ── */}
-      {isSelectMode && (
-        <TooltipProvider>
-          <div className="p-2 border-b border-border dark:border-[#222d34]/80 bg-[#0a332c]/5 dark:bg-[#1a342a]/10 flex items-center gap-2">
-            <button
-              onClick={() =>
-                selectedChatIds.size === filteredConversations.length
-                  ? setSelectedChatIds(new Set())
-                  : setSelectedChatIds(new Set(filteredConversations.map((c) => c.id)))
-              }
-              className="flex items-center gap-1.5 px-1"
-            >
-              {selectedChatIds.size === filteredConversations.length && selectedChatIds.size > 0 ? (
-                <CheckSquare className="h-4 w-4 text-[#00a884]" />
-              ) : selectedChatIds.size > 0 ? (
-                <MinusCircle className="h-4 w-4 text-[#00a884]" />
-              ) : (
-                <CheckSquare className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
+              <span className="text-sm font-semibold text-zinc-800 dark:text-[#e9edef] whitespace-nowrap">
+                {selectedChatIds.size} selected
+              </span>
 
-            <span className="text-xs text-muted-foreground dark:text-[#a2a2a2] flex-1">
-              {selectedChatIds.size} selected
-            </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const allIds = filteredConversations.map((c) => c.id);
+                  const allSelected = allIds.length > 0 && allIds.every((id) => selectedChatIds.has(id));
+                  if (allSelected) {
+                    setSelectedChatIds(new Set());
+                  } else {
+                    setSelectedChatIds(new Set(allIds));
+                  }
+                }}
+                className="text-xs font-semibold text-[#00a884] hover:text-[#008f6f] dark:text-[#00a884] dark:hover:text-[#25d366] transition-colors px-2 py-0.5 rounded hover:bg-[#00a884]/10 whitespace-nowrap ml-1"
+              >
+                {filteredConversations.length > 0 && filteredConversations.every((c) => selectedChatIds.has(c.id))
+                  ? 'Deselect all'
+                  : 'Select all'}
+              </button>
+            </div>
 
-            <AddToGroupDropdown
-              selectedIds={selectedChatIds}
-              onDone={exitSelectMode}
-              channel={backendChannel}
-              variant="whatsapp"
-            />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+              <AddToGroupDropdown
+                selectedIds={selectedChatIds}
+                onDone={exitSelectMode}
+                channel={backendChannel}
+                variant="whatsapp"
+                dropdownPosition="bottom"
+              />
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Send Template"
-                  onClick={() => {
-                    setGroupTemplateSendTarget(null);
-                    setIsTemplatePickerOpen(true);
-                  }}
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
-                Send Template
-              </TooltipContent>
-            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Send Template"
+                    disabled={selectedChatIds.size === 0}
+                    onClick={() => {
+                      setGroupTemplateSendTarget(null);
+                      setIsTemplatePickerOpen(true);
+                    }}
+                    className="h-8 w-8 flex items-center justify-center rounded-full text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
+                  Send Template
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Resolve"
-                  onClick={async () => {
-                    const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
-                    try {
-                      const res = await fetchWithTenant(
-                        `/api/whatsapp-conversations/conversations/bulk${channelParam}`,
-                        {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'resolve', conversation_ids: Array.from(selectedChatIds) }),
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Resolve"
+                    disabled={selectedChatIds.size === 0}
+                    onClick={async () => {
+                      const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
+                      try {
+                        const res = await fetchWithTenant(
+                          `/api/whatsapp-conversations/conversations/bulk${channelParam}`,
+                          {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'resolve', conversation_ids: Array.from(selectedChatIds) }),
+                          }
+                        );
+                        if (!res.ok) {
+                          throw new Error(await getApiErrorMessage(res, 'Failed to resolve selected conversations'));
                         }
-                      );
-                      if (!res.ok) {
-                        throw new Error(await getApiErrorMessage(res, 'Failed to resolve selected conversations'));
+                        onRefresh?.();
+                      } catch (err: unknown) {
+                        setSidebarError({ message: getErrorMessage(err, 'Bulk resolve failed') });
                       }
-                      onRefresh?.();
-                    } catch (err: unknown) {
-                      setSidebarError({ message: getErrorMessage(err, 'Bulk resolve failed') });
-                    }
-                    exitSelectMode();
-                  }}
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
-                Resolve
-              </TooltipContent>
-            </Tooltip>
+                      exitSelectMode();
+                    }}
+                    className="h-8 w-8 flex items-center justify-center rounded-full text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
+                  Resolve
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Delete"
-                  onClick={async () => {
-                    const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
-                    try {
-                      const res = await fetchWithTenant(
-                        `/api/whatsapp-conversations/conversations/bulk${channelParam}`,
-                        {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'delete', conversation_ids: Array.from(selectedChatIds) }),
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Delete"
+                    disabled={selectedChatIds.size === 0}
+                    onClick={async () => {
+                      const channelParam = backendChannel ? `?channel=${backendChannel}` : '?channel=waba';
+                      try {
+                        const res = await fetchWithTenant(
+                          `/api/whatsapp-conversations/conversations/bulk${channelParam}`,
+                          {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'delete', conversation_ids: Array.from(selectedChatIds) }),
+                          }
+                        );
+                        if (!res.ok) {
+                          throw new Error(await getApiErrorMessage(res, 'Failed to delete selected conversations'));
                         }
-                      );
-                      if (!res.ok) {
-                        throw new Error(await getApiErrorMessage(res, 'Failed to delete selected conversations'));
+                        onRefresh?.();
+                      } catch (err: unknown) {
+                        setSidebarError({ message: getErrorMessage(err, 'Bulk delete failed') });
                       }
-                      onRefresh?.();
-                    } catch (err: unknown) {
-                      setSidebarError({ message: getErrorMessage(err, 'Bulk delete failed') });
-                    }
-                    exitSelectMode();
-                  }}
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
-                Delete
-              </TooltipContent>
-            </Tooltip>
+                      exitSelectMode();
+                    }}
+                    className="h-8 w-8 flex items-center justify-center rounded-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px] px-2 py-1 font-bold uppercase tracking-wider bg-zinc-800 text-white border-0">
+                  Delete
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </TooltipProvider>
       )}
@@ -3731,20 +3725,20 @@ function WABASidebar({
                 key={conv.id}
                 onClick={() => isSelectMode ? toggleSelectChat(conv.id) : onSelectConversation(conv.id)}
                 className={cn(
-                  'flex items-center gap-4 py-2 px-4 mx-2 cursor-pointer transition-colors rounded-xl',
+                  'flex items-center gap-4 py-2 px-4 cursor-pointer transition-colors',
                   isSelectMode && selectedChatIds.has(conv.id)
-                    ? 'bg-emerald-50 dark:bg-emerald-950/20'
+                    ? 'bg-[#00a884]/10 dark:bg-[#00a884]/15'
                     : isSelected ? 'bg-[#d9fdd3] dark:bg-[#2e2f2f]' : 'hover:bg-zinc-100 dark:hover:bg-[#2e2f2f]/50'
                 )}
               >
                 {isSelectMode && (
                   <div className={cn(
                     'h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                    selectedChatIds.has(conv.id) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+                    selectedChatIds.has(conv.id) ? 'bg-[#00a884] border-[#00a884]' : 'border-zinc-400 dark:border-zinc-600'
                   )}>
                     {selectedChatIds.has(conv.id) && (
                       <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </div>
