@@ -16,7 +16,9 @@ import {
   useBatchView,
   useBatchCallLogsByBatchId,
   useEndCall,
+  useEndCalls,
   useRetryFailedCalls,
+  useFollowUpCall,
   useCallLogsStats,
   useBatchStats,
   useCallLogsLeadStatus,
@@ -31,10 +33,18 @@ import { Pagination } from "@/components/Pagination";
 import { CallLogModal } from "@/components/call-log-modal";
 import { CallLogsTableSkeleton } from "@/components/CallLogsTableSkeleton";
 import CallLogsStatsCards from "@/components/call-logs/CallLogsStatsCards";
-import { ScrollText } from "lucide-react";
+import { ScrollText, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/app-toaster";
 import { categorizeLead } from "@/utils/leadCategorization";
 
 type TimeFilter = "all" | "current" | "previous" | "batch";
+
+/** The JSON body of a failed API call, when there is one. */
+type ApiErrorBody = { error?: string; message?: string; skipped?: Array<{ call_id: string; reason: string }> };
+function errorBody(error: unknown): ApiErrorBody | null {
+  const data = (error as { response?: { data?: unknown } } | null)?.response?.data;
+  return data && typeof data === "object" ? (data as ApiErrorBody) : null;
+}
 
 export default function CallLogsPage() {
   const router = useRouter();
@@ -77,7 +87,7 @@ export default function CallLogsPage() {
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<
-    "ended" | "failed" | "ongoing" | "queue" | null
+    "ended" | "failed" | "declined" | "ongoing" | "queue" | null
   >(null);
 
   // Memoize date range to prevent unnecessary re-renders and API calls
@@ -155,7 +165,16 @@ export default function CallLogsPage() {
     timeFilter === "batch" && !!selectedBatchId && !batchJobId,
   );
   const endCallMutation = useEndCall();
+  const endCallsMutation = useEndCalls();
   const retryCallsMutation = useRetryFailedCalls();
+  const followUpMutation = useFollowUpCall();
+  const { push: toast } = useToast();
+  // Which completed row has a follow-up in flight (one at a time is plenty).
+  const [followingUpId, setFollowingUpId] = useState<string | null>(null);
+  const isRetrying = retryCallsMutation.isPending;
+  const isEndingSelected = endCallsMutation.isPending;
+  // Which row's single End Call is in flight.
+  const [endingId, setEndingId] = useState<string | null>(null);
 
   // Get tenant_id from current user
   useEffect(() => {
@@ -224,7 +243,7 @@ export default function CallLogsPage() {
 
     const status = (batch.status || "").toLowerCase();
     const isOngoing = ["running", "pending", "queued", "queue", "in_queue", "ongoing", "calling", "in_progress", "started"].includes(status);
-    const isFinished = ["completed", "failed", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
+    const isFinished = ["completed", "failed", "declined", "ended", "done", "finished", "success", "error", "cancelled", "stopped"].includes(status);
 
     // If the batch we are tracking has finished, and we are in the 'Current Batch' view,
     // move to 'Batch View' so the user can see the final results.
@@ -294,6 +313,7 @@ export default function CallLogsPage() {
         batch_total_calls: batch.total_calls || results.length,
         batch_completed_calls: batch.completed_calls || logs.filter(l => l.status === "completed" || l.status === "ended").length,
         batch_failed_calls: batch.failed_calls || logs.filter(l => l.status === "failed").length,
+        batch_declined_calls: batch.declined_calls ?? logs.filter(l => l.status === "declined").length,
       } as any;
 
       logger.debug("[Call Logs] Setting batch items", { count: logs.length });
@@ -408,6 +428,7 @@ export default function CallLogsPage() {
         batch_total_calls: b.total_calls || 0,
         batch_completed_calls: b.completed_calls || 0,
         batch_failed_calls: b.failed_calls || 0,
+        batch_declined_calls: b.declined_calls || 0,
         attachments: b.attachments,
         attachment_file_name: b.attachment_file_name,
         attachment_signed_url: b.attachment_signed_url,
@@ -878,9 +899,9 @@ export default function CallLogsPage() {
     const call = items.find((i) => i.id === id);
     const status = call?.status.toLowerCase() || "";
 
-    // Don't open modal for calling, queue, ongoing, or failed calls
+    // Don't open modal for calling, queue, ongoing, failed or declined calls (nothing to show)
     if (
-      ["calling", "queue", "queued", "ongoing", "in_queue", "failed"].includes(
+      ["calling", "queue", "queued", "ongoing", "in_queue", "failed", "declined"].includes(
         status,
       )
     ) {
@@ -890,46 +911,143 @@ export default function CallLogsPage() {
     setOpenId(id);
   };
 
-  // End selected calls
+  // End selected calls. Only the live ones are sent — a finished call has
+  // nothing to end and the backend would just echo its status back.
   async function endSelectedCalls() {
-    alert("Ending " + selected.size + " calls");
-    // TODO: Implement bulk end API
-    // await callLogsQuery.refetch();
-    setSelected(new Set());
-    setSelectAllMode('none');
+    if (endCallsMutation.isPending) return;
+    const liveIds = activeCallIds;
+    if (liveIds.length === 0) {
+      toast({
+        variant: "warning",
+        title: "Nothing to end",
+        description: "None of the selected calls is ringing or in progress.",
+      });
+      return;
+    }
+    // Ending a live call hangs up on the person; make sure that is meant.
+    const ok = window.confirm(
+      `End ${liveIds.length} live call${liveIds.length === 1 ? "" : "s"}? The agent will hang up immediately.`,
+    );
+    if (!ok) return;
+    try {
+      const result = await endCallsMutation.mutateAsync({ callIds: liveIds });
+      const ended = result.results.filter((r) => r.status === "cancelled").length;
+      const finished = result.results.length - ended;
+      toast({
+        variant: finished ? "warning" : "success",
+        title: `Ended ${ended} call${ended === 1 ? "" : "s"}`,
+        description: finished ? `${finished} had already finished.` : undefined,
+      });
+      setSelected(new Set());
+      setSelectAllMode('none');
+    } catch (error) {
+      logger.error("Error ending calls", error);
+      const body = errorBody(error);
+      toast({
+        variant: "error",
+        title: "Could not end calls",
+        description: body?.error ?? body?.message ?? "Please try again.",
+        duration: 6000,
+      });
+    }
   }
 
   // End a single call using SDK
   async function endSingleCall(callId: string) {
+    if (endingId) return;
+    setEndingId(callId);
     try {
-      await endCallMutation.mutateAsync({ callId });
+      const result = await endCallMutation.mutateAsync({ callId });
+      const item = result.results[0];
+      if (item && item.status !== "cancelled") {
+        toast({ variant: "warning", title: "Call already finished", description: item.message });
+      } else {
+        toast({ variant: "success", title: "Call ended" });
+      }
     } catch (error) {
       logger.error("Error ending call", error);
-      alert("Failed to end call. Please try again.");
+      const body = errorBody(error);
+      toast({
+        variant: "error",
+        title: "Could not end call",
+        description: body?.error ?? body?.message ?? "Please try again.",
+        duration: 6000,
+      });
+    } finally {
+      setEndingId(null);
     }
   }
 
-  // Retry failed calls using SDK
+  // Retry failed calls using SDK. The backend answers per call; a selection
+  // where nothing could be retried comes back as 422 with the reasons.
   async function retrySelectedCalls() {
+    // A second click while the first request is out would dial everyone twice.
+    if (retryCallsMutation.isPending) return;
     const failedCallIds = Array.from(selected);
     try {
-      await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
-      alert(`Retrying ${failedCallIds.length} failed calls`);
+      const result = await retryCallsMutation.mutateAsync({ call_ids: failedCallIds });
+      const n = result.retried.length;
+      toast({
+        variant: result.skipped.length ? "warning" : "success",
+        title: `Retrying ${n} failed call${n === 1 ? "" : "s"}`,
+        description: result.skipped.length
+          ? `${result.skipped.length} skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
+          : "The new calls will appear in the list as they ring.",
+      });
       setSelected(new Set());
       setSelectAllMode('none');
     } catch (error) {
       logger.error("Error retrying calls", error);
-      alert("Failed to retry calls. Please try again.");
+      const body = errorBody(error);
+      const reasons = Array.isArray(body?.skipped) && body.skipped.length
+        ? body.skipped.map((s) => s.reason).join("; ")
+        : body?.error || body?.message || null;
+      toast({
+        variant: "error",
+        title: "No calls retried",
+        description: reasons ?? "Please try again.",
+        duration: 6000,
+      });
+    }
+  }
+
+  // Follow-up call on a completed call: same number, same agent, last call as context
+  async function followUpCall(callId: string) {
+    if (followingUpId) return;
+    setFollowingUpId(callId);
+    try {
+      const result = await followUpMutation.mutateAsync({ callId });
+      toast({
+        variant: "success",
+        title: "Follow-up call started",
+        description: `Dialling ${result.data.to_number ?? "the same number"} — it will appear in the list as it rings.`,
+      });
+    } catch (error) {
+      logger.error("Error starting follow-up call", error);
+      const body = errorBody(error);
+      toast({
+        variant: "error",
+        title: "Could not start follow-up",
+        description: body?.error ?? "Please try again.",
+        duration: 6000,
+      });
+    } finally {
+      setFollowingUpId(null);
     }
   }
 
 
-  // Check if any selected calls have "failed" status and count them
+  // Selected calls that never connected — failed on our side or declined by the callee — are retryable
   const failedCallIds = Array.from(selected).filter((id) => {
     const call = items.find((i) => i.id === id);
-    return call && call.status.toLowerCase() === "failed";
+    return call && ["failed", "declined"].includes(call.status.toLowerCase());
   });
   const hasFailedCalls = failedCallIds.length > 0;
+  // Selected calls that are still live — the only ones End Selected can act on.
+  const activeCallIds = Array.from(selected).filter((id) => {
+    const call = items.find((i) => i.id === id);
+    return call && ["ongoing", "ringing", "in_progress", "calling", "pending", "queued", "queue", "in_queue"].includes(call.status.toLowerCase());
+  });
 
   // Show loading state in table body during fetch
   const isTableLoading =
@@ -988,16 +1106,23 @@ export default function CallLogsPage() {
             {hasFailedCalls && (
               <button
                 onClick={retrySelectedCalls}
-                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
+                disabled={isRetrying}
+                aria-busy={isRetrying}
+                className="px-5 py-2.5 bg-[#FEF3C6] hover:bg-[#FDE68A] text-amber-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100 inline-flex items-center gap-2"
               >
-                Retry Failed ({failedCallIds.length})
+                {isRetrying && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isRetrying ? "Retrying…" : `Retry Failed (${failedCallIds.length})`}
               </button>
             )}
             <button
               onClick={endSelectedCalls}
-              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105"
+              disabled={isEndingSelected || activeCallIds.length === 0}
+              aria-busy={isEndingSelected}
+              title={activeCallIds.length === 0 ? "None of the selected calls is live" : `End ${activeCallIds.length} live call(s)`}
+              className="px-5 py-2.5 bg-[#FFE2E2] hover:bg-[#FCDADA] text-red-700 rounded-xl transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 inline-flex items-center gap-2"
             >
-              End Selected ({selectAllMode === 'all' ? totalRecords : selected.size})
+              {isEndingSelected && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isEndingSelected ? "Ending…" : `End Selected (${activeCallIds.length})`}
             </button>
           </div>
         )}
@@ -1039,6 +1164,12 @@ export default function CallLogsPage() {
         selectAllMode={selectAllMode}
         onRowClick={handleRowClick}
         onEndCall={endSingleCall}
+        onFollowUpCall={followUpCall}
+        followingUpId={followingUpId}
+        isRetrying={isRetrying}
+        endingId={endingId}
+        isEndingSelected={isEndingSelected}
+        activeCount={activeCallIds.length}
         leadTagFilter={leadTagFilter}
         batchGroups={batchGroupsProp}
         expandedBatches={expandedBatches}

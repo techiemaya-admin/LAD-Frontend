@@ -44,3 +44,15 @@ export { useMigrationStatus } from './hooks/useMigrationStatus';
 export { useStrategyReview } from './hooks/useStrategyReview';
 export { useCommunitySignups } from './hooks/useCommunitySignups';
 export { useLlmRouting } from './hooks/useLlmRouting';
+
+// Vertical prompt viewer (read-only)
+export {
+  getVerticalPromptEditions,
+  getVerticalTemplate,
+  getRenderedVerticalPrompt,
+} from './api';
+export type {
+  VerticalPromptEdition,
+  VerticalTemplate,
+  RenderedVerticalPrompt,
+} from './types';

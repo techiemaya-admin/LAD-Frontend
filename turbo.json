@@ -19,7 +19,8 @@
       "cache": true
     },
     "dev": {
-      "cache": false
+      "cache": false,
+      "persistent": true
     },
     "lint": {
       "outputs": [],

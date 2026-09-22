@@ -25,6 +25,11 @@ export function TemplateIcon({ tplKey, color, size = 16 }: { tplKey: string; col
   if (tplKey === 'signal_hunter') return (
     <svg {...p}><path d="M4.9 19.1A10 10 0 0 1 4.9 4.9" /><path d="M7.8 16.2a6 6 0 0 1 0-8.4" /><circle cx="12" cy="12" r="2" fill={color} stroke="none" /><path d="M16.2 7.8a6 6 0 0 1 0 8.4" /><path d="M19.1 4.9a10 10 0 0 1 0 14.2" /></svg>
   );
+  // Network Engagement - a speech bubble with a heart: comments on your
+  // connections' posts, not messages to strangers.
+  if (tplKey === 'network_engagement') return (
+    <svg {...p}><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-4.7A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z" /><path d="M12 14.6s-2.8-1.7-2.8-3.6a1.5 1.5 0 0 1 2.8-.8 1.5 1.5 0 0 1 2.8.8c0 1.9-2.8 3.6-2.8 3.6z" fill={color} stroke="none" /></svg>
+  );
   if (tplKey === 'crm_reengage') return (
     <svg {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></svg>
   );
@@ -36,6 +41,8 @@ export function TemplateIcon({ tplKey, color, size = 16 }: { tplKey: string; col
 /** Human-readable category for a pipeline step (subtitle in the overview list). */
 export function stepCategory(type: string, isSource = false): string {
   if (isSource) return 'Contact source';
+  if (type === 'post_approval' || type === 'comment_approval') return 'Approval';
+  if (type === 'linkedin_post_engage') return 'Engagement';
   if (type.startsWith('linkedin')) return 'LinkedIn';
   if (type.startsWith('email')) return 'Email';
   if (type.startsWith('whatsapp')) return 'WhatsApp';

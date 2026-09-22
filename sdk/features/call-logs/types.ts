@@ -91,6 +91,8 @@ export interface VoiceAgentBatch {
   total_calls: number;
   completed_calls: number;
   failed_calls: number;
+  /** Optional until LAD-Backend #866 / LAD-VOAG #66 are deployed. */
+  declined_calls?: number;
   initiated_by_user_id?: string | null;
   agent_id?: string | null;
   voice_id?: string | null;
@@ -131,6 +133,21 @@ export interface BatchCallLogsApiResponse {
   } | CallLogResponse[];
 }
 
+/** Why a call has no recording (VOAG `metadata.recording_error`). */
+export interface RecordingError {
+  code:
+    | "egress_quota_exceeded"
+    | "egress_auth_failed"
+    | "egress_start_failed"
+    | "no_audio"
+    | "upload_failed"
+    | "local_mix_failed"
+    | "local_recorder_unavailable"
+    | "disabled"
+    | string;
+  message?: string;
+}
+
 export interface CallLog {
   id: string;
   assistant: string;
@@ -147,12 +164,20 @@ export interface CallLog {
   batch_total_calls?: number;
   batch_completed_calls?: number;
   batch_failed_calls?: number;
+  /** Callee ended the ring (declined / busy / no answer) — counted apart from failed. */
+  batch_declined_calls?: number;
   lead_category?: string;
   lead_score?: number;
   lead_tags?: string[];
   signed_recording_url?: string;
   recording_url?: string;
   call_recording_url?: string;
+  /** Written by the VOAG worker at cleanup: how the recording was made, or why there is none. */
+  metadata?: {
+    recording_mode?: "local" | "egress";
+    recording_error?: RecordingError;
+    [key: string]: unknown;
+  };
   attachments?: string | null;
   attachment_file_name?: string | null;
   attachment_signed_url?: string | null;
@@ -185,8 +210,49 @@ export interface EndCallParams {
   callId: string;
 }
 
+export interface EndCallsParams {
+  callIds: string[];
+}
+
+/** One entry of POST /calls/cancel — a call that was ended, or why it was not. */
+export interface CancelResultItem {
+  resource_id: string;
+  resource_type: "call" | "batch";
+  /** "cancelled" when ended; otherwise the call's existing terminal status, or "not_found". */
+  status: string;
+  cancelled_count: number;
+  message: string;
+}
+
+export interface CancelCallsResult {
+  success: boolean;
+  results: CancelResultItem[];
+  total_cancelled: number;
+}
+
 export interface RetryCallsParams {
   call_ids: string[];
+}
+
+/** POST /calls/retry — which selected calls were re-dialled and which were not, with the reason. */
+export interface RetryCallsResult {
+  success: boolean;
+  retried: Array<{ call_id: string; job_id: string | null; to_number: string | null }>;
+  skipped: Array<{ call_id: string; reason: string }>;
+  message?: string;
+}
+
+/** POST /calls/:id/follow-up — call the same person again after a completed call. */
+export interface FollowUpCallParams {
+  callId: string;
+  /** Optional operator note handed to the agent as context (<= 500 chars). */
+  note?: string;
+}
+
+export interface FollowUpCallResult {
+  success: boolean;
+  message?: string;
+  data: { job_id: string | null; follow_up_of: string; to_number: string | null };
 }
 
 export interface RecordingSignedUrlParams {
@@ -205,6 +271,8 @@ export interface CallLogsStats {
   total_calls: number;
   completed_calls: number;
   failed_calls: number;
+  /** Callee ended the ring (declined / busy / no answer). Optional until the backend ships it. */
+  declined_calls?: number;
   ongoing: number;
   queue: number;
   hot_leads: number;
@@ -221,6 +289,8 @@ export interface BatchStats {
   total_calls_scheduled: number;
   total_calls_completed: number;
   total_calls_failed: number;
+  /** Callee ended the ring (declined / busy / no answer). Optional until LAD-Backend #869 is deployed. */
+  total_calls_declined?: number;
 }
 
 // ============================================================================

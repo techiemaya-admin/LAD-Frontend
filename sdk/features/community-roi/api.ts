@@ -81,7 +81,12 @@ export const memberApi = {
   /**
    * Get all members (paginated)
    */
-  async listMembers(params?: ListMembersParams): Promise<PaginatedResponse<Member>> {
+  // Returns the ARRAY. The endpoint's body is { success, data: Member[], count }
+  // and this unwraps .data; it was declared PaginatedResponse<Member>, which
+  // has never been what came back. Every caller in web/ already treats it as
+  // an array behind an `any` cast — and the one caller that obeyed the type
+  // (`members?.data`) got undefined and rendered an empty dropdown.
+  async listMembers(params?: ListMembersParams): Promise<Member[]> {
     const queryParams: Record<string, string> = {};
     if (params?.page) queryParams.page = params.page.toString();
     if (params?.limit) queryParams.limit = params.limit.toString();
@@ -89,7 +94,7 @@ export const memberApi = {
     if (params?.sortBy) queryParams.sortBy = params.sortBy;
     if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
     if (params?.tenantId) queryParams.tenantId = params.tenantId;
-    const response = await communityROIApiClient.get<{ data: PaginatedResponse<Member> }>(`${API_PREFIX}/members`, { params: queryParams });
+    const response = await communityROIApiClient.get<{ data: Member[] }>(`${API_PREFIX}/members`, { params: queryParams });
     return response.data.data;
   },
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { MEDIA_GEN_URL, PLAYGROUND_WORKER_URL } from "@/lib/serviceUrls";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { safeStorage } from "@lad/shared/storage";
@@ -144,8 +145,12 @@ export function usePlayground({
   /* Connection state */
   const [sessionToken, setSessionToken] = useState("");
   const [livekitUrl, setLivekitUrl] = useState("");
-  const workerUrl =
-    process.env.NEXT_PUBLIC_PLAYGROUND_WORKER_URL || "http://localhost:8080";
+  // Two services (see lib/serviceUrls.ts): the voice test call runs on the VOAG
+  // playground worker, the guided agent builder on LAD-MAGe. Each takes its own
+  // hold, so a hold remembers which service it was taken on.
+  const workerUrl = PLAYGROUND_WORKER_URL;
+  const mediaGenUrl = MEDIA_GEN_URL;
+  const holdBaseRef = useRef<string>(workerUrl);
   const [callId, setCallId] = useState("");
   const callIdRef = useRef("");
 
@@ -218,7 +223,7 @@ export function usePlayground({
     async (id: string) => {
       if (!id) return;
       try {
-        await fetch(`${workerUrl}/release-call`, {
+        await fetch(`${holdBaseRef.current}/release-call`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: id }),
@@ -260,10 +265,11 @@ export function usePlayground({
   );
 
   const establishHold = useCallback(
-    async (id: string) => {
+    async (id: string, baseUrl: string = workerUrl) => {
+      holdBaseRef.current = baseUrl;
       try {
         console.warn(`[Playground] Establishing hold for ${id}...`);
-        const probe = await fetch(`${workerUrl}/worker-status`, {
+        const probe = await fetch(`${baseUrl}/worker-status`, {
           method: "GET",
           headers: getAuthHeaderOnly(),
         });
@@ -274,7 +280,7 @@ export function usePlayground({
         holdAbortRef.current = controller;
 
         // Fire-and-forget: /hold-for-call is long-polling (blocks up to 600s).
-        fetch(`${workerUrl}/hold-for-call`, {
+        fetch(`${baseUrl}/hold-for-call`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({ call_id: id }),
@@ -514,7 +520,7 @@ export function usePlayground({
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.warn(`[Playground] Probing worker status, attempt ${attempt}/${maxAttempts}...`);
-          const probe = await fetch(`${workerUrl}/worker-status`, {
+          const probe = await fetch(`${mediaGenUrl}/worker-status`, {
             method: "GET",
             headers: getAuthHeaderOnly(),
           });
@@ -541,9 +547,9 @@ export function usePlayground({
 
       // Worker is awake! Establish hold and call builder chat
       try {
-        await establishHold(id);
+        await establishHold(id, mediaGenUrl);
 
-        const res = await fetch(`${workerUrl}/playground-builder/chat`, {
+        const res = await fetch(`${mediaGenUrl}/playground-builder/chat`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({ session_id: newSessionId }),
@@ -584,7 +590,7 @@ export function usePlayground({
       setStep("guided-journey"); // Show loading screen while waiting
 
       try {
-        const res = await fetch(`${workerUrl}/playground-builder/chat`, {
+        const res = await fetch(`${mediaGenUrl}/playground-builder/chat`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -608,7 +614,7 @@ export function usePlayground({
           if (!isHolding && !reloading) {
             const id = generateCallId();
             setCallId(id);
-            establishHold(id);
+            establishHold(id, mediaGenUrl);
           }
           return;
         }

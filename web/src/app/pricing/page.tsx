@@ -25,7 +25,7 @@ export default function PricingPage() {
   const handleGetStarted = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) router.push('/settings?tab=credits&action=add');
-    else        router.push('/login');
+    else        router.push('/register');
   };
   const handleTalkToSales = () => router.push('/contact');
 

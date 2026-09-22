@@ -10,7 +10,9 @@
  *   useCallLogs,
  *   useBatchStatus,
  *   useEndCall,
+ *   useEndCalls,
  *   useRetryFailedCalls,
+ *   useFollowUpCall,
  *   useRecordingSignedUrl,
  *   type CallLogsResponse,
  *   type GetCallLogsParams
@@ -30,7 +32,7 @@ export { useCallLogs } from "./hooks/useCallLogs";
 export { useBatchStatus } from "./hooks/useBatchStatus";
 export { useBatchView } from "./hooks/useBatchView";
 export { useBatchCallLogsByBatchId } from "./hooks/useBatchCallLogsByBatchId";
-export { useEndCall, useRetryFailedCalls } from "./hooks/useCallLogMutations";
+export { useEndCall, useEndCalls, useRetryFailedCalls, useFollowUpCall } from "./hooks/useCallLogMutations";
 export { useRecordingSignedUrl } from "./hooks/useRecordingSignedUrl";
 export { useCallLogsStats } from "./hooks/useCallLogsStats";
 export { useBatchStats } from "./hooks/useBatchStats";

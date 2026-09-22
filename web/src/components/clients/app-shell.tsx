@@ -43,6 +43,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicPage =
     pathname === "/login" ||
     pathname === "/register" ||
+    // The verified-signup steps after /register: the applicant has no account
+    // yet, so there is nothing for a sidebar to show.
+    pathname.startsWith("/register/") ||
     pathname === "/forgot-password" ||
     pathname === "/pricing" ||
     pathname === "/" ||

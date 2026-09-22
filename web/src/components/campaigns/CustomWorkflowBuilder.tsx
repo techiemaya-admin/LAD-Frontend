@@ -107,10 +107,11 @@ import {
   SOURCE_STEP_ID, FOLLOWUP_STEP_ID, ANALYTICS_STEP_ID, ZOHO_UPDATE_STEP_ID,
   MEDIA_STEP_ID, MULTICOND_STEP_ID, AI_STEP_ID, ENRICH_STEP_ID, EXPORT_STEP_ID,
   AUTOPOST_STEP_ID, CONTENT_STEP_ID, APPROVAL_STEP_ID, AI_DEFAULT_INSTRUCTION, EXPORT_DEFAULT_COLUMNS,
+  POST_ENGAGE_STEP_ID, COMMENT_APPROVAL_STEP_ID,
   IG_AUTOPOST_STEP_ID, HUMAN_TASK_STEP_ID, REPORT_STEP_ID,
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
-  SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
+  SPLIT_STEP_ID, ACCEPT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
   templateToPreviewSteps,
 } from './workflowTemplates';
 import {
@@ -144,7 +145,7 @@ const edgeTypes = { labeled: LabeledEdge };
 
 // ─── Palette definitions ─────────────────────────────────────────────────────
 
-type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts';
+type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts' | 'linkedin_connections';
 
 const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNode; chip: string; recurring?: boolean }[] = [
   { key: 'own_contacts', label: 'Your own contacts', sub: 'People who already gave you their details', icon: <Users className="h-4 w-4 text-amber-600" />, chip: 'bg-amber-50 dark:bg-amber-950/30', recurring: true },
@@ -156,6 +157,7 @@ const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNo
   { key: 'linkedin_search', label: 'LinkedIn Search', sub: 'Find new leads by keywords', icon: <Search className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30' },
   { key: 'web_extract', label: 'Web page (exhibitors, directories)', sub: 'Pull companies off a page, then find the roles you name', icon: <Globe className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30' },
   { key: 'linkedin_signal', label: 'LinkedIn Signal Search', sub: 'Find leads from hiring/buying signals', icon: <Radar className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
+  { key: 'linkedin_connections', label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network', icon: <UserCheck className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
 ];
 
 // Target fields the file columns map to. 'ignore' drops the column.
@@ -301,13 +303,14 @@ const CONDITIONS = [
 const STEP_INSTRUCTIONS: Record<string, string> = {
   // Sources
   own_contacts: 'Works through the contacts already in your account - people who messaged you or were imported from your booking system. Email only: they have no open WhatsApp window, so a WhatsApp step would need an approved template. Anyone without a usable email address is skipped.',
-  zoho_recurring: 'Imports newly-created Zoho CRM contacts every day for the life of the campaign. Nothing is required - the tag filter is optional.',
+  zoho_recurring: 'Imports newly-created Zoho CRM records every day for the life of the campaign. Contacts and Leads need nothing beyond the optional tag filter; Accounts are companies, so they also need a job title to find at each one.',
   zoho_once: 'Imports contacts already synced from Zoho CRM, once. Nothing is required.',
   ghl_once: 'Imports contacts already synced from GoHighLevel, once. Nothing is required.',
   ghl_recurring: 'Imports newly-created GoHighLevel contacts every day for the life of the campaign. Nothing is required - the tag filter is optional. GoHighLevel must be connected and synced first.',
   file_import: "Imports leads from an uploaded CSV/Excel file. Needs a file with at least one column mapped to name, company, email, or LinkedIn URL. Rows with no LinkedIn URL are resolved automatically by name+company at send time - some may never match, and those retry indefinitely rather than fail. Map a LinkedIn URL column directly when you have one.",
   linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
   linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
+  linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed. Pair it with the Comment on new posts + Approval nodes to engage their posts. Needs an active LinkedIn account in Settings.',
   // LinkedIn outreach
   linkedin_connect: "Sends a LinkedIn connection request - no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
   linkedin_message: "Sends a LinkedIn DM - but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
@@ -331,6 +334,8 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [EXPORT_STEP_ID]: 'Sends the final lead list to a file, database, email, WhatsApp, webhook, Sheet, or Slack. Needs at least one destination configured.',
   [AUTOPOST_STEP_ID]: "Publishes on a recurring schedule to the tenant's own LinkedIn feed - not sent to leads. Needs post content from a LinkedIn content node.",
   [CONTENT_STEP_ID]: 'Writes (or AI-generates) the text for the scheduled LinkedIn post.',
+  [POST_ENGAGE_STEP_ID]: "Watches every lead in this campaign for new LinkedIn posts (every few hours) and engages: likes, and an AI-drafted comment. Add the Approval node after it so each comment is sent to you on WhatsApp first - without it, comments post automatically. Meant for the Your LinkedIn connections source: engaging your own network reads as organic; commenting on strangers' posts does not.",
+  [COMMENT_APPROVAL_STEP_ID]: 'Holds each drafted comment for a WhatsApp tap before it is posted. Approve posts the suggestion as written; Reject opens a page where you write your own comment instead, or skip. Needs a Comment on new posts node in this workflow. The approver defaults to your account phone.',
   [APPROVAL_STEP_ID]: 'Holds a post for approval over WhatsApp/email before it publishes. Needs an approver contact, AND a LinkedIn auto-post node in this workflow - approval has nothing to gate without one.',
   // Rewritten against WebIntelStepService.executeWebScrapeStep, which resolves
   // `(stepConfig.url || '').trim() || resolveWebsite(leadData)`. The previous
@@ -342,6 +347,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [RESEARCH_STEP_ID]: "Runs AI research on each lead's company from the open web. Nothing is required.",
   [SCORE_STEP_ID]: 'Scores each lead\'s buy-intent 0-100 and labels it hot/warm/cold. Nothing is required. Pairs naturally with a Multi-condition step placed right after it, to branch hot vs. cold leads.',
   [SPLIT_STEP_ID]: 'Sends variant A or B (roughly 50/50, sticky per lead) to compare two openers. Needs a message for BOTH variants.',
+  [ACCEPT_STEP_ID]: 'Waits to see if the lead accepts your connection request, then branches. Accepted goes one way; still unanswered after the chosen number of days goes the other. The clock starts when the invite was SENT.',
   [SETFIELD_STEP_ID]: 'Writes a tag or value onto the lead record for later branching or export.',
   [HTTP_STEP_ID]: "Calls any external API with this lead's data. Requests to internal/private/cloud-metadata addresses are blocked.",
 };
@@ -1434,12 +1440,43 @@ const WORKFLOW_DATA_POINTS: DataPoint[] = [
   { key: 'location',           label: 'Location',             match: /location|\bcity\b|\bstate\b|country|address/i },
   { key: 'industry',           label: 'Industry',             match: /industry|sector/i },
   { key: 'headline',           label: 'Headline / summary',   match: /headline|about|summary|description/i },
-  { key: 'campaign_status',    label: 'Campaign status',      match: /lead.?status|\bstatus\b|\bstage\b/i },
+  // Listed BEFORE campaign_status so a status-shaped field suggests this one.
+  // campaign_status resolves to the engine's internal lead status ("active",
+  // "contacted"), which a Zoho picklist refuses; this one resolves to a
+  // sequence outcome the operator maps onto the field's own options below.
+  { key: 'campaign_outcome',   label: 'Campaign outcome',     match: /lead.?status|\bstatus\b|\bstage\b|outcome|result/i },
+  { key: 'campaign_status',    label: 'Campaign status (raw)', match: /^$/ },
   { key: 'campaign_name',      label: 'Campaign name',        match: /campaign/i },
   { key: 'last_channel',       label: 'Last channel used',    match: /channel|\bsource\b/i },
   { key: 'last_activity_date', label: "Today's date",         match: /date|last.?activity|modified/i },
   { key: 'notes',              label: 'Last message / notes', match: /\bnote|comment|remark/i },
 ];
+
+/** The outcomes a sequence can leave a lead in. MIRRORS the backend's
+ *  CAMPAIGN_OUTCOMES in ZohoWritebackService — same keys, same order — and
+ *  the backend pins them with a test. A key here that the backend does not
+ *  know resolves to nothing at run time; a backend key missing here can never
+ *  be mapped. Change both together. */
+const CAMPAIGN_OUTCOMES: { key: string; label: string; hint: RegExp }[] = [
+  { key: 'linkedin_not_found',     label: 'LinkedIn account not found', hint: /not.?found|no.?linkedin|acc(ount)?.?not|invalid|missing/i },
+  { key: 'connection_sent',        label: 'Connection request sent',    hint: /(connection|invite|invitation|request).*(sent|pending)|requested/i },
+  { key: 'connection_accepted',    label: 'Connection accepted',        hint: /accept|connected\b/i },
+  { key: 'linkedin_followup_sent', label: 'LinkedIn follow-up sent',    hint: /follow.?up|linkedin.*(message|dm|sent)|messaged/i },
+  { key: 'replied',                label: 'Replied',                    hint: /repl|respond|answer/i },
+  { key: 'email_sent',             label: 'Email sent',                 hint: /e-?mail.*sent|sent.*e-?mail|emailed/i },
+  { key: 'email_opened',           label: 'Email opened',               hint: /e-?mail.*(open|read|viewed)|(open|read).*e-?mail/i },
+  { key: 'whatsapp_sent',          label: 'WhatsApp sent',              hint: /whats?app|\bwa\b/i },
+];
+
+/** Pick the picklist option that most plausibly means this outcome, or ''. A
+ *  suggestion, not a decision — the operator sees every row and can override. */
+function suggestPicklistOption(outcomeKey: string, options: string[]): string {
+  const o = CAMPAIGN_OUTCOMES.find((x) => x.key === outcomeKey);
+  if (!o) return '';
+  // "-None-" is Zoho's empty option; never suggest it as a meaning.
+  const real = options.filter((v) => v && !/^-?none-?$/i.test(v.trim()));
+  return real.find((v) => o.hint.test(v)) || '';
+}
 
 /** Suggest a data-point for a Zoho field, sequence-aware (only maps a channel
  *  source when that channel is actually in the Accelerator). Returns key or ''. */
@@ -1513,6 +1550,42 @@ function BuilderCanvas({ steps, branches = [], switchId }: { steps: WorkflowPrev
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+/** A Meta template's BODY text. Approved templates carry their copy in
+ *  `components`, not a flat field, and the list endpoint may omit it entirely —
+ *  so an empty string is normal and must not be treated as an error. */
+function waTemplateBody(t: any): string {
+  // The WABA service's list already flattens the BODY component to `body`;
+  // the raw Meta shape keeps it in `components`. Read both.
+  if (t?.body && typeof t.body === 'string') return t.body;
+  const body = (t?.components || []).find((c: any) => c?.type === 'BODY');
+  return body?.text || '';
+}
+
+/** What a Meta template is keyed on. NOT an id — the WABA service's list has
+ *  none, so `<option value={t.id}>` rendered value=undefined and the browser
+ *  fell back to the option's TEXT: the label "developer_outreach · en · +971…"
+ *  went into the config as the template id, and the lookup by id found
+ *  nothing, so name and language were never stored and the engine had no
+ *  template to send (stage, campaign f8cfedcd, 2026-09-11). Meta addresses a
+ *  template by name + language, and the same name can exist in two languages,
+ *  so that pair is the identity. */
+function waTemplateKey(t: any): string {
+  return `${t?.name || ''}|${t?.language || t?.language_code || 'en'}`;
+}
+function findWaTemplate(list: any[], key: string): any | undefined {
+  return (list || []).find((x: any) => waTemplateKey(x) === key);
+}
+
+/** What to call a Meta template in a dropdown. The NAME is what Meta knows it
+ *  by and what the operator approved; the language disambiguates the same name
+ *  registered twice, and the number says which WABA it lives on. */
+function waTemplateLabel(t: any): string {
+  const parts = [t?.name || 'Template'];
+  if (t?.language) parts.push(`· ${t.language}`);
+  if (t?.account_phone) parts.push(`· ${t.account_phone}`);
+  return parts.join(' ');
+}
+
 /** Loads the connected accounts/templates a step config can reference:
  *  voice agents + numbers, email senders + templates, WhatsApp accounts +
  *  templates, LinkedIn templates. Reuses the same hooks/endpoints the
@@ -1523,14 +1596,33 @@ function useBuilderResources() {
   const { data: emailTemplates = [] } = useEmailTemplates({ is_active: true });
   const [waAccounts, setWaAccounts] = useState<any[]>([]);
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  // Why the WhatsApp template list is empty, when it is empty for a REASON.
+  // The service answers 200 with total 0 and a `degraded` array naming the
+  // number and Meta's error; ignoring that rendered nothing at all, and the
+  // operator read "no templates" when the truth was "your token is revoked".
+  const [waTemplatesDegraded, setWaTemplatesDegraded] = useState<string | null>(null);
   const [liTemplates, setLiTemplates] = useState<any[]>([]);
 
   useEffect(() => { voice.fetchAll?.().catch(() => {}); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
     fetch('/api/social-integration/whatsapp/accounts', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (Array.isArray(d?.accounts)) setWaAccounts(d.accounts); }).catch(() => {});
-    fetch('/api/campaigns/whatsapp-templates', { credentials: 'include' })
-      .then((r) => r.json()).then((d) => { if (d?.success) setWaTemplates(d.data || []); }).catch(() => {});
+    // The Meta-APPROVED templates, the same list the Templates page shows —
+    // not communication_templates, which holds the "Welcome Message" /
+    // "Follow-Up Message" pair seeded into every tenant at onboarding and has
+    // nothing to do with Meta approval. A WABA send to a lead outside the 24h
+    // window is only accepted as an approved template, so those seeded rows
+    // could never have been sent to a cold lead.
+    fetch('/api/whatsapp-conversations/conversations/templates?channel=waba', { credentials: 'include' })
+      .then((r) => r.json()).then((d) => {
+        const list = Array.isArray(d) ? d : Array.isArray(d?.templates) ? d.templates : Array.isArray(d?.data) ? d.data : [];
+        // Only APPROVED can be sent; PENDING and REJECTED would fail at Meta.
+        setWaTemplates(list.filter((t: any) => String(t?.status || '').toUpperCase() === 'APPROVED'));
+        const deg: any[] = Array.isArray(d?.degraded) ? d.degraded : [];
+        setWaTemplatesDegraded(deg.length
+          ? deg.map((g: any) => `${g?.account_phone || g?.account_name || 'WhatsApp number'}: ${g?.error || 'could not load templates'}`).join(' · ')
+          : null);
+      }).catch(() => {});
     fetch('/api/campaigns/linkedin-message-templates', { credentials: 'include' })
       .then((r) => r.json()).then((d) => { if (d?.success) setLiTemplates(d.data || []); }).catch(() => {});
   }, []);
@@ -1546,12 +1638,19 @@ function useBuilderResources() {
     voiceAgents, voiceNumbers,
     emailSenders: (emailSenders as any[]) || [],
     emailTemplates: (emailTemplates as any[]) || [],
-    waAccounts, waTemplates, liTemplates,
+    waAccounts, waTemplates, liTemplates, waTemplatesDegraded,
   };
 }
 
-export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId }: {
+export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSourceCfg, initialNodeCfg, autoLaunch, initialAiTemplate, initialAiWarnings, editCampaignId, onLaunched, afterLaunchHref }: {
   onClose: () => void;
+  /**
+   * Called once a NEW campaign has been created, before the redirect to
+   * /campaigns, with the created campaign's id when the response carried one.
+   * The Studio's first-campaign hand-off records the launch here. Awaited but
+   * never allowed to fail the launch - the campaign already exists.
+   */
+  onLaunched?: (campaignId: string | null) => void | Promise<void>;
   /**
    * A pipeline drafted from a description in the chat, applied to the canvas on
    * mount. Unlike `initialTemplateKey` this is the template itself: it was
@@ -1577,6 +1676,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   initialNodeCfg?: Record<string, any>;
   /** Fire launch() automatically once the template is applied. */
   autoLaunch?: boolean;
+  /** Where a successful NEW launch lands; defaults to the campaigns list. */
+  afterLaunchHref?: string;
   /** Reopen an existing custom workflow for editing; launch updates it in place. */
   editCampaignId?: string;
 }) {
@@ -2155,6 +2256,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   /** Put a finished draft on the canvas via the one existing apply path. */
   const applyAiTemplate = (t: any) => {
     const srcDef = SOURCES.find((s) => s.key === t.source?.key);
+    // A drafter may say how many leads a day it planned for (the Studio's
+    // first campaign does); the source cfg has no such key of its own.
+    if (Number(t.perDay) > 0) setPerDay(String(Math.round(Number(t.perDay))));
     // silent: replacing the canvas was already confirmed when the draft started.
     applyTemplate({
       key: `ai-${Date.now()}`,
@@ -2555,7 +2659,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
    */
   const leadConsumption = useMemo(() => {
     const outreachSteps = workflowPreview.filter(
-      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID
+      (s) => s.id !== SOURCE_STEP_ID && s.id !== FOLLOWUP_STEP_ID && s.id !== ANALYTICS_STEP_ID && s.id !== ZOHO_UPDATE_STEP_ID && s.id !== MEDIA_STEP_ID && s.id !== MULTICOND_STEP_ID && s.id !== AI_STEP_ID && s.id !== ENRICH_STEP_ID && s.id !== EXPORT_STEP_ID && s.id !== AUTOPOST_STEP_ID && s.id !== SCRAPE_STEP_ID && s.id !== RESEARCH_STEP_ID && s.id !== SCORE_STEP_ID && s.id !== SPLIT_STEP_ID && s.id !== SETFIELD_STEP_ID && s.id !== HTTP_STEP_ID && s.id !== CONTENT_STEP_ID && s.id !== APPROVAL_STEP_ID && s.id !== POST_ENGAGE_STEP_ID && s.id !== COMMENT_APPROVAL_STEP_ID
     );
     const multiCondNode = workflowPreview.find((s) => s.id === MULTICOND_STEP_ID);
     const followupNode = workflowPreview.find((s) => s.id === FOLLOWUP_STEP_ID);
@@ -2628,6 +2732,25 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setEditingId(SPLIT_STEP_ID);
   };
 
+  const addAcceptanceBranch = () => {
+    if (!workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+      addWorkflowStep({
+        id: ACCEPT_STEP_ID, type: 'linkedin_acceptance', channel: 'linkedin',
+        title: 'Accepted?', description: 'Accepted · or after 5 days',
+      });
+      setCfg(ACCEPT_STEP_ID, {
+        wait_days: 5,
+        // Defaults chosen to match the shape people actually ask for: a phone
+        // number is what makes WhatsApp possible, an official email is what
+        // makes the fallback possible, and neither channel works without the
+        // enrichment in front of it.
+        accepted: { enrich: 'phone', channel: 'whatsapp', body: '' },
+        expired: { enrich: 'official_email', channel: 'email', subject: '', body: '' },
+      });
+    }
+    setEditingId(ACCEPT_STEP_ID);
+  };
+
   const addSetField = () => {
     if (!workflowPreview.some((s) => s.id === SETFIELD_STEP_ID)) {
       addWorkflowStep({ id: SETFIELD_STEP_ID, type: 'set_field', channel: 'email', title: 'Set field', description: 'Tag / write a value' });
@@ -2682,6 +2805,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       setCfg(APPROVAL_STEP_ID, { approval_channel: 'whatsapp', approval_to: '' });
     }
     setEditingId(APPROVAL_STEP_ID);
+  };
+
+  const addPostEngage = () => {
+    if (!workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      addWorkflowStep({ id: POST_ENGAGE_STEP_ID, type: 'linkedin_post_engage', channel: 'linkedin', title: 'Comment on new posts', description: 'Watch their posts · AI-drafted comment · like' });
+      setCfg(POST_ENGAGE_STEP_ID, { like_posts: true, min_icp_score: '50' });
+    }
+    setEditingId(POST_ENGAGE_STEP_ID);
+  };
+
+  const addCommentApproval = () => {
+    if (!workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID)) {
+      addWorkflowStep({ id: COMMENT_APPROVAL_STEP_ID, type: 'comment_approval', channel: 'whatsapp', title: 'Approval', description: 'WhatsApp · approve, or write your own' });
+      setCfg(COMMENT_APPROVAL_STEP_ID, { approval_to: '' });
+    }
+    setEditingId(COMMENT_APPROVAL_STEP_ID);
   };
 
   const addExport = () => {
@@ -3049,7 +3188,12 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   }, [editingId, liOrganizations.length]);
 
   // Lazy-load Zoho field metadata when the write-back node is open, per module.
-  const zohoModule = configs[ZOHO_UPDATE_STEP_ID]?.module === 'Leads' ? 'Leads' : 'Contacts';
+  // Contacts and Leads are people; Accounts are companies, and their field
+  // list has nothing in common with either (no first name, no email).
+  const ZOHO_WRITEBACK_MODULES = ['Contacts', 'Leads', 'Accounts'] as const;
+  const zohoModule = ZOHO_WRITEBACK_MODULES.includes(configs[ZOHO_UPDATE_STEP_ID]?.module)
+    ? configs[ZOHO_UPDATE_STEP_ID]?.module as string
+    : 'Contacts';
   useEffect(() => {
     if (editingId !== ZOHO_UPDATE_STEP_ID) return;
     let cancelled = false;
@@ -3126,6 +3270,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     if (workflowPreview.some((s) => s.id === APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === AUTOPOST_STEP_ID)) {
       issues.push({ id: APPROVAL_STEP_ID, message: 'The Approval node needs a LinkedIn post node - it gates what that node publishes.' });
     }
+    if (workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) && !workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID)) {
+      issues.push({ id: COMMENT_APPROVAL_STEP_ID, message: 'The comment Approval node needs a Comment on new posts node - it gates the comments that node drafts.' });
+    }
+    // Zoho Accounts: an account is a company, so without a target job title the
+    // import has nobody to search for and the campaign would launch, run daily
+    // and enrol zero leads without ever erroring. Same reasoning as the
+    // broadcast template below — catch it before Launch, not after.
+    if (source === 'zoho_recurring'
+        && (configs[SOURCE_STEP_ID] || {}).zoho_modules === 'accounts'
+        && !String((configs[SOURCE_STEP_ID] || {}).zoho_account_title || '').trim()) {
+      issues.push({
+        id: SOURCE_STEP_ID,
+        message: 'Importing Zoho Accounts needs a job title to look for. An account is a company, not a person — without a title there is nobody to enrol.',
+      });
+    }
     // Broadcasts: catch the missing-required-field case here rather than letting
     // the backend validator answer with a 400 after the user hits Launch.
     if (workflowPreview.some((x) => x.id === WA_BROADCAST_STEP_ID)
@@ -3144,7 +3303,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       });
     }
     return issues;
-  }, [workflowPreview, configs]);
+  }, [workflowPreview, configs, source]);
 
   // Router-style branch visualisation for the Multi-condition node: one output
   // node per condition (+ else), fanned out on the canvas.
@@ -3205,7 +3364,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const analyticsNode = workflowPreview.find((s) => s.id === ANALYTICS_STEP_ID);
     const autopostNode = workflowPreview.find((s) => s.id === AUTOPOST_STEP_ID);
     const zohoUpdateNode = workflowPreview.find((s) => s.id === ZOHO_UPDATE_STEP_ID);
-    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly) { setError('Add at least one outreach step.'); return; }
+    // A connections campaign with post engagement on does its work in the
+    // background (the monitor cron comments on their posts), so it is a
+    // complete pipeline with no outreach step at all - like publisher-only.
+    const engagementOnly = workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID);
+    if (!outreachSteps.length && !followupNode && !multiCondNode && !publisherOnly && !engagementOnly) { setError('Add at least one outreach step.'); return; }
 
     // InMail needs an entitlement the account may not have. Checking here means
     // the user finds out while looking at the canvas, instead of one lead
@@ -3339,6 +3502,33 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             source: 'zoho_contacts',
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
+            leadGenerationLimit: perDayN,
+          },
+        });
+      } else if (source === 'linkedin_connections') {
+        // The tenant's own 1st-degree network, a page a day, decision-makers
+        // only. Nobody here needs an invite. Post engagement is campaign-level
+        // (config.post_engagement below), not a step: the monitor cron sweeps
+        // every lead of the campaign for new posts.
+        steps.push({
+          type: 'lead_generation', title: 'Your LinkedIn connections', channel: 'linkedin', order_index: order++,
+          config: {
+            source: 'linkedin_connections',
+            decision_maker_titles: String(srcCfg.decision_maker_titles || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            min_seniority: srcCfg.min_seniority || 'director',
+            keywords: (srcCfg.keywords || '').trim() || undefined,
+            min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
             leadGenerationLimit: perDayN,
           },
         });
@@ -3585,7 +3775,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         else if (s.type === 'linkedin_inmail') steps.push({ type: s.type, title: 'Send LinkedIn InMail', channel: 'linkedin', order_index: order++, config: { message: (c.message || '').trim(), subject: (c.subject || '').trim() || undefined, template_id: c.linkedin_template_id || undefined, ...delay } });
         else if (s.type === 'linkedin_visit') steps.push({ type: s.type, title: 'Visit LinkedIn Profile', channel: 'linkedin', order_index: order++, config: { ...delay } });
         else if (s.type === 'email_send') steps.push({ type: s.type, title: 'Send Email', channel: 'email', order_index: order++, config: { subject: (c.subject || '').trim(), body: (c.body || '').trim(), from_email: c.from_email || undefined, email_provider: c.email_provider || undefined, template_id: c.template_id || undefined, ...delay } });
-        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, ...delay } });
+        else if (s.type === 'whatsapp_send') steps.push({ type: s.type, title: 'Send WhatsApp Message', channel: 'whatsapp', order_index: order++, config: { whatsappMessage: (c.message || '').trim(), whatsapp_account_id: c.whatsapp_account_id || undefined, whatsapp_template_id: c.whatsapp_template_id || undefined, whatsapp_template_name: c.whatsapp_template_name || undefined, whatsapp_template_language: c.whatsapp_template_language || undefined, ...delay } });
         // added_context is the key the voice executors read (they also accept
         // voiceContext); without it the panel's extra-context box would collect
         // text that never left the browser.
@@ -3602,7 +3792,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       // else the chosen template id). Delays are relative to the prior step.
       const fc = configs[FOLLOWUP_STEP_ID] || {};
       const fuChannel = fc.channel === 'email' ? 'email' : fc.channel === 'whatsapp' ? 'whatsapp' : 'linkedin';
-      const fuTouchList: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] =
+      const fuTouchList: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] =
         Array.isArray(fc.touches) && fc.touches.length ? fc.touches.slice(0, 7) : [{ hours: 24 }, { hours: 72 }, { hours: 168 }];
       if (followupNode) {
         fuTouchList.forEach((t, idx) => {
@@ -3619,7 +3809,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           // modes so other touch_type values (e.g. lead_report) fall through.
           const liTouchType = (t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') ? t.touch_type : undefined;
           if (fuChannel === 'email') steps.push({ type: 'email_send', title: `Follow-up ${n} (email)`, channel: 'email', order_index: order++, config: { subject: '', body, template_id: tid, ...d } });
-          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...d } });
+          else if (fuChannel === 'whatsapp') steps.push({ type: 'whatsapp_send', title: `Follow-up ${n} (WhatsApp)`, channel: 'whatsapp', order_index: order++, config: { whatsappMessage: body, whatsapp_template_id: tid, ...(t.template_name ? { whatsapp_template_name: t.template_name, whatsapp_template_language: t.template_language || 'en' } : {}), ...d } });
           else steps.push({ type: 'linkedin_message', title: `Follow-up ${n} (LinkedIn)`, channel: 'linkedin', order_index: order++, config: { message: body, template_id: tid, ...(liTouchType ? { touch_type: liTouchType } : {}), ...d } });
         });
       }
@@ -3680,13 +3870,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       if (zohoUpdateNode) {
         const zc = configs[ZOHO_UPDATE_STEP_ID] || {};
         const map: Record<string, string> = zc.map || {};
+        const pick: Record<string, Record<string, string>> = zc.picklist || {};
         const mappings = Object.entries(map)
           .filter(([, sourceKey]) => sourceKey)
-          .map(([zoho_field, source]) => ({ zoho_field, source }));
+          .map(([zoho_field, source]) => {
+            // Only the rows the operator actually chose; an empty row must
+            // read as "don't write", not as a blank value posted to Zoho.
+            const chosen = Object.fromEntries(Object.entries(pick[zoho_field] || {}).filter(([, v]) => v && String(v).trim()));
+            return source === 'campaign_outcome' && Object.keys(chosen).length
+              ? { zoho_field, source, picklist_map: chosen }
+              : { zoho_field, source };
+          });
         if (mappings.length) {
           steps.push({
             type: 'zoho_update', title: 'Update Zoho record', channel: 'linkedin', order_index: order++,
-            config: { module: zc.module === 'Leads' ? 'Leads' : 'Contacts', mappings },
+            config: { module: ['Contacts', 'Leads', 'Accounts'].includes(zc.module) ? zc.module : 'Contacts', mappings },
           });
         }
       }
@@ -3747,6 +3945,96 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         }
       }
 
+      // "Accepted?" node → a linkedin_acceptance step plus, per branch, an
+      // enrichment step and a message step, both guarded by run_if_branch. The
+      // backend stamps 'accepted' or 'expired' into switch_outcomes and prunes
+      // the branch not taken — the same machinery the split test and the
+      // multi-condition node already use.
+      //
+      // The enrichment is INSIDE the branch on purpose: revealing a phone
+      // number for a lead who never accepted, or an email for one who did,
+      // spends credits on contact details that branch will never use.
+      if (workflowPreview.some((s) => s.id === ACCEPT_STEP_ID)) {
+        const ac = configs[ACCEPT_STEP_ID] || {};
+        const acceptId = `ab-${ACCEPT_STEP_ID}`;
+        const buildBranch = (v: any, branchKey: string, label: string) => {
+          const guard = { run_if_branch: { switch_id: acceptId, branch: branchKey } };
+          const out: any[] = [];
+          if (v?.enrich) {
+            out.push({
+              type: 'data_enrich', title: `${label} · enrich`, channel: 'email', order_index: order++,
+              config: { enrich: [v.enrich], ...guard },
+            });
+          }
+          const body = (v?.body || '').trim();
+          const tmplId = v?.template_id || undefined;
+          // A branch with neither a message nor a template is just the
+          // enrichment. A template alone IS a send: an approved WhatsApp
+          // template carries its own body, so requiring text here would drop
+          // the step for exactly the branches that need it most.
+          if (!body && !tmplId) return out;
+          // Same three channels the multi-condition branch already compiles
+          // (buildBranchStep above), and the same template_id keys the engine
+          // reads: email_send → template_id, whatsapp_send →
+          // whatsapp_template_id, linkedin_message → linkedin_template_id.
+          if (v?.channel === 'email') {
+            out.push({ type: 'email_send', title: `${label} (email)`, channel: 'email', order_index: order++,
+              config: {
+                subject: (v?.subject || '').trim(), body,
+                ...(tmplId ? { template_id: tmplId } : {}),
+                // Sender is optional here: the email executor falls back to the
+                // tenant's own active account when from_email is unset.
+                ...(v?.from_email ? { from_email: v.from_email, email_provider: v.email_provider || undefined } : {}),
+                ...guard,
+              } });
+          } else if (v?.channel === 'linkedin') {
+            out.push({ type: 'linkedin_message', title: `${label} (LinkedIn)`, channel: 'linkedin', order_index: order++,
+              config: { message: body, ...(tmplId ? { linkedin_template_id: tmplId } : {}), ...guard } });
+          } else {
+            out.push({ type: 'whatsapp_send', title: `${label} (WhatsApp)`, channel: 'whatsapp', order_index: order++,
+              config: {
+                whatsappMessage: body,
+                ...(tmplId ? { whatsapp_template_id: tmplId } : {}),
+                // What the engine sends when the lead's 24h window is shut —
+                // without these the send is free text only, which Meta rejects
+                // for anyone who has not messaged the tenant first.
+                ...(v?.whatsapp_template_name ? {
+                  whatsapp_template_name: v.whatsapp_template_name,
+                  whatsapp_template_language: v.whatsapp_template_language || 'en',
+                } : {}),
+                // NOT optional, unlike email: whatsAppDispatcher.resolveAccount
+                // has no tenant default and errors with "No WhatsApp account
+                // configured for this step" when this is missing. The branch
+                // never sent one, so its WhatsApp step could not have worked.
+                ...(v?.whatsapp_account_id ? { whatsapp_account_id: v.whatsapp_account_id } : {}),
+                ...guard,
+              } });
+          }
+          return out;
+        };
+        // Mirrors the backend's own guard (WorkflowProcessor, acceptance
+        // branch): an ABSENT or unusable value must not collapse to "expire
+        // immediately", which would email every lead the moment the invite goes
+        // out. An explicit 0 is a real choice — "don't wait, decide on the next
+        // pass" — and is passed through.
+        //
+        // The supplied-ness check has to come before the conversion: Number(null)
+        // is 0, so an absent value would otherwise read as a deliberate zero.
+        // Number rather than parseInt for the same reason the engine uses it —
+        // parseInt('5 days') is 5, and quietly accepting that here would put a
+        // number in the config the box never showed.
+        const rawWaitDays = ac.wait_days;
+        const waitDaysSupplied = rawWaitDays !== undefined && rawWaitDays !== null
+          && String(rawWaitDays).trim() !== '';
+        const days = waitDaysSupplied ? Number(rawWaitDays) : NaN;
+        steps.push({
+          type: 'linkedin_acceptance', title: 'Accepted?', channel: 'linkedin', order_index: order++,
+          config: { branch_id: acceptId, wait_days: Number.isFinite(days) && days >= 0 ? days : 5 },
+        });
+        buildBranch(ac.accepted, 'accepted', 'Accepted').forEach((s) => steps.push(s));
+        buildBranch(ac.expired, 'expired', 'No answer').forEach((s) => steps.push(s));
+      }
+
       // "AI Media" node → records a media_generation step AND attaches the
       // generated asset to every email/WhatsApp step that has no media of its
       // own (the engine's email/whatsapp executors read config.media_url).
@@ -3776,7 +4064,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         campaign_start_date: start.toISOString(),
         campaign_end_date: end.toISOString(),
         config: {
-          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
+          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'linkedin_connections' ? 'linkedin_connections' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
           builder: 'custom_workflow',
           // The builder's own state, stored so "Edit Accelerator" can reopen it
           // exactly as it was. Launch flattens these nodes into config.* and
@@ -3810,9 +4098,41 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           leads_per_day: perDayN,
           campaign_days: daysN,
           working_days: 'monday-friday',
+          // Post engagement is the campaign-level opt-in the post-monitor cron
+          // keys on (LinkedInPostMonitorService._campaignMonitoredLeads). Only
+          // the connections source writes it: the toggle lives on that drawer,
+          // so a value left behind by a switched-away selection cannot enrol
+          // a search campaign's strangers into background commenting.
+          ...(workflowPreview.some((s) => s.id === POST_ENGAGE_STEP_ID) ? (() => {
+            const ec = configs[POST_ENGAGE_STEP_ID] || {};
+            const apc = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID) ? (configs[COMMENT_APPROVAL_STEP_ID] || {}) : null;
+            return {
+              post_engagement: {
+                enabled: true,
+                like: ec.like_posts !== false,
+                // The Approval node's presence is the mode: with it every
+                // comment waits for a WhatsApp tap, without it comments post
+                // automatically (supervised). 'off' = like only.
+                comment_mode: ec.comment === 'off' ? 'off' : apc ? 'approve' : 'auto',
+                min_icp_score: Number(ec.min_icp_score) > 0 ? Number(ec.min_icp_score) : 0,
+                notify_phone: (apc?.approval_to || '').trim() || undefined,
+              },
+            };
+          })() : {}),
           ...(source === 'zoho_recurring' ? {
             zoho_modules: srcCfg.zoho_modules || 'contacts',
             zoho_tag: (srcCfg.zoho_tag || '').trim() || undefined,
+            // Only meaningful for the accounts source; omitted otherwise so a
+            // stale title from a switched-away selection cannot reach the import.
+            zoho_account_title: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_title || '').trim() || undefined)
+              : undefined,
+            // Same reasoning as the title: omitted unless the accounts source is
+            // the one selected, so a location left behind by a switched-away
+            // selection cannot silently narrow a contacts import.
+            zoho_account_location: srcCfg.zoho_modules === 'accounts'
+              ? ((srcCfg.zoho_account_location || '').trim() || undefined)
+              : undefined,
             // Compliant, read-only Instagram enrichment: resolve each contact's
             // handle + optional public business_discovery profile. No follow/DM
             // (Meta's API exposes none) - maps contacts to IG for inbound.
@@ -3944,9 +4264,34 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         // Steps are not in update()'s allowedFields - they have their own
         // endpoint, so without this an edited outreach sequence saved nothing.
         if (res.ok && Array.isArray(editSteps)) {
-          await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
-          }).catch(() => { /* surfaced by the reload below */ });
+          // This used to swallow every failure and fall through to the redirect
+          // below, so a save that never wrote a step reported as done. It hid a
+          // 500 on this endpoint for as long as that endpoint has been broken —
+          // and worse, on the old non-transactional handler the delete had
+          // already committed, so "saved" meant the workflow was gone.
+          try {
+            const stepsRes = await fetchWithTenant(`/api/campaigns/${editCampaignId}/steps`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: editSteps }),
+            });
+            if (!stepsRes.ok) {
+              const body = await stepsRes.text();
+              let parsed: any = null;
+              try { parsed = body ? JSON.parse(body) : null; } catch { /* not JSON */ }
+              // The backend says whether the campaign kept its previous steps.
+              // Worth repeating verbatim: it is the difference between "your
+              // edit did not save" and "your workflow is now empty".
+              const kept = parsed?.stepsPreserved
+                ? ' Your previous steps were kept.'
+                : '';
+              setError(`${parsed?.message || parsed?.error || `Could not save the workflow steps (${stepsRes.status})`}.${kept}`);
+              setLaunching(false);
+              return;
+            }
+          } catch (stepsErr: any) {
+            setError(stepsErr?.message || 'Could not save the workflow steps');
+            setLaunching(false);
+            return;
+          }
         }
       } else {
         res = await fetchWithTenant('/api/campaigns', {
@@ -3959,8 +4304,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       const raw = await res.text();
       let data: any = null;
       try { data = raw ? JSON.parse(raw) : null; } catch { /* not JSON */ }
-      if (res.ok && (data?.success || data?.id || data?.data?.id)) window.location.href = '/campaigns';
-      else {
+      if (res.ok && (data?.success || data?.id || data?.data?.id)) {
+        if (!editCampaignId && onLaunched) {
+          const createdId = data?.data?.id ?? data?.id ?? data?.campaign?.id ?? data?.data?.campaign?.id ?? null;
+          try { await onLaunched(createdId != null ? String(createdId) : null); } catch { /* the campaign is live either way */ }
+        }
+        window.location.href = (!editCampaignId && afterLaunchHref) || '/campaigns';
+      } else {
         setError(data?.error || `${editCampaignId ? 'Could not save changes' : 'Failed to launch Accelerator'} (${res.status})`);
         setLaunching(false);
       }
@@ -4033,6 +4383,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     appliedTplRef.current = true;
     setPaletteTab('ai');
     applyAiTemplate(initialAiTemplate);
+    // Re-arm on cleanup: the "fresh canvas on mount" effect above clears the
+    // store again when React re-runs effects (dev Strict Mode), and a one-shot
+    // ref would leave the draft applied-then-wiped. Callers pass a stable
+    // template object, so this never re-applies on an ordinary re-render.
+    return () => { appliedTplRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAiTemplate]);
   // Re-arm the banner if a fresh draft arrives while the builder is already
@@ -4078,6 +4433,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       })),
       macro(MULTICOND_STEP_ID, 'Multi-condition', 'Branch by a field value', <Split className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addMultiCond, 'Logic & routing'),
       macro(SPLIT_STEP_ID, 'A/B split test', 'Compare two openers', <Shuffle className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addSplitTest, 'Logic & routing'),
+      macro(ACCEPT_STEP_ID, 'Accepted?', 'Branch on the connection request', <UserCheck className="h-4 w-4 text-emerald-600" />, 'bg-emerald-50 dark:bg-emerald-950/30', addAcceptanceBranch, 'Logic & routing'),
       macro(SETFIELD_STEP_ID, 'Set field', 'Tag or write a value', <PenLine className="h-4 w-4 text-lime-600" />, 'bg-lime-50 dark:bg-lime-950/30', addSetField, 'Logic & routing'),
       macro(AI_STEP_ID, 'AI Agent', 'Clean & normalise lead data', <Sparkles className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addAiParse, 'Enrich & AI'),
       macro(ENRICH_STEP_ID, 'Enrich contact', 'Official email · phone', <Contact className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addDataEnrich, 'Enrich & AI'),
@@ -4089,6 +4445,8 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       macro(HTTP_STEP_ID, 'HTTP request', 'Call any API per lead', <Webhook className="h-4 w-4 text-slate-600" />, 'bg-slate-100 dark:bg-slate-800/50', addHttpRequest, 'Automation & output'),
       macro(CONTENT_STEP_ID, 'LinkedIn content', 'Write or AI-generate a post', <PenTool className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addLinkedInContent, 'Automation & output'),
       macro(APPROVAL_STEP_ID, 'Approval', 'Approve before posting', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addPostApproval, 'Automation & output'),
+      macro(POST_ENGAGE_STEP_ID, 'Comment on new posts', "Engage your connections' posts", <MessageCircle className="h-4 w-4 text-cyan-700" />, 'bg-cyan-50 dark:bg-cyan-950/30', addPostEngage, 'Automation & output'),
+      macro(COMMENT_APPROVAL_STEP_ID, 'Comment approval', 'Approve or rewrite on WhatsApp', <ShieldCheck className="h-4 w-4 text-green-600" />, 'bg-green-50 dark:bg-green-950/30', addCommentApproval, 'Automation & output'),
       macro(AUTOPOST_STEP_ID, 'LinkedIn auto-post', 'Recurring post to your feed', <Megaphone className="h-4 w-4 text-[#0077B5]" />, 'bg-sky-50 dark:bg-sky-950/30', addAutopost, 'Automation & output'),
       macro(IG_AUTOPOST_STEP_ID, 'Instagram auto-post', 'Image or Reel · on a schedule', <Instagram className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addInstagramPost, 'Automation & output'),
       macro(REPORT_STEP_ID, 'Audit report', 'PDF · attach or offer', <FileText className="h-4 w-4 text-teal-700" />, 'bg-teal-50 dark:bg-teal-950/30', addReport, 'Automation & output'),
@@ -4227,13 +4585,16 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isResearch = editingId === RESEARCH_STEP_ID;
     const isScore = editingId === SCORE_STEP_ID;
     const isSplit = editingId === SPLIT_STEP_ID;
+    const isAccept = editingId === ACCEPT_STEP_ID;
     const isSetField = editingId === SETFIELD_STEP_ID;
     const isHttp = editingId === HTTP_STEP_ID;
     const isLanding = editingId === LANDING_STEP_ID;
     const isIgPost = editingId === IG_AUTOPOST_STEP_ID;
     const isHumanTask = editingId === HUMAN_TASK_STEP_ID;
     const isReport = editingId === REPORT_STEP_ID;
-    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport;
+    const isPostEngage = editingId === POST_ENGAGE_STEP_ID;
+    const isCommentApproval = editingId === COMMENT_APPROVAL_STEP_ID;
+    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport || isPostEngage || isCommentApproval;
     const visual = isSource
       ? SOURCES.find((s) => s.key === source)
       : isFollowup
@@ -4264,6 +4625,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ? { icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30' }
           : isScore
             ? { icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30' }
+          : isPostEngage
+            ? { icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30' }
+          : isCommentApproval
+            ? { icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30' }
           : isSplit
             ? { icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30' }
           : isSetField
@@ -4284,7 +4649,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-foreground truncate">{editingStep.title}</div>
             <div className="text-xs text-muted-foreground">
-              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
+              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isPostEngage ? 'What to engage' : isCommentApproval ? 'Who approves comments' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
             </div>
           </div>
           <button onClick={() => setEditingId(null)} className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
@@ -4303,10 +4668,51 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Import from</label>
               <CustomSelect className={field} value={cfg.zoho_modules || 'contacts'} onValueChange={(val) => setCfg(editingId, { zoho_modules: val })}>
                 <option value="contacts">Contacts only</option><option value="contacts_leads">Contacts + Leads</option>
+                <option value="accounts">Accounts (companies)</option>
               </CustomSelect></div>
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Job title to find at each account</label>
+                <Input
+                  value={cfg.zoho_account_title || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_title: e.target.value })}
+                  placeholder="e.g. Head of Operations, Operations Director"
+                />
+                <p className="text-xs text-muted-foreground">
+                  An account is a company, not a person. Each one is searched on LinkedIn for people with this title. Separate alternatives with commas — they widen one search rather than adding more.
+                </p>
+                {!(cfg.zoho_account_title || '').trim() && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">Required — without a title there is nobody to import.</p>
+                )}
+              </div>
+            )}
+            {cfg.zoho_modules === 'accounts' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Location (optional)</label>
+                <Input
+                  value={cfg.zoho_account_location || ''}
+                  onChange={(e) => setCfg(editingId, { zoho_account_location: e.target.value })}
+                  placeholder="e.g. Dubai"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Added to each company&apos;s people search, so it favours profiles based there.
+                  It <strong>steers</strong> the search rather than filtering it — a few people
+                  elsewhere will still come through. Leave blank to search worldwide.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This does not read the account&apos;s address in Zoho: on most accounts the
+                  billing city is empty, so filtering on it would skip nearly every company —
+                  and permanently, because the daily import moves past whatever it reads.
+                </p>
+              </div>
+            )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only tag (optional)</label>
               <Input value={cfg.zoho_tag || ''} onChange={(e) => setCfg(editingId, { zoho_tag: e.target.value })} placeholder="e.g. Auto-Conversion Lead" /></div>
-            <p className="text-xs text-muted-foreground">Imports up to {perDay}/day of newly-created records, every day until the campaign ends.</p>
+            <p className="text-xs text-muted-foreground">
+              {cfg.zoho_modules === 'accounts'
+                ? `Imports up to ${perDay}/day of newly-created accounts and finds people at each, every day until the campaign ends.`
+                : `Imports up to ${perDay}/day of newly-created records, every day until the campaign ends.`}
+            </p>
             <div className="rounded-lg border border-border p-2.5 space-y-2 bg-muted/20">
               <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
                 <input type="checkbox" checked={!!cfg.resolve_instagram} onChange={(e) => setCfg(editingId, { resolve_instagram: e.target.checked })} />
@@ -4330,6 +4736,37 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               </CustomSelect></div>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">How many (max 500)</label>
               <Input type="number" value={cfg.import_count || '100'} onChange={(e) => setCfg(editingId, { import_count: e.target.value })} /></div>
+          </>)}
+          {isSource && source === 'linkedin_connections' && (<>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Decision-maker titles (optional)</label>
+              <Input value={cfg.decision_maker_titles || ''} onChange={(e) => setCfg(editingId, { decision_maker_titles: e.target.value })} placeholder="e.g. Founder, CEO, Managing Director" />
+              <p className="text-[11px] text-muted-foreground">Matched against each connection&apos;s headline. Leave blank to use the seniority floor below instead.</p></div>
+            {!(cfg.decision_maker_titles || '').trim() && (
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum seniority</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={cfg.min_seniority || 'director'}
+                  onChange={(e) => setCfg(editingId, { min_seniority: e.target.value })}
+                >
+                  <option value="c_suite">C-suite &amp; founders only</option>
+                  <option value="vp">VP and above</option>
+                  <option value="director">Director and above</option>
+                  <option value="manager">Manager and above</option>
+                  <option value="any">Everyone</option>
+                </select></div>
+            )}
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Headline keywords (optional)</label>
+              <Input value={cfg.keywords || ''} onChange={(e) => setCfg(editingId, { keywords: e.target.value })} placeholder="e.g. real estate, proptech" />
+              <p className="text-[11px] text-muted-foreground">Comma-separated; at least one must appear in the headline. Narrows to your industry.</p></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-foreground">Minimum ICP fit (0&ndash;100)</label>
+              <Input type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(editingId, { min_icp_score: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">Scored from seniority, department and your business profile&apos;s target titles/industries. No AI credits are spent.</p></div>
+            <p className="text-xs text-muted-foreground">
+              Reviews your connections newest-first, up to {perDay} matches a day, carrying on where it
+              left off until the whole list has been seen. Add <strong>Comment on new posts</strong> and
+              <strong> Approval</strong> from the palette to engage their posts; that keeps running after the
+              list is done, for as long as the campaign is active.
+            </p>
           </>)}
           {isSource && source === 'own_contacts' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Who to include</label>
@@ -4590,7 +5027,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const reportBeforeFollowup = reportIdx !== -1 && followupIdx !== -1 && reportIdx < followupIdx;
             const eid = editingId!;
             const channel: string = cfg.channel || 'linkedin';
-            const touches: { hours?: number; template_id?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
+            const touches: { hours?: number; template_id?: string; template_name?: string; template_language?: string; message?: string; touch_type?: string }[] = Array.isArray(cfg.touches) && cfg.touches.length ? cfg.touches : [{ hours: 24 }];
             const tmpls: any[] = channel === 'email' ? res.emailTemplates : channel === 'whatsapp' ? res.waTemplates : res.liTemplates;
             const tmplName = (t: any) => t.name || t.title || 'Template';
             const syncDesc = (n: number, ch: string) => updateWorkflowStep(eid, { description: `${n} touches · ${FU_CHANNELS.find((c2) => c2.value === ch)?.label}` });
@@ -4635,7 +5072,19 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                           if (v === '__lead_report__') setTouch(i, { touch_type: 'lead_report', template_id: undefined });
                           else if (v === '__industry_trend__') setTouch(i, { touch_type: 'industry_trend', template_id: undefined });
                           else if (v === '__company_post__') setTouch(i, { touch_type: 'company_page_post', template_id: undefined });
-                          else setTouch(i, { touch_type: undefined, template_id: v || undefined });
+                          else {
+                            const tm = channel === 'whatsapp' ? findWaTemplate(tmpls, v) : tmpls.find((x: any) => String(x.id) === v);
+                            setTouch(i, {
+                              touch_type: undefined,
+                              template_id: v || undefined,
+                              // WhatsApp templates are addressed by name +
+                              // language, not by id — see waTemplateLabel.
+                              ...(channel === 'whatsapp' ? {
+                                template_name: tm?.name || undefined,
+                                template_language: tm?.language || undefined,
+                              } : {}),
+                            });
+                          }
                         }}>
                         <option value="">AI-generated (default)</option>
                         {reportBeforeFollowup && (
@@ -4647,7 +5096,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                             <option value="__company_post__">Share a post from our company page</option>
                           </>
                         )}
-                        {tmpls.map((tm: any) => <option key={tm.id} value={tm.id}>{tmplName(tm)}</option>)}
+                        {tmpls.map((tm: any) => {
+                          const v = channel === 'whatsapp' ? waTemplateKey(tm) : String(tm.id);
+                          return <option key={v} value={v}>{channel === 'whatsapp' ? waTemplateLabel(tm) : tmplName(tm)}</option>;
+                        })}
                       </CustomSelect>
                       {(t.touch_type === 'industry_trend' || t.touch_type === 'company_page_post') && (
                         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -4902,17 +5354,44 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             const channels = new Set<Channel>();
             workflowPreview.forEach((s) => { const o = OUTREACH.find((x) => x.type === s.type); if (o) channels.add(o.channel); });
             if ((source === 'zoho_recurring' || source === 'ghl_recurring') && configs[SOURCE_STEP_ID]?.resolve_instagram) channels.add('instagram');
+            // Per picklist field: which of ITS options each outcome becomes.
+            // { [api_name]: { [outcome_key]: option } }. Kept apart from `map`
+            // so the module-switch reset above clears both together.
+            const zpick: Record<string, Record<string, string>> = cfg.picklist || {};
             const setMap = (api: string, val: string) => setCfg(eid, { map: { ...zmap, [api]: val } });
+            const setPick = (api: string, outcome: string, option: string) =>
+              setCfg(eid, { picklist: { ...zpick, [api]: { ...(zpick[api] || {}), [outcome]: option } } });
+            const optionsOf = (f: any): string[] => Array.isArray(f?.pick_list_values) ? f.pick_list_values.map(String) : [];
             const applySuggestions = () => {
               const next: Record<string, string> = { ...zmap };
-              zohoFields.forEach((f) => { if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; } });
-              setCfg(eid, { map: next });
+              const nextPick: Record<string, Record<string, string>> = { ...zpick };
+              zohoFields.forEach((f) => {
+                if (!next[f.api_name]) { const s = suggestDataPoint(f, channels); if (s) next[f.api_name] = s; }
+                // A picklist mapped to the outcome gets its rows suggested too,
+                // but only the rows the operator has not already set.
+                if (next[f.api_name] === 'campaign_outcome' && optionsOf(f).length) {
+                  const cur = nextPick[f.api_name] || {};
+                  const filled: Record<string, string> = { ...cur };
+                  CAMPAIGN_OUTCOMES.forEach((o) => { if (!filled[o.key]) { const s = suggestPicklistOption(o.key, optionsOf(f)); if (s) filled[o.key] = s; } });
+                  nextPick[f.api_name] = filled;
+                }
+              });
+              setCfg(eid, { map: next, picklist: nextPick });
             };
             const mappedCount = Object.values(zmap).filter(Boolean).length;
             return (<>
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Update which record</label>
-                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => { setCfg(eid, { module: val }); updateWorkflowStep(eid, { description: `Write back to ${val}` }); }}>
-                  <option value="Contacts">Contacts</option><option value="Leads">Leads</option>
+                <CustomSelect className={field} value={cfg.module || 'Contacts'} onValueChange={(val) => {
+                  // Drop the existing mapping. It is keyed by Zoho api_name, and
+                  // the save path writes EVERY key in it — not just the rows still
+                  // on screen — so a mapping left over from Contacts would be
+                  // posted invisibly to Accounts, where those fields do not exist.
+                  setCfg(eid, { module: val, map: {} });
+                  updateWorkflowStep(eid, { description: `Write back to ${val}` });
+                }}>
+                  <option value="Contacts">Contacts</option>
+                  <option value="Leads">Leads</option>
+                  <option value="Accounts">Accounts (companies)</option>
                 </CustomSelect></div>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Field mapping{mappedCount ? ` (${mappedCount})` : ''}</label>
@@ -4925,17 +5404,50 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               {!!zohoFields.length && (
                 <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
                   {zohoFields.map((f) => (
-                    <div key={f.api_name} className="grid grid-cols-2 gap-2 items-center">
-                      <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
-                      <CustomSelect className="w-full text-xs" value={zmap[f.api_name] || ''} onValueChange={(val) => setMap(f.api_name, val)}>
-                        <option value="">— Skip —</option>
-                        {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
-                      </CustomSelect>
-                    </div>
+                    <Fragment key={f.api_name}>
+                      <div className="grid grid-cols-2 gap-2 items-center">
+                        <span className="text-xs text-foreground truncate" title={`${f.field_label} (${f.data_type})`}>{f.field_label}</span>
+                        <CustomSelect className="w-full text-xs" value={zmap[f.api_name] || ''} onValueChange={(val) => setMap(f.api_name, val)}>
+                          <option value="">— Skip —</option>
+                          {WORKFLOW_DATA_POINTS.map((dp) => <option key={dp.key} value={dp.key}>{dp.label}</option>)}
+                        </CustomSelect>
+                      </div>
+                      {/* A picklist mapped to the outcome needs one more answer per
+                          outcome: which of the field's OWN options it becomes.
+                          Zoho refuses any value that is not an option, and the
+                          write-back fails softly, so without this the field
+                          silently never changed. An outcome left at "— Don't
+                          write —" leaves the field alone on those leads. */}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length > 0 && (
+                        <div className="ml-3 pl-2 border-l-2 border-border dark:border-blue-950/40 space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            <strong>{f.field_label}</strong> is a picklist. Choose which of its options each outcome becomes:
+                          </p>
+                          {CAMPAIGN_OUTCOMES.map((o) => (
+                            <div key={o.key} className="grid grid-cols-2 gap-2 items-center">
+                              <span className="text-[11px] text-foreground truncate" title={o.label}>{o.label}</span>
+                              <CustomSelect className="w-full text-[11px]" value={(zpick[f.api_name] || {})[o.key] || ''} onValueChange={(val) => setPick(f.api_name, o.key, val)}>
+                                <option value="">— Don&apos;t write —</option>
+                                {optionsOf(f).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                              </CustomSelect>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {zmap[f.api_name] === 'campaign_outcome' && optionsOf(f).length === 0 && (
+                        <p className="ml-3 text-[11px] text-amber-700 dark:text-amber-400">
+                          This field is not a picklist, so the outcome key (e.g. <code>connection_accepted</code>) is written as plain text.
+                        </p>
+                      )}
+                    </Fragment>
                   ))}
                 </div>
               )}
-              <p className="text-[11px] leading-snug text-muted-foreground">Runs when a lead finishes the sequence - writes the mapped workflow &amp; enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {(cfg.module || 'Contacts') === 'Accounts'
+                  ? 'Runs when a lead finishes the sequence - writes the mapped data onto the COMPANY the lead was found at, not the person. Only leads that came from the Zoho Accounts source carry an account to update; for anyone else this step is skipped. Only non-empty values are written; blank fields are left untouched.'
+                  : 'Runs when a lead finishes the sequence - writes the mapped workflow & enrichment data back onto its original Zoho record. Only non-empty values are written; blank fields are left untouched.'}
+              </p>
             </>);
           })()}
 
@@ -5431,6 +5943,69 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             </>);
           })()}
 
+          {isPostEngage && (() => {
+            const eid = editingId!;
+            const hasApproval = workflowPreview.some((s) => s.id === COMMENT_APPROVAL_STEP_ID);
+            const ownNetwork = source === 'linkedin_connections';
+            return (<>
+              <div className="rounded-md border border-cyan-200 bg-cyan-50 dark:border-cyan-900 dark:bg-cyan-950/30 px-3 py-2">
+                <p className="text-[11px] text-cyan-800 dark:text-cyan-300">
+                  Every few hours the campaign checks each lead for a new LinkedIn post (last 14 days,
+                  one post per person per check) and engages it. One engagement per post, ever; a daily
+                  cap keeps the pattern human.
+                </p>
+              </div>
+              {!ownNetwork && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  This source enrols people you are <strong>not</strong> connected to. Commenting on strangers&apos;
+                  posts reads as automation; this node is built for the <strong>Your LinkedIn connections</strong> source.
+                </div>
+              )}
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">When someone posts</label>
+                <CustomSelect className={field} value={cfg.comment === 'off' ? 'off' : 'comment'}
+                  onValueChange={(val) => { setCfg(eid, { comment: val }); updateWorkflowStep(eid, { description: val === 'off' ? 'Watch their posts · like only' : 'Watch their posts · AI-drafted comment · like' }); }}>
+                  <option value="comment">Draft an AI comment</option>
+                  <option value="off">Like only, never comment</option>
+                </CustomSelect></div>
+              {cfg.comment !== 'off' && (hasApproval ? (
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Each draft goes to the <strong>Approval</strong> node: you get the post and the suggested comment on WhatsApp.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  <strong>No Approval node</strong> - comments post automatically under your name (each one still
+                  passes a safety check). <button type="button" className="underline font-semibold" onClick={addCommentApproval}>Add the Approval node</button> to review each comment first.
+                </div>
+              ))}
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input type="checkbox" checked={cfg.like_posts !== false} onChange={(e) => setCfg(eid, { like_posts: e.target.checked })} />
+                Also like the post
+              </label>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only leads with ICP fit at least (0&ndash;100)</label>
+                <input className={field} type="number" min={0} max={100} value={cfg.min_icp_score ?? '50'} onChange={(e) => setCfg(eid, { min_icp_score: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Uses the ICP score on each lead; leads without one are included.</p></div>
+            </>);
+          })()}
+
+          {isCommentApproval && (() => {
+            const eid = editingId!;
+            return (<>
+              <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-3 py-2">
+                <p className="text-[11px] text-green-800 dark:text-green-300">
+                  Nothing is posted until you tap. You get the post and a suggested comment on WhatsApp:
+                  <strong> Approve</strong> posts it as written; <strong>Reject</strong> opens a page where you
+                  write your own comment instead, or skip.
+                </p>
+              </div>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Approver WhatsApp number (optional)</label>
+                <input className={field} value={cfg.approval_to || ''} onChange={(e) => setCfg(eid, { approval_to: e.target.value })} placeholder="+971500000000 - defaults to your account phone" />
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                A request nobody answers expires after 48 hours and posts nothing - a comment days after the post reads as automation.
+              </p>
+            </>);
+          })()}
+
           {isApproval && (() => {
             const eid = editingId!;
             return (<>
@@ -5550,6 +6125,142 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
 
           })()}
 
+
+          {isAccept && (() => {
+            const eid = editingId!;
+            const setBranch = (k: 'accepted' | 'expired', patch: any) =>
+              setCfg(eid, { [k]: { ...(cfg[k] || {}), ...patch } });
+            // Defaults match what buildBranch compiles when nothing is set.
+            const branchChannel = (k: 'accepted' | 'expired') =>
+              (cfg[k] || {}).channel || (k === 'accepted' ? 'whatsapp' : 'email');
+            const branchTemplates = (k: 'accepted' | 'expired'): any[] => {
+              const ch = branchChannel(k);
+              return ch === 'email' ? res.emailTemplates : ch === 'linkedin' ? res.liTemplates : res.waTemplates;
+            };
+            // Derived, never passed in: a hardcoded "phone → WhatsApp" goes
+            // stale the moment someone changes the channel, and a label that
+            // disagrees with the config is how a step nobody expected gets sent.
+            const branchHint = (k: 'accepted' | 'expired') => {
+              const ch = branchChannel(k);
+              const enrich = (cfg[k] || {}).enrich;
+              const chLabel = ch === 'email' ? 'Email' : ch === 'linkedin' ? 'LinkedIn' : 'WhatsApp';
+              const enrichLabel = enrich === 'phone' ? 'phone' : enrich === 'official_email' ? 'email' : null;
+              return enrichLabel ? `${enrichLabel} → ${chLabel}` : chLabel;
+            };
+            const branch = (k: 'accepted' | 'expired', label: string) => (
+              <div className="rounded-lg border border-border dark:border-blue-950/40 p-2.5 space-y-1.5 bg-muted/20 dark:bg-[#030a21]/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-foreground">{label}</span>
+                  <span className="text-[11px] text-muted-foreground">{branchHint(k)}</span>
+                </div>
+                <CustomSelect className={field} value={(cfg[k] || {}).enrich || ''} onValueChange={(val) => setBranch(k, { enrich: val })}>
+                  <option value="">No enrichment</option>
+                  <option value="phone">Reveal phone</option>
+                  <option value="official_email">Reveal official email</option>
+                </CustomSelect>
+                <CustomSelect className={field} value={branchChannel(k)} onValueChange={(val) => setBranch(k, { channel: val, template_id: undefined })}>
+                  <option value="whatsapp">Send WhatsApp</option>
+                  <option value="linkedin">Send LinkedIn message</option>
+                  <option value="email">Send email</option>
+                </CustomSelect>
+                {/* Same templates the standalone message nodes offer, picked per
+                    branch because each branch chooses its own channel. Selecting
+                    one copies its text into the box below so it stays editable
+                    and visible; the id travels too, since the engine's email and
+                    WhatsApp executors resolve HTML, media and approved WhatsApp
+                    templates from it rather than from the text. */}
+                {branchTemplates(k).length > 0 && (
+                  <CustomSelect className={field} value={(cfg[k] || {}).template_id || ''} onValueChange={(val) => {
+                    const isWa = branchChannel(k) === 'whatsapp';
+                    const t = isWa
+                      ? findWaTemplate(branchTemplates(k), val)
+                      : branchTemplates(k).find((x: any) => String(x.id) === val);
+                    setBranch(k, {
+                      template_id: val || undefined,
+                      // WhatsApp is addressed by name + language: that is what
+                      // Meta accepts outside the 24h window, and the id alone
+                      // cannot express it (the same name can exist on two of a
+                      // tenant's numbers).
+                      ...(isWa ? {
+                        whatsapp_template_name: t?.name || undefined,
+                        whatsapp_template_language: t?.language || undefined,
+                      } : {}),
+                      ...(t ? { body: (isWa ? waTemplateBody(t) : (t.content ?? t.body ?? t.message)) || (cfg[k] || {}).body } : {}),
+                      ...(t && branchChannel(k) === 'email' && t.subject ? { subject: t.subject } : {}),
+                    });
+                  }}>
+                    <option value="">— No template (write below / AI-drafted) —</option>
+                    {branchTemplates(k).map((t: any) => {
+                      const isWa = branchChannel(k) === 'whatsapp';
+                      const v = isWa ? waTemplateKey(t) : String(t.id);
+                      return <option key={v} value={v}>{isWa ? waTemplateLabel(t) : (t.name || t.title || 'Template')}</option>;
+                    })}
+                  </CustomSelect>
+                )}
+                {branchChannel(k) === 'whatsapp' && branchTemplates(k).length === 0 && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    {res.waTemplatesDegraded
+                      ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                      : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+                  </p>
+                )}
+                {/* Sending account. WhatsApp needs one — the dispatcher has no
+                    tenant default and fails the step without it. Email does
+                    default to the tenant's own active account, so its picker is
+                    a choice rather than a requirement. */}
+                {(branchChannel(k) === 'whatsapp') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).whatsapp_account_id || ''} onValueChange={(val) => setBranch(k, { whatsapp_account_id: val || undefined })}>
+                    <option value="">— Pick the WhatsApp number to send from —</option>
+                    {res.waAccounts.map((a: any) => <option key={a.id} value={a.id}>{a.slug || a.display_name || a.phone_number || a.id}</option>)}
+                  </CustomSelect>
+                  {res.waAccounts.length === 0
+                    ? <p className="text-[11px] text-muted-foreground">No WhatsApp account connected — connect one in Settings.</p>
+                    : !(cfg[k] || {}).whatsapp_account_id
+                      ? <p className="text-[11px] text-amber-700 dark:text-amber-400">Pick a number — WhatsApp has no default sender, so this branch would fail without one.</p>
+                      : null}
+                </>)}
+                {(branchChannel(k) === 'email') && (<>
+                  <CustomSelect className={field} value={(cfg[k] || {}).from_email || ''} onValueChange={(val) => {
+                    const s = res.emailSenders.find((x: any) => x.email === val);
+                    setBranch(k, { from_email: val || undefined, email_provider: s?.provider || undefined });
+                  }}>
+                    <option value="">— Default connected account —</option>
+                    {res.emailSenders.map((s: any) => <option key={s.email} value={s.email}>{s.email}{s.provider ? ` (${s.provider})` : ''}</option>)}
+                  </CustomSelect>
+                  <input className={field} value={(cfg[k] || {}).subject || ''} onChange={(e) => setBranch(k, { subject: e.target.value })} placeholder="Subject" />
+                </>)}
+                <textarea className={`${field} min-h-[70px]`} value={(cfg[k] || {}).body || ''} onChange={(e) => setBranch(k, { body: e.target.value })}
+                  placeholder="Message (leave blank to send nothing on this branch)" />
+              </div>
+            );
+            return (
+              <div className="space-y-2.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Waits to see if the lead accepts your connection request, then branches. The
+                  clock starts when the invite was <strong>sent</strong>, not when the workflow
+                  reaches this step.
+                </p>
+                <div>
+                  <label className="text-[12px] font-semibold text-foreground">Give them how long?</label>
+                  <input
+                    className={field}
+                    type="number"
+                    min={0}
+                    value={cfg.wait_days ?? 5}
+                    onChange={(e) => setCfg(eid, { wait_days: e.target.value })}
+                    placeholder="5"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Days to wait before treating the invite as unanswered. Leave it blank for the
+                    default of 5. <strong>0</strong> decides on the next pass — useful for testing
+                    the sequence, but it sends the no-answer follow-up within minutes of the invite.
+                  </p>
+                </div>
+                {branch('accepted', 'If accepted')}
+                {branch('expired', 'If still no answer')}
+              </div>
+            );
+          })()}
 
           {isSplit && (() => {
             const eid = editingId!;
@@ -6493,12 +7204,27 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             {res.waTemplates.length > 0 && (
               <div className="space-y-1"><label className="text-xs font-medium text-foreground">Template (optional)</label>
                 <CustomSelect className={field} value={cfg.whatsapp_template_id || ''} onValueChange={(val) => {
-                  const t = res.waTemplates.find((x: any) => String(x.id) === val);
-                  setCfg(editingId!, { whatsapp_template_id: val || undefined, message: t?.content ?? t?.body ?? cfg.message });
+                  const t = findWaTemplate(res.waTemplates, val);
+                  setCfg(editingId!, {
+                    whatsapp_template_id: val || undefined,
+                    // Meta addresses a template by NAME + LANGUAGE, not by id —
+                    // the same name can exist on two of a tenant's numbers. The
+                    // engine sends these two; the id is kept for media lookup.
+                    whatsapp_template_name: t?.name || undefined,
+                    whatsapp_template_language: t?.language || undefined,
+                    message: waTemplateBody(t) || cfg.message,
+                  });
                 }}>
                   <option value=""> -  None (write below / AI-drafted)  - </option>
-                  {res.waTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.name || t.title || 'Template'}</option>)}
+                  {res.waTemplates.map((t: any) => <option key={waTemplateKey(t)} value={waTemplateKey(t)}>{waTemplateLabel(t)}</option>)}
                 </CustomSelect></div>
+            )}
+            {res.waTemplates.length === 0 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                {res.waTemplatesDegraded
+                  ? <>Couldn&apos;t load approved templates — {res.waTemplatesDegraded}. If Meta says the number doesn&apos;t exist or lacks permission, reconnect it in Settings → WhatsApp.</>
+                  : <>No approved WhatsApp templates on this account. A message to someone who hasn&apos;t written to you first needs one — create it in Templates and get it approved.</>}
+              </p>
             )}
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Message</label>
               <textarea className={`${field} min-h-[90px]`} value={cfg.message || ''} onChange={(e) => { setCfg(editingId!, { message: e.target.value }); updateWorkflowStep(editingId!, { description: e.target.value.slice(0, 40) }); }}
@@ -8292,10 +9018,13 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               { id: RESEARCH_STEP_ID, on: addWebResearch, icon: <Telescope className="h-4 w-4 text-indigo-600" />, chip: 'bg-indigo-50 dark:bg-indigo-950/30', label: 'Web research', sub: 'AI company intel from the web' },
               { id: SCORE_STEP_ID, on: addLeadScore, icon: <Gauge className="h-4 w-4 text-yellow-600" />, chip: 'bg-yellow-50 dark:bg-yellow-950/30', label: 'Lead scoring', sub: 'Buy-intent 0-100 · hot/warm/cold' },
               { id: SPLIT_STEP_ID, on: addSplitTest, icon: <Shuffle className="h-4 w-4 text-pink-600" />, chip: 'bg-pink-50 dark:bg-pink-950/30', label: 'A/B split test', sub: 'Compare two openers' },
+              { id: ACCEPT_STEP_ID, on: addAcceptanceBranch, icon: <UserCheck className="h-4 w-4 text-emerald-600" />, chip: 'bg-emerald-50 dark:bg-emerald-950/30', label: 'Accepted?', sub: 'Branch on the connection request' },
               { id: SETFIELD_STEP_ID, on: addSetField, icon: <PenLine className="h-4 w-4 text-lime-600" />, chip: 'bg-lime-50 dark:bg-lime-950/30', label: 'Set field', sub: 'Tag or write a value' },
               { id: HTTP_STEP_ID, on: addHttpRequest, icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50', label: 'HTTP request', sub: 'Call any API per lead' },
               { id: CONTENT_STEP_ID, on: addLinkedInContent, icon: <PenTool className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', label: 'LinkedIn content', sub: 'Write or AI-generate the post' },
               { id: APPROVAL_STEP_ID, on: addPostApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Approval', sub: 'Approve on WhatsApp before posting' },
+              { id: POST_ENGAGE_STEP_ID, on: addPostEngage, icon: <MessageCircle className="h-4 w-4 text-cyan-700" />, chip: 'bg-cyan-50 dark:bg-cyan-950/30', label: 'Comment on new posts', sub: "Like + AI comment on your connections' posts" },
+              { id: COMMENT_APPROVAL_STEP_ID, on: addCommentApproval, icon: <ShieldCheck className="h-4 w-4 text-green-600" />, chip: 'bg-green-50 dark:bg-green-950/30', label: 'Comment approval', sub: 'Approve or write your own on WhatsApp' },
             ]).map((b) => {
               const added2 = workflowPreview.some((s) => s.id === b.id);
               return (
