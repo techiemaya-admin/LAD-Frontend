@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Calendar, ExternalLink, Eye, Cpu } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, ArrowUpDown, Calendar, ExternalLink, Eye, Cpu } from 'lucide-react';
 import { useTransactions } from '@lad/frontend-features/billing';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { TransactionDetailModal } from './TransactionDetailModal';
@@ -105,18 +105,35 @@ export const TransactionHistory: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Transaction History</h2>
           <p className="text-gray-600 dark:text-gray-400 mt-1">View all credits and debits for your account</p>
         </div>
-        <div className="text-right">
+        <div className="hidden md:block text-right">
           <div className="text-sm text-gray-600 dark:text-gray-400">Net Balance Change</div>
           <div className={`text-2xl font-bold ${stats.net >= 0 ? 'text-green-600 dark:text-emerald-400' : 'text-red-600 dark:text-rose-400'}`}>
             {stats.net >= 0 ? '+' : '-'}
             {formatCredits(Math.abs(stats.net))}
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{planTier} plan · {creditsPerDollar.toFixed(1)} cr/$</div>
+        </div>
+      </div>
+
+      {/* Net Balance Change Card - Mobile Only (matching user reference mockup) */}
+      <div className={`md:hidden bg-white dark:bg-[#030a21]/60 rounded-xl shadow-md p-6 border border-gray-200 dark:border-blue-950/40 border-l-4 ${stats.net >= 0 ? 'border-l-green-600 dark:border-l-emerald-500' : 'border-l-red-600 dark:border-l-rose-500'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-gray-700 dark:text-gray-300 text-sm font-medium">Net Balance Change</span>
+            <div className={`text-2xl font-bold mt-1 ${stats.net >= 0 ? 'text-green-600 dark:text-emerald-400' : 'text-red-600 dark:text-rose-400'}`}>
+              {stats.net >= 0 ? '+' : '-'}
+              {formatCredits(Math.abs(stats.net))}
+            </div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{planTier} plan · {creditsPerDollar.toFixed(1)} cr/$</div>
+          </div>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${stats.net >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'}`}>
+            <ArrowUpDown className="h-6 w-6" />
+          </div>
         </div>
       </div>
 
@@ -149,80 +166,80 @@ export const TransactionHistory: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-[#030a21]/60 rounded-lg shadow-md p-6 border border-transparent dark:border-blue-950/40">
+      <div className="bg-white dark:bg-[#030a21]/60 rounded-xl shadow-md p-6 border border-gray-200 dark:border-blue-950/40">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Range</label>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Time Range</label>
 
             <Select
               value={timeRange}
               onValueChange={(value) => setTimeRange(value as TimeRange)}
             >
-              <SelectTrigger className="w-full h-auto flex-1 border border-gray-300 dark:border-blue-950/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent px-3 text-left min-h-[30px]">
+              <SelectTrigger className="w-full h-10 px-3 bg-white dark:bg-[#061033]/70 text-slate-900 dark:text-white font-medium border border-gray-300 dark:border-blue-950/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                 <SelectValue placeholder="Select time range" />
               </SelectTrigger>
 
               <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
                 <SelectItem
                   value="7d"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   Last 7 days
                 </SelectItem>
                 <SelectItem
                   value="30d"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   Last 30 days
                 </SelectItem>
                 <SelectItem
                   value="90d"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   Last 90 days
                 </SelectItem>
                 <SelectItem
                   value="all"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   All time
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transaction Type</label>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Transaction Type</label>
             <Select
               value={transactionType}
               onValueChange={(value) => setTransactionType(value as TransactionType)}
             >
-              <SelectTrigger className="w-full h-auto flex-1 border border-gray-300 dark:border-blue-950/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent px-3 text-left min-h-[30px]">
+              <SelectTrigger className="w-full h-10 px-3 bg-white dark:bg-[#061033]/70 text-slate-900 dark:text-white font-medium border border-gray-300 dark:border-blue-950/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
 
               <SelectContent className="bg-white dark:bg-[#000724] border-slate-200 dark:border-[#262831]">
                 <SelectItem
                   value="all"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   All Types
                 </SelectItem>
                 <SelectItem
                   value="credit"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   Credits Only
                 </SelectItem>
                 <SelectItem
                   value="debit"
-                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white dark:focus:bg-[#2563eb] dark:focus:text-white dark:data-[state=checked]:focus:bg-[#2563eb] dark:data-[state=checked]:focus:text-white">
+                  className="pl-3 pr-6 text-xs justify-start transition-colors cursor-pointer text-slate-800 dark:text-white focus:bg-slate-100 dark:focus:bg-[#2563eb] dark:focus:text-white">
                   Debits Only
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Search</label>
             <input
               type="text"
               placeholder="Search description, reference..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-blue-950/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[#061033]/70 dark:text-white dark:placeholder-gray-600 min-h-[30px]"
+              className="w-full h-10 px-4 py-2 border border-gray-300 dark:border-blue-950/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900 placeholder-slate-400 dark:bg-[#061033]/70 dark:text-white dark:placeholder-gray-500 text-sm font-medium shadow-sm"
             />
           </div>
         </div>
