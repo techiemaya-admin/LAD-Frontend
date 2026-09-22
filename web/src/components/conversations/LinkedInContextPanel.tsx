@@ -415,7 +415,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 -ml-1 lg:hidden text-slate-500"
+            className="h-7 w-7 -ml-1 lg:hidden text-slate-500 hover:bg-blue-600 hover:text-white"
             onClick={onClose}
             aria-label="Back to chat"
           >
@@ -426,7 +426,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 hidden lg:inline-flex text-slate-500"
+          className="h-7 w-7 hidden lg:inline-flex text-slate-500 hover:bg-blue-600 hover:text-white"
           onClick={onClose}
           aria-label="Close contact details"
         >
@@ -479,7 +479,7 @@ export function LinkedInContextPanel({ conversation, onClose }: Props) {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">Labels</p>
             <Button
-              variant="ghost" size="icon" className="h-6 w-6"
+              variant="ghost" size="icon" className="h-6 w-6 hover:bg-blue-600 hover:text-white"
               onClick={() => setShowLabelInput(s => !s)}
             >
               <Plus className="w-3.5 h-3.5" />

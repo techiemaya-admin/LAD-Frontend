@@ -624,7 +624,9 @@ export function LinkedInConversationView({
       const res  = await fetchWithTenant(li(`${API_BASE}/conversations`));
       const json = await res.json();
       if (json.success) {
-        setConversations(json.data || []);
+        const raw: LinkedInConversation[] = Array.isArray(json.data) ? json.data : [];
+        const unique = Array.from(new Map(raw.map(c => [c.id, c])).values());
+        setConversations(unique);
       } else {
         setError(json.message || json.error || 'Failed to load LinkedIn conversations');
       }
@@ -685,7 +687,9 @@ export function LinkedInConversationView({
       const res  = await fetchWithTenant(li(`${API_BASE}/conversations/${convId}/messages`));
       const json = await res.json();
       if (json.success) {
-        const sorted = [...(json.data || [])].sort(
+        const rawMsgs: LinkedInMessage[] = Array.isArray(json.data) ? json.data : [];
+        const uniqueMsgs = Array.from(new Map(rawMsgs.map(m => [m.id, m])).values());
+        const sorted = uniqueMsgs.sort(
           (a: LinkedInMessage, b: LinkedInMessage) =>
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
@@ -1004,7 +1008,7 @@ export function LinkedInConversationView({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 -ml-1" 
+                  className="h-8 w-8 -ml-1 hover:bg-blue-600 hover:text-white" 
                   onClick={() => setSelectedId(null)}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -1053,7 +1057,7 @@ export function LinkedInConversationView({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-slate-500"
+                    className="h-8 w-8 shrink-0 text-slate-500 hover:bg-blue-600 hover:text-white"
                     title="Conversation options"
                   >
                     <MoreVertical className="h-5 w-5" />
@@ -1062,7 +1066,7 @@ export function LinkedInConversationView({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() => setContextPanelOpen(o => !o)}
-                    className="cursor-pointer"
+                    className="cursor-pointer focus:bg-blue-600 focus:text-white"
                   >
                     {contextPanelOpen ? (
                       <PanelRightClose className="h-4 w-4 mr-2" />
@@ -1203,7 +1207,7 @@ export function LinkedInConversationView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="flex-shrink-0 h-10 w-10 p-0 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800"
+                            className="flex-shrink-0 h-10 w-10 p-0 rounded-xl text-slate-600 dark:text-slate-300 hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white border border-slate-200 dark:border-slate-800"
                             disabled={!chatEnabled}
                           >
                             <Plus className="h-5 w-5" />
@@ -1217,9 +1221,9 @@ export function LinkedInConversationView({
                       <DropdownMenuItem
                         onClick={handleAttachClick}
                         disabled={!chatEnabled}
-                        className="flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium"
+                        className="group flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium focus:bg-blue-600 focus:text-white"
                       >
-                        <Paperclip className="w-4 h-4 text-slate-500" />
+                        <Paperclip className="w-4 h-4 text-slate-500 group-focus:text-white" />
                         <span>Attach media (image / PDF)</span>
                       </DropdownMenuItem>
 
@@ -1232,13 +1236,13 @@ export function LinkedInConversationView({
                       }}>
                         <DropdownMenuSubTrigger
                           disabled={!chatEnabled}
-                          className="flex items-center justify-between gap-2 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                          className="group flex items-center justify-between gap-2 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium focus:bg-blue-600 focus:text-white data-[state=open]:bg-blue-600 data-[state=open]:text-white"
                         >
                           <div className="flex items-center gap-2.5">
-                            <FileText className="w-4 h-4 text-slate-500" />
+                            <FileText className="w-4 h-4 text-slate-500 group-focus:text-white group-data-[state=open]:text-white" />
                             <span>Templates</span>
                           </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-focus:text-white group-data-[state=open]:text-white" />
                         </DropdownMenuSubTrigger>
 
                         <DropdownMenuSubContent className="w-72 p-2 bg-white dark:bg-[#091122] border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl text-slate-900 dark:text-slate-100">
@@ -1305,7 +1309,7 @@ export function LinkedInConversationView({
                               return (
                                 <DropdownMenuItem
                                   key={t.id}
-                                  className="flex items-center justify-between gap-2 px-2 py-2 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-md outline-none"
+                                  className="group flex items-center justify-between gap-2 px-2 py-2 text-xs cursor-pointer focus:bg-blue-600 focus:text-white rounded-md outline-none"
                                   onClick={() => {
                                     const resolved = substituteLeadVars(t.content || '', selectedConv?.contact);
                                     if (resolved) {
@@ -1321,14 +1325,14 @@ export function LinkedInConversationView({
                                   }}
                                 >
                                   <div className="min-w-0 flex-1">
-                                    <div className="font-semibold text-slate-800 dark:text-slate-100 truncate text-[11px]">
+                                    <div className="font-semibold text-slate-800 dark:text-slate-100 group-focus:text-white truncate text-[11px]">
                                       {t.name}
                                     </div>
-                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 group-focus:text-white/80 truncate">
                                       {t.content || (hasMedia ? (media.media_filename || 'Attachment') : '')}
                                     </div>
                                   </div>
-                                  {hasMedia && <Paperclip className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
+                                  {hasMedia && <Paperclip className="w-3.5 h-3.5 text-slate-400 group-focus:text-white flex-shrink-0" />}
                                 </DropdownMenuItem>
                               );
                             })}
@@ -1340,9 +1344,9 @@ export function LinkedInConversationView({
                       <DropdownMenuItem
                         onClick={() => alert('Assignment for LinkedIn is queued for the next backend release.')}
                         disabled={!chatEnabled}
-                        className="flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium"
+                        className="group flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg cursor-pointer font-medium focus:bg-blue-600 focus:text-white"
                       >
-                        <UserPlus className="w-4 h-4 text-slate-500" />
+                        <UserPlus className="w-4 h-4 text-slate-500 group-focus:text-white" />
                         <span>Assign to team member</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
