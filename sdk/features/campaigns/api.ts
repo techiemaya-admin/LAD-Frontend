@@ -15,6 +15,7 @@ import type {
   UpdateCampaignRequest,
   CampaignAnalytics,
   CampaignLead,
+  CampaignPostStats,
 } from './types';
 
 // Query keys for TanStack Query
@@ -26,6 +27,7 @@ export const campaignKeys = {
   detail: (id: string) => [...campaignKeys.details(), id] as const,
   stats: () => [...campaignKeys.all, 'stats'] as const,
   analytics: (id: string) => [...campaignKeys.all, 'analytics', id] as const,
+  postStats: (id: string) => [...campaignKeys.all, 'postStats', id] as const,
   // `filters` must include the engagement filter - it changes which rows the
   // server returns, so it has to be part of the cache key.
   leads: (id: string, filters?: CampaignLeadFilters) => [...campaignKeys.all, 'leads', id, filters] as const,
@@ -204,6 +206,29 @@ export const getCampaignAnalyticsOptions = (campaignId: string) =>
     queryKey: campaignKeys.analytics(campaignId),
     queryFn: () => getCampaignAnalytics(campaignId),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
+    enabled: !!campaignId,
+  });
+
+/**
+ * Post performance for an auto-post campaign. The backend answers 204 when
+ * the campaign has no auto-post schedule and no published posts; that is
+ * surfaced as `null` so the page can hide the section.
+ * `fresh` bypasses the backend's 10-minute counter cache.
+ */
+export async function getCampaignPostStats(campaignId: string, fresh = false): Promise<CampaignPostStats | null> {
+  const response = await apiClient.get<{ data: CampaignPostStats } | undefined>(
+    `/api/campaigns/${campaignId}/post-stats${fresh ? '?fresh=1' : ''}`
+  );
+  if (response.status === 204 || !response.data) return null;
+  return response.data.data ?? null;
+}
+
+export const getCampaignPostStatsOptions = (campaignId: string) =>
+  queryOptions({
+    queryKey: campaignKeys.postStats(campaignId),
+    queryFn: () => getCampaignPostStats(campaignId),
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: !!campaignId,
   });
@@ -494,7 +519,7 @@ export async function revealLeadPhone(
   campaignId: string,
   leadId: string,
   apolloPersonId: string
-): Promise<{ phone: string; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
+): Promise<{ phone: string | null; from_cache: boolean; credits_used: number; processing?: boolean; message?: string }> {
   const response = await apiClient.post<{
     error: string;
     success: boolean;

@@ -10,7 +10,7 @@
  * something that made replies worse. Without it the learning is invisible and
  * the only way to inspect it is a SQL query.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GraduationCap, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -26,7 +26,7 @@ interface AILearningsPanelProps {
 
 export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
   const [rows, setRows] = useState<LearnedCorrection[]>([]);
-  const [maxInPrompt, setMaxInPrompt] = useState(0);
+  const [reachingPrompt, setReachingPrompt] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -37,10 +37,10 @@ export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
     setLoading(true);
     setError(null);
     listLearnedCorrections()
-      .then(({ corrections, maxInPrompt: cap }) => {
+      .then(({ corrections, reachingPrompt: reaching }) => {
         if (cancelled) return;
         setRows(corrections);
-        setMaxInPrompt(cap);
+        setReachingPrompt(reaching);
       })
       .catch(() => !cancelled && setError('Could not load learnings'))
       .finally(() => !cancelled && setLoading(false));
@@ -49,18 +49,27 @@ export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
     };
   }, [open]);
 
+  const refresh = useCallback(async () => {
+    const { corrections, reachingPrompt: reaching } = await listLearnedCorrections();
+    setRows(corrections);
+    setReachingPrompt(reaching);
+  }, []);
+
   const toggle = async (row: LearnedCorrection) => {
     setBusyId(row.id);
     const next = !row.is_active;
-    // Optimistic, then re-derive in_prompt: switching one off promotes the
-    // next active correction into the prompt, so neighbouring rows change too.
     const previous = rows;
-    setRows((cur) => recomputeInPrompt(
-      cur.map((r) => (r.id === row.id ? { ...r, is_active: next } : r)),
-      maxInPrompt,
-    ));
+    // The switch flips optimistically so it feels instant. `in_prompt` is
+    // deliberately NOT guessed here: which rows reach the prompt is a
+    // character-budget decision the server owns, and mirroring that rule in
+    // the client is exactly the duplication that drifted last time. Refetch
+    // for the authoritative answer instead.
+    setRows((cur) =>
+      cur.map((r) => (r.id === row.id ? { ...r, is_active: next } : r))
+    );
     try {
       await setCorrectionActive(row.id, next);
+      await refresh();
     } catch {
       setRows(previous);
       setError('Could not update - try again');
@@ -107,7 +116,10 @@ export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
 
         {rows.length > 0 && (
           <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-            {activeCount} active · the newest {maxInPrompt} reach the prompt
+            {activeCount} active ·{' '}
+            {reachingPrompt >= activeCount
+              ? 'all reaching the prompt'
+              : `${reachingPrompt} reaching the prompt`}
           </p>
         )}
 
@@ -135,9 +147,9 @@ export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
                   {r.is_active && !r.in_prompt && (
                     <span
                       className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
-                      title={`Only the newest ${maxInPrompt} active corrections are sent to the agent`}
+                      title="The prompt has run out of room for corrections. Switch an older one off to make space."
                     >
-                      Not applied - over the {maxInPrompt} limit
+                      Not applied - no room left
                     </span>
                   )}
                   {!r.is_active && (
@@ -181,22 +193,4 @@ export function AILearningsPanel({ open, onClose }: AILearningsPanelProps) {
       </div>
     </div>
   );
-}
-
-/**
- * Re-derive which rows reach the prompt after a toggle.
- *
- * Mirrors the backend rule (newest N ACTIVE ones win) so the UI doesn't need a
- * refetch to stay truthful - turning one off must visibly promote the next.
- */
-function recomputeInPrompt(
-  rows: LearnedCorrection[],
-  cap: number
-): LearnedCorrection[] {
-  let live = 0;
-  return rows.map((r) => {
-    if (!r.is_active) return { ...r, in_prompt: false };
-    live += 1;
-    return { ...r, in_prompt: live <= cap };
-  });
 }

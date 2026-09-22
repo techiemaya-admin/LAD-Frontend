@@ -34,6 +34,7 @@ export {
   resumeCampaign,
   restartCampaign,
   getCampaignAnalytics,
+  getCampaignPostStats,
   getCampaignLeads,
   getLeadProfileSummary,
   generateLeadProfileSummary,
@@ -46,7 +47,9 @@ export {
   saveInboundLeads,
   getInboundLeads,
   cancelLeadBookingsForReNurturing,
+  exportCampaignLeads,
 } from './api';
+
 export type { WithdrawConnectionResult } from './api';
 
 // ============================================================================
@@ -56,6 +59,7 @@ export { useCampaigns } from './hooks/useCampaigns';
 export { useCampaign } from './hooks/useCampaign';
 export { useCampaignStats } from './hooks/useCampaignStats';
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
+export { useCampaignPostStats } from './hooks/useCampaignPostStats';
 export { useCampaignLeads } from './hooks/useCampaignLeads';
 export { useLeadsSummaries } from './hooks/useLeadsSummaries';
 export { useLeadProfileSummary, useGenerateLeadProfileSummary } from './hooks/useLeadProfileSummary';
@@ -84,6 +88,8 @@ export type {
   UpdateCampaignRequest,
   CampaignAnalytics,
   CampaignLead,
+  CampaignPostStats,
+  CampaignPostStatsPost,
 } from './types';
 export type { RetryConnectionResult } from './api';
 // ============================================================================
@@ -92,6 +98,7 @@ export type { RetryConnectionResult } from './api';
 export type { UseCampaignsReturn } from './hooks/useCampaigns';
 export type { UseCampaignReturn } from './hooks/useCampaign';
 export type { UseCampaignStatsReturn } from './hooks/useCampaignStats';
+export type { UseCampaignPostStatsReturn } from './hooks/useCampaignPostStats';
 export type { UseCampaignAnalyticsReturn } from './hooks/useCampaignAnalytics';
 export type { UseCampaignLeadsReturn } from './hooks/useCampaignLeads';
 

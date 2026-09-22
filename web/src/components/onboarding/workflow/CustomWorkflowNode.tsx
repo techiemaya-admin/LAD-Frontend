@@ -30,6 +30,8 @@ function getBrandConfig(type: string) {
   if (type === 'landing_page')     return { bg: '#10b981', border: '#059669', glow: 'rgba(16,185,129,0.25)' };
   if (type === 'linkedin_content') return { bg: '#7c3aed', border: '#6d28d9', glow: 'rgba(124,58,237,0.25)' };
   if (type === 'post_approval')    return { bg: '#16a34a', border: '#15803d', glow: 'rgba(22,163,74,0.25)' };
+  if (type === 'comment_approval') return { bg: '#16a34a', border: '#15803d', glow: 'rgba(22,163,74,0.25)' };
+  if (type === 'linkedin_post_engage') return { bg: '#0e7490', border: '#155e75', glow: 'rgba(14,116,144,0.25)' };
   if (type === 'linkedin_post')    return { bg: '#0a66c2', border: '#004182', glow: 'rgba(10,102,194,0.25)' };
   if (type === 'instagram_post')   return { bg: '#c13584', border: '#a02c6d', glow: 'rgba(193,53,132,0.25)' };
   if (type === 'human_task')       return { bg: '#f59e0b', border: '#d97706', glow: 'rgba(245,158,11,0.25)' };

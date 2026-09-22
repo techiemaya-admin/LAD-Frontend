@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   UserPlus,
   Edit2,
@@ -39,6 +39,8 @@ import { TeamManagementSkeleton } from '../skeletons';
 import { getApiBaseUrl } from '@/lib/api-utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { PAGE_PERMISSIONS, isPermissionOfferable, isPermissionGranted } from '@/lib/page-permissions';
 
 interface User {
   id: string;
@@ -54,18 +56,12 @@ interface User {
   metadata?: { mask_phone_number?: boolean; [key: string]: unknown };
 }
 
-const PAGE_CAPABILITIES = [
-  { key: 'view_overview', label: 'Overview' },
-  { key: 'view_conversations', label: 'Conversations' },
-  { key: 'view_followup', label: 'Follow-up' },
-  { key: 'view_community_roi', label: 'Community ROI' },
-  { key: 'view_scraper', label: 'Scraper' },
-  { key: 'view_make_call', label: 'Make a Call' },
-  { key: 'view_call_logs', label: 'Call Logs' },
-  { key: 'view_pipeline', label: 'Pipeline' },
-  { key: 'view_pricing', label: 'Pricing' },
-  { key: 'view_settings', label: 'Settings' },
-];
+// PAGE_CAPABILITIES used to be a hardcoded array of ten here. It offered every
+// permission to every workspace regardless of entitlement — Coverage Gifts LLC
+// was shown "Make a Call", "Call Logs" and "Community ROI" with no voice-agent
+// or community_roi feature at all, and was NOT shown AI Assistant, which they
+// do have. The pairing now lives in lib/page-permissions.ts alongside the
+// sidebar's, so the two cannot drift.
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -81,6 +77,13 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export const TeamManagement: React.FC = () => {
+  // Offer only what this workspace can actually use. `hasFeature` reads the
+  // tenant_features list from /auth/me.
+  const { hasFeature } = useAuth();
+  const PAGE_CAPABILITIES = useMemo(
+    () => PAGE_PERMISSIONS.filter((p) => isPermissionOfferable(p, hasFeature)),
+    [hasFeature],
+  );
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -499,7 +502,7 @@ export const TeamManagement: React.FC = () => {
                       <td className="px-6 py-6">
                         <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                           {PAGE_CAPABILITIES.map((page) => {
-                            const isChecked = user.capabilities?.includes(page.key);
+                            const isChecked = isPermissionGranted(page, user.capabilities);
                             return (
                               <label key={page.key} className="flex items-center gap-2.5 cursor-pointer group w-fit">
                                 <div
@@ -675,7 +678,7 @@ export const TeamManagement: React.FC = () => {
                           <input
                             type="checkbox"
                             className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-blue-500/80 dark:border-blue-500/50 bg-transparent text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 cursor-pointer appearance-none checked:bg-primary checked:border-primary relative checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-[4px] checked:after:h-[8px] checked:after:border-white checked:after:border-r-2 checked:after:border-b-2 checked:after:rotate-45 transition-all"
-                            checked={newUser.capabilities.includes(page.key)}
+                            checked={isPermissionGranted(page, newUser.capabilities)}
                             onChange={() => {
                               const current = [...newUser.capabilities];
                               if (current.includes(page.key)) {

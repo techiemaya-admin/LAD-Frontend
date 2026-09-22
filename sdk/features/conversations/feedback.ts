@@ -84,6 +84,61 @@ export async function submitMessageFeedback(
   return { ...response.data.data, willTrain: response.data.will_train };
 }
 
+export interface TeachFromReplyRequest {
+  conversationId: string;
+  /** The HUMAN colleague's message to learn from. */
+  messageId: string;
+  /**
+   * Override the text to teach. Defaults server-side to the message itself.
+   * Use it to trim a greeting - "Hi Gus, Maggie here" names a specific person
+   * and is not something the agent should learn to say.
+   */
+  expectedResponse?: string;
+  submittedBy?: string;
+}
+
+export interface TeachFromReplyResponse {
+  id: string;
+  is_active: boolean;
+  /** The text now in the agent's instructions. */
+  learned: string;
+  /**
+   * The agent's own reply immediately before the takeover, if there was one.
+   * The correction renders as a contrast ("Instead of X, say Y"), so showing
+   * this back lets the reviewer see the pairing they just created.
+   */
+  instead_of: string | null;
+}
+
+/**
+ * Keep a colleague's takeover reply as a lesson for the agent.
+ *
+ * When a human steps in they demonstrate the right answer - the pricing
+ * breakdown, the policy caveat the agent was hedging about. That is the best
+ * training material the product produces and it used to be discarded: the only
+ * route into the prompt was to find an OLD agent message, thumbs-down it, and
+ * retype the answer by hand.
+ *
+ * The server refuses anything that is not a human colleague's reply, so this
+ * cannot be used to teach the agent its own output back to itself.
+ */
+export async function teachFromHumanReply(
+  req: TeachFromReplyRequest
+): Promise<TeachFromReplyResponse> {
+  const response = await proxyClient.post<{
+    success: boolean;
+    data: TeachFromReplyResponse;
+    will_train: boolean;
+  }>(
+    `/api/whatsapp-conversations/conversations/${req.conversationId}/messages/${req.messageId}/teach`,
+    {
+      expected_response: req.expectedResponse,
+      submitted_by: req.submittedBy,
+    }
+  );
+  return response.data.data;
+}
+
 export async function getConversationFeedback(
   conversationId: string
 ): Promise<MessageFeedback[]> {
@@ -114,16 +169,27 @@ export interface LearnedCorrection {
 
 export async function listLearnedCorrections(): Promise<{
   corrections: LearnedCorrection[];
+  /**
+   * Backstop row count, not a curation limit — the server selects by a
+   * character budget now. Kept for compatibility; prefer `reachingPrompt`.
+   */
   maxInPrompt: number;
+  /** How many active corrections actually reach the prompt right now. */
+  reachingPrompt: number;
 }> {
   const response = await proxyClient.get<{
     success: boolean;
     data: LearnedCorrection[];
     max_in_prompt: number;
+    reaching_prompt: number;
   }>('/api/whatsapp-conversations/conversations/feedback/corrections');
+  const corrections = response.data.data ?? [];
   return {
-    corrections: response.data.data ?? [],
+    corrections,
     maxInPrompt: response.data.max_in_prompt ?? 0,
+    // Fall back to counting client-side so an older backend still renders.
+    reachingPrompt:
+      response.data.reaching_prompt ?? corrections.filter((c) => c.in_prompt).length,
   };
 }
 

@@ -308,7 +308,7 @@ export default function NewHeroSection() {
           variants={itemVariants}
           className="flex justify-center mb-12 md:mb-16"
         >
-          <Link href="/onboarding">
+          <Link href="/register">
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(11, 25, 87, 0.3)' }}
               whileTap={{ scale: 0.95 }}
@@ -350,7 +350,7 @@ export default function NewHeroSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-row gap-3 mb-8">
-              <Link href="/onboarding">
+              <Link href="/register">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

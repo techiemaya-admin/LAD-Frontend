@@ -4,6 +4,7 @@
  * Email sending             → LAD_backend (Node.js)
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveAuthorizedTenantId } from '../../utils/tenant-scope';
 
 function getWABAUrl(): string {
   return (
@@ -24,19 +25,31 @@ function getBackendUrl(): string {
 function forwardHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
-  // Bearer token (set explicitly by some callers)
+  // Forward the Authorization header, lifting a cookie token into it when the
+  // browser only sent a cookie. The session JWT lives in the `access_token`
+  // cookie; LAD-WABA-Comms verifies a Bearer JWT and never reads cookies, so
+  // passing the cookie through alone meant every /api/email/* call answered
+  // 401 - which the Email channel swallowed as an empty list. Same
+  // lift the WhatsApp proxy (python-proxy.ts) does.
   const auth = req.headers.get('Authorization') || req.headers.get('authorization');
-  if (auth) headers['Authorization'] = auth;
+  if (auth) {
+    headers['Authorization'] = auth;
+  } else {
+    const cookieToken =
+      req.cookies.get('access_token')?.value ||
+      req.cookies.get('token')?.value;
+    if (cookieToken) headers['Authorization'] = `Bearer ${cookieToken}`;
+  }
 
-  // Cookie-based auth (used by EmailTemplateEditor and other server-side callers
-  // that use credentials:'include' instead of explicit Bearer tokens).
-  // The backend's jwtAuth middleware accepts the token from either the
-  // Authorization header OR a cookie named 'token'.
+  // The backend's jwtAuth also accepts the cookie directly; keep forwarding it
+  // for the LAD_backend paths.
   const cookie = req.headers.get('cookie');
   if (cookie) headers['cookie'] = cookie;
 
-  const tenant = req.headers.get('X-Tenant-ID');
-  if (tenant) headers['X-Tenant-ID'] = tenant;
+  // Tenant scoping: only a tenant the caller is authorised for (super-admin
+  // switch), never a bare client header.
+  const authorizedTenant = resolveAuthorizedTenantId(req, { logLabel: 'email-conversations-proxy' });
+  if (authorizedTenant) headers['X-Tenant-ID'] = authorizedTenant;
   return headers;
 }
 

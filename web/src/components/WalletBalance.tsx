@@ -2,8 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock, CheckCircle2, Repeat, RefreshCw, AlertCircle } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-utils';
-import { getCreditPackages, getWalletBalance, getWalletBalanceLegacy } from '@lad/frontend-features/billing';
-import { rechargeWallet, subscribeMonthly, setupAutoRecharge, getRecurring, cancelRecurring, type RecurringStatus } from '../../../sdk/features/billing/api';
+import {
+  getCreditPackages,
+  getWalletBalance,
+  getWalletBalanceLegacy,
+  rechargeWallet,
+  subscribeMonthly,
+  setupAutoRecharge,
+  getRecurring,
+  cancelRecurring,
+  type RecurringStatus,
+} from '@lad/frontend-features/billing';
+
 interface WalletData {
   balance: number;
   currency: string;

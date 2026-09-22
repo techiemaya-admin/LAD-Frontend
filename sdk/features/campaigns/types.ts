@@ -150,3 +150,57 @@ export interface CampaignLead {
   created_at: string;
   updated_at: string;
 }
+
+// ====================
+// Post performance (auto-post campaigns)
+// ====================
+
+/** One published LinkedIn post with LinkedIn's live counters. */
+export interface CampaignPostStatsPost {
+  post_id: string;
+  published_at: string;
+  content: string | null;
+  share_url: string | null;
+  impressions: number | null;   // null = unknown (author is not a connected account)
+  reactions: number | null;
+  comments: number | null;
+  reposts: number | null;
+  deleted: boolean;             // no longer exists on LinkedIn
+  stats_available: boolean;
+}
+
+/** GET /api/campaigns/:id/post-stats — null when the campaign neither schedules nor has published posts. */
+export interface CampaignPostStats {
+  has_schedule: boolean;
+  linkedin_connected: boolean;
+  schedule: {
+    status: string | null;
+    frequency: string | null;
+    days: string[] | string | null;
+    post_time: string | null;
+    timezone: string | null;
+    run_count: number | null;
+    last_run_at: string | null;
+    next_run_at: string | null;
+    last_error: string | null;
+    require_approval: boolean | null;
+    approval_channel: string | null;
+    approval_status: string | null;
+    as_organization: boolean | null;
+  } | null;
+  totals: {
+    posts: number;
+    posts_deleted: number;
+    impressions: number;
+    reactions: number;
+    comments: number;
+    reposts: number;
+    median_impressions: number | null;
+    impressions_unknown: number;
+  };
+  posts: CampaignPostStatsPost[];
+  approvals: Record<string, number>;
+  /** Connections dated after the first post, minus those won by campaign invitations. */
+  network: { since: string; new_connections: number; via_campaign_invites: number; not_from_invites: number } | null;
+  fetched_at: string;
+}
