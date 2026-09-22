@@ -28,7 +28,7 @@ import {
   Users, Repeat, Search, X, HardDrive, Inbox, ListOrdered, BarChart3, GitFork, DatabaseZap,
   Wand2, Trash2, Radar, Split, Plus, Upload, FileSpreadsheet, Sparkles, Contact, Download, Megaphone, Zap, Globe, Telescope, Gauge, Shuffle, PenLine, Webhook, PenTool, ShieldCheck,
   Bookmark, LayoutTemplate, ExternalLink, FlaskConical, Play,
-  Instagram, UserCheck, FileText, AlertTriangle, CalendarCheck,
+  Instagram, UserCheck, FileText, AlertTriangle, CalendarCheck, CalendarDays, CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,6 +112,7 @@ import {
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
   SCRAPE_STEP_ID, RESEARCH_STEP_ID, SCORE_STEP_ID,
   SPLIT_STEP_ID, ACCEPT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID, LANDING_STEP_ID, templateNodeKey, MACRO_STEP_IDS,
+  MEETING_REMINDER_STEP_ID,
   templateToPreviewSteps,
 } from './workflowTemplates';
 import {
@@ -134,6 +135,9 @@ import type { StepType } from '@/types/campaign';
 import { useVoiceAgent } from '@lad/frontend-features/ai-icp-assistant';
 import { useConnectedEmailSenders } from '@lad/frontend-features/email-senders';
 import { useEmailTemplates } from '@lad/frontend-features/email-templates';
+import {
+  useCalendarSources, offsetLabel, validateOffsets, REMINDER_MERGE_FIELDS,
+} from '@lad/frontend-features/calendar';
 import { CustomWorkflowNode } from '@/components/onboarding/workflow/CustomWorkflowNode';
 import { WorkflowCanvas } from '@/components/onboarding/workflow/WorkflowCanvas';
 import { createReactFlowNodes, createReactFlowEdges } from '@/components/onboarding/workflow/workflowFlowBuilder';
@@ -145,7 +149,7 @@ const edgeTypes = { labeled: LabeledEdge };
 
 // ─── Palette definitions ─────────────────────────────────────────────────────
 
-type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts' | 'linkedin_connections';
+type SourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'own_contacts' | 'linkedin_connections' | 'calendar_meetings';
 
 const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNode; chip: string; recurring?: boolean }[] = [
   { key: 'own_contacts', label: 'Your own contacts', sub: 'People who already gave you their details', icon: <Users className="h-4 w-4 text-amber-600" />, chip: 'bg-amber-50 dark:bg-amber-950/30', recurring: true },
@@ -158,7 +162,23 @@ const SOURCES: { key: SourceKey; label: string; sub: string; icon: React.ReactNo
   { key: 'web_extract', label: 'Web page (exhibitors, directories)', sub: 'Pull companies off a page, then find the roles you name', icon: <Globe className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30' },
   { key: 'linkedin_signal', label: 'LinkedIn Signal Search', sub: 'Find leads from hiring/buying signals', icon: <Radar className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
   { key: 'linkedin_connections', label: 'Your LinkedIn connections', sub: 'Decision-makers already in your network', icon: <UserCheck className="h-4 w-4 text-[#0077B5]" />, chip: 'bg-sky-50 dark:bg-sky-950/30', recurring: true },
+  { key: 'calendar_meetings', label: 'People you have meetings with', sub: 'Everyone booked into your calendar', icon: <CalendarDays className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30', recurring: true },
 ];
+
+/** The offsets the reminder card offers with one tap. Minutes before the meeting. */
+const REMINDER_OFFSET_PRESETS = [1440, 180, 60, 15];
+
+/** Sample values for the reminder-template preview, so the merge fields read as words. */
+const REMINDER_PREVIEW_VALUES: Record<string, string> = Object.fromEntries(
+  REMINDER_MERGE_FIELDS.map((f) => [f.token, f.sample]),
+);
+
+/** The template as it will actually read, with the merge fields filled in. */
+function previewReminderTemplate(template: string): string {
+  let out = template;
+  for (const [token, sample] of Object.entries(REMINDER_PREVIEW_VALUES)) out = out.split(token).join(sample);
+  return out;
+}
 
 // Target fields the file columns map to. 'ignore' drops the column.
 const IMPORT_FIELDS = [
@@ -311,6 +331,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   linkedin_search: 'Finds new leads by keyword, title, industry, or location. Needs at least one of those filled in.',
   linkedin_signal: 'Finds leads from hiring/buying signals. Needs a description of the signal to search for.',
   linkedin_connections: 'Reads your own 1st-degree LinkedIn connections and keeps the decision-makers - by the titles you name, or by seniority. They are already connected, so no connection request is needed. Pair it with the Comment on new posts + Approval nodes to engage their posts. Needs an active LinkedIn account in Settings.',
+  calendar_meetings: 'Enrols the people booked into a calendar you connected in Settings \u2192 Calendars. Only meetings Mr LAD could match to a lead are enrolled \u2014 a meeting with nobody he recognises is listed on the Calendars page instead, so you can see what was missed.',
   // LinkedIn outreach
   linkedin_connect: "Sends a LinkedIn connection request - no prior connection needed. Needs an active LinkedIn account connected in Settings. Follow it with a Message step to reach leads once they accept.",
   linkedin_message: "Sends a LinkedIn DM - but ONLY once a connection has already been accepted. If there is no Connection request step earlier in this sequence, the lead is never asked to connect, so this step waits for an acceptance that will never happen and no message is ever sent. Needs message text (supports {{first_name}}, {{company}}, {{web_insight}}, {{recent_post}}, {{article}}, {{news}}).",
@@ -350,6 +371,7 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
   [ACCEPT_STEP_ID]: 'Waits to see if the lead accepts your connection request, then branches. Accepted goes one way; still unanswered after the chosen number of days goes the other. The clock starts when the invite was SENT.',
   [SETFIELD_STEP_ID]: 'Writes a tag or value onto the lead record for later branching or export.',
   [HTTP_STEP_ID]: "Calls any external API with this lead's data. Requests to internal/private/cloud-metadata addresses are blocked.",
+  [MEETING_REMINDER_STEP_ID]: 'Plans the reminders for the lead\u2019s next booked meeting \u2014 it does not send them itself. Mr LAD writes the rows down when the lead reaches this step and one sweeper sends each one when it is due, so a restart never loses a reminder. Needs a calendar connected in Settings \u2192 Calendars.',
 };
 
 // ─── Build with AI ───────────────────────────────────────────────────────────
@@ -1709,6 +1731,9 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
   const [configs, setConfigs] = useState<Record<string, any>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
+  // The calendars this tenant has connected. Both new nodes read it: the source
+  // node to pick one, the reminder node to say so when there is none.
+  const calendarSourcesQ = useCalendarSources();
   // Edit mode: block the canvas until the saved state is back, so a stray click
   // can't launch a half-restored workflow over the real one.
   const [hydrating, setHydrating] = useState(!!editCampaignId);
@@ -2906,6 +2931,22 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     setEditingId(HUMAN_TASK_STEP_ID);
   };
 
+  /**
+   * Meeting reminder. Per-lead, and a PLANNER: reaching this step writes the
+   * reminder rows for the lead's next booked meeting. One sweeper cron sends
+   * what is due - there is never a timer per meeting.
+   */
+  const addMeetingReminder = () => {
+    if (!workflowPreview.some((s) => s.id === MEETING_REMINDER_STEP_ID)) {
+      addWorkflowStep({ id: MEETING_REMINDER_STEP_ID, type: 'meeting_reminder', channel: 'whatsapp', title: 'Meeting reminder', description: '1 day + 1 hour before' });
+      setCfg(MEETING_REMINDER_STEP_ID, {
+        offsets: [1440, 60], channel: 'whatsapp', template: '', ai_write: true,
+        voiceConfirmed: false, cancel_on_reply: true,
+      });
+    }
+    setEditingId(MEETING_REMINDER_STEP_ID);
+  };
+
   const addLandingPage = () => {
     if (!workflowPreview.some((s) => s.id === LANDING_STEP_ID)) {
       addWorkflowStep({ id: LANDING_STEP_ID, type: 'landing_page', channel: 'email', title: 'Landing page', description: 'AI page · Capture form' });
@@ -3294,6 +3335,17 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         message: 'The WhatsApp broadcast needs an approved template name. A broadcast is business-initiated, so the 24-hour window is shut and free text cannot be delivered.',
       });
     }
+    // A reminder node with no calendar connected would launch, run and never
+    // plan a single row. Only raised once the list has actually come back -
+    // a failed read is not an empty one.
+    if (workflowPreview.some((x) => x.id === MEETING_REMINDER_STEP_ID)
+        && calendarSourcesQ.data !== undefined
+        && calendarSourcesQ.data.filter((c) => c.is_active).length === 0) {
+      issues.push({
+        id: MEETING_REMINDER_STEP_ID,
+        message: 'The Meeting reminder node needs a calendar. Connect one in Settings \u2192 Calendars, or there are no meetings to remind anyone about.',
+      });
+    }
     const ebCfg = configs[EMAIL_BROADCAST_STEP_ID] || {};
     if (workflowPreview.some((x) => x.id === EMAIL_BROADCAST_STEP_ID)
         && (!String(ebCfg.subject || '').trim() || !String(ebCfg.body || '').trim())) {
@@ -3303,7 +3355,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       });
     }
     return issues;
-  }, [workflowPreview, configs, source]);
+  }, [workflowPreview, configs, source, calendarSourcesQ.data]);
 
   // Router-style branch visualisation for the Multi-condition node: one output
   // node per condition (+ else), fanned out on the canvas.
@@ -3460,6 +3512,23 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         setEditingId(APPROVAL_STEP_ID); return;
       }
     }
+    if (workflowPreview.some((s) => s.id === MEETING_REMINDER_STEP_ID)) {
+      const mr = configs[MEETING_REMINDER_STEP_ID] || {};
+      const offsetProblem = validateOffsets(Array.isArray(mr.offsets) ? mr.offsets : []);
+      if (offsetProblem) {
+        setError(offsetProblem); setEditingId(MEETING_REMINDER_STEP_ID); return;
+      }
+      // A voice reminder is a paid phone call per meeting. The node has to say
+      // so out loud before we plan a single one.
+      if (mr.channel === 'voice' && mr.voiceConfirmed !== true) {
+        setError('Tick "Yes, call them" in the Meeting reminder node - a voice reminder is a real phone call and costs credits.');
+        setEditingId(MEETING_REMINDER_STEP_ID); return;
+      }
+      if (mr.ai_write === false && !(mr.template || '').trim()) {
+        setError('Write what the meeting reminder should say, or switch "Let Mr LAD write it" back on.');
+        setEditingId(MEETING_REMINDER_STEP_ID); return;
+      }
+    }
     if (analyticsNode && !(configs[ANALYTICS_STEP_ID]?.recipient || '').trim()) {
       setError('Add a recipient (email or WhatsApp number) in the Analytics report node.'); setEditingId(ANALYTICS_STEP_ID); return;
     }
@@ -3529,6 +3598,21 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             min_seniority: srcCfg.min_seniority || 'director',
             keywords: (srcCfg.keywords || '').trim() || undefined,
             min_icp_score: Number(srcCfg.min_icp_score) > 0 ? Number(srcCfg.min_icp_score) : 0,
+            leadGenerationLimit: perDayN,
+          },
+        });
+      } else if (source === 'calendar_meetings') {
+        // The people booked into a connected calendar. The calendar sync cron
+        // fills tenant_meetings; this step enrols the leads those meetings were
+        // matched to - a meeting with no matched lead enrols nobody.
+        steps.push({
+          type: 'lead_generation', title: 'People you have meetings with', channel: 'whatsapp', order_index: order++,
+          config: {
+            source: 'calendar_meetings',
+            source_id: (srcCfg.source_id || '').trim() || undefined,
+            window_days: Number(srcCfg.window_days) > 0 ? Number(srcCfg.window_days) : 14,
+            title_contains: (srcCfg.title_contains || '').trim() || undefined,
+            only_with_attendees: srcCfg.only_with_attendees !== false,
             leadGenerationLimit: perDayN,
           },
         });
@@ -3754,6 +3838,27 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               order_index: order++, config: reportCfg,
             });
           }
+        }
+        else         if (s.type === 'meeting_reminder') {
+          // Per-lead, and a PLANNER not a sender: reaching this step writes the
+          // reminder rows for the lead's next meeting. One sweeper cron sends
+          // what is due, so a restart never loses a reminder.
+          const mrOffsets: number[] = Array.isArray(c.offsets) ? c.offsets.slice().sort((a: number, b: number) => b - a) : [1440, 60];
+          steps.push({
+            type: 'meeting_reminder', title: 'Meeting reminder',
+            channel: c.channel === 'email' ? 'email' : c.channel === 'linkedin' ? 'linkedin' : c.channel === 'voice' ? 'voice' : 'whatsapp',
+            order_index: order++,
+            config: {
+              offsets: mrOffsets,
+              channel: c.channel === 'email' ? 'email' : c.channel === 'linkedin' ? 'linkedin' : c.channel === 'voice' ? 'voice' : 'whatsapp',
+              // Blank template = Mr LAD writes each reminder himself, the same
+              // "leave it empty and the AI drafts it" rule the message steps use.
+              template: c.ai_write === false ? ((c.template || '').trim() || undefined) : undefined,
+              voiceConfirmed: c.voiceConfirmed === true,
+              cancel_on_reply: c.cancel_on_reply !== false,
+              ...delay,
+            },
+          });
         }
         else         if (s.type === 'human_task') {
           // Per-lead, unlike the other new nodes. WorkflowProcessor pauses the
@@ -4064,7 +4169,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
         campaign_start_date: start.toISOString(),
         campaign_end_date: end.toISOString(),
         config: {
-          data_source: source === 'own_contacts' ? 'own_contacts' : source === 'linkedin_connections' ? 'linkedin_connections' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
+          data_source: source === 'calendar_meetings' ? 'calendar_meetings' : source === 'own_contacts' ? 'own_contacts' : source === 'linkedin_connections' ? 'linkedin_connections' : source === 'zoho_recurring' ? 'zoho_contacts' : source === 'ghl_recurring' ? 'ghl_contacts' : source === 'linkedin_search' ? 'linkedin_search' : 'direct_contact',
           builder: 'custom_workflow',
           // The builder's own state, stored so "Edit Accelerator" can reopen it
           // exactly as it was. Launch flattens these nodes into config.* and
@@ -4450,6 +4555,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
       macro(AUTOPOST_STEP_ID, 'LinkedIn auto-post', 'Recurring post to your feed', <Megaphone className="h-4 w-4 text-[#0077B5]" />, 'bg-sky-50 dark:bg-sky-950/30', addAutopost, 'Automation & output'),
       macro(IG_AUTOPOST_STEP_ID, 'Instagram auto-post', 'Image or Reel · on a schedule', <Instagram className="h-4 w-4 text-pink-600" />, 'bg-pink-50 dark:bg-pink-950/30', addInstagramPost, 'Automation & output'),
       macro(REPORT_STEP_ID, 'Audit report', 'PDF · attach or offer', <FileText className="h-4 w-4 text-teal-700" />, 'bg-teal-50 dark:bg-teal-950/30', addReport, 'Automation & output'),
+      macro(MEETING_REMINDER_STEP_ID, 'Meeting reminder', 'Before a booked meeting', <CalendarClock className="h-4 w-4 text-violet-600" />, 'bg-violet-50 dark:bg-violet-950/30', addMeetingReminder, 'Automation & output'),
       macro(HUMAN_TASK_STEP_ID, 'Assign a human task', 'Pauses until someone confirms', <UserCheck className="h-4 w-4 text-amber-600" />, 'bg-amber-50 dark:bg-amber-950/30', addHumanTask, 'Automation & output'),
       macro(LANDING_STEP_ID, 'Landing page', 'AI-written · captures leads', <LayoutTemplate className="h-4 w-4 text-emerald-700" />, 'bg-emerald-50 dark:bg-emerald-950/30', addLandingPage, 'Automation & output'),
       macro(MINDBODY_STEP_ID, 'MindBody', 'Book a trial class', <CalendarCheck className="h-4 w-4 text-teal-600" />, 'bg-teal-50 dark:bg-teal-950/30', addMindBody, 'Automation & output'),
@@ -4591,10 +4697,11 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const isLanding = editingId === LANDING_STEP_ID;
     const isIgPost = editingId === IG_AUTOPOST_STEP_ID;
     const isHumanTask = editingId === HUMAN_TASK_STEP_ID;
+    const isMeetingReminder = editingId === MEETING_REMINDER_STEP_ID;
     const isReport = editingId === REPORT_STEP_ID;
     const isPostEngage = editingId === POST_ENGAGE_STEP_ID;
     const isCommentApproval = editingId === COMMENT_APPROVAL_STEP_ID;
-    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isReport || isPostEngage || isCommentApproval;
+    const isMacro = isFollowup || isAnalytics || isZohoUpdate || isMedia || isMultiCond || isAiParse || isDataEnrich || isExport || isAutopost || isScrape || isResearch || isScore || isSplit || isSetField || isHttp || isContent || isApproval || isLanding || isIgPost || isHumanTask || isMeetingReminder || isReport || isPostEngage || isCommentApproval;
     const visual = isSource
       ? SOURCES.find((s) => s.key === source)
       : isFollowup
@@ -4635,6 +4742,10 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
             ? { icon: <PenLine className="h-4 w-4 text-lime-600" />, chip: 'bg-lime-50 dark:bg-lime-950/30' }
           : isHttp
             ? { icon: <Webhook className="h-4 w-4 text-slate-600" />, chip: 'bg-slate-100 dark:bg-slate-800/50' }
+          : isMeetingReminder
+            ? { icon: <CalendarClock className="h-4 w-4 text-violet-600" />, chip: 'bg-violet-50 dark:bg-violet-950/30' }
+          : isHumanTask
+            ? { icon: <UserCheck className="h-4 w-4 text-amber-600" />, chip: 'bg-amber-50 dark:bg-amber-950/30' }
           : isRouter
             ? { icon: <GitFork className="h-4 w-4 text-rose-600" />, chip: 'bg-rose-50 dark:bg-rose-950/30' }
             : OUTREACH.find((o) => o.type === editingStep.type && !o.router);
@@ -4649,7 +4760,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-foreground truncate">{editingStep.title}</div>
             <div className="text-xs text-muted-foreground">
-              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isPostEngage ? 'What to engage' : isCommentApproval ? 'Who approves comments' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isRouter ? 'Fallback routing settings' : 'Step settings'}
+              {isSource ? 'Contact source settings' : isFollowup ? 'Follow-up sequence settings' : isAnalytics ? 'Report settings' : isZohoUpdate ? 'Field mapping' : isMedia ? 'AI media' : isMultiCond ? 'Branch by condition' : isAiParse ? 'AI data cleanup' : isDataEnrich ? 'Data to enrich' : isExport ? 'Export destinations' : isAutopost ? 'Where & when' : isContent ? 'What the post says' : isApproval ? 'Who approves' : isScrape ? 'Page to read' : isResearch ? 'What gets researched' : isScore ? 'Scoring signals' : isPostEngage ? 'What to engage' : isCommentApproval ? 'Who approves comments' : isSplit ? 'Variants & split' : isSetField ? 'Fields to write' : isHttp ? 'Request' : isMeetingReminder ? 'When and how to remind' : isRouter ? 'Fallback routing settings' : 'Step settings'}
             </div>
           </div>
           <button onClick={() => setEditingId(null)} className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
@@ -4768,6 +4879,51 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
               list is done, for as long as the campaign is active.
             </p>
           </>)}
+          {isSource && source === 'calendar_meetings' && (() => {
+            const eid = editingId!;
+            const cals = calendarSourcesQ.data;
+            const active = (cals || []).filter((c) => c.is_active);
+            return (<>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Which calendar</label>
+                {/* Failure is not emptiness: only say "no calendar" when the list really came back. */}
+                {cals === undefined ? (
+                  <p className="text-[11px] text-amber-600">
+                    We could not read your calendars just now. Open Settings &rarr; Calendars to check.
+                  </p>
+                ) : active.length === 0 ? (
+                  <p className="text-[11px] text-amber-600">
+                    No calendar is connected yet. Add one in Settings &rarr; Calendars first, or this source enrols nobody.
+                  </p>
+                ) : (
+                  <CustomSelect className={field} value={cfg.source_id || ''} onValueChange={(val) => setCfg(eid, { source_id: val })}>
+                    <option value="">Every calendar</option>
+                    {active.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label || c.account_email || 'Calendar'}</option>
+                    ))}
+                  </CustomSelect>
+                )}
+              </div>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">How far ahead to look</label>
+                <Input type="number" min={1} max={60} value={cfg.window_days ?? '14'} onChange={(e) => setCfg(eid, { window_days: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Days. Meetings further out are picked up as they come into range.</p></div>
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Only meetings whose title contains (optional)</label>
+                <Input value={cfg.title_contains || ''} onChange={(e) => setCfg(eid, { title_contains: e.target.value })} placeholder="e.g. Intro call" />
+                <p className="text-[11px] text-muted-foreground">Leave blank to take every meeting on the calendar.</p></div>
+              <label className="flex items-start gap-2.5 rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={cfg.only_with_attendees !== false}
+                  onChange={(e) => setCfg(eid, { only_with_attendees: e.target.checked })} />
+                <span className="min-w-0">
+                  <span className="block text-sm text-foreground">Skip meetings with nobody else invited</span>
+                  <span className="block text-[11px] text-muted-foreground">Blocked-out time and personal entries have no one to message.</span>
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Enrols up to {perDay}/day. A meeting is only enrolled once Mr LAD can match an attendee
+                to a lead &mdash; by email, then phone, then LinkedIn. Meetings he could not match are
+                listed on the Calendars page so you can see what was missed.
+              </p>
+            </>);
+          })()}
           {isSource && source === 'own_contacts' && (<>
             <div className="space-y-1"><label className="text-xs font-medium text-foreground">Who to include</label>
               <select
@@ -6653,6 +6809,161 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                 <p className="text-[11px] text-slate-700 dark:text-slate-300">
                   Whatever they type when confirming is saved onto the lead, so later steps can
                   use it.
+                </p>
+              </div>
+            </>);
+          })()}
+
+          {isMeetingReminder && (() => {
+            const eid = editingId!;
+            const offsets: number[] = Array.isArray(cfg.offsets) ? cfg.offsets : [];
+            const channel: string = cfg.channel || 'whatsapp';
+            const aiWrites = cfg.ai_write !== false;
+            const template: string = cfg.template || '';
+            const offsetError = validateOffsets(offsets);
+            const describe = (list: number[]) => (list.length
+              ? list.slice().sort((a, b) => b - a).map((m) => offsetLabel(m).replace(' before', '')).join(' + ') + ' before'
+              : 'No reminder times picked');
+            const setOffsets = (next: number[]) => {
+              const sorted = next.slice().sort((a, b) => b - a);
+              setCfg(eid, { offsets: sorted });
+              updateWorkflowStep(eid, { description: describe(sorted) });
+            };
+            const toggleOffset = (m: number) => setOffsets(offsets.includes(m) ? offsets.filter((x) => x !== m) : [...offsets, m]);
+            const customValue = Number(cfg.custom_offset_value) > 0 ? Number(cfg.custom_offset_value) : 0;
+            const customUnit = cfg.custom_offset_unit || 'hours';
+            const customMinutes = customUnit === 'days' ? customValue * 1440 : customUnit === 'hours' ? customValue * 60 : customValue;
+            const noCalendar = calendarSourcesQ.data !== undefined && calendarSourcesQ.data.filter((c) => c.is_active).length === 0;
+            return (<>
+              <div className="rounded-md border border-violet-300 bg-violet-50 dark:border-violet-700 dark:bg-violet-950/30 px-3 py-2">
+                <p className="text-[11px] text-violet-900 dark:text-violet-200">
+                  <strong>Writes the reminders down</strong> for the lead&apos;s next booked meeting. Mr LAD sends
+                  each one when it falls due, so nothing is lost if anything restarts in between.
+                </p>
+              </div>
+              {noCalendar && (
+                <p className="text-[11px] text-amber-600">
+                  No calendar is connected yet, so there are no meetings to remind anyone about. Add one in Settings &rarr; Calendars.
+                </p>
+              )}
+
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">Send it on</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: 'whatsapp', label: 'WhatsApp' },
+                    { value: 'email', label: 'Email' },
+                    { value: 'linkedin', label: 'LinkedIn' },
+                    { value: 'voice', label: 'Voice call' },
+                  ].map((c) => (
+                    <button key={c.value} type="button" onClick={() => setCfg(eid, { channel: c.value })}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                        channel === c.value
+                          ? 'border-violet-600 bg-violet-600 text-white'
+                          : 'border-border text-muted-foreground hover:bg-muted/50'
+                      }`}>{c.label}</button>
+                  ))}
+                </div></div>
+
+              <div className="space-y-1"><label className="text-xs font-medium text-foreground">How long before the meeting</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {REMINDER_OFFSET_PRESETS.map((m) => (
+                    <button key={m} type="button" onClick={() => toggleOffset(m)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                        offsets.includes(m)
+                          ? 'border-violet-600 bg-violet-600 text-white'
+                          : 'border-border text-muted-foreground hover:bg-muted/50'
+                      }`}>{offsetLabel(m).replace(' before', '')}</button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5 pt-1.5">
+                  <Input type="number" min={1} className="h-8 w-16" value={cfg.custom_offset_value || ''}
+                    onChange={(e) => setCfg(eid, { custom_offset_value: e.target.value })} placeholder="2" />
+                  <CustomSelect className={`${field} h-8 w-24 py-1`} value={customUnit} onValueChange={(val) => setCfg(eid, { custom_offset_unit: val })}>
+                    <option value="minutes">minutes</option>
+                    <option value="hours">hours</option>
+                    <option value="days">days</option>
+                  </CustomSelect>
+                  <button type="button"
+                    disabled={!customMinutes || offsets.includes(customMinutes)}
+                    onClick={() => { setOffsets([...offsets, customMinutes]); setCfg(eid, { custom_offset_value: '' }); }}
+                    className="rounded-md border border-border px-2.5 py-1 text-[11px] text-foreground hover:bg-muted/50 disabled:opacity-40">
+                    Add
+                  </button>
+                </div>
+                {offsets.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                    {offsets.slice().sort((a, b) => b - a).map((m) => (
+                      <span key={m} className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] text-violet-800 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-200">
+                        {offsetLabel(m)}
+                        <button type="button" aria-label={`Remove ${offsetLabel(m)}`} onClick={() => toggleOffset(m)} className="text-violet-500 hover:text-violet-800 dark:hover:text-violet-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {offsetError && <p className="text-[11px] text-amber-600">{offsetError}</p>}
+              </div>
+
+              <label className="flex items-start gap-2.5 rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={aiWrites}
+                  onChange={(e) => setCfg(eid, { ai_write: e.target.checked })} />
+                <span className="min-w-0">
+                  <span className="block text-sm text-foreground">Let Mr LAD write it</span>
+                  <span className="block text-[11px] text-muted-foreground">A fresh line per reminder, in your agent&apos;s voice, using the meeting details.</span>
+                </span>
+              </label>
+
+              {!aiWrites && (<>
+                <div className="space-y-1"><label className="text-xs font-medium text-foreground">What to say</label>
+                  <textarea className={`${field} min-h-[90px] resize-y`} value={template}
+                    onChange={(e) => setCfg(eid, { template: e.target.value })}
+                    placeholder={'Hi {{first_name}}, just a reminder about {{meeting_time}} — {{duration}}. Here is the link: {{meeting_link}}'} />
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {REMINDER_MERGE_FIELDS.map((f) => (
+                      <button key={f.token} type="button"
+                        onClick={() => setCfg(eid, { template: `${template}${template && !template.endsWith(' ') ? ' ' : ''}${f.token}` })}
+                        className="rounded-full border border-border px-2 py-0.5 text-[10.5px] text-muted-foreground hover:bg-muted/50">
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Tap a field to drop it in. Each one is swapped for the real value when the reminder goes out.</p></div>
+                {template.trim() && (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 px-3 py-2">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">They will read</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[12px] text-slate-700 dark:text-slate-300">{previewReminderTemplate(template)}</p>
+                  </div>
+                )}
+              </>)}
+
+              {channel === 'voice' && (
+                <label className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-2.5 cursor-pointer dark:border-amber-700 dark:bg-amber-950/30">
+                  <input type="checkbox" className="mt-0.5 h-4 w-4" checked={!!cfg.voiceConfirmed}
+                    onChange={(e) => setCfg(eid, { voiceConfirmed: e.target.checked })} />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-amber-900 dark:text-amber-200">Yes, call them</span>
+                    <span className="block text-[11px] text-amber-800 dark:text-amber-300">
+                      Every reminder is a real phone call and costs credits per minute, on top of the
+                      usual send fee. Without this tick Mr LAD skips the call and says why.
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              <label className="flex items-start gap-2.5 rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={cfg.cancel_on_reply !== false}
+                  onChange={(e) => setCfg(eid, { cancel_on_reply: e.target.checked })} />
+                <span className="min-w-0">
+                  <span className="block text-sm text-foreground">Call it off if they reply first</span>
+                  <span className="block text-[11px] text-muted-foreground">Nobody gets a reminder for a meeting they have already talked to you about.</span>
+                </span>
+              </label>
+
+              <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 px-3 py-2">
+                <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                  A reminder whose time has already passed, or whose meeting was called off, is skipped
+                  with the reason written next to it on the Calendars page.
                 </p>
               </div>
             </>);
@@ -8959,6 +9270,28 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-foreground truncate">Audit report</span>
                     <span className="block text-xs text-muted-foreground truncate">PDF · Attach or offer as a download</span>
+                  </span>
+                  {added && (
+                    <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {/* Meeting reminder - plans the touches before a booked meeting. */}
+            {(() => {
+              const added = workflowPreview.some((s) => s.id === MEETING_REMINDER_STEP_ID);
+              return (
+                <button onClick={addMeetingReminder}
+                  className={`mt-2 relative w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    added ? 'border-[#0b1957] dark:border-[#2b7cff] bg-[#0b1957]/[0.04] dark:bg-[#030a21]/60 shadow-sm ring-1 ring-[#0b1957]/20 dark:ring-[#2b7cff]/30' : 'border-border dark:border-blue-950/40 bg-card dark:bg-[#030a21]/60 hover:border-[#0b1957]/30 dark:hover:border-[#2b7cff]/50 hover:bg-muted/40'
+                  }`}>
+                  <IconChip icon={<CalendarClock className="h-4 w-4 text-violet-600" />} chip="bg-violet-50 dark:bg-violet-950/30" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground truncate">Meeting reminder</span>
+                    <span className="block text-xs text-muted-foreground truncate">Before a booked meeting</span>
                   </span>
                   {added && (
                     <span className="h-5 w-5 rounded-full bg-[#0b1957] dark:bg-[#2b7cff] flex items-center justify-center flex-shrink-0">

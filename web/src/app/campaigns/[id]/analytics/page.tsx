@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/app-toaster';
 import AnalyticsCharts from '@/components/analytics/AnalyticsCharts';
 import { LiveActivityTable } from '@/components/campaigns';
 import PostPerformanceCard from '@/components/campaigns/PostPerformanceCard';
+import { UpcomingMeetings } from '@/components/calendar/UpcomingMeetings';
 import ScheduledFollowupsModal from '@/components/campaigns/ScheduledFollowupsModal';
 import { LiveBadge } from '@/components/LiveBadge';
 import { proxyPost } from '@/lib/api';
@@ -581,6 +582,10 @@ export default function CampaignAnalyticsPage() {
 
       {/* LinkedIn post performance — renders only for campaigns that auto-post */}
       <PostPerformanceCard campaignId={campaignId} />
+
+      {/* Meetings booked with this campaign's leads, and the reminders planned
+          for them. Renders nothing when there is nothing booked. */}
+      <UpcomingMeetings campaignId={campaignId} hideWhenEmpty className="mb-8" />
 
       {/* Live Activity Feed */}
       <div className="mb-8">

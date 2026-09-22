@@ -35,6 +35,7 @@ function getBrandConfig(type: string) {
   if (type === 'linkedin_post')    return { bg: '#0a66c2', border: '#004182', glow: 'rgba(10,102,194,0.25)' };
   if (type === 'instagram_post')   return { bg: '#c13584', border: '#a02c6d', glow: 'rgba(193,53,132,0.25)' };
   if (type === 'human_task')       return { bg: '#f59e0b', border: '#d97706', glow: 'rgba(245,158,11,0.25)' };
+  if (type === 'meeting_reminder') return { bg: '#7c3aed', border: '#6d28d9', glow: 'rgba(124,58,237,0.25)' };
   if (type === 'lead_report')      return { bg: '#0f766e', border: '#115e59', glow: 'rgba(15,118,110,0.25)' };
   if (type === 'web_scrape')       return { bg: '#0284c7', border: '#0369a1', glow: 'rgba(2,132,199,0.25)' };
   if (type === 'web_research')     return { bg: '#4f46e5', border: '#4338ca', glow: 'rgba(79,70,229,0.25)' };
