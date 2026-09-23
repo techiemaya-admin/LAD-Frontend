@@ -44,6 +44,11 @@ export const COMMENT_APPROVAL_STEP_ID = 'comment-approval-node';
 export const IG_AUTOPOST_STEP_ID = 'instagram-post-node';
 /** Human task. Per-lead: pauses the lead until a person confirms. */
 export const HUMAN_TASK_STEP_ID = 'human-task-node';
+/**
+ * Meeting reminder. Per-lead: plans the reminder rows for the lead's next
+ * booked meeting. The sending is one sweeper cron's job, not this node's.
+ */
+export const MEETING_REMINDER_STEP_ID = 'meeting-reminder-node';
 export const MINDBODY_STEP_ID = 'mindbody-node';
 // Broadcasts are CAMPAIGN-level: the backend prunes them from the per-lead
 // sequence and ticks them once per run. Single-instance for the same reason a
@@ -79,6 +84,7 @@ export const MACRO_STEP_IDS: readonly string[] = [
   SPLIT_STEP_ID, SETFIELD_STEP_ID, HTTP_STEP_ID,
   IG_AUTOPOST_STEP_ID, LANDING_STEP_ID,
   MINDBODY_STEP_ID, WA_BROADCAST_STEP_ID, EMAIL_BROADCAST_STEP_ID,
+  MEETING_REMINDER_STEP_ID,
 ];
 
 /**
@@ -96,7 +102,7 @@ export const EXPORT_DEFAULT_COLUMNS = [
   'full_name', 'title', 'company_name', 'email', 'phone', 'linkedin_url', 'status', 'last_action', 'last_action_at',
 ];
 
-export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'linkedin_connections';
+export type TemplateSourceKey = 'zoho_recurring' | 'zoho_once' | 'ghl_recurring' | 'ghl_once' | 'linkedin_search' | 'linkedin_signal' | 'file_import' | 'web_extract' | 'linkedin_connections' | 'calendar_meetings';
 
 export type TemplateNode = {
   type: StepType;

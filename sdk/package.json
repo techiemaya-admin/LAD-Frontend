@@ -30,6 +30,10 @@
       "types": "./features/call-logs/index.ts",
       "default": "./features/call-logs/index.ts"
     },
+    "./calendar": {
+      "types": "./features/calendar/index.ts",
+      "default": "./features/calendar/index.ts"
+    },
     "./campaigns": {
       "types": "./features/campaigns/index.ts",
       "default": "./features/campaigns/index.ts"

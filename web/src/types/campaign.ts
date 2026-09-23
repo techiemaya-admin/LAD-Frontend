@@ -40,6 +40,9 @@ export type StepType =
   | 'instagram_post'
   // Per-lead: pauses the lead until a human confirms via a one-time link.
   | 'human_task'
+  // Per-lead: plans (does NOT send) the reminders for the lead's next booked
+  // meeting. One sweeper cron sends what is due - never a cron per meeting.
+  | 'meeting_reminder'
   // Per-lead by default; switches to a campaign-level macro when its scope is
   // set to the whole campaign's industry (see config.campaign_report).
   | 'lead_report'

@@ -43,6 +43,7 @@ export function stepCategory(type: string, isSource = false): string {
   if (isSource) return 'Contact source';
   if (type === 'post_approval' || type === 'comment_approval') return 'Approval';
   if (type === 'linkedin_post_engage') return 'Engagement';
+  if (type === 'meeting_reminder') return 'Meeting reminder';
   if (type.startsWith('linkedin')) return 'LinkedIn';
   if (type.startsWith('email')) return 'Email';
   if (type.startsWith('whatsapp')) return 'WhatsApp';
