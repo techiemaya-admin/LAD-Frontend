@@ -11,6 +11,7 @@ import {
   useEndCall,
   useRetryFailedCalls,
   useRecordingSignedUrl,
+  getRecordingMp3Url,
   useCallLead,
   getCallLog,
   type CallLog,
@@ -1279,9 +1280,27 @@ export function CallLogModal({
       const leadName = [log?.lead_first_name, log?.lead_last_name]
         .filter(Boolean)
         .join(' ') || '';
-      const filename = generateRecordingFilename(leadName, log?.started_at);
-      logger.debug("Starting recording download with URL:", signedRecordingUrl.substring(0, 100) + "...");
-      await downloadRecording(signedRecordingUrl, filename);
+      // Download an MP3, not the stored OGG/Opus: WhatsApp refuses an .ogg
+      // attachment as audio, and the old code handed it out named ".wav".
+      // The voice service transcodes on first request, so this can take a
+      // moment; fall back to the streaming URL if it is unavailable.
+      let downloadUrl = signedRecordingUrl;
+      let extension = "mp3";
+      try {
+        const mp3 = await getRecordingMp3Url({ callId: String(callId) });
+        const url = mp3?.signed_url || (mp3 as any)?.data?.signed_url;
+        if (url) {
+          downloadUrl = url;
+        } else {
+          extension = "ogg";
+        }
+      } catch (mp3Error) {
+        logger.warn("MP3 rendition unavailable, downloading the original:", mp3Error);
+        extension = "ogg";
+      }
+      const filename = generateRecordingFilename(leadName, log?.started_at, extension);
+      logger.debug("Starting recording download with URL:", downloadUrl.substring(0, 100) + "...");
+      await downloadRecording(downloadUrl, filename);
       // Success - the download will happen in the browser
     } catch (error) {
       logger.error("Failed to download recording:", error);

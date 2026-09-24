@@ -177,6 +177,20 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
   return response.data;
 }
 
+/**
+ * Signed URL for an MP3 of the recording — what the Download button uses.
+ *
+ * The stored recording is OGG/Opus. WhatsApp refuses an .ogg attachment as audio
+ * ("file format not supported"), and until now the download was that OGG named
+ * ".wav", which no player could place. The voice service transcodes to MP3 on the
+ * first request and caches it.
+ */
+export async function getRecordingMp3Url({ callId }: RecordingSignedUrlParams): Promise<RecordingSignedUrlResponse> {
+  const response = await apiGet<RecordingSignedUrlResponse>(`/api/voice-agent/calls/${callId}/recording-mp3-url`);
+
+  return response.data;
+}
+
 
 /**
  * Retry failed calls.

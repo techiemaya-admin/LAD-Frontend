@@ -7,11 +7,17 @@ import { logger } from "@/lib/logger";
 
 /**
  * Generate filename for call recording download
- * Format: {lead_name}_{date}_{time}.wav
+ * Format: {lead_name}_{date}_{time}.{ext}
+ *
+ * The extension has to match the bytes. It used to be hardcoded ".wav" while the
+ * file was the stored OGG/Opus, so WhatsApp (and every player) refused it as
+ * audio — "file format not supported". Downloads now fetch an MP3 and pass
+ * "mp3" here.
  */
 export function generateRecordingFilename(
   leadName?: string,
-  startedAt?: string
+  startedAt?: string,
+  extension: string = "mp3"
 ): string {
   const name = (leadName || "recording")
     .toLowerCase()
@@ -23,13 +29,13 @@ export function generateRecordingFilename(
       const date = new Date(startedAt);
       const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
       const timeStr = date.toISOString().split("T")[1].split(".")[0].replace(/:/g, "-"); // HH-MM-SS
-      return `${name || "recording"}_${dateStr}_${timeStr}.wav`;
+      return `${name || "recording"}_${dateStr}_${timeStr}.${extension}`;
     } catch {
-      return `${name || "recording"}.wav`;
+      return `${name || "recording"}.${extension}`;
     }
   }
 
-  return `${name || "recording"}.wav`;
+  return `${name || "recording"}.${extension}`;
 }
 
 /**

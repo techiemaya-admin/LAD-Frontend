@@ -19,3 +19,18 @@ export function useRecordingSignedUrl(callId: string | null | undefined) {
     staleTime: 300000, // 5 minutes - signed URLs typically have longer expiry
   });
 }
+
+/**
+ * Hook to fetch the MP3 signed URL for a call (download / share).
+ *
+ * Disabled until asked for: the MP3 is transcoded on the first request, so it is
+ * only fetched when the user actually clicks Download.
+ */
+export function useRecordingMp3Url(callId: string | null | undefined, enabled = false) {
+  return useQuery({
+    queryKey: ["recording-mp3-url", callId],
+    queryFn: () => api.getRecordingMp3Url({ callId: callId! }),
+    enabled: !!callId && enabled,
+    staleTime: 300000,
+  });
+}
