@@ -96,9 +96,9 @@ export function secondsToClock(seconds: number, tenths = false): string {
   return tenths ? `${m}:${s.toFixed(1).padStart(4, "0")}` : `${m}:${String(Math.floor(s)).padStart(2, "0")}`;
 }
 
-/** `<base>_clip_0m05s-1m12s.wav` beside the full recording's name. */
-export function clipFilename(baseName: string, start: number, end: number): string {
+/** `<base>_clip_0m05s-1m12s.<ext>` beside the full recording's name. */
+export function clipFilename(baseName: string, start: number, end: number, extension: string = "mp3"): string {
   const tag = (t: number) => `${Math.floor(t / 60)}m${String(Math.floor(t % 60)).padStart(2, "0")}s`;
   const base = baseName.replace(/\.(wav|ogg|mp3|m4a|opus)$/i, "") || "recording";
-  return `${base}_clip_${tag(start)}-${tag(end)}.wav`;
+  return `${base}_clip_${tag(start)}-${tag(end)}.${extension}`;
 }

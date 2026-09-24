@@ -1374,6 +1374,7 @@ export function CallLogModal({
                   <div className="flex-1 min-w-0">
                     <AgentAudioPlayer
                       src={signedRecordingUrl}
+                      callId={callId ? String(callId) : undefined}
                       downloadBaseName={generateRecordingFilename(
                         [log?.lead_first_name, log?.lead_last_name].filter(Boolean).join(' '),
                         log?.started_at,
