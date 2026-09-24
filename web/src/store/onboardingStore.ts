@@ -181,6 +181,13 @@ export interface WorkflowPreviewStep {
   description?: string;
   icon?: string;
   channel?: 'linkedin' | 'email' | 'whatsapp' | 'voice' | 'instagram' | 'media' | 'system';
+  /**
+   * For the SOURCE step only: which source it is (`linkedin_search`,
+   * `calendar_meetings`, `file_import`, …). Every source is a
+   * `lead_generation` step, so the type alone cannot say where the leads come
+   * from — the canvas badge would otherwise call a calendar LinkedIn.
+   */
+  sourceKey?: string;
   // Additional fields for step configuration
   message?: string;
   subject?: string;

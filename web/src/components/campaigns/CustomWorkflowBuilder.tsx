@@ -2051,6 +2051,7 @@ export function CustomWorkflowBuilder({ onClose, initialTemplateKey, initialSour
     const def = SOURCES.find((s) => s.key === key)!;
     const step: WorkflowPreviewStep = {
       id: SOURCE_STEP_ID, type: 'lead_generation', channel: 'linkedin',
+      sourceKey: key,
       title: def.label, description: def.sub,
     };
     const rest = workflowPreview.filter((s) => s.id !== SOURCE_STEP_ID);
