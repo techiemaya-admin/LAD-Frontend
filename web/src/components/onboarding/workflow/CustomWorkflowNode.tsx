@@ -2,7 +2,7 @@ import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { StepType } from '@/types/campaign';
 import { getNodeIcon } from './workflowNodeUtils';
-import { Trash2, Settings, Tag, Plus } from 'lucide-react';
+import { Trash2, Settings, Tag, Plus, CalendarDays, FileSpreadsheet } from 'lucide-react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 
 /**
@@ -56,6 +56,27 @@ function getBrandConfig(type: string) {
  */
 export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
   const stepType = (data?.type as string) || 'linkedin_visit';
+  // Which mini badge this node wears. Every SOURCE is a `lead_generation`
+  // step, so the step type cannot say where the leads come from — a calendar
+  // source read as LinkedIn until this looked at the source key. A source we
+  // have no badge for wears none, which is honest; `undefined` (an older
+  // campaign loaded before the key was stored) keeps the LinkedIn badge it
+  // has always had rather than losing it on reload.
+  const sourceKey = (data?.sourceKey as string | undefined) || '';
+  const badge: 'linkedin' | 'email' | 'whatsapp' | 'calendar' | 'file' | 'none' = (() => {
+    if (stepType === 'lead_generation') {
+      if (!sourceKey) return 'linkedin';
+      if (sourceKey.startsWith('linkedin')) return 'linkedin';
+      if (sourceKey === 'calendar_meetings') return 'calendar';
+      if (sourceKey === 'file_import') return 'file';
+      if (sourceKey.startsWith('zoho') || sourceKey.startsWith('ghl') || sourceKey === 'own_contacts' || sourceKey === 'web_extract') return 'none';
+      return 'none';
+    }
+    if (stepType.includes('linkedin')) return 'linkedin';
+    if (stepType.includes('email')) return 'email';
+    if (stepType.includes('whatsapp')) return 'whatsapp';
+    return 'none';
+  })();
   const brand = getBrandConfig(stepType);
   const { removeWorkflowStep } = useOnboardingStore();
 
@@ -221,8 +242,8 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
           {renderIcon()}
         </div>
 
-        {/* Platform mini badge (LinkedIn / Email / WhatsApp) */}
-        {!isSmall && stepType !== 'delay' && stepType !== 'condition' && (
+        {/* Platform mini badge (LinkedIn / Email / WhatsApp / the source's own) */}
+        {!isSmall && stepType !== 'delay' && stepType !== 'condition' && badge !== 'none' && (
           <div style={{
             position: 'absolute', top: -4, right: -4,
             width: 22, height: 22, borderRadius: '50%',
@@ -231,15 +252,19 @@ export function CustomWorkflowNode({ data, id, selected }: NodeProps) {
             boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
             zIndex: 10,
           }}>
-            {(stepType.includes('linkedin') || stepType === 'lead_generation') ? (
+            {badge === 'calendar' ? (
+              <CalendarDays size={11} color="#7c3aed" strokeWidth={2.5} />
+            ) : badge === 'file' ? (
+              <FileSpreadsheet size={11} color="#0f766e" strokeWidth={2.5} />
+            ) : badge === 'linkedin' ? (
               <svg viewBox="0 0 24 24" width={11} height={11} fill="#0a66c2">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
               </svg>
-            ) : stepType.includes('email') ? (
+            ) : badge === 'email' ? (
               <svg viewBox="0 0 24 24" width={11} height={11} fill="#ea4335">
                 <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
               </svg>
-            ) : stepType.includes('whatsapp') ? (
+            ) : badge === 'whatsapp' ? (
               <svg viewBox="0 0 24 24" width={11} height={11} fill="#25d366">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
               </svg>

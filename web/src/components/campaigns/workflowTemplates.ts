@@ -1092,6 +1092,7 @@ export function templateToPreviewSteps(
     id: SOURCE_STEP_ID,
     type: 'lead_generation' as StepType,
     channel: t.source.key.startsWith('linkedin') ? 'linkedin' : 'email',
+    sourceKey: t.source.key,
     title: t.source.title || srcDef?.label || 'Contact source',
     description: t.source.description || srcDef?.sub || '',
   }] : [];

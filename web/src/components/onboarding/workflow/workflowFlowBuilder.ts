@@ -34,12 +34,12 @@ function snakeCols(n: number): number {
   return Math.min(4, Math.max(2, Math.ceil(Math.sqrt(n))));
 }
 
-interface SeqNode { id: string; type: string; title: string; description: string }
+interface SeqNode { id: string; type: string; title: string; description: string; sourceKey?: string }
 
 function toSequence(steps: WorkflowPreviewStep[]): SeqNode[] {
   return [
     { id: 'start', type: 'start', title: 'Start', description: 'Campaign begins' },
-    ...steps.map((s) => ({ id: s.id, type: s.type, title: s.title, description: s.description || '' })),
+    ...steps.map((s) => ({ id: s.id, type: s.type, title: s.title, description: s.description || '', sourceKey: s.sourceKey })),
     { id: 'end', type: 'end', title: 'End', description: 'Campaign ends' },
   ];
 }
@@ -80,7 +80,7 @@ export function createReactFlowNodes(
       type: 'custom',
       position: { x: X0 + col * X_STRIDE, y: Y0 + row * Y_STRIDE },
       draggable: true,
-      data: { title: n.title, type: n.type, description: n.description, _layout: 'snake' },
+      data: { title: n.title, type: n.type, description: n.description, sourceKey: n.sourceKey, _layout: 'snake' },
     };
   });
 }
