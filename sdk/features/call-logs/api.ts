@@ -184,9 +184,18 @@ export async function getRecordingSignedUrl({ callId }: RecordingSignedUrlParams
  * ("file format not supported"), and until now the download was that OGG named
  * ".wav", which no player could place. The voice service transcodes to MP3 on the
  * first request and caches it.
+ *
+ * With `start` / `end` (seconds) it returns just that window — a trimmed clip made
+ * in the browser is a WAV, which WhatsApp refuses in the same way.
  */
-export async function getRecordingMp3Url({ callId }: RecordingSignedUrlParams): Promise<RecordingSignedUrlResponse> {
-  const response = await apiGet<RecordingSignedUrlResponse>(`/api/voice-agent/calls/${callId}/recording-mp3-url`);
+export async function getRecordingMp3Url(
+  { callId, start, end }: RecordingSignedUrlParams & { start?: number; end?: number }
+): Promise<RecordingSignedUrlResponse> {
+  const query = new URLSearchParams();
+  if (typeof start === "number") query.set("start", String(start));
+  if (typeof end === "number") query.set("end", String(end));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const response = await apiGet<RecordingSignedUrlResponse>(`/api/voice-agent/calls/${callId}/recording-mp3-url${suffix}`);
 
   return response.data;
 }

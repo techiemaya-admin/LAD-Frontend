@@ -15,6 +15,8 @@ import {
   secondsToClock,
   clipFilename,
 } from "@/utils/audioTrim";
+import { getRecordingMp3Url } from "@lad/frontend-features/call-logs";
+import { downloadRecording } from "@/utils/recordingDownload";
 interface AgentAudioPlayerProps {
   src?: string;
   height?: number;
@@ -25,6 +27,13 @@ interface AgentAudioPlayerProps {
   width?: number;
   /** Base name for a trimmed clip download (the full recording's filename works). */
   downloadBaseName?: string;
+  /**
+   * Call id. Given one, a trimmed clip is fetched as MP3 from the server rather
+   * than encoded here as WAV — WhatsApp refuses a .wav attachment as audio the
+   * same way it refuses .ogg, so the browser-made clip could not be forwarded.
+   * Without it the WAV path still works.
+   */
+  callId?: string | null;
 }
 type Peaks = number[];
 interface WaveformProps {
@@ -162,6 +171,7 @@ export const AgentAudioPlayer = ({
   height = 50,
   width = 0,
   downloadBaseName = "call-recording",
+  callId,
 }: AgentAudioPlayerProps) => {
   const [playing, setPlaying] = useState(false);
   // Trim: a [start, end] window on the recording, dragged on the waveform or
@@ -398,16 +408,31 @@ export const AgentAudioPlayer = ({
     playingSelectionRef.current = true;
     setPlaying(true);
   }, [trimStart, trimEnd]);
-  const downloadClip = useCallback(() => {
-    if (!audioBuffer || trimEnd <= trimStart) return;
+  const downloadClip = useCallback(async () => {
+    if (trimEnd <= trimStart) return;
     setExporting(true);
     try {
+      // Prefer an MP3 of the window from the server: a WAV made here is refused
+      // by WhatsApp as an audio attachment ("file format is not supported").
+      if (callId) {
+        try {
+          const mp3 = await getRecordingMp3Url({ callId: String(callId), start: trimStart, end: trimEnd });
+          const url = mp3?.signed_url || (mp3 as unknown as { data?: { signed_url?: string } })?.data?.signed_url;
+          if (url) {
+            await downloadRecording(url, clipFilename(downloadBaseName, trimStart, trimEnd, "mp3"));
+            return;
+          }
+        } catch {
+          // fall through to the local WAV
+        }
+      }
+      if (!audioBuffer) return;
       const clip = sliceAudioBuffer(audioBuffer, trimStart, trimEnd);
-      saveBlob(audioBufferToWav(clip), clipFilename(downloadBaseName, trimStart, trimEnd));
+      saveBlob(audioBufferToWav(clip), clipFilename(downloadBaseName, trimStart, trimEnd, "wav"));
     } finally {
       setExporting(false);
     }
-  }, [audioBuffer, trimStart, trimEnd, downloadBaseName]);
+  }, [audioBuffer, trimStart, trimEnd, downloadBaseName, callId]);
   const timeAtClientX = useCallback((clientX: number) => {
     const rect = waveWrapRef.current?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || duration <= 0) return null;
