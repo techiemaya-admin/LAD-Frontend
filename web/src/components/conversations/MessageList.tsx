@@ -21,7 +21,7 @@ interface MessageListProps {
   isAgentTyping?: boolean;
   contact?: Contact;
   onAgentClick?: (agentId?: string) => void;
-  onDeleteMessage?: (message: Message, scope: 'me' | 'everyone') => void;
+  onDeleteMessage?: (message: Message) => void;
   onToggleStar?: (message: Message) => void;
   /** Whether older messages exist beyond the current window */
   hasMore?: boolean;
