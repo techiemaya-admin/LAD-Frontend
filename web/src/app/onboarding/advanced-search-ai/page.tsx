@@ -1204,6 +1204,18 @@ const EDUCATION_OPTIONS = ['MBA', 'Bachelor\'s', 'Master\'s', 'PhD', 'Bootcamp',
 /* How long we will hold the transcript hostage waiting for the tidy-up. */
 const BEAUTIFY_TIMEOUT_MS = 4000;
 
+// How long a half-finished media journey is kept in this browser. Long enough
+// to survive a refresh or signing in again, short enough that coming back
+// later opens a clean page instead of the last journey.
+const MEDIA_JOURNEY_CACHE_MS = 30 * 60 * 1000;
+
+function clearCachedMediaJourney() {
+    for (const key of ['mrlad_media_mode', 'mrlad_active_media_session_id', 'mrlad_media_messages',
+                       'mrlad_chat_messages', 'mrlad_cp_step', 'mrlad_media_saved_at']) {
+        localStorage.removeItem(key);
+    }
+}
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════ */
@@ -1665,6 +1677,19 @@ export default function AdvancedSearchAIPage() {
             if (params.get('open_icp') === 'true') {
                 setShowPlayground(true);
             }
+            if (params.get('open_media') === 'true') {
+                try {
+                    const raw = sessionStorage.getItem('mrlad_media_handoff');
+                    sessionStorage.removeItem('mrlad_media_handoff');
+                    const pick = raw ? JSON.parse(raw) : null;
+                    // Only a fresh pick: an old one would hijack a later visit.
+                    if (pick?.urls?.length && Date.now() - (pick.at || 0) < 2 * 60 * 1000) {
+                        setHandedOverMedia({ action: pick.action, urls: pick.urls });
+                    }
+                } catch (e) {
+                    console.error('[MediaHandoff] Could not read the gallery pick', e);
+                }
+            }
         }
     }, []);
 
@@ -1743,6 +1768,11 @@ export default function AdvancedSearchAIPage() {
 
     const [mediaMode, setMediaMode] = useState(false);
     const [mediaMessages, setMediaMessages] = useState<Array<MediaChatMsg>>([]);
+    // An action picked in the gallery on the settings page, to carry out here.
+    // Settings leaves it in sessionStorage and sends the browser over with
+    // ?open_media=true, because a signed asset URL is far too long for the query
+    // string and there can be five of them.
+    const [handedOverMedia, setHandedOverMedia] = useState<{ action: string; urls: string[] } | null>(null);
     const mb = useMediaBuilder();
     const [brandDnaRequestedChanges, setBrandDnaRequestedChanges] = useState(false);
     const [isHydrated, setIsHydrated] = useState(false);
@@ -1757,13 +1787,10 @@ export default function AdvancedSearchAIPage() {
             localStorage.setItem('mrlad_media_messages', JSON.stringify(mediaMessages));
             localStorage.setItem('mrlad_chat_messages', JSON.stringify(messages));
             localStorage.setItem('mrlad_cp_step', String(cpStep));
+            localStorage.setItem('mrlad_media_saved_at', String(Date.now()));
         } else {
             if (!mediaMode) {
-                localStorage.removeItem('mrlad_media_mode');
-                localStorage.removeItem('mrlad_active_media_session_id');
-                localStorage.removeItem('mrlad_media_messages');
-                localStorage.removeItem('mrlad_chat_messages');
-                localStorage.removeItem('mrlad_cp_step');
+                clearCachedMediaJourney();
             }
         }
     }, [mediaMode, mb.sessionId, mediaMessages, messages, cpStep, isHydrated]);
@@ -1772,6 +1799,17 @@ export default function AdvancedSearchAIPage() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         
+        const savedAt = Number(localStorage.getItem('mrlad_media_saved_at') || 0);
+        const isRecent = savedAt > 0 && Date.now() - savedAt < MEDIA_JOURNEY_CACHE_MS;
+        if (!isRecent) {
+            // Kept so a refresh, or signing in again after the token expired, drops
+            // you back where you were. Older than that and you are starting
+            // something new, so do not reopen the last journey over the page.
+            clearCachedMediaJourney();
+            setIsHydrated(true);
+            return;
+        }
+
         const cachedMediaMode = localStorage.getItem('mrlad_media_mode') === 'true';
         const cachedSessionId = localStorage.getItem('mrlad_active_media_session_id');
         const cachedMediaMessages = localStorage.getItem('mrlad_media_messages');
@@ -1794,11 +1832,7 @@ export default function AdvancedSearchAIPage() {
                 setIsHydrated(true);
             }).catch((err) => {
                 console.error("[SessionHydrate] Cached session validation failed, discarding cache", err);
-                localStorage.removeItem('mrlad_media_mode');
-                localStorage.removeItem('mrlad_active_media_session_id');
-                localStorage.removeItem('mrlad_media_messages');
-                localStorage.removeItem('mrlad_chat_messages');
-                localStorage.removeItem('mrlad_cp_step');
+                clearCachedMediaJourney();
                 setIsHydrated(true);
             });
         } else {
@@ -1808,7 +1842,12 @@ export default function AdvancedSearchAIPage() {
 
     // Overwrite mediaMessages if backend returns history (during GCS re-hydration / load or dropdown switch)
     useEffect(() => {
-        if (mb.uiPayload?.history && mb.sessionId && lastRestoredSessionIdRef.current !== mb.sessionId) {
+        // A reply says which session it came from. While a switch is in flight the
+        // page can still be holding the session it just left, and restoring that
+        // chat under the new session's id left the chat one session behind: the
+        // conversation looked unchanged, then the next switch showed the last one.
+        const answersThisSession = !mb.uiPayload?.session_id || mb.uiPayload.session_id === mb.sessionId;
+        if (answersThisSession && mb.uiPayload?.history && mb.sessionId && lastRestoredSessionIdRef.current !== mb.sessionId) {
             console.warn("[SessionHydrate] Restoring messages list from session history payload for:", mb.sessionId);
             lastRestoredSessionIdRef.current = mb.sessionId;
             const restoredHistory = mb.uiPayload.history.map((m: any) => {
@@ -1829,12 +1868,15 @@ export default function AdvancedSearchAIPage() {
                     description: m.description,
                     step: m.step,
                     payload: mappedPayload,
+                    // What was attached to the message, so a restored chat still
+                    // shows the picture a person sent or picked, not just its name.
+                    references: m.references,
                     timestamp: new Date(m.timestamp || Date.now())
                 };
             });
             setMediaMessages(restoredHistory);
         }
-    }, [mb.uiPayload?.history, mb.sessionId]);
+    }, [mb.uiPayload?.history, mb.uiPayload?.session_id, mb.sessionId]);
 
     const hasOptionsOpen = mediaMode && (
         mb.step === "welcome" || 
@@ -1846,11 +1888,7 @@ export default function AdvancedSearchAIPage() {
         ((mb.step === "builder-script-confirm" || mb.step === "builder-workflow-choice") && mb.uiPayload?.options && mb.uiPayload.options.length > 0)
     );
 
-    const isSplitScreenStep = mediaMode && (
-        mb.step === "builder-brand-dna" ||
-        mb.step === "builder-video-progress" ||
-        mb.step === "builder-keyframes-confirm"
-    );
+    const isSplitScreenStep = mediaMode && SPLIT_SCREEN_STEPS.includes(mb.step);
 
     const [mediaPlaceholder, setMediaPlaceholder] = useState('Ask Mr LAD / type response...');
     useEffect(() => {
@@ -3098,6 +3136,26 @@ export default function AdvancedSearchAIPage() {
         ]);
         mb.startFlow();
     }, [mb]);
+
+    // An action picked in the settings gallery: animate this, attach that. It needs
+    // a journey to happen in, so if nothing was restored we start one and let this
+    // run again on the pass where the session id exists.
+    useEffect(() => {
+        if (!handedOverMedia || !isHydrated) return;
+        if (!mb.sessionId) {
+            handleStartMediaGeneration();
+            return;
+        }
+        const { action, urls } = handedOverMedia;
+        setHandedOverMedia(null);
+        setMediaMode(true);
+        if (action === 'attach') mb.generateImagesFromGallery(urls);
+        else if (action === 'animate') mb.animateImageFromGallery(urls[0]);
+        else if (action === 'extend') mb.extendVideoFromGallery(urls[0]);
+        else if (action === 'dialogues') mb.addDialoguesFromGallery(urls[0]);
+        else console.error('[MediaHandoff] Unknown action handed over:', action);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [handedOverMedia, isHydrated, mb.sessionId]);
 
     const submitMediaInput = useCallback((text: string, valueToSend?: string | string[], customReferences?: { path: string, thumbnail: string }[]) => {
         const finalRefs = customReferences || (mb.references && mb.references.length > 0 ? [...mb.references] : undefined);
@@ -15105,6 +15163,18 @@ function AgentBuilderTrendOptions({
     );
 }
 
+/**
+ * The steps that have their own panel on the right. While one of these is the
+ * live step it belongs to that panel and must not also be drawn in the chat, or
+ * the same screen is on the page twice. Once the journey moves past it, the
+ * finished card takes its place in the chat history.
+ *
+ * `isSplitScreenStep` and MediaStepWidget both read this list, so a step cannot
+ * be given a panel and then forgotten in the chat, which is what happened to the
+ * storyboard review.
+ */
+const SPLIT_SCREEN_STEPS = ["builder-brand-dna", "builder-video-progress", "builder-keyframes-confirm"];
+
 function MediaStepWidget({ 
     msg, 
     isActive, 
@@ -15118,6 +15188,7 @@ function MediaStepWidget({
     submitMediaInput: (text: string, valueToSend?: string | string[]) => void; 
     userSelectionText?: string;
 }) {
+    if (isActive && SPLIT_SCREEN_STEPS.includes(msg.step)) return null;
     switch (msg.step) {
         case "builder-image-output":
             return (
@@ -15183,7 +15254,6 @@ function MediaStepWidget({
                 </div>
             );
         case "builder-video-progress":
-            if (isActive) return null;
             return (
                 <div className="mt-2 w-[448px] max-w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-md">
                     <AgentBuilderVideoProgress
@@ -15200,7 +15270,6 @@ function MediaStepWidget({
                 </div>
             );
         case "builder-brand-dna":
-            if (isActive) return null;
             return (
                 <div className="mt-4 max-w-full w-[448px] bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-md">
                     <AgentBuilderBrandDNA

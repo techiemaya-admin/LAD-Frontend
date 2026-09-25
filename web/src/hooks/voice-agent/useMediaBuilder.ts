@@ -26,6 +26,8 @@ export type MediaBuilderStep =
   | "gallery";
 
 export interface MediaUiPayload {
+  /** The session this screen and history came from. */
+  session_id?: string;
   step: MediaBuilderStep;
   question?: string;
   description?: string;
@@ -200,6 +202,11 @@ export function useMediaBuilder() {
   const loadSession = useCallback(async (targetSessionId: string) => {
     setStep("loading");
     setError("");
+    // The screen on display and the attachments waiting under it belong to the
+    // session being left. They go before the switch, so nothing from that session
+    // is on screen under this one's id while the load is in flight.
+    setUiPayload(null);
+    setReferences([]);
     setSessionId(targetSessionId);
     sessionIdRef.current = targetSessionId;
     try {
@@ -223,6 +230,9 @@ export function useMediaBuilder() {
 
       const data = await res.json();
       setUiPayload(data);
+      // What was attached and not yet sent goes out with the next message, so it
+      // is shown again rather than left out after the switch cleared it.
+      setReferences(data.references ?? []);
       setStep(data.step as MediaBuilderStep);
     } catch (err) {
       const errorObj = err as Error;
