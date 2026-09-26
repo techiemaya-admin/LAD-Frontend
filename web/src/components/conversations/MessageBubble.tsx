@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { Message } from '@/types/conversation';
-import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download, MoreVertical, Star } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, X, UserCircle, MessageSquare, MapPin, FileText, Music, Video, Download, MoreVertical, Star, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MessageFeedback } from './MessageFeedback';
 import { TeachFromReply } from './TeachFromReply';
@@ -257,7 +257,7 @@ interface MessageBubbleProps {
   showAvatar?: boolean;
   contact?: Contact;
   onAgentClick?: (agentId?: string) => void;
-  onDeleteMessage?: (message: Message, scope: 'me' | 'everyone') => void;
+  onDeleteMessage?: (message: Message) => void;
   onToggleStar?: (message: Message) => void;
   searchText?: string;
   isHighlighted?: boolean;
@@ -505,7 +505,7 @@ export const MessageBubble = memo(function MessageBubble({
             {displayPossiblePhone(message.senderName)}
           </span>
         )}
-        {(onToggleStar || (isOutgoing && onDeleteMessage)) && (
+        {(onToggleStar || onDeleteMessage) && (
           <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -529,15 +529,14 @@ export const MessageBubble = memo(function MessageBubble({
                     {message.starred ? 'Unstar message' : 'Star message'}
                   </DropdownMenuItem>
                 )}
-                {isOutgoing && onDeleteMessage && (
-                  <>
-                    <DropdownMenuItem onClick={() => onDeleteMessage(message, 'me')}>
-                      Delete for me
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDeleteMessage(message, 'everyone')}>
-                      Delete for everyone
-                    </DropdownMenuItem>
-                  </>
+                {onDeleteMessage && (
+                  <DropdownMenuItem
+                    onClick={() => onDeleteMessage(message)}
+                    className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete message
+                  </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

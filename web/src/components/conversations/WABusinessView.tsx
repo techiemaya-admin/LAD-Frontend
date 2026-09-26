@@ -1156,10 +1156,12 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [searchMatchIndex, setSearchMatchIndex] = useState(0);
-  const [deletedForMeIds, setDeletedForMeIds] = useState<Set<string>>(new Set());
+  // Optimistic hide of messages the user just deleted. The durable removal comes from
+  // the backend soft-delete (is_deleted=true) + the 3s message poll re-reading (all
+  // readers filter is_deleted=false); this set only bridges the gap until the next poll.
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   // Optimistic per-message starred overrides (messageId → starred), merged into allMessages.
   const [starOverrides, setStarOverrides] = useState<Record<string, boolean>>({});
-  const [deletedForEveryoneIds, setDeletedForEveryoneIds] = useState<Set<string>>(new Set());
 
    const { messages: polledMessages, isLoading, total, isAgentTyping } = useConversationMessages(
     conversation?.id || null,
@@ -1225,8 +1227,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       setOwnershipError(null);
       setOlderMessages([]);
       setOlderOffset(CONFIG.INITIAL_MESSAGE_LIMIT);
-      setDeletedForMeIds(new Set());
-      setDeletedForEveryoneIds(new Set());
+      setDeletedIds(new Set());
     }
   }, [conversation?.id]);
 
@@ -1264,8 +1265,7 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
       setOwnershipError(null);
       setOlderMessages([]);
       setOlderOffset(CONFIG.INITIAL_MESSAGE_LIMIT);
-      setDeletedForMeIds(new Set());
-      setDeletedForEveryoneIds(new Set());
+      setDeletedIds(new Set());
     }
   }, [conversation?.id]);
 
@@ -1303,28 +1303,15 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
   const allMessages = useMemo(
     () =>
       baseMessages
-        .filter((m) => !deletedForMeIds.has(m.id))
+        // Optimistically hide a just-deleted message; the poll then re-reads without
+        // it (backend soft-deletes and every reader filters is_deleted=false).
+        .filter((m) => !deletedIds.has(m.id))
         .map((m) => {
           // Apply optimistic star override so the indicator flips immediately.
           const starred = m.id in starOverrides ? starOverrides[m.id] : m.starred;
-          const base = starred === m.starred ? m : ({ ...m, starred } as Message);
-          if (!deletedForEveryoneIds.has(m.id)) return base;
-          return {
-            ...base,
-            content: base.isOutgoing ? 'You deleted this message' : 'This message was deleted',
-            mediaId: undefined,
-            mediaType: undefined,
-            mediaMimeType: undefined,
-            mediaFilename: undefined,
-            mediaCaption: undefined,
-            templateName: undefined,
-            latitude: undefined,
-            longitude: undefined,
-            locationName: undefined,
-            locationAddress: undefined,
-          } as Message;
+          return starred === m.starred ? m : ({ ...m, starred } as Message);
         }),
-    [baseMessages, deletedForMeIds, deletedForEveryoneIds, starOverrides]
+    [baseMessages, deletedIds, starOverrides]
   );
   const hasMore = total > olderOffset;
 
@@ -1605,35 +1592,32 @@ const [voicePlayProgress, setVoicePlayProgress] = useState(0);
     }
   }, []);
 
+  // Delete a message: hide it from the LAD inbox (soft-delete on the backend). This
+  // does NOT remove the message from anyone's WhatsApp — for an inbound customer
+  // message that is impossible via any WhatsApp API. Works for inbound and outbound.
   const handleDeleteMessage = useCallback(
-    async (message: Message, scope: 'me' | 'everyone') => {
-      if (scope === 'me') {
-        setDeletedForMeIds((prev) => new Set(prev).add(message.id));
-        return;
-      }
-
+    async (message: Message) => {
       const convId = conversationId || conversation?.id;
       if (!convId) return;
 
-      setDeletedForEveryoneIds((prev) => new Set(prev).add(message.id));
+      // Optimistically hide immediately; the 3s poll then re-reads without it once the
+      // backend soft-delete lands (all readers filter is_deleted=false).
+      setDeletedIds((prev) => new Set(prev).add(message.id));
       try {
         const selectedChannel = backendChannel || channel || 'waba';
         const res = await fetchWithTenant(
           `/api/whatsapp-conversations/conversations/${convId}/messages/${message.id}?channel=${selectedChannel}`,
-          {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ delete_for_everyone: true }),
-          }
+          { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
         );
         if (!res.ok) throw new Error('Delete failed');
       } catch {
-        setDeletedForEveryoneIds((prev) => {
+        // Roll back the optimistic hide so the user sees it did not persist.
+        setDeletedIds((prev) => {
           const next = new Set(prev);
           next.delete(message.id);
           return next;
         });
-        setSendError('Could not delete for everyone');
+        setSendError('Could not delete the message');
       }
     },
     [backendChannel, channel, conversationId, conversation?.id]
